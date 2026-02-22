@@ -1,0 +1,23 @@
+nohup: ignoring input
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.100.102:3000
+
+✓ Starting...
+✓ Ready in 1456ms
+ GET /dashboard 200 in 1789ms (compile: 1158ms, render: 631ms)
+ GET /assets 404 in 1777ms (compile: 1497ms, render: 280ms)
+ GET /dashboard 200 in 167ms (compile: 10ms, render: 157ms)
+ GET /dashboard/assets 200 in 378ms (compile: 195ms, render: 182ms)
+ GET /dashboard/assets 200 in 258ms (compile: 133ms, render: 125ms)
+ GET /login 200 in 16.9s (compile: 1434ms, render: 15.5s)
+✓ Finished writing to filesystem cache in 12.5s
+ GET / 307 in 324ms (compile: 151ms, render: 173ms)
+ GET /dashboard 200 in 69ms (compile: 5ms, render: 65ms)
+ GET /auth/login 404 in 73ms (compile: 8ms, render: 64ms)
+ GET /login 200 in 78ms (compile: 14ms, render: 64ms)
+ GET /register 200 in 75ms (compile: 45ms, render: 30ms)

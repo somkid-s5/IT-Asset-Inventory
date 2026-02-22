@@ -1,0 +1,144 @@
+หมายเหตุ : ,,,,,,,,,,,,,
+Rack,Rack, IP Address,Brand/Model,Specification,Operating System,Sticker,Serial,augment,Drive Capacity,Username,Password,System,Path URL
+,1C-01,192.168.13.225,vmWare,"Vcenter (192.168.13.200)
+DisplayName : 13.225_Remote_Admin_DC
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 16 GB
+HDD 1 : 300 GB
+HostName : 13225RemoteAdmin","Windows 11 Enterprise, x64",,,,,"administrator
+admin","!ZZP@ss13225$
+P@ssw0rd",monitor DC,
+B1 เครื่องใหม่,1C-01,192.168.9.145,vmWare,"Vcenter (192.168.41.150)
+DisplayName : 9.145_Remote_Admin_DC
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 16 GB
+HDD 1 : 300 GB
+HostName : -","Windows 11 Enterprise, x64",,,,,administrator,!ZZP@ss9145$,monitor DC,
+B1 เครื่องใหม่,1C-01,192.168.9.71 เอาไว้Monitor Storage ประเมิน (43.233),vmWare,"Vcenter (192.168.9.193)
+DisplayName : 9.71_ManageEMCUnisphere
+CPU : 8 vCPU (4 CPU 2 CORE)
+Memory : 8 GB
+HDD 1 : 100 GB",Windows 7 Professional,,,,,administrator,!ZZP@ss971$,monitor DC,
+,1C-01,192.168.9.59,vmWare,"Vcenter (192.168.41.150)
+DisplayName : 9.59_Tester-Model
+CPU : 4 vCPU (2 CPU 2 CORE)
+Memory : 12 GB
+HDD 1 : 100 GB
+HostName : LogFileServer2024",Microsoft Windows 10 (x64X,,,,"C: 100 GB
+",administrator,!ZZP@ss959$,monitor DC,
+,1C-01,192.168.9.146,vmWare,"Vcenter (192.168.9.193)
+DisplayName : 9.145_Remote_Admin_DC
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 16 GB
+HDD 1 : 300 GB
+HostName : -","Windows 11 Enterprise, x64",,,,,administrator,!ZZP@ss9146$,monitor DC,
+,1C-01,192.168.9.149,vmWare,"Vcenter (192.168.9.193)
+DisplayName : 9.145_Remote_Admin_DC
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 16 GB
+HDD 1 : 300 GB
+HostName : -",Windows Server 2019 Standard,,,,,administrator,P@ssw0rd,monitor DC,
+,1C-06 ,192.168.23.34,vmWare,"Vcenter (192.168.13.98)
+DisplayName : 23.34_Windows_NBUSetup
+CPU : 16 vCPU (4 CPU 4 CORE)
+Memory : 32 GB
+HDD 1 :  100 GB
+HostName : -",Windows 10 x64,,,,,administrator,P@ssw0rd@trd,monitor DC เข้าวง 10.1.xxx.xxx ได้,
+,1C-01,192.168.9.193,vmWare,"Vcenter (192.168.9.193)
+DisplayName : 9.193_vsphere.local
+CPU : 4 vCPU (4 CPU 1 CORE)
+Memory : 16 GB
+Hard disk 1 : 12 GB | SCSI(0:0)
+Hard disk 2 :  1.63 GB | SCSI(0:1)
+Hard disk 3 : 25 GB | SCSI(0:2)
+Hard disk 4 : 50 GB | SCSI(0:3)
+ Hard disk 5 : 10 GB | SCSI(0:4)
+Hard disk 6 : 10 GB | SCSI(0:5)
+Hard disk 7 : 15 GB | SCSI(0:6)
+Hard disk 8 : 25 GB | SCSI(0:8)
+Hard disk 9 : 1024 MB | SCSI(0:9)
+Hard disk 10 : 10 GB | SCSI(0:10)
+Hard disk 11 : 10 GB | SCSI(0:11)
+Hard disk 12 : 100 GB | SCSI(0:12)
+Hard disk 13 : 50 GB | SCSI(0:13)
+HostName : photon-machine",VMware vCenter Server Appliance 6.7,-,-,-,-,"root
+administrator@vsphere.local","Trd@treasury193*
+vCenter-trd@9193",vCenter Spare,
+,1C-07,192.168.13.204,vmWare,"Vcenter (192.168.13.204)
+DisplayName : 13.204_vsphere.local
+CPU : 4 vCPU (4 CPU 1 CORE)
+Memory : 16 GB
+HDD 1 : 12 GB
+HDD 2 : 1.7 GB
+HDD 3 : 25 GB
+HDD 4 : 50 GB
+HDD 5 : 10 GB
+HDD 6 : 10 GB
+HDD 7 : 15 GB
+HDD 8 : 25 GB
+HDD 9 : 1 GB
+HDD 10 : 10 GB
+HDD 11 : 10 GB
+HDD 12 : 100 GB
+HDD 13 : 50 GB
+HostName : photon-machine",VMware vCenter Server Appliance 6.7,-,-,-,-,"root
+administrator@vsphere.local","!ZZP@ss13204$
+vCenter-trd@13204",vCenter NTNX-Cluster-2,https://192.168.13.204/
+,1C-06,192.168.13.200,ProLiant DL360 Gen9,"Vcenter (192.168.13.200)
+DisplayName : 
+CPU : 2 vCPU (1 CPU 2 CORE Total 32 Thread)
+Memory : 128 GB
+ Hard disk 1
+12 GB | SCSI(0:0)
+ Hard disk 2
+1.63 GB | SCSI(0:1)
+ Hard disk 3
+25 GB | SCSI(0:2)
+ Hard disk 4
+50 GB | SCSI(0:3)
+ Hard disk 5
+10 GB | SCSI(0:4)
+ Hard disk 6
+10 GB | SCSI(0:5)
+ Hard disk 7
+15 GB | SCSI(0:6)
+ Hard disk 8
+25 GB | SCSI(0:8) 
+ Hard disk 9
+1024 MB | SCSI(0:9)
+ Hard disk 10
+10 GB | SCSI(0:10)
+ Hard disk 11
+10 GB | SCSI(0:11)
+ Hard disk 12
+100 GB | SCSI(0:12)
+ Hard disk 13
+50 GB | 
+Datastore
+HDD 1 : 150 GB
+HDD 2 : 3.4 TB
+HDD 3 : 6 TB
+HostName : esxispare2
+
+",Esxi 6.7,,,,,administrator@vsphere.local,P@ssw0rd@13200,Vcenter 6.7 ใช้งานชั่วคราวระหว่างส่งเครื่องซ่อม,
+,1C-04,192.168.41.150,vmWare,"Vcenter (192.168.41.150)
+DisplayName : 6403vCenterTRD150
+CPU : 8
+Memory : 28 GB
+HDD : 712.67 GB
+Hostname : 6403vcentertrd150.vsphere.local",VMware Photon,,,,,administrator@vsphere.local,P@ssw0rdsit,,
+,1D-04,10.1.110.50,vmWare,"Vcenter (10.1.100.50)
+DisplayName : trd6801vCenter
+CPU : 4
+Memory : 21 GB
+HDD: 701.85 GB
+Hostname : localhost",VMware Photon,,,,,administrator@vsphere.local,P@ssw0rd6801,,
+,vCenter Server Management,,,,,,,,,,,,
+,https://192.168.9.193:5480 root  Trd@treasury193*,,,,,,,,,,,,
+,https://192.168.13.200:5480 root P@ssw0rd@13200,,,,,,,,,,,,
+,https://192.168.13.204:5480 root !ZZP@ss13204$,,,,,,,,,,,,
+,https://192.168.41.150:5480 root P@sswordsit,,,,,,,,,,,,
+,https://10.1.110.50:5480 root P@ssword6801,,,,,,,,,,,,
+,vmware vSphere web Client,,remote เปิดได้ที่ เครื่อง 9.71,,,,,,,,,,
+,https://192.168.41.99/vsphere-client  root  P@33w0rd,,,,,,,,,,,,
+,https://192.168.13.98/vsphere-client  root  P@ssw0rd,,,,,,,,,,,,

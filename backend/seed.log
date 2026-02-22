@@ -1,0 +1,23 @@
+Starting Extended CSV Migration...
+
+Processing: /home/smart/Private/Project/IT-Asset-Inventory/Flie_Password_Update_09-01-69(192.168.60.csv
+  Found 307 records in this file.
+  -> Successfully imported 272 assets from this file.
+
+Processing: /home/smart/Private/Project/IT-Asset-Inventory/backend/prisma/xlsx_export_Land_System.csv
+  Found 19 records in this file.
+  -> Successfully imported 18 assets from this file.
+
+Processing: /home/smart/Private/Project/IT-Asset-Inventory/backend/prisma/xlsx_export____________Auction_.csv
+  Found 6 records in this file.
+  -> Successfully imported 6 assets from this file.
+
+Processing: /home/smart/Private/Project/IT-Asset-Inventory/backend/prisma/xlsx_export_Remote_+Vcenter.csv
+  Found 21 records in this file.
+  -> Successfully imported 12 assets from this file.
+
+Processing: /home/smart/Private/Project/IT-Asset-Inventory/backend/prisma/xlsx_export_NBU.csv
+  Found 41 records in this file.
+  -> Successfully imported 23 assets from this file.
+
+Extended Migration complete! Successfully imported a total of 331 additional assets.

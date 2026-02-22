@@ -1,0 +1,295 @@
+หมายเหตุ : ,,,,,,,,,,,,,,,,,,,,,,,,
+Rack,Rack, IP Address,Brand/Model,Specification,Operating System,Sticker,Serial,augment,Drive Capacity,Username,Password,System,Path URL,Application Type,Application Directory,U & P to Connect Database,Report Type,Report Directory,Database Type,PHPMYADMIN_URL,Database Directory,ORACLE_HOME,Database Name/SID,U & P Database
+,1C-03,"192.168.9.5
+DB ตัวจริง
+ใช้ VM ที่ราช ตัวนี้อยุ่ 15/05/67
+set paremeterใหม่และรีเครื่องไปเมื่อ 17/05/67","vmWare
+Production","Vcenter (192.168.41.150)
+DisplayName : 9.5_LandDB
+CPU : 32 vCPU (8 CPU 4 CORE)
+Memory : 64 GB
+HDD 1 : 500 GB
+HostName : 95soldbuat",Oracle Solaris 11.3 SPARC,_,-,-,"/(root) : 488 GB
+/tmp : 28 GB
+/backup : 200 GB
+/oracle : 488 GB
+/data : 200 GB","root
+yit
+oracle","P@ssw0rd
+p@ssw0rd
+p@ssw0rd",DB ระบบที่ราชพัสดุส่วนขยาย,https://192.168.9.5:5500/em,,,,,,,,,,,
+1C-03,1C-03,"192.168.9.5
+เลิกใช้แล้ว 15/05/67",Oracle T5-2,"VM on Oracle VM [T5-2  (ILOM 9.214)] 
+CPU : 32 vCPU
+Memory : 64 GB
+9.5_root : 547 GB
+9.5_data : 547GB
+9.5_oracle : 547 GB
+9.5_backup : 547 GB
+HostName : TRD59Saraban1",Oracle Solaris 11.3 SPARC,5901-0002,	AK00355730,100000190885,"/(root) : 547 GB
+/tmp : 44 GB
+/backup : 547 GB
+/oracle : 547 GB
+/data : 547 GB
+/backup/BK : 768 GB","root
+biz
+yit
+oracle","p@ssw0rd
+B1Z_95@TRD
+p@ssw0rd
+p@ssw0rd",DB ระบบที่ราชพัสดุส่วนขยาย,https://192.168.9.5:5500/em,-,-,treasury/1234567,-,-,Oracle Database 12c Enterprise Edition Release 12.1.0.2.0,-,"spfile
+/oracle/product/12.1.0/db_1/dbs/spfileORCL.ora
+
+Control File
+/data/ORCL/controlfile
+
+Data File + Log File
+/data/ORCL",/oracle/product/12.1.0/db_1,ORCL,"sys/System_95#
+system/System_95#"
+1D-03,1D-03,"192.168.9.224
+เลิกใช้แล้ว 15/05/67",Oracle T5-2,"VM on Oracle VM [T5-2 ตัวบน (9.224,9.213)ILOM 9.212] 
+CPU : 32 vCPU
+Memory : 64 GB
+HDD : 600 GB * 4
+9.5_root : 547 GB
+9.5_data : 547GB
+9.5_oracle : 547 GB
+9.5_backup : 547 GB
+Hostname : trdlanddb",Oracle Solaris 11.3 SPARC,5901-0001,AK00348763,100000190885,"/(root) : 547 GB
+/tmp : 24 GB
+/backup : 547 GB
+/oracle : 547 GB
+/data : 547 GB
+/backup/BK : 768 GB","trdroot
+root
+yit
+biz
+GIS
+oracle","p@ssw0rd
+!ZZP@ss224$
+yit@landdb
+B1Z_95@TRD
+Gis1234
+-",DB ระบบที่ราชพัสดุส่วนขยาย,https://192.168.9.224:5500/em,-,-,,,,Oracle Database 12c Enterprise Edition Release 12.1.0.2.0,,"spfile
+/oracle/product/12.1.0/db_1/dbs/spfileORCL.ora
+
+Control File
+/data/ORCL/controlfile
+
+Data File + Log File
+/data/ORCL",/oracle/product/12.1.0/db_1,ORCL,"sys/System_95#
+system/System_95#"
+1D-03,1D-03,"192.168.9.213
+(UAT)เลิกใช้แล้ว 15/05/67",Oracle T5-2,"VM on Oracle VM [T5-2 ตัวบน (9.224,9.213)] 
+CPU : 32 vCPU
+Memory : 64 GB
+HDD : 600 GB * 4
+9.5_root : 977 GB
+9.5_data : 600 GB
+9.5_oracle : 250 GB
+9.5_sw : 977 GB
+Hostname : trdlanddb",Oracle Solaris 11.3 SPARC,5901-0001,AK00348763,100000190885,"/(root) : 1.5 TB
+/oracle : 250 GB
+/data : 500 GB
+/backup : 200 GB","root
+oracle","P@ssw0rd
+P@ssw0rd",DB_UAT ระบบที่ราชพัสดุส่วนขยาย,,,,,,,Oracle Database 12c Enterprise Edition Release 12.1.0.2.0,,,,,
+B1 เครื่องใหม่,1C-04,192.168.9.117,"vmWare
+Production","Vcenter (192.168.41.150)
+DisplayName : 9.117_LandApp
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 24 GB
+HDD 1 : 100 GB
+HDD 2 : 350 GB
+HostName : TRDLandApp",Windows Server 2008 R2 Ent (x64),-,-,-,"C : 100 GB
+D : 1 TB","administrator
+yit","#T12D!ZZP@ss9117$
+y1t@TRD9117$",ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (App) ,,,,,,,,,,,,
+B1 เครื่องใหม่,1C-04,192.168.9.118,"vmWare
+Production","Vcenter (192.168.41.150)
+DisplayName : 9.118_LandRep
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 16 GB
+HDD : 600 GB
+HostName : LandRep",Windows Server 2008 R2 Ent (x64) ServicePack 1,-,-,-,"C : 100 GB
+D : 500 GB","administrator
+yit
+biz
+trd","!ZZP@ss9118$
+y1t@TRD9118$
+B1Z_9118@TRD
+tl2d@ss9118$",ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (Report) ,,,,,,,,,,,,
+B2 (NTNX-Cluster2),1C-07,192.168.9.120,vmWare,"Vcenter (192.168.13.204)
+DisplayName :9.120_AdhocTRD 
+CPU : 4vCPU
+Memory : 8 GB
+HDD1 : 100 GB
+HDD2: 300 GB
+HostName : AdhocTRD",Windows Server 2012 Std (x64),-,-,-,"C : 100 GB
+D : 300 GB","administrator
+oracle
+biz
+yit","!ZZP@ss9120$
+P@ssw0rd
+Adhoc9120$
+y1t@trd9120$",Ad-Hoc,,,,"system/Adh0c9120$
+sys/Adh0c9120$",,,Oracle standard 12.1,-,,,adhocdb,"
+system/Adhoc9120
+sys/Adhoc9120
+biz/Biz9120"
+B1 Fujo,1C-04,192.168.9.124,"vmWare
+UAT","Vcenter (192.168..41.150)
+DisplayName : 9.124_LandApp-Uat_2023
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 24 GB
+HDD 1 : 100 GB
+HDD 2 : 550 GB
+HostName : TRDLandAppUat",Windows Server 2008 R2 Ent (x64),-,-,-,"C : 100 GB
+D : 650 GB","administrator
+yit","!ZZP@ss9128$
+y1t@TRD9117$",ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (App) ,,,,,,,,,,,,
+,1C-03,"192.168.9.213
+DB UAT
+ใช้ VM ที่ราช ตัวนี้อยุ่ 15/05/67
+","vmWare
+UAT","Vcenter (192.168.13.204)
+DisplayName : 9.213_LandUat_DB
+CPU : 16 vCPU (8 CPU 2 CORE)
+Memory : 32 GB
+HDD 1 : 500 GB
+HostName : 9213soldbuat",Oracle Solaris 11.3 SPARC,_,-,-,"/(root) : 547 GB
+/tmp : 44 GB
+/backup : 547 GB
+/oracle : 547 GB
+/data : 547 GB
+/backup/BK : 768 GB","root
+yit
+oracle","P@ssw0rd
+p@ssw0rd
+p@ssw0rd",DB ระบบที่ราชพัสดุส่วนขยาย,,,,,,,,,,,,
+,1C-07,192.168.9.67,"vmWare
+Test","Vcenter (192.168.13.204)
+DisplayName : 9.67_LandApp_Re
+CPU : 16 vCPU (4 CPU 4 CORE)
+Memory : 24 GB
+HDD 1 : 100 GB
+HDD 2 : 1 TB
+HostName : TRDLandApp2",Windows Server 2008 R2 Ent (x64),-,-,-,"C : 100 GB
+D : 1 TB","administrator
+yit","!ZZP@ss967$
+y1t@TRD967$",ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (App) (TEST),,,,,,,,,,,,
+,1C-07,192.168.9.68,"vmWare
+Test","Vcenter (192.168.13.204)
+DisplayName : 9.68_LandRep_Re
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 16 GB
+HDD : 600 GB
+HostName : LandRep2",Windows Server 2008 R2 Ent (x64) ServicePack 1,-,-,-,"C : 100 GB
+D : 100 GB","administrator
+yit
+biz
+trd","!ZZP@ss968$
+y1t@TRD968$
+B1Z_968@TRD
+tl2d@ss968$",ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (Report) (TEST),,,,,,,,,,,,
+,1C-07,192.168.9.69,"vmWare
+Test","Vcenter (192.168.41.150)
+DisplayName : 9.69_Land_DB_Re
+CPU : 16 vCPU (2 CPU 8 CORE)
+Memory : 32 GB
+HDD : 500 GB
+HostName : 969soldbuattest",Oracle Solaris 11,-,-,-,HDD : 500 GB,"root
+oracle","P@ssw0rd
+P@ssw0rd",DB ระบบที่ราชพัสดุส่วนขยาย (TEST),,,,,,,,,,,,
+,1D-04,"10.1.100.147
+Test Connect",vmWare,"Vcenter (10.1.115.50)
+DisplayName : 9.117_LandAPP_Test
+CPU : 16 vCPU (2 CPU 4 CORE)
+Memory : 24 GB
+HDD 1 : 200 GB
+HDD 2 : 1.5TGB
+HostName : TRDLandApp",Windows Server 2008 R2 Ent (x64),-,-,-,"C : 100 GB
+D : 1 TB","administrator
+yit","P@ssw0rd
+y1t@TRD9117$","ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (App)
+
+สำหรับ Test",,,,,,,,,,,,
+,1D-04,"101.100.148
+Test Connect",vmWare,"Vcenter (10.1.115.50)
+DisplayName : 9.118_LandRep_Test
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 16 GB
+HDD : 600 GB
+HostName : LandRep148",Windows Server 2008 R2 Ent (x64) ServicePack 1,-,-,-,"C : 100 GB
+D : 500 GB","administrator
+yit
+biz
+trd","P@ssw0rd
+y1t@TRD9118$
+B1Z_9118@TRD
+tl2d@ss9118$","ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (Report) 
+
+สำหรับ Test",,,,,,,,,,,,
+,1D-04,"101.100.149
+Test Connect",vmWare,"Vcenter (10.1.115.50)
+DisplayName : 9.5_LandDB_Test
+CPU : 32 vCPU (8 CPU 4 CORE)
+Memory : 64 GB
+HDD 1 : 500 GB
+HostName : 219LandDB",Oracle Solaris 11.3 SPARC,_,-,-,"/(root) : 488 GB
+/tmp : 28 GB
+/backup : 200 GB
+/oracle : 488 GB
+/data : 200 GB","root
+yit
+oracle","P@ssw0rd
+p@ssw0rd
+p@ssw0rd","DB ระบบที่ราชพัสดุส่วนขยาย
+
+สำหรับ Test",,,,,,,,,,,,
+,1D-04,10.1.100.217,vmWare,"Vcenter (10.1.115.50)
+DisplayName : 9.117_LandAPP_audit
+CPU : 16 vCPU (2 CPU 4 CORE)
+Memory : 24 GB
+HDD 1 : 200 GB
+HDD 2 : 1.5TGB
+HostName : LandApp_trd",Windows Server 2008 R2 Ent (x64),-,-,-,"C : 100 GB
+D : 1 TB","administrator
+yit","#T12D!ZZP@ss9117$
+y1t@TRD9117$","ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (App)
+
+สำหรับ สตง. ",,,,,,,,,,,,
+,1D-04,10.1.100.218,vmWare,"Vcenter (10.1.115.50)
+DisplayName : 9.118_LandRep_audit
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 16 GB
+HDD : 600 GB
+HostName : LandRep_trd",Windows Server 2008 R2 Ent (x64) ServicePack 1,-,-,-,"C : 100 GB
+D : 500 GB","administrator
+yit
+biz
+trd","!ZZP@ss9118$
+y1t@TRD9118$
+B1Z_9118@TRD
+tl2d@ss9118$","ระบบสารสนเทศเพื่อสนับสนุนการดำเนินงานด้านที่ราชพัสดุ ส่วนขยาย (Report) 
+
+สำหรับ สตง. ",,,,,,,,,,,,
+,1D-04,10.1.100.219,vmWare,"Vcenter (10.1.115.50)
+DisplayName : 9.5_LandDB_audit
+CPU : 32 vCPU (8 CPU 4 CORE)
+Memory : 64 GB
+HDD 1 : 500 GB
+HostName : 219LandDB",Oracle Solaris 11.3 SPARC,_,-,-,"/(root) : 488 GB
+/tmp : 28 GB
+/backup : 200 GB
+/oracle : 488 GB
+/data : 200 GB","root
+yit
+oracle","P@ssw0rd
+p@ssw0rd
+p@ssw0rd","DB ระบบที่ราชพัสดุส่วนขยาย
+
+สำหรับ สตง. ",,,,,,,,,,,,
+,"เข้าDB 9.5 & 9.213
+U: sys
+P: system",,,,,,,,,,,,,,,,,,,,,,,

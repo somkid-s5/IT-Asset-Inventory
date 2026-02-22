@@ -1,0 +1,228 @@
+,,,Internet Time Server : 10.1.100.254,,,,,,,,,,,,,,,,,,,,
+IPMI Port,,,,,,,,,,,,,,,,,,,,,,,
+Rack, IP Address,Brand/Model,Specification,Operating System,Sticker,Serial,augment,Drive Capacity,Username,Password,System,Path URL,,,,,,,,,,,
+"1C-09
+DC","10.1.115.21 (URL)
+10.1.120.121 (IPMI)",Flex Appliance 5260 node,"IPMI NetBackup (trddc-flex01)
+Flex Appliance 5260 node
+SATA SSD 59 GBx1
+HDD Master (OS) : 9308 GB
+Flex Appliance 5260 storage shelf #1 : 67063 GB
+Flex Appliance 5260 storage shelf #2 : 67063 GB
+Flex Appliance 5260 storage shelf #3 : 67063 GB
+Flex Appliance 5260 storage shelf #4 : 67063 GB
+Flex Appliance 5260 storage shelf #5 : 67063 GB
+Flex Appliance 5260 storage shelf #6 : 67063 GB
+ 
+",Red Hat Enterprise 8,6803-0002,VTAS0032632,,,serveradmin,MyTRD123P@ss2025,IPMI NetBackup (trddc-flex01),"IPMI : https://10.1.120.121/
+
+web : https://10.1.115.21/#/login
+",,,,,,,,,,,
+C6-U17-U18,"10.1.115.41 (URL)
+10.1.120.124 (IPMI)",Flex Appliance 5260 node,"IPMI NetBackup (trddc-flex01)
+Flex Appliance 5260 node
+SATA SSD 59 GBx1
+HDD Master (OS) : 9308 GB
+Flex Appliance 5260 storage shelf #1 : 67063 GB
+Flex Appliance 5260 storage shelf #2 : 67063 GB
+Flex Appliance 5260 storage shelf #3 : 67063 GB
+Flex Appliance 5260 storage shelf #4 : 67063 GB
+Flex Appliance 5260 storage shelf #5 : 67063 GB
+Flex Appliance 5260 storage shelf #6 : 67063 GB
+ 
+",Red Hat Enterprise 8,6803-0001,VTAS0032632,,,serveradmin,MyTRD123P@ss2025,IPMI NetBackup (trddc-flex01),"IPMI : https://10.1.120.124/
+
+web : https://10.1.115.41/#/login
+",,,,,,,,,,,
+"1C-10
+GIS",192.168.9.40,Veritas NetBackup 5240,"IPMI NetBackup (nbu-master-gis)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12
+HDD Shelf 2 : 6 TB * 12
+HDD Shelf 3 : 6 TB * 12",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6008-6005
+6008-6006
+6008-6007
+6008-6008",VTAS0001962,,,sysadmin,P@ssw0rd,IPMI NetBackup (nbu-master-gis),https://192.168.9.40/index.html,,,,,,,,,,,
+"1C-10
+DC",192.168.9.188,Veritas NetBackup 5240,"IPMI NetBackup (nbu-master-dc)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6008-6003
+6008-6004",VTAS0001961,,,sysadmin,P@ssw0rd,IPMI NetBackup (nbu-master-dc),https://192.168.9.188/page/login.html,,,,,,,,,,,
+"C6-U17-U18
+DR",192.168.60.199,Veritas NetBackup 5240,"IPMI NetBackup (nbu-master-dr)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12
+HDD Shelf 2 : 6 TB * 12",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6008-6001
+6008-6002",VTAS0001919,100000193176,-,sysadmin,P@ssw0rd,IPMI NetBackup (nbu-master-dr),https://192.168.60.199/page/login.html,,,,,,,,,,,
+"1C-10
+GIS2",192.168.43.135,Veritas NetBackup 5240,"Web Management NetBackup (nbu-master-gis2)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12
+HDD Shelf 2 : 6 TB * 12",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6304-0003
+6304-0004
+6304-0005",VTAS0016385,-,-,sysadmin,P@ssw0rd,IPMI NetBackup (nbu-master-gis2),https://192.168.43.135,,,,,,,,,,,
+Access Storage,,,,,,,,,,,,,,,,,,,,,,,
+"1C-10
+Access",192.168.41.140,Veritas NetBackup Access 3340 Appliance,,,,,,-,admin,P@ssw0rd,NetBackup Access (nbu-access-gis2-n1-2),https://192.168.41.140:14161/,,,,,,,,,,,
+,192.168.41.141,Veritas NetBackup Access 3340 Appliance,,,,,,-,admin,P@ssw0rd,NetBackup Access (nbu-access-gis2-n1),ssh,,,,,,,,,,,
+,192.168.41.142,Veritas NetBackup Access 3340 Appliance,,,,,,-,admin,P@ssw0rd,NetBackup Access (nbu-access-gis2-n2),ssh,,,,,,,,,,,
+"1C-09
+(ACCESS)","IPMI : 
+10.1.120.122
+10.1.120.123
+",Access Appliance 3360,"IPMI ACCESS (trddc-access)
+Access Appliance 3360 node #1
+Access Appliance 3360 node #2",,6803-0003,,,,serveradmin,MyTRD123P@ss2025,, ,,,,,,,,,,,
+Dashboard UI,,,,,,,,,,,,,,,,,,,,,,,
+Rack, IP Address,Brand/Model,Specification,Operating System,Sticker,Serial,augment,Drive Capacity,Username,Password,System,Path URL,,,,,,,,,,,
+1C-09,"10.1.115.22 (DC)
+trddc-master01.treasury.go.th",Flex Appliance 5260 node,"IPMI NetBackup (trddc-flex01)
+Flex Appliance 5260 node
+SATA SSD 59 GBx1
+HDD Master (OS) : 9308 GB
+Flex Appliance 5260 storage shelf #1 : 67063 GB
+Flex Appliance 5260 storage shelf #2 : 67063 GB
+Flex Appliance 5260 storage shelf #3 : 67063 GB
+Flex Appliance 5260 storage shelf #4 : 67063 GB
+Flex Appliance 5260 storage shelf #5 : 67063 GB
+Flex Appliance 5260 storage shelf #6 : 67063 GB
+ 
+",Red Hat Enterprise 8,6803-0002,VTAS0032632,,,serveradmin,MyTRD123P@ss2025,,https://trddc-master01/webui/login,,,,,,,,,,,
+1C-09,"10.1.115.23 (DC)
+trddc-media01.treasury.go.th",Flex Appliance 5260 node,"IPMI NetBackup (trddc-flex01)
+Flex Appliance 5260 node
+SATA SSD 59 GBx1
+HDD Master (OS) : 9308 GB
+Flex Appliance 5260 storage shelf #1 : 67063 GB
+Flex Appliance 5260 storage shelf #2 : 67063 GB
+Flex Appliance 5260 storage shelf #3 : 67063 GB
+Flex Appliance 5260 storage shelf #4 : 67063 GB
+Flex Appliance 5260 storage shelf #5 : 67063 GB
+Flex Appliance 5260 storage shelf #6 : 67063 GB
+ 
+",Red Hat Enterprise 8,6803-0002,VTAS0032632,,,serveradmin,MyTRD123P@ss2025,,,,,,,,,,,,,
+1C-09,"10.1.115.24 (DC)
+trddc-worm01.treasury.go.th",Flex Appliance 5260 node,"IPMI NetBackup (trddc-flex01)
+Flex Appliance 5260 node
+SATA SSD 59 GBx1
+HDD Master (OS) : 9308 GB
+Flex Appliance 5260 storage shelf #1 : 67063 GB
+Flex Appliance 5260 storage shelf #2 : 67063 GB
+Flex Appliance 5260 storage shelf #3 : 67063 GB
+Flex Appliance 5260 storage shelf #4 : 67063 GB
+Flex Appliance 5260 storage shelf #5 : 67063 GB
+Flex Appliance 5260 storage shelf #6 : 67063 GB
+ 
+",Red Hat Enterprise 8,6803-0002,VTAS0032632,,,serveradmin,MyTRD123P@ss2025,,,,,,,,,,,,,
+C6-U17-U18+A24:KA24:M24,"10.1.115.42 (DR)
+trddrc-master01.treasury.go.th",Flex Appliance 5260 node,"IPMI NetBackup (trddc-flex01)
+Flex Appliance 5260 node
+SATA SSD 59 GBx1
+HDD Master (OS) : 9308 GB
+Flex Appliance 5260 storage shelf #1 : 67063 GB
+Flex Appliance 5260 storage shelf #2 : 67063 GB
+Flex Appliance 5260 storage shelf #3 : 67063 GB
+Flex Appliance 5260 storage shelf #4 : 67063 GB
+Flex Appliance 5260 storage shelf #5 : 67063 GB
+Flex Appliance 5260 storage shelf #6 : 67063 GB
+ 
+",Red Hat Enterprise 8,6803-0001,VTAS0032632,,,serveradmin,MyTRD123P@ss2025,,,,,,,,,,,,,
+C6-U17-U18+A24:KA24:M24,"10.1.115.43 (DR)
+trddrc-media01.treasury.go.th",Flex Appliance 5260 node,"IPMI NetBackup (trddc-flex01)
+Flex Appliance 5260 node
+SATA SSD 59 GBx1
+HDD Master (OS) : 9308 GB
+Flex Appliance 5260 storage shelf #1 : 67063 GB
+Flex Appliance 5260 storage shelf #2 : 67063 GB
+Flex Appliance 5260 storage shelf #3 : 67063 GB
+Flex Appliance 5260 storage shelf #4 : 67063 GB
+Flex Appliance 5260 storage shelf #5 : 67063 GB
+Flex Appliance 5260 storage shelf #6 : 67063 GB
+ 
+",Red Hat Enterprise 8,6803-0001,VTAS0032632,,,serveradmin,MyTRD123P@ss2025,,,,,,,,,,,,,
+C6-U17-U18+A24:KA24:M24,"10.1.115.44 (DR)
+trddrc-worm01.treasury.go.th",Flex Appliance 5260 node,"IPMI NetBackup (trddc-flex01)
+Flex Appliance 5260 node
+SATA SSD 59 GBx1
+HDD Master (OS) : 9308 GB
+Flex Appliance 5260 storage shelf #1 : 67063 GB
+Flex Appliance 5260 storage shelf #2 : 67063 GB
+Flex Appliance 5260 storage shelf #3 : 67063 GB
+Flex Appliance 5260 storage shelf #4 : 67063 GB
+Flex Appliance 5260 storage shelf #5 : 67063 GB
+Flex Appliance 5260 storage shelf #6 : 67063 GB
+ 
+",Red Hat Enterprise 8,6803-0001,VTAS0032632,,,serveradmin,MyTRD123P@ss2025,,,,,,,,,,,,,
+1C-07,192.168.9.154,vmWare,"Vcenter (192.168.13.204)
+DisplayName : 9.154_OPSCenter_NBU
+CPU : 8 vCPU (2 CPU 4 CORE)
+Memory : 8 GB
+HDD 1 : 60 GB
+HostName : NBUOpscenter",Windows Server 2016 Std (x64),-,-,-,C: 150 GB,"administrator
+admin","!ZZP@ss9154$
+P@ssw0rd",OpsCenter 9.1.0.1,https://192.168.9.154/opscenter/,,,,,,,,,,,
+1C-10,192.168.9.155,Veritas NetBackup 5240,"Web Management NetBackup (nbu-master-dc)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12
+HDD Shelf 2 : 6 TB * 12",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6008-6003
+6008-6004
+6304-0002",VTAS0001961,100000193177,-,"admin
+CLI user: nbuuser
+nbuadmin","Veritas123!
+We!come10
+Veritas123!",Web Management NetBackup (nbu-master-dc),"https://192.168.9.155/
+https://nbu-master-dc/webui/dashboard
+",,,,,,,,,,,
+1C-10,192.168.9.157,Veritas NetBackup 5240,"Web Management NetBackup (nbu-master-gis)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12
+HDD Shelf 2 : 6 TB * 12
+",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6008-6005
+6008-6006
+6008-6007
+6008-6008",VTAS0001962,100000193178,-,"admin
+nbuadmin","P@ssw0rd
+Veritas123!",Web Management NetBackup (nbu-master-gis),"https://192.168.9.157/
+https://nbu-master-gis/webui/dashboard",,,,,,,,,,,
+C6-U17-U18,192.168.60.199,Veritas NetBackup 5240,"IPMI NetBackup (nbu-master-dr)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12
+HDD Shelf 2 : 6 TB * 12",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6008-6001
+6008-6002",VTAS0001919,100000193176,-,sysadmin,P@ssw0rd,IPMI NetBackup (nbu-master-dr),https://192.168.60.199/page/login.html,,,,,,,,,,,
+C6-U17-U18,192.168.60.200,Veritas NetBackup 5240,"Web Management NetBackup (nbu-master-dr)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12
+HDD Shelf 2 : 6 TB * 12",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6008-6001
+6008-6002
+6304-0001",VTAS0001919,100000193176,-,"admin
+nbuadmin
+root","Veritas123!
+Veritas123!
+Veritas12345$%",Web Management NetBackup (nbu-master-dr),"https://192.168.60.200/
+https://nbu-master-dr/webui/login",,,,,,,,,,,
+1C-10,192.168.41.134,Veritas NetBackup 5240,"Web Management NetBackup (nbu-master-gis2)
+HDD Master : 1 TB * 12
+HDD Shelf 1 : 6 TB * 12
+HDD Shelf 2 : 6 TB * 12",Red Hat Enterprise Linux Server release 6.8 (Santiago),"6304-0003
+6304-0004
+6304-0005",VTAS0016385,-,-,"admin
+nbuadmin
+nbasecadmin","P@ssw0rd
+Veritas123!
+Veritas123!",Web Management NetBackup (nbu-master-gis2),,,,,,,,,,,,
+Web ui ของ NBU (Dashboard&Self-service recovery),,,,,,,,,,,,,,,,,,,,,,,
+User : webui,,,,,,,,,,,,,,,,,,,,,,,
+P/W : Veritas12345$%,,,,,,,,,,,,,,,,,,,,,,,
+1.DC URL : https://nbu-master-dc/webui/login,,,,,,,,,,,,,,,,,,,,,,,
+2.DR URL : https://nbu-master-dr/webui/login,,,,,,,,,,,,,,,,,,,,,,,
+3.GIS URL : https://nbu-master-gis/webui/login,,,,,,,,,,,,,,,,,,,,,,,
+4.GIS2 URL : https://nbu-master-gis2/webui/login,,,,,,,,,,,,,,,,,,,,,,,
+Media ID : @aaaab,,,,,,,,,,,,,,,,,,,,,,,
+TRDDC ,,,,,,,,,,,,,,,,,,,,,,,
+https://trddc-master01/webui/login,,,,,,,,,,,,,,,,,,,,,,,
+U: serveradmin,,,,,,,,,,,,,,,,,,,,,,,
+P: MyTRD123P@ss2025,,,,,,,,,,,,,,,,,,,,,,,
+TRDDRC ,,,,,,,,,,,,,,,,,,,,,,,
+https://trddrc-master01/webui/login,,,,,,,,,,,,,,,,,,,,,,,
+U: serveradmin,,,,,,,,,,,,,,,,,,,,,,,
+P: MyTRD123P@ss2025,,,,,,,,,,,,,,,,,,,,,,,

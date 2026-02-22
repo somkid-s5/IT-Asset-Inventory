@@ -1,0 +1,46 @@
+Rack, IP Address,Brand/Model,Specification,Operating System,Sticker,Serial,augment,Drive Capacity,Username,Password,System,Path URL,Application Type,Application Directory,U & P to Connect Database,Report Type,Report Directory,Database Type,PHPMYADMIN_URL,Database Directory,ORACLE_HOME,Database Name/SID,U & P Database
+1C-07,192.168.60.47,vmWare,"Vcenter (192.168.13.204)
+DisplyName : 60.47_ERC-TREASURY_UAT
+CPU 8 vCPU (2CPU 4 CORE)
+Memory : 16 GB
+HDD1 : 150 GB
+HDD2: 300 GB 
+HostName : ERC-TREASURY",Windows Server 2019 Std (x64),-,-,-,"C : 150 GB
+D : 300 GB","administrator
+erc","!ZZP@ss6047$
+P@33w0rd",โครงการจ่ายแลกเหรียญกษาปณ์ (UAT),,,,,,,,,,,,
+1C-07,192.168.60.51,vmWare,"Vcenter (192.168.41.150)
+DisplyName : 60.51_TRD-Auction_APP1
+CPU 4 vCPU (2CPU 2 CORE)
+Memory : 16 GB
+HDD 1 : 300 GB
+HostName : TRD-Auction_App1_New",Windows Server 2019 Std (x64),,,,C:300 GB,"administrator
+admin","!ZZP@ss6051$
+Trd@65_app1",TD ระบบประมูล APP,,,,,,,,,,,,
+1C-07,192.168.60.52,vmWare,"Vcenter (192.168.41.150)
+DisplyName : 60.51_TRD-Auction_APP2
+CPU 4 vCPU (2CPU 2 CORE)
+Memory : 16 GB
+HDD 1 : 300 GB
+HostName : TRD-Auction_App2_New",Windows Server 2019 Std (x64),,,,C:300 GB,"administrator
+admin","!ZZP@ss6052$
+Trd@65_app2",TD ระบบประมูล APP,,,,,,,,,,,,
+1C-06 ,192.168.13.51,vmWare,"Vcenter (192.168.13.98)
+DisplyName : 13.51_TRD-Aution_DB
+CPU 4 vCPU (1 CPU 4 CORE)
+Memory : 32 GB
+HDD1 : 200 GB
+HDD2: 500 GB
+HostName :TRD-Aution_DB",Windows Server 2019 Std (x64),-,-,-,,"administrator
+admin","!ZZP@ss1351$
+Trd@65DB1",Data bระบบประมูลเรียญพระพันปี,,,,,,,SQL Server 2019,,,,,
+1C-06 ,192.168.13.52,vmWare,"Vcenter (192.168.13.98)
+DisplyName : 13.52_TRD-Auction_MongoDB
+CPU 4 vCPU (1 CPU 4 CORE)
+Memory : 32 GB
+HDD1 : 200 GB
+HDD2: 500 GB
+HostName :TRD-Auction_MongoDB",Windows Server 2019 Std (x64),-,-,-,,"administrator
+admin","!ZZP@ss1352$
+Trd@65DB2",TD ระบบประมูล DB2,,,,,,,Mango,,,,,
+,มีการขอข้อมูล Vcenter13.204 เพื่อทางพี่เอ(บริษัทอื่น)จะทำการย้ายไป server ใหม่ (Vcenterใหม่),,,,,,,,,,,,,,,,,,,,,,
