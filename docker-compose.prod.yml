@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: infrapilot_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-infrapilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securepassword123}
+      POSTGRES_DB: ${POSTGRES_DB:-infrapilot_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - infrapilot_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: infrapilot_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@infrapilot.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+    ports:
+      - "5050:80"
+    networks:
+      - infrapilot_network
+    depends_on:
+      - postgres
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: infrapilot_backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-infrapilot}:${POSTGRES_PASSWORD:-securepassword123}@postgres:5432/${POSTGRES_DB:-infrapilot_db}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-me-in-prod}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-12345678123456781234567812345678}
+      - PORT=3001
+    networks:
+      - infrapilot_network
+    depends_on:
+      - postgres
+    # Note: In production you'd use an init container or script to run prisma dev/deploy
+    # but for this MVP docker-compose we'll assume the db is updated or we update it manually.
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: infrapilot_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001/api # Access from browser
+    networks:
+      - infrapilot_network
+    depends_on:
+      - backend
+
+networks:
+  infrapilot_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

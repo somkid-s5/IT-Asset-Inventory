@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum AssetType {
+  SERVER
+  VM
+  APP
+  DB
+  NETWORK
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  DECOMMISSIONED
+}
+
+enum AuditAction {
+  VIEW_PASSWORD
+  COPY_PASSWORD
+  LOGIN
+  CREATE_ASSET
+  UPDATE_ASSET
+  DELETE_ASSET
+  CREATE_CREDENTIAL
+  UPDATE_CREDENTIAL
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(VIEWER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assets    Asset[]
+  auditLogs AuditLog[]
+}
+
+model IPAllocation {
+  id      String  @id @default(uuid())
+  address String  // e.g. 192.168.1.50
+  type    String? // e.g. Management, VIP, Backup, Data
+  assetId String
+  asset   Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([address, assetId])
+}
+
+model Asset {
+  id         String      @id @default(uuid())
+  name       String
+  type       AssetType
+  osVersion  String?
+  status     AssetStatus @default(ACTIVE)
+
+  // Financial & Info
+  owner              String?
+  department         String?
+  purchaseDate       DateTime?
+  warrantyExpiration DateTime?
+  vendor             String?
+  dependencies       String?
+
+  // Hierarchical Relationship (Parent-Child)
+  parentId String?
+  parent   Asset?  @relation("AssetHierarchy", fields: [parentId], references: [id])
+  children Asset[] @relation("AssetHierarchy")
+
+  // IP Management
+  ipAllocations IPAllocation[]
+
+  createdByUserId String
+  createdByUser   User   @relation(fields: [createdByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patchInfo   PatchInfo?
+  credentials Credential[]
+}
+
+model PatchInfo {
+  id      String @id @default(uuid())
+  assetId String @unique
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  currentVersion  String?
+  latestVersion   String?
+  eolDate         DateTime?
+  lastPatchedDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Credential {
+  id      String @id @default(uuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  username          String
+  encryptedPassword String
+
+  lastChangedDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  action    AuditAction
+  targetId  String? // ID of the asset or credential interacted with
+  ipAddress String?
+  details   String? // Optional JSON or text details
+
+  timestamp DateTime @default(now())
+}

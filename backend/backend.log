@@ -1,0 +1,38 @@
+nohup: ignoring input
+
+> backend@0.0.1 start:dev
+> nest start --watch
+
+[2J[3J[H[[90m11:37:03 PM[0m] Starting compilation in watch mode...
+
+[[90m11:37:08 PM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +21ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAssetsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCredentialsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDashboardModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAppController {/}:[39m[38;5;3m +5ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/, GET} route[39m[38;5;3m +4ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAssetsController {/api/assets}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCredentialsController {/api/credentials}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/credentials, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/credentials/asset/:assetId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/credentials/:id/reveal, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/credentials/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/credentials/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/api/dashboard}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/dashboard/overview, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 501581  - [39m02/21/2026, 11:37:09 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +62ms[39m
