@@ -8,6 +8,7 @@ import { Plus, Search, Server, Database, AppWindow, Monitor, Pencil, Trash2, Fil
 import { toast } from 'sonner';
 import React from 'react';
 import { RiskBadge, StatusDot } from '@/components/StatusBadges';
+import { AssetFormDialog } from '@/components/AssetFormDialog';
 
 interface Asset {
     id: string;
@@ -15,7 +16,13 @@ interface Asset {
     type: string;
     ipAllocations?: { address: string, type?: string }[];
     osVersion: string;
-    status: string;
+    status: 'ACTIVE' | 'OFFLINE' | 'DECOMMISSIONED' | 'MAINTENANCE';
+    environment?: string; // Phase 10 addition
+    location?: string;    // Phase 10 addition
+    customMetadata?: Record<string, any>; // Phase 10 flexible metadata
+    patchInfo?: {
+        eolDate?: string;
+    };
     department: string;
     owner?: string;
     tags?: string[];
@@ -44,6 +51,8 @@ export default function AssetsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('All');
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingAsset, setEditingAsset] = useState<Asset | undefined>();
 
     const toggleRow = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
@@ -100,7 +109,9 @@ export default function AssetsPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">{assets.length} assets tracked</p>
                 </div>
                 {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
-                    <button className="h-9 px-3 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shadow-sm">
+                    <button
+                        onClick={() => { setEditingAsset(undefined); setIsDialogOpen(true); }}
+                        className="h-9 px-3 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shadow-sm">
                         <Plus className="h-4 w-4" />
                         Add Asset
                     </button>
@@ -216,7 +227,9 @@ export default function AssetsPage() {
                                                 </td>
                                                 <td>
                                                     <div className="flex items-center gap-1">
-                                                        <button onClick={(e) => { e.stopPropagation(); }} className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setIsDialogOpen(true); }}
+                                                            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
                                                             <Pencil className="h-3.5 w-3.5" />
                                                         </button>
                                                         <button onClick={(e) => { e.stopPropagation(); }} className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
@@ -238,6 +251,14 @@ export default function AssetsPage() {
                     </tbody>
                 </table>
             </div>
+
+            <AssetFormDialog
+                open={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                assetToEdit={editingAsset}
+                onSuccess={fetchAssets}
+                availableParents={assets.filter(a => a.type === 'SERVER' || a.type === 'VM')}
+            />
         </div>
     );
 }

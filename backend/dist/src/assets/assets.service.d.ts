@@ -7,18 +7,19 @@ export declare class AssetsService {
     create(createAssetDto: CreateAssetDto, userId: string): Promise<{
         ipAllocations: {
             id: string;
+            type: string | null;
             createdAt: Date;
             updatedAt: Date;
-            type: string | null;
             address: string;
             assetId: string;
         }[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         type: import(".prisma/client").$Enums.AssetType;
+        environment: string | null;
+        location: string | null;
+        customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         osVersion: string | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -27,16 +28,19 @@ export declare class AssetsService {
         warrantyExpiration: Date | null;
         vendor: string | null;
         dependencies: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         parentId: string | null;
         createdByUserId: string;
     }>;
     findAll(): Promise<({
         parent: {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             type: import(".prisma/client").$Enums.AssetType;
+            environment: string | null;
+            location: string | null;
+            customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             osVersion: string | null;
             status: import(".prisma/client").$Enums.AssetStatus;
             owner: string | null;
@@ -45,15 +49,18 @@ export declare class AssetsService {
             warrantyExpiration: Date | null;
             vendor: string | null;
             dependencies: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             parentId: string | null;
             createdByUserId: string;
         } | null;
         children: {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             type: import(".prisma/client").$Enums.AssetType;
+            environment: string | null;
+            location: string | null;
+            customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             osVersion: string | null;
             status: import(".prisma/client").$Enums.AssetStatus;
             owner: string | null;
@@ -62,14 +69,16 @@ export declare class AssetsService {
             warrantyExpiration: Date | null;
             vendor: string | null;
             dependencies: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             parentId: string | null;
             createdByUserId: string;
         }[];
         ipAllocations: {
             id: string;
+            type: string | null;
             createdAt: Date;
             updatedAt: Date;
-            type: string | null;
             address: string;
             assetId: string;
         }[];
@@ -85,10 +94,11 @@ export declare class AssetsService {
         } | null;
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         type: import(".prisma/client").$Enums.AssetType;
+        environment: string | null;
+        location: string | null;
+        customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         osVersion: string | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -97,16 +107,19 @@ export declare class AssetsService {
         warrantyExpiration: Date | null;
         vendor: string | null;
         dependencies: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         parentId: string | null;
         createdByUserId: string;
     })[]>;
     findOne(id: string): Promise<{
         parent: {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             type: import(".prisma/client").$Enums.AssetType;
+            environment: string | null;
+            location: string | null;
+            customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             osVersion: string | null;
             status: import(".prisma/client").$Enums.AssetStatus;
             owner: string | null;
@@ -115,15 +128,18 @@ export declare class AssetsService {
             warrantyExpiration: Date | null;
             vendor: string | null;
             dependencies: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             parentId: string | null;
             createdByUserId: string;
         } | null;
         children: {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             type: import(".prisma/client").$Enums.AssetType;
+            environment: string | null;
+            location: string | null;
+            customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             osVersion: string | null;
             status: import(".prisma/client").$Enums.AssetStatus;
             owner: string | null;
@@ -132,14 +148,16 @@ export declare class AssetsService {
             warrantyExpiration: Date | null;
             vendor: string | null;
             dependencies: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             parentId: string | null;
             createdByUserId: string;
         }[];
         ipAllocations: {
             id: string;
+            type: string | null;
             createdAt: Date;
             updatedAt: Date;
-            type: string | null;
             address: string;
             assetId: string;
         }[];
@@ -160,10 +178,11 @@ export declare class AssetsService {
         }[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         type: import(".prisma/client").$Enums.AssetType;
+        environment: string | null;
+        location: string | null;
+        customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         osVersion: string | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -172,24 +191,27 @@ export declare class AssetsService {
         warrantyExpiration: Date | null;
         vendor: string | null;
         dependencies: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         parentId: string | null;
         createdByUserId: string;
     }>;
     update(id: string, updateAssetDto: UpdateAssetDto): Promise<{
         ipAllocations: {
             id: string;
+            type: string | null;
             createdAt: Date;
             updatedAt: Date;
-            type: string | null;
             address: string;
             assetId: string;
         }[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         type: import(".prisma/client").$Enums.AssetType;
+        environment: string | null;
+        location: string | null;
+        customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         osVersion: string | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -198,15 +220,18 @@ export declare class AssetsService {
         warrantyExpiration: Date | null;
         vendor: string | null;
         dependencies: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         parentId: string | null;
         createdByUserId: string;
     }>;
     remove(id: string): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         type: import(".prisma/client").$Enums.AssetType;
+        environment: string | null;
+        location: string | null;
+        customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         osVersion: string | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -215,6 +240,8 @@ export declare class AssetsService {
         warrantyExpiration: Date | null;
         vendor: string | null;
         dependencies: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         parentId: string | null;
         createdByUserId: string;
     }>;

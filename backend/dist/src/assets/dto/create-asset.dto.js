@@ -16,6 +16,9 @@ class CreateAssetDto {
     name;
     type;
     ipAddress;
+    environment;
+    location;
+    customMetadata;
     parentId;
     osVersion;
     status;
@@ -41,6 +44,20 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateAssetDto.prototype, "ipAddress", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "environment", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "location", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], CreateAssetDto.prototype, "customMetadata", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

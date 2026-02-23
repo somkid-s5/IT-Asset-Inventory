@@ -10,40 +10,40 @@ export declare class CredentialsService {
     private decrypt;
     create(createCredentialDto: CreateCredentialDto): Promise<{
         id: string;
+        assetId: string;
         createdAt: Date;
         updatedAt: Date;
         username: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
-        assetId: string;
     }>;
     findByAsset(assetId: string): Promise<{
         id: string;
+        assetId: string;
         createdAt: Date;
         updatedAt: Date;
         username: string;
         lastChangedDate: Date | null;
-        assetId: string;
     }[]>;
     revealPassword(id: string, userId: string): Promise<{
         password: string;
     }>;
     update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{
         id: string;
+        assetId: string;
         createdAt: Date;
         updatedAt: Date;
         username: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
-        assetId: string;
     }>;
     remove(id: string): Promise<{
         id: string;
+        assetId: string;
         createdAt: Date;
         updatedAt: Date;
         username: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
-        assetId: string;
     }>;
 }
