@@ -3,6 +3,9 @@ export declare class CreateAssetDto {
     name: string;
     type: AssetType;
     ipAddress?: string;
+    environment?: string;
+    location?: string;
+    customMetadata?: any;
     parentId?: string;
     osVersion?: string;
     status?: AssetStatus;

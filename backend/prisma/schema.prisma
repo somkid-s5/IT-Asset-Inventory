@@ -68,11 +68,14 @@ model IPAllocation {
 }
 
 model Asset {
-  id         String      @id @default(uuid())
-  name       String
-  type       AssetType
-  osVersion  String?
-  status     AssetStatus @default(ACTIVE)
+  id             String      @id @default(uuid())
+  name           String
+  type           AssetType
+  environment    String?     // e.g., 'PROD', 'UAT', 'DEV'
+  location       String?     // e.g., 'DC-1 / Rack 12'
+  customMetadata Json?       // Flexible JSON structure for 90+ unstructured hardware specs without bloating DB
+  osVersion      String?
+  status         AssetStatus @default(ACTIVE)
 
   // Financial & Info
   owner              String?

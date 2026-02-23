@@ -37,6 +37,9 @@ interface Asset {
     osVersion: string;
     status: string;
     department: string;
+    environment?: string; // Phase 10 addition
+    location?: string;    // Phase 10 addition
+    customMetadata?: Record<string, any>; // Phase 10 flexible metadata
     owner?: string;
     tags?: string[];
     riskScore?: number;
@@ -207,6 +210,12 @@ export default function AssetDetailsPage() {
                                 <span>{asset.osVersion}</span>
                             </div>
                         )}
+                        {asset.location && (
+                            <div className="flex justify-between items-start">
+                                <span className="text-muted-foreground whitespace-nowrap mr-4">Location</span>
+                                <span className="text-right">{asset.location}</span>
+                            </div>
+                        )}
                         {asset.parent && (
                             <div className="flex justify-between items-center group cursor-pointer" onClick={() => router.push(`/dashboard/assets/${asset.parent!.id}`)}>
                                 <span className="text-muted-foreground">Hosted On</span>
@@ -240,6 +249,15 @@ export default function AssetDetailsPage() {
                 <div className="stat-card">
                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
                     <div className="flex flex-wrap gap-1.5">
+                        {asset.environment && (
+                            <span className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${asset.environment === 'PROD' ? 'bg-destructive/10 text-destructive border border-destructive/20' :
+                                asset.environment === 'UAT' ? 'bg-warning/10 text-warning border border-warning/20' :
+                                    'bg-primary/10 text-primary border border-primary/20'
+                                }`}>
+                                <Server className="h-2.5 w-2.5" />
+                                {asset.environment}
+                            </span>
+                        )}
                         {asset.tags?.map((tag) => (
                             <span key={tag} className="flex items-center gap-1 rounded bg-accent px-2 py-1 text-xs text-accent-foreground">
                                 <Tag className="h-2.5 w-2.5" />
@@ -267,6 +285,30 @@ export default function AssetDetailsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Extended Metadata Section */}
+            {asset.customMetadata && Object.keys(asset.customMetadata).length > 0 && (
+                <div className="stat-card">
+                    <div className="mb-4 flex items-center gap-2">
+                        <Database className="h-4 w-4 text-primary" />
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            Extended Metadata (Specs & Configuration)
+                        </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                        {Object.entries(asset.customMetadata).map(([key, value]) => (
+                            <div key={key} className="flex flex-col gap-1 p-2 rounded-md bg-accent/50 border border-border/50">
+                                <span className="text-[10px] font-mono uppercase text-muted-foreground">
+                                    {key.replace(/_/g, ' ')}
+                                </span>
+                                <span className="text-sm font-medium">
+                                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Credentials Section */}
             <div className="stat-card">

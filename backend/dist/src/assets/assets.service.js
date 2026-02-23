@@ -20,17 +20,21 @@ let AssetsService = class AssetsService {
     }
     async create(createAssetDto, userId) {
         const { ipAddress, ...assetData } = createAssetDto;
+        const createData = {
+            ...assetData,
+            status: createAssetDto.status || client_1.AssetStatus.ACTIVE,
+            createdByUserId: userId,
+            ...(ipAddress ? {
+                ipAllocations: {
+                    create: [{ address: ipAddress }]
+                }
+            } : {})
+        };
+        if (createAssetDto.customMetadata !== undefined) {
+            createData.customMetadata = createAssetDto.customMetadata;
+        }
         return this.prisma.asset.create({
-            data: {
-                ...assetData,
-                status: createAssetDto.status || client_1.AssetStatus.ACTIVE,
-                createdByUserId: userId,
-                ...(ipAddress ? {
-                    ipAllocations: {
-                        create: [{ address: ipAddress }]
-                    }
-                } : {})
-            },
+            data: createData,
             include: {
                 ipAllocations: true
             }
@@ -68,10 +72,14 @@ let AssetsService = class AssetsService {
     async update(id, updateAssetDto) {
         await this.findOne(id);
         const { ipAddress, ...assetData } = updateAssetDto;
+        const updateData = { ...assetData };
+        if (updateAssetDto.customMetadata !== undefined) {
+            updateData.customMetadata = updateAssetDto.customMetadata;
+        }
         return this.prisma.asset.update({
             where: { id },
             data: {
-                ...assetData,
+                ...updateData,
                 ...(ipAddress ? {
                     ipAllocations: {
                         create: [{ address: ipAddress }]

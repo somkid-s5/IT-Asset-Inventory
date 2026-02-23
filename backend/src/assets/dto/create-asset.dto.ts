@@ -15,6 +15,17 @@ export class CreateAssetDto {
 
     @IsOptional()
     @IsString()
+    environment?: string;
+
+    @IsOptional()
+    @IsString()
+    location?: string;
+
+    @IsOptional()
+    customMetadata?: any;
+
+    @IsOptional()
+    @IsString()
     parentId?: string;
 
     @IsOptional()
