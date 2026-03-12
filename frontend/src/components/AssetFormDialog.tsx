@@ -22,6 +22,7 @@ export function AssetFormDialog({ open, onOpenChange, assetToEdit, onSuccess, av
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
+        assetId: '',
         type: 'SERVER',
         status: 'ACTIVE',
         osVersion: '',
@@ -39,6 +40,7 @@ export function AssetFormDialog({ open, onOpenChange, assetToEdit, onSuccess, av
         if (assetToEdit) {
             setFormData({
                 name: assetToEdit.name || '',
+                assetId: assetToEdit.assetId || '',
                 type: assetToEdit.type || 'SERVER',
                 status: assetToEdit.status || 'ACTIVE',
                 osVersion: assetToEdit.osVersion || '',
@@ -63,6 +65,7 @@ export function AssetFormDialog({ open, onOpenChange, assetToEdit, onSuccess, av
         } else {
             setFormData({
                 name: '',
+                assetId: '',
                 type: 'SERVER',
                 status: 'ACTIVE',
                 osVersion: '',
@@ -146,6 +149,14 @@ export function AssetFormDialog({ open, onOpenChange, assetToEdit, onSuccess, av
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 placeholder="e.g. SRV-DB-01"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Asset ID</Label>
+                            <Input
+                                value={formData.assetId}
+                                onChange={(e) => setFormData({ ...formData, assetId: e.target.value })}
+                                placeholder="e.g. 17SM6C140321dm"
                             />
                         </div>
                         <div className="space-y-2">

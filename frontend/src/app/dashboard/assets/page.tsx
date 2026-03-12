@@ -12,6 +12,7 @@ import { AssetFormDialog } from '@/components/AssetFormDialog';
 
 interface Asset {
     id: string;
+    assetId?: string;
     name: string;
     type: string;
     ipAllocations?: { address: string, type?: string }[];
@@ -152,6 +153,7 @@ export default function AssetsPage() {
                 <table className="data-table">
                     <thead>
                         <tr className="bg-muted/30">
+                            <th>Asset ID</th>
                             <th>Asset</th>
                             <th>Type</th>
                             <th>IP Address</th>
@@ -208,6 +210,7 @@ export default function AssetsPage() {
                                                         <span className="font-mono text-xs font-medium group-hover:text-primary transition-colors">{asset.name}</span>
                                                     </div>
                                                 </td>
+                                                <td><span className="font-mono text-xs text-muted-foreground">{asset.assetId || '--'}</span></td>
                                                 <td><span className="text-xs text-muted-foreground capitalize">{asset.type.toLowerCase()}</span></td>
                                                 <td className="font-mono text-xs text-muted-foreground">{asset.ipAllocations?.[0]?.address || '--'}</td>
                                                 <td className="text-xs text-muted-foreground">{asset.osVersion || '--'}</td>

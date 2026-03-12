@@ -6,6 +6,10 @@ export class CreateAssetDto {
     @IsString()
     name: string;
 
+    @IsOptional()
+    @IsString()
+    assetId?: string;
+
     @IsEnum(AssetType)
     type: AssetType;
 

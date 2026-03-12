@@ -57,10 +57,10 @@ async function main() {
     await prisma.asset.deleteMany();
     await prisma.user.deleteMany();
     console.log('Old data cleared. Starting seed...');
-    const adminPasswordHash = await bcrypt.hash('P@ssw0rd', 10);
+    const adminPasswordHash = await bcrypt.hash('admin123', 10);
     const adminValue = await prisma.user.create({
         data: {
-            email: 'admin@test.test',
+            email: 'admin@infrapilot.local',
             passwordHash: adminPasswordHash,
             role: client_1.Role.ADMIN,
         },

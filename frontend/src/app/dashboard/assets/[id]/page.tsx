@@ -31,6 +31,7 @@ interface Credential {
 
 interface Asset {
     id: string;
+    assetId?: string;
     name: string;
     type: string;
     ipAllocations?: { address: string, type?: string }[];
@@ -181,6 +182,7 @@ export default function AssetDetailsPage() {
                     <div className="flex items-center gap-3">
                         {getAssetIcon(asset.type, "h-5 w-5 text-muted-foreground")}
                         <h1 className="text-xl font-semibold font-mono">{asset.name}</h1>
+                        {asset.assetId && <span className="rounded bg-accent/50 px-2 py-1 text-xs font-mono text-muted-foreground border border-border">{asset.assetId}</span>}
                         <StatusDot status={asset.status.toLowerCase() === 'active' ? 'online' : 'offline'} />
                         <span className="text-sm capitalize text-muted-foreground">{asset.status.toLowerCase()}</span>
                     </div>

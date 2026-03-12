@@ -5,40 +5,40 @@ export declare class CredentialsController {
     private readonly credentialsService;
     constructor(credentialsService: CredentialsService);
     create(createCredentialDto: CreateCredentialDto): Promise<{
-        id: string;
         assetId: string;
+        username: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
-        username: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
     findByAsset(assetId: string): Promise<{
-        id: string;
         assetId: string;
+        username: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
-        username: string;
         lastChangedDate: Date | null;
     }[]>;
     revealPassword(id: string, req: any): Promise<{
         password: string;
     }>;
     update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{
-        id: string;
         assetId: string;
+        username: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
-        username: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
     remove(id: string): Promise<{
-        id: string;
         assetId: string;
+        username: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
-        username: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
