@@ -1,6 +1,7 @@
 import { AssetStatus, AssetType } from '@prisma/client';
 export declare class CreateAssetDto {
     name: string;
+    assetId?: string;
     type: AssetType;
     ipAddress?: string;
     environment?: string;

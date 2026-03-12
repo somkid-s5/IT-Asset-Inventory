@@ -69,6 +69,7 @@ model IPAllocation {
 
 model Asset {
   id             String      @id @default(uuid())
+  assetId        String?     @unique // e.g., '17SM6C140321dm'
   name           String
   type           AssetType
   environment    String?     // e.g., 'PROD', 'UAT', 'DEV'

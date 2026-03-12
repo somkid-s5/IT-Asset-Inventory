@@ -19,7 +19,7 @@ async function main() {
     console.log('🌱 Starting database reset & dummy data seeding (Phase 11)...');
 
     // 1. Create Default Admin User
-    const adminPassword = await bcrypt.hash('SecureAdmin123!', 10);
+    const adminPassword = await bcrypt.hash('admin123', 10);
     const admin = await prisma.user.upsert({
         where: { email: 'admin@infrapilot.local' },
         update: { passwordHash: adminPassword },

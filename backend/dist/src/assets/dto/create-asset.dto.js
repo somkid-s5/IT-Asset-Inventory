@@ -14,6 +14,7 @@ const client_1 = require("@prisma/client");
 const class_validator_1 = require("class-validator");
 class CreateAssetDto {
     name;
+    assetId;
     type;
     ipAddress;
     environment;
@@ -35,6 +36,11 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateAssetDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "assetId", void 0);
 __decorate([
     (0, class_validator_1.IsEnum)(client_1.AssetType),
     __metadata("design:type", String)
