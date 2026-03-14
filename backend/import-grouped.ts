@@ -69,9 +69,6 @@ async function main() {
         // Determine type
         let type: AssetType = AssetType.SERVER;
         const upperType = typeStr.toUpperCase();
-        if (upperType.includes('VM') || name.toUpperCase().includes('CVM') || name.toUpperCase().includes('ESXI')) type = AssetType.VM;
-        if (upperType.includes('APP')) type = AssetType.APP;
-        if (upperType.includes('DB')) type = AssetType.DB;
         if (upperType.includes('NETWORK') || upperType.includes('SWITCH')) type = AssetType.NETWORK;
 
         if (!assetsMap[assetId]) {

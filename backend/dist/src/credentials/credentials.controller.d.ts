@@ -5,6 +5,7 @@ export declare class CredentialsController {
     private readonly credentialsService;
     constructor(credentialsService: CredentialsService);
     create(createCredentialDto: CreateCredentialDto): Promise<{
+        type: string | null;
         assetId: string;
         username: string;
         id: string;
@@ -25,6 +26,7 @@ export declare class CredentialsController {
         password: string;
     }>;
     update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{
+        type: string | null;
         assetId: string;
         username: string;
         id: string;
@@ -34,6 +36,7 @@ export declare class CredentialsController {
         lastChangedDate: Date | null;
     }>;
     remove(id: string): Promise<{
+        type: string | null;
         assetId: string;
         username: string;
         id: string;

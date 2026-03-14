@@ -12,13 +12,50 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateAssetDto = void 0;
 const client_1 = require("@prisma/client");
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
+class IpAllocationDto {
+    address;
+    type;
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], IpAllocationDto.prototype, "address", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], IpAllocationDto.prototype, "type", void 0);
+class AssetCredentialDto {
+    username;
+    password;
+    type;
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AssetCredentialDto.prototype, "username", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AssetCredentialDto.prototype, "password", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AssetCredentialDto.prototype, "type", void 0);
 class CreateAssetDto {
     name;
     assetId;
     type;
-    ipAddress;
-    environment;
+    ips;
+    credentials;
     location;
+    rack;
+    manageType;
+    brandModel;
+    sn;
     customMetadata;
     parentId;
     osVersion;
@@ -47,19 +84,43 @@ __decorate([
 ], CreateAssetDto.prototype, "type", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreateAssetDto.prototype, "ipAddress", void 0);
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => IpAllocationDto),
+    __metadata("design:type", Array)
+], CreateAssetDto.prototype, "ips", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreateAssetDto.prototype, "environment", void 0);
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => AssetCredentialDto),
+    __metadata("design:type", Array)
+], CreateAssetDto.prototype, "credentials", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateAssetDto.prototype, "location", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "rack", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "manageType", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "brandModel", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "sn", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)

@@ -128,10 +128,10 @@ export default function DashboardPage() {
 
     // Mock Top Assets
     const topVulnerableAssets = [
-        { name: 'db-prod-01', ip: '10.0.1.45', risk: 'Critical', score: 98, type: 'Database' },
+        { name: 'db-prod-01', ip: '10.0.1.45', risk: 'Critical', score: 98, type: 'Server' },
         { name: 'web-front-lb', ip: '10.0.2.12', risk: 'High', score: 82, type: 'Server' },
-        { name: 'auth-service-vm', ip: '10.0.5.99', risk: 'Medium', score: 55, type: 'VM' },
-        { name: 'internal-wiki', ip: '10.0.8.20', risk: 'Low', score: 12, type: 'App' }
+        { name: 'auth-service-vm', ip: '10.0.5.99', risk: 'Medium', score: 55, type: 'Server' },
+        { name: 'internal-wiki', ip: '10.0.8.20', risk: 'Low', score: 12, type: 'Server' }
     ];
 
     return (

@@ -18,7 +18,8 @@ exports.CredentialsModule = CredentialsModule = __decorate([
     (0, common_1.Module)({
         imports: [prisma_module_1.PrismaModule],
         providers: [credentials_service_1.CredentialsService],
-        controllers: [credentials_controller_1.CredentialsController]
+        controllers: [credentials_controller_1.CredentialsController],
+        exports: [credentials_service_1.CredentialsService]
     })
 ], CredentialsModule);
 //# sourceMappingURL=credentials.module.js.map

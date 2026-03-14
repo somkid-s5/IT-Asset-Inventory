@@ -59,9 +59,6 @@ async function main() {
             try {
                 // Determine type
                 let type: AssetType = AssetType.SERVER;
-                if (typeStr.toUpperCase().includes('VM')) type = AssetType.VM;
-                if (typeStr.toUpperCase().includes('DB')) type = AssetType.DB;
-                if (typeStr.toUpperCase().includes('APP')) type = AssetType.APP;
                 if (typeStr.toUpperCase().includes('NETWORK')) type = AssetType.NETWORK;
 
                 console.log(`Importing: ${name} (ID: ${assetId})`);

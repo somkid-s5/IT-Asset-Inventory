@@ -77,7 +77,7 @@ async function main() {
     const assetsData = [
         {
             name: 'db-prod-01',
-            type: client_1.AssetType.DB,
+            type: client_1.AssetType.SERVER,
             ipAddress: '10.0.1.45',
             macAddress: '00:1B:44:11:3A:B7',
             osVersion: 'Ubuntu 22.04 LTS',
@@ -112,7 +112,7 @@ async function main() {
         },
         {
             name: 'auth-service-vm',
-            type: client_1.AssetType.VM,
+            type: client_1.AssetType.SERVER,
             ipAddress: '10.0.5.99',
             osVersion: 'Windows Server 2019',
             status: client_1.AssetStatus.ACTIVE,
@@ -128,7 +128,7 @@ async function main() {
         },
         {
             name: 'internal-wiki',
-            type: client_1.AssetType.APP,
+            type: client_1.AssetType.SERVER,
             ipAddress: '10.0.8.20',
             osVersion: 'Confluence 8.0',
             status: client_1.AssetStatus.ACTIVE,

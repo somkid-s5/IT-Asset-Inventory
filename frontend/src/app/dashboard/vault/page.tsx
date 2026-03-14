@@ -113,9 +113,10 @@ export default function VaultPage() {
     const getAssetIcon = (type?: string, className?: string) => {
         switch (type) {
             case 'SERVER': return <Server className={className || "h-4 w-4 text-primary"} />;
-            case 'VM': return <Monitor className={className || "h-4 w-4 text-purple-500"} />;
-            case 'DB': return <Database className={className || "h-4 w-4 text-amber-500"} />;
-            case 'APP': return <AppWindow className={className || "h-4 w-4 text-emerald-500"} />;
+            case 'STORAGE': return <Database className={className || "h-4 w-4 text-amber-500"} />;
+            case 'SWITCH': return <Server className={className || "h-4 w-4 text-blue-500"} />;
+            case 'SP': return <Monitor className={className || "h-4 w-4 text-purple-500"} />;
+            case 'NETWORK': return <Shield className={className || "h-4 w-4 text-emerald-500"} />;
             default: return <Server className={className || "h-4 w-4 text-muted-foreground"} />;
         }
     }

@@ -88,12 +88,6 @@ async function main() {
             continue;
         let type = client_1.AssetType.SERVER;
         const upperType = typeStr.toUpperCase();
-        if (upperType.includes('VM') || name.toUpperCase().includes('CVM') || name.toUpperCase().includes('ESXI'))
-            type = client_1.AssetType.VM;
-        if (upperType.includes('APP'))
-            type = client_1.AssetType.APP;
-        if (upperType.includes('DB'))
-            type = client_1.AssetType.DB;
         if (upperType.includes('NETWORK') || upperType.includes('SWITCH'))
             type = client_1.AssetType.NETWORK;
         if (!assetsMap[assetId]) {

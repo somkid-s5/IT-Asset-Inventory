@@ -1,22 +1,36 @@
-"use client"
+'use client';
 
+import type { CSSProperties } from 'react';
 import {
   CircleCheckIcon,
   InfoIcon,
   Loader2Icon,
   OctagonXIcon,
   TriangleAlertIcon,
-} from "lucide-react"
-import { useTheme } from "next-themes"
-import { Toaster as Sonner, type ToasterProps } from "sonner"
+} from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const { theme = 'system' } = useTheme();
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={theme as ToasterProps['theme']}
       className="toaster group"
+      richColors
+      toastOptions={{
+        classNames: {
+          toast:
+            'rounded-2xl border border-border/70 bg-popover/95 text-popover-foreground shadow-[0_20px_60px_-30px_rgba(15,23,42,0.5)]',
+          title: 'text-sm font-semibold',
+          description: 'text-xs text-muted-foreground',
+          success: '!border-emerald-500/30 !bg-emerald-500/12 !text-emerald-950 dark:!text-emerald-100',
+          error: '!border-rose-500/30 !bg-rose-500/12 !text-rose-950 dark:!text-rose-100',
+          warning: '!border-amber-500/30 !bg-amber-500/12 !text-amber-950 dark:!text-amber-100',
+          info: '!border-sky-500/30 !bg-sky-500/12 !text-sky-950 dark:!text-sky-100',
+        },
+      }}
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,
@@ -26,15 +40,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
+          '--normal-bg': 'var(--popover)',
+          '--normal-text': 'var(--popover-foreground)',
+          '--normal-border': 'var(--border)',
+          '--border-radius': '1rem',
+        } as CSSProperties
       }
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster }
+export { Toaster };

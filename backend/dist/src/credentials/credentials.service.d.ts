@@ -6,9 +6,10 @@ export declare class CredentialsService {
     private readonly algorithm;
     private readonly secretKey;
     constructor(prisma: PrismaService);
-    private encrypt;
-    private decrypt;
+    encrypt(text: string): string;
+    decrypt(text: string): string;
     create(createCredentialDto: CreateCredentialDto): Promise<{
+        type: string | null;
         assetId: string;
         username: string;
         id: string;
@@ -29,6 +30,7 @@ export declare class CredentialsService {
         password: string;
     }>;
     update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{
+        type: string | null;
         assetId: string;
         username: string;
         id: string;
@@ -38,6 +40,7 @@ export declare class CredentialsService {
         lastChangedDate: Date | null;
     }>;
     remove(id: string): Promise<{
+        type: string | null;
         assetId: string;
         username: string;
         id: string;

@@ -4,7 +4,72 @@ import { UpdateAssetDto } from './dto/update-asset.dto';
 export declare class AssetsController {
     private readonly assetsService;
     constructor(assetsService: AssetsService);
-    create(createAssetDto: CreateAssetDto, req: any): Promise<{
+    create(createAssetDto: CreateAssetDto, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
+        credentials: {
+            password: string;
+            type: string | null;
+            assetId: string;
+            username: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            encryptedPassword: string;
+            lastChangedDate: Date | null;
+        }[];
+        parent: {
+            type: import(".prisma/client").$Enums.AssetType;
+            assetId: string | null;
+            name: string;
+            osVersion: string | null;
+            manageType: string | null;
+            rack: string | null;
+            location: string | null;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            environment: string | null;
+            brandModel: string | null;
+            sn: string | null;
+            customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
+            status: import(".prisma/client").$Enums.AssetStatus;
+            owner: string | null;
+            department: string | null;
+            purchaseDate: Date | null;
+            warrantyExpiration: Date | null;
+            vendor: string | null;
+            dependencies: string | null;
+            parentId: string | null;
+            createdByUserId: string;
+        } | null;
+        children: {
+            type: import(".prisma/client").$Enums.AssetType;
+            assetId: string | null;
+            name: string;
+            osVersion: string | null;
+            manageType: string | null;
+            rack: string | null;
+            location: string | null;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            environment: string | null;
+            brandModel: string | null;
+            sn: string | null;
+            customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
+            status: import(".prisma/client").$Enums.AssetStatus;
+            owner: string | null;
+            department: string | null;
+            purchaseDate: Date | null;
+            warrantyExpiration: Date | null;
+            vendor: string | null;
+            dependencies: string | null;
+            parentId: string | null;
+            createdByUserId: string;
+        }[];
         ipAllocations: {
             type: string | null;
             assetId: string;
@@ -13,16 +78,29 @@ export declare class AssetsController {
             updatedAt: Date;
             address: string;
         }[];
-    } & {
+        patchInfo: {
+            assetId: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            currentVersion: string | null;
+            latestVersion: string | null;
+            eolDate: Date | null;
+            lastPatchedDate: Date | null;
+        } | null;
         type: import(".prisma/client").$Enums.AssetType;
         assetId: string | null;
         name: string;
         osVersion: string | null;
+        manageType: string | null;
+        rack: string | null;
         location: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
         environment: string | null;
+        brandModel: string | null;
+        sn: string | null;
         customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -34,17 +112,27 @@ export declare class AssetsController {
         parentId: string | null;
         createdByUserId: string;
     }>;
-    findAll(): Promise<({
+    findAll(): Promise<{
+        credentials: {
+            id: string;
+            username: string;
+            type: string | null;
+            lastChangedDate: Date | null;
+        }[];
         parent: {
             type: import(".prisma/client").$Enums.AssetType;
             assetId: string | null;
             name: string;
             osVersion: string | null;
+            manageType: string | null;
+            rack: string | null;
             location: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             environment: string | null;
+            brandModel: string | null;
+            sn: string | null;
             customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             status: import(".prisma/client").$Enums.AssetStatus;
             owner: string | null;
@@ -61,11 +149,15 @@ export declare class AssetsController {
             assetId: string | null;
             name: string;
             osVersion: string | null;
+            manageType: string | null;
+            rack: string | null;
             location: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             environment: string | null;
+            brandModel: string | null;
+            sn: string | null;
             customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             status: import(".prisma/client").$Enums.AssetStatus;
             owner: string | null;
@@ -95,16 +187,19 @@ export declare class AssetsController {
             eolDate: Date | null;
             lastPatchedDate: Date | null;
         } | null;
-    } & {
         type: import(".prisma/client").$Enums.AssetType;
         assetId: string | null;
         name: string;
         osVersion: string | null;
+        manageType: string | null;
+        rack: string | null;
         location: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
         environment: string | null;
+        brandModel: string | null;
+        sn: string | null;
         customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -115,18 +210,33 @@ export declare class AssetsController {
         dependencies: string | null;
         parentId: string | null;
         createdByUserId: string;
-    })[]>;
+    }[]>;
     findOne(id: string): Promise<{
+        credentials: {
+            password: string;
+            type: string | null;
+            assetId: string;
+            username: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            encryptedPassword: string;
+            lastChangedDate: Date | null;
+        }[];
         parent: {
             type: import(".prisma/client").$Enums.AssetType;
             assetId: string | null;
             name: string;
             osVersion: string | null;
+            manageType: string | null;
+            rack: string | null;
             location: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             environment: string | null;
+            brandModel: string | null;
+            sn: string | null;
             customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             status: import(".prisma/client").$Enums.AssetStatus;
             owner: string | null;
@@ -143,11 +253,15 @@ export declare class AssetsController {
             assetId: string | null;
             name: string;
             osVersion: string | null;
+            manageType: string | null;
+            rack: string | null;
             location: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             environment: string | null;
+            brandModel: string | null;
+            sn: string | null;
             customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             status: import(".prisma/client").$Enums.AssetStatus;
             owner: string | null;
@@ -177,21 +291,19 @@ export declare class AssetsController {
             eolDate: Date | null;
             lastPatchedDate: Date | null;
         } | null;
-        credentials: {
-            username: string;
-            id: string;
-            lastChangedDate: Date | null;
-        }[];
-    } & {
         type: import(".prisma/client").$Enums.AssetType;
         assetId: string | null;
         name: string;
         osVersion: string | null;
+        manageType: string | null;
+        rack: string | null;
         location: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
         environment: string | null;
+        brandModel: string | null;
+        sn: string | null;
         customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -204,6 +316,67 @@ export declare class AssetsController {
         createdByUserId: string;
     }>;
     update(id: string, updateAssetDto: UpdateAssetDto): Promise<{
+        credentials: {
+            password: string;
+            type: string | null;
+            assetId: string;
+            username: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            encryptedPassword: string;
+            lastChangedDate: Date | null;
+        }[];
+        parent: {
+            type: import(".prisma/client").$Enums.AssetType;
+            assetId: string | null;
+            name: string;
+            osVersion: string | null;
+            manageType: string | null;
+            rack: string | null;
+            location: string | null;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            environment: string | null;
+            brandModel: string | null;
+            sn: string | null;
+            customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
+            status: import(".prisma/client").$Enums.AssetStatus;
+            owner: string | null;
+            department: string | null;
+            purchaseDate: Date | null;
+            warrantyExpiration: Date | null;
+            vendor: string | null;
+            dependencies: string | null;
+            parentId: string | null;
+            createdByUserId: string;
+        } | null;
+        children: {
+            type: import(".prisma/client").$Enums.AssetType;
+            assetId: string | null;
+            name: string;
+            osVersion: string | null;
+            manageType: string | null;
+            rack: string | null;
+            location: string | null;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            environment: string | null;
+            brandModel: string | null;
+            sn: string | null;
+            customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
+            status: import(".prisma/client").$Enums.AssetStatus;
+            owner: string | null;
+            department: string | null;
+            purchaseDate: Date | null;
+            warrantyExpiration: Date | null;
+            vendor: string | null;
+            dependencies: string | null;
+            parentId: string | null;
+            createdByUserId: string;
+        }[];
         ipAllocations: {
             type: string | null;
             assetId: string;
@@ -212,16 +385,29 @@ export declare class AssetsController {
             updatedAt: Date;
             address: string;
         }[];
-    } & {
+        patchInfo: {
+            assetId: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            currentVersion: string | null;
+            latestVersion: string | null;
+            eolDate: Date | null;
+            lastPatchedDate: Date | null;
+        } | null;
         type: import(".prisma/client").$Enums.AssetType;
         assetId: string | null;
         name: string;
         osVersion: string | null;
+        manageType: string | null;
+        rack: string | null;
         location: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
         environment: string | null;
+        brandModel: string | null;
+        sn: string | null;
         customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;
@@ -238,11 +424,15 @@ export declare class AssetsController {
         assetId: string | null;
         name: string;
         osVersion: string | null;
+        manageType: string | null;
+        rack: string | null;
         location: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
         environment: string | null;
+        brandModel: string | null;
+        sn: string | null;
         customMetadata: import("@prisma/client/runtime/library").JsonValue | null;
         status: import(".prisma/client").$Enums.AssetStatus;
         owner: string | null;

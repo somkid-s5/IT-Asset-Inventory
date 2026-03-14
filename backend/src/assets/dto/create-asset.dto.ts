@@ -1,5 +1,28 @@
 import { AssetStatus, AssetType } from '@prisma/client';
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class IpAllocationDto {
+    @IsString()
+    address: string;
+
+    @IsOptional()
+    @IsString()
+    type?: string;
+}
+
+class AssetCredentialDto {
+    @IsString()
+    username: string;
+
+    @IsOptional()
+    @IsString()
+    password?: string;
+
+    @IsOptional()
+    @IsString()
+    type?: string;
+}
 
 export class CreateAssetDto {
     @IsNotEmpty()
@@ -14,16 +37,36 @@ export class CreateAssetDto {
     type: AssetType;
 
     @IsOptional()
-    @IsString()
-    ipAddress?: string;
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => IpAllocationDto)
+    ips?: IpAllocationDto[];
 
     @IsOptional()
-    @IsString()
-    environment?: string;
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => AssetCredentialDto)
+    credentials?: AssetCredentialDto[];
 
     @IsOptional()
     @IsString()
     location?: string;
+
+    @IsOptional()
+    @IsString()
+    rack?: string;
+
+    @IsOptional()
+    @IsString()
+    manageType?: string;
+
+    @IsOptional()
+    @IsString()
+    brandModel?: string;
+
+    @IsOptional()
+    @IsString()
+    sn?: string;
 
     @IsOptional()
     customMetadata?: any;
@@ -48,7 +91,6 @@ export class CreateAssetDto {
     @IsString()
     department?: string;
 
-    // Date validations bypassed for MVP simplicity (passed as ISO strings)
     @IsOptional()
     purchaseDate?: Date;
 
