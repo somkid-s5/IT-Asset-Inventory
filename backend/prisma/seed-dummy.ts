@@ -16,7 +16,7 @@ function encryptPassword(text: string): string {
 }
 
 async function main() {
-    console.log('🌱 Starting database reset & dummy data seeding (Phase 11)...');
+    console.log('🌱 Starting hardware-focused database seeding...');
 
     // 1. Create Default Admin User
     const adminPassword = await bcrypt.hash('admin123', 10);
@@ -31,195 +31,76 @@ async function main() {
     });
     console.log(`👤 Created Admin user: ${admin.email}`);
 
-    // 2. Physical Hypervisors
-    const host1 = await prisma.asset.create({
+    // 2. Physical Servers
+    const server1 = await prisma.asset.create({
         data: {
-            name: 'ESXi-Host-01',
-            type: 'SERVER',
+            name: 'API-3PARSP',
+            type: 'SP',
             status: 'ACTIVE',
-            osVersion: 'VMware ESXi 8.0',
+            osVersion: 'iLO 5 Version 2.12',
             owner: 'IT Infrastructure Team',
-            environment: 'PROD',
-            location: 'DC-BKK / Rack 04 / U12-U14',
-            customMetadata: {
-                brand: 'Dell',
-                model: 'PowerEdge R750',
-                serial_number: 'DELL-SV-10023',
-                cpu_summary: '2x Intel Xeon Gold 6330',
-                ram_gb: 512,
-                storage_type: 'NVMe SSD',
-                warranty_expire: '2028-12-31'
-            },
+            location: 'DC',
+            rack: '1C-04',
+            brandModel: 'HPE ProLiant DL360 G10',
+            sn: 'CN70170QQC',
             ipAllocations: {
                 create: [
-                    { address: '10.0.1.10', type: 'Management (iDRAC)' },
-                    { address: '10.0.1.11', type: 'vMotion' }
+                    { address: '192.168.11.64', type: 'iLO' }
                 ]
             },
             createdByUserId: admin.id,
         }
     });
 
-    const host2 = await prisma.asset.create({
+    const storage1 = await prisma.asset.create({
         data: {
-            name: 'ESXi-Host-02',
-            type: 'SERVER',
+            name: 'API-3PAR8200',
+            type: 'STORAGE',
             status: 'ACTIVE',
-            osVersion: 'VMware ESXi 8.0',
+            osVersion: '3.3.1.410',
             owner: 'IT Infrastructure Team',
-            environment: 'PROD',
-            location: 'DC-BKK / Rack 04 / U15-U17',
-            customMetadata: {
-                brand: 'Dell',
-                model: 'PowerEdge R750',
-                serial_number: 'DELL-SV-10024',
-                ram_gb: 512,
-            },
+            location: 'DC',
+            rack: '1C-04',
+            brandModel: 'HPE / 3PAR StoreServ 8200',
+            sn: '7CE022P0TB',
             ipAllocations: {
                 create: [
-                    { address: '10.0.1.12', type: 'Management' }
+                    { address: '192.168.11.63', type: 'Management' }
                 ]
             },
             createdByUserId: admin.id,
         }
     });
 
-    // 3. Network & Security Devices
     const switch1 = await prisma.asset.create({
         data: {
-            name: 'Core-Switch-01',
-            type: 'SERVER',
+            name: 'API-SANSW01',
+            type: 'SWITCH',
             status: 'ACTIVE',
-            environment: 'PROD',
-            location: 'DC-BKK / Rack 01 / U42',
-            customMetadata: {
-                brand: 'Cisco',
-                model: 'Nexus 93180YC-EX',
-                firmware: 'NXOS 9.3',
-                stack_role: 'Master'
-            },
+            osVersion: 'Fabric OS: v8.2.1c',
+            location: 'DC',
+            rack: '1C-04',
+            brandModel: 'HPE StoreFabric SN3600B',
+            sn: 'CZC014WXEG',
             ipAllocations: {
-                create: [{ address: '10.0.254.1', type: 'Management VLAN' }]
+                create: [{ address: '192.168.13.249', type: 'IPMI' }]
             },
             createdByUserId: admin.id,
         }
     });
 
-    const fw1 = await prisma.asset.create({
-        data: {
-            name: 'PaloAlto-FW-Main',
-            type: 'SERVER',
-            status: 'ACTIVE',
-            environment: 'PROD',
-            location: 'DC-BKK / Rack 01 / U40',
-            customMetadata: {
-                brand: 'Palo Alto Networks',
-                model: 'PA-3220',
-                panos: '10.1.8',
-                ha_status: 'Active'
-            },
-            ipAllocations: {
-                create: [{ address: '10.0.254.254', type: 'Internal Gateway' }]
-            },
-            createdByUserId: admin.id,
-        }
-    });
-
-    // 4. Virtual Machines (Web & DB Tier)
-    const vm1 = await prisma.asset.create({
-        data: {
-            name: 'APP-SRV-01',
-            type: 'VM',
-            status: 'ACTIVE',
-            osVersion: 'Ubuntu 24.04 LTS',
-            parentId: host1.id,
-            owner: 'App Dev Team',
-            environment: 'PROD',
-            location: 'DC-BKK / Virtual Cluster 1',
-            customMetadata: { vCores: 8, ram_gb: 32 },
-            ipAllocations: { create: [{ address: '10.0.5.50', type: 'Primary' }] },
-            createdByUserId: admin.id,
-        }
-    });
-
-    const web1 = await prisma.asset.create({
-        data: {
-            name: 'WEB-SRV-01',
-            type: 'VM',
-            status: 'ACTIVE',
-            osVersion: 'Debian 12',
-            parentId: host2.id,
-            owner: 'Web Team',
-            environment: 'PROD',
-            customMetadata: { vCores: 4, ram_gb: 16, role: 'Nginx Load Balancer' },
-            ipAllocations: { create: [{ address: '10.0.5.10', type: 'VIP' }] },
-            createdByUserId: admin.id,
-        }
-    });
-
-    const db1 = await prisma.asset.create({
-        data: {
-            name: 'DB-SRV-MAIN',
-            type: 'VM',
-            status: 'ACTIVE',
-            osVersion: 'RHEL 9',
-            parentId: host1.id,
-            owner: 'DBA Team',
-            environment: 'PROD',
-            customMetadata: { vCores: 16, ram_gb: 128, db_engine: 'PostgreSQL 16' },
-            ipAllocations: { create: [{ address: '10.0.6.100', type: 'Database Network' }] },
-            createdByUserId: admin.id,
-        }
-    });
-
-    // 5. Cloud/SaaS Applications
-    const saasApp = await prisma.asset.create({
-        data: {
-            name: 'AWS RDS Finance',
-            type: 'APP',
-            status: 'ACTIVE',
-            environment: 'PROD',
-            owner: 'Finance Dept',
-            location: 'ap-southeast-1 (Singapore)',
-            customMetadata: { provider: 'AWS', service: 'RDS Aurora', instance_class: 'db.r6g.xlarge' },
-            createdByUserId: admin.id,
-        }
-    });
-
-    // 6. Create Massive Credentials Array
-    console.log('🔑 Seeding encrypted credentials for diverse assets...');
+    // 3. Create Credentials
+    console.log('🔑 Seeding encrypted credentials...');
 
     await prisma.credential.createMany({
         data: [
-            // ESXi Hosts
-            { assetId: host1.id, username: 'root', encryptedPassword: encryptPassword('HostAdminP@ss!'), lastChangedDate: new Date() },
-            { assetId: host1.id, username: 'admin', encryptedPassword: encryptPassword('iDRAC_secure_123'), lastChangedDate: new Date() },
-            { assetId: host2.id, username: 'root', encryptedPassword: encryptPassword('Host2AdminP@ss!'), lastChangedDate: new Date() },
-
-            // Network & Security
-            { assetId: switch1.id, username: 'admin', encryptedPassword: encryptPassword('cisco_enable_pwd!'), lastChangedDate: new Date() },
-            { assetId: fw1.id, username: 'fwadmin', encryptedPassword: encryptPassword('PaloAlto!Sup3r'), lastChangedDate: new Date() },
-            { assetId: fw1.id, username: 'api_readonly', encryptedPassword: encryptPassword('REST_TOKEN_9A8B7C'), lastChangedDate: new Date() },
-
-            // App Server
-            { assetId: vm1.id, username: 'ubuntu', encryptedPassword: encryptPassword('ubuntuVPX!99'), lastChangedDate: new Date() },
-            { assetId: vm1.id, username: 'deploy_svc', encryptedPassword: encryptPassword('JenkinsKey_a8b!'), lastChangedDate: new Date() },
-
-            // Web Server
-            { assetId: web1.id, username: 'root', encryptedPassword: encryptPassword('debian_web_root!!'), lastChangedDate: new Date() },
-
-            // Database Server (OS + DB Level)
-            { assetId: db1.id, username: 'rhel_admin', encryptedPassword: encryptPassword('RedHat$3cure9'), lastChangedDate: new Date() },
-            { assetId: db1.id, username: 'postgres_sys', encryptedPassword: encryptPassword('pgAdmin_Super!123'), lastChangedDate: new Date() },
-            { assetId: db1.id, username: 'app_readonly', encryptedPassword: encryptPassword('readonly_app_pwd'), lastChangedDate: new Date() },
-
-            // Cloud App
-            { assetId: saasApp.id, username: 'master_aws_admin', encryptedPassword: encryptPassword('AwsAurora!Finance99'), lastChangedDate: new Date() },
-            { assetId: saasApp.id, username: 'bi_reporting', encryptedPassword: encryptPassword('BI_Read_Token!#'), lastChangedDate: new Date() },
+            { assetId: server1.id, username: 'administrator', type: 'iLO', encryptedPassword: encryptPassword('ZYHMSWL2'), lastChangedDate: new Date() },
+            { assetId: storage1.id, username: '3paradm', type: 'SSH', encryptedPassword: encryptPassword('3pardata'), lastChangedDate: new Date() },
+            { assetId: switch1.id, username: 'admin', type: 'WEB/SSH', encryptedPassword: encryptPassword('P@ssw0rd'), lastChangedDate: new Date() },
         ]
     });
 
-    console.log('✅ Seed complete. A highly detailed, realistic IT Infrastructure with full Credentials has been populated!');
+    console.log('✅ Seed complete. Hardware-only focus applied.');
 }
 
 main()

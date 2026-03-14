@@ -79,12 +79,6 @@ async function main() {
             const ipAddress = row[6] || null;
             try {
                 let type = client_1.AssetType.SERVER;
-                if (typeStr.toUpperCase().includes('VM'))
-                    type = client_1.AssetType.VM;
-                if (typeStr.toUpperCase().includes('DB'))
-                    type = client_1.AssetType.DB;
-                if (typeStr.toUpperCase().includes('APP'))
-                    type = client_1.AssetType.APP;
                 if (typeStr.toUpperCase().includes('NETWORK'))
                     type = client_1.AssetType.NETWORK;
                 console.log(`Importing: ${name} (ID: ${assetId})`);

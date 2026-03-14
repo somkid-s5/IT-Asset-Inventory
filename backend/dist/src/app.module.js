@@ -12,8 +12,6 @@ const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
 const prisma_module_1 = require("./prisma/prisma.module");
-const core_1 = require("@nestjs/core");
-const roles_guard_1 = require("./auth/guards/roles.guard");
 const assets_module_1 = require("./assets/assets.module");
 const credentials_module_1 = require("./credentials/credentials.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
@@ -24,13 +22,7 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule, assets_module_1.AssetsModule, credentials_module_1.CredentialsModule, dashboard_module_1.DashboardModule],
         controllers: [app_controller_1.AppController],
-        providers: [
-            app_service_1.AppService,
-            {
-                provide: core_1.APP_GUARD,
-                useClass: roles_guard_1.RolesGuard,
-            },
-        ],
+        providers: [app_service_1.AppService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

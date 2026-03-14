@@ -18,9 +18,9 @@ enum Role {
 
 enum AssetType {
   SERVER
-  VM
-  APP
-  DB
+  STORAGE
+  SWITCH
+  SP
   NETWORK
 }
 
@@ -57,7 +57,7 @@ model User {
 model IPAllocation {
   id      String  @id @default(uuid())
   address String  // e.g. 192.168.1.50
-  type    String? // e.g. Management, VIP, Backup, Data
+  type    String? // e.g. Management, VIP, Backup, Data, IPMI, Host, Service Processor
   assetId String
   asset   Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
@@ -69,13 +69,17 @@ model IPAllocation {
 
 model Asset {
   id             String      @id @default(uuid())
-  assetId        String?     @unique // e.g., '17SM6C140321dm'
+  assetId        String?     @unique // e.g., '6303-0003'
   name           String
   type           AssetType
   environment    String?     // e.g., 'PROD', 'UAT', 'DEV'
-  location       String?     // e.g., 'DC-1 / Rack 12'
-  customMetadata Json?       // Flexible JSON structure for 90+ unstructured hardware specs without bloating DB
-  osVersion      String?
+  location       String?     // e.g., 'DC'
+  rack           String?     // e.g., '1C-04'
+  osVersion      String?     // e.g., 'Fabric OS: v8.2.1c'
+  manageType     String?     // e.g., 'WEB/SSH'
+  brandModel     String?     // e.g., 'HPE StoreFabric SN3600B'
+  sn             String?     // Serial Number
+  customMetadata Json?       // Flexible JSON structure for other specs
   status         AssetStatus @default(ACTIVE)
 
   // Financial & Info
@@ -88,7 +92,7 @@ model Asset {
 
   // Hierarchical Relationship (Parent-Child)
   parentId String?
-  parent   Asset?  @relation("AssetHierarchy", fields: [parentId], references: [id])
+  parent   Asset?  @relation("AssetHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children Asset[] @relation("AssetHierarchy")
 
   // IP Management
@@ -125,6 +129,7 @@ model Credential {
 
   username          String
   encryptedPassword String
+  type              String? // e.g. 'IPMI', 'OS', 'SSH', 'WEB'
 
   lastChangedDate DateTime?
 

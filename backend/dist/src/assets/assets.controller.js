@@ -14,12 +14,13 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AssetsController = void 0;
 const common_1 = require("@nestjs/common");
-const assets_service_1 = require("./assets.service");
-const create_asset_dto_1 = require("./dto/create-asset.dto");
-const update_asset_dto_1 = require("./dto/update-asset.dto");
+const client_1 = require("@prisma/client");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
+const assets_service_1 = require("./assets.service");
+const create_asset_dto_1 = require("./dto/create-asset.dto");
+const update_asset_dto_1 = require("./dto/update-asset.dto");
 let AssetsController = class AssetsController {
     assetsService;
     constructor(assetsService) {
@@ -43,7 +44,7 @@ let AssetsController = class AssetsController {
 };
 exports.AssetsController = AssetsController;
 __decorate([
-    (0, roles_decorator_1.Roles)('ADMIN', 'EDITOR'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.EDITOR),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
@@ -65,7 +66,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AssetsController.prototype, "findOne", null);
 __decorate([
-    (0, roles_decorator_1.Roles)('ADMIN', 'EDITOR'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.EDITOR),
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -74,7 +75,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AssetsController.prototype, "update", null);
 __decorate([
-    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.EDITOR),
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),

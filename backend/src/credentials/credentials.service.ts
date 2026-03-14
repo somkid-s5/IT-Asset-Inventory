@@ -12,7 +12,7 @@ export class CredentialsService {
 
     constructor(private prisma: PrismaService) { }
 
-    private encrypt(text: string): string {
+    public encrypt(text: string): string {
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv(this.algorithm, Buffer.from(this.secretKey), iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -21,7 +21,7 @@ export class CredentialsService {
         return `${iv.toString('hex')}:${encrypted}:${authTag}`;
     }
 
-    private decrypt(text: string): string {
+    public decrypt(text: string): string {
         const [ivHex, encryptedHex, authTagHex] = text.split(':');
         const decipher = crypto.createDecipheriv(
             this.algorithm,

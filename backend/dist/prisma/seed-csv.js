@@ -109,13 +109,13 @@ async function main() {
                 if (rackStatus && !rackStatus.toLowerCase().includes('free') && !rackStatus.toLowerCase().includes('close')) {
                     isStatusActive = true;
                 }
-                let assetType = 'SERVER';
+                let assetType = client_1.AssetType.SERVER;
                 const brand = record['Brand/Model']?.toLowerCase() || '';
                 const system = record['System']?.toLowerCase() || '';
-                if (brand.includes('vmware') || system.includes('vm'))
-                    assetType = 'VM';
-                if (record['Database Type'] || record['Database Name/SID'])
-                    assetType = 'DB';
+                if (brand.includes('switch') || brand.includes('cisco'))
+                    assetType = client_1.AssetType.NETWORK;
+                if (brand.includes('storage') || brand.includes('emc') || brand.includes('netapp'))
+                    assetType = client_1.AssetType.STORAGE;
                 let name = record['DisplayName'] || record[' IP Address'] || record['IP Address'];
                 const spec = record['Specification'] || '';
                 if (spec.includes('DisplayName :')) {
@@ -124,7 +124,7 @@ async function main() {
                         name = match[1].trim();
                 }
                 let parentId = undefined;
-                if (assetType === 'VM' && system && system !== '') {
+                if ((brand.includes('vmware') || system.includes('vm')) && system && system !== '') {
                     let parentAsset = await prisma.asset.findFirst({
                         where: { name: system, type: 'SERVER' }
                     });

@@ -13,43 +13,121 @@ exports.AssetsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const client_1 = require("@prisma/client");
+const credentials_service_1 = require("../credentials/credentials.service");
 let AssetsService = class AssetsService {
     prisma;
-    constructor(prisma) {
+    credentialsService;
+    constructor(prisma, credentialsService) {
         this.prisma = prisma;
+        this.credentialsService = credentialsService;
+    }
+    buildCreateRelations(dto) {
+        return {
+            ...(dto.ips !== undefined
+                ? {
+                    ipAllocations: {
+                        create: (dto.ips ?? []).map((ip) => ({
+                            address: ip.address.trim(),
+                            type: ip.type?.trim() || null,
+                        })),
+                    },
+                }
+                : {}),
+            ...(dto.credentials !== undefined
+                ? {
+                    credentials: {
+                        create: (dto.credentials ?? [])
+                            .filter((credential) => credential.username.trim())
+                            .map((credential) => ({
+                            username: credential.username.trim(),
+                            type: credential.type?.trim() || null,
+                            encryptedPassword: this.credentialsService.encrypt(credential.password ?? ''),
+                        })),
+                    },
+                }
+                : {}),
+        };
+    }
+    buildReplaceRelations(dto) {
+        return {
+            ...(dto.ips !== undefined
+                ? {
+                    ipAllocations: {
+                        deleteMany: {},
+                        create: (dto.ips ?? []).map((ip) => ({
+                            address: ip.address.trim(),
+                            type: ip.type?.trim() || null,
+                        })),
+                    },
+                }
+                : {}),
+            ...(dto.credentials !== undefined
+                ? {
+                    credentials: {
+                        deleteMany: {},
+                        create: (dto.credentials ?? [])
+                            .filter((credential) => credential.username.trim())
+                            .map((credential) => ({
+                            username: credential.username.trim(),
+                            type: credential.type?.trim() || null,
+                            encryptedPassword: this.credentialsService.encrypt(credential.password ?? ''),
+                        })),
+                    },
+                }
+                : {}),
+        };
+    }
+    toListItem(asset) {
+        return {
+            ...asset,
+            credentials: asset.credentials.map((credential) => ({
+                id: credential.id,
+                username: credential.username,
+                type: credential.type,
+                lastChangedDate: credential.lastChangedDate,
+            })),
+        };
+    }
+    toDetail(asset) {
+        return {
+            ...asset,
+            credentials: asset.credentials.map((credential) => ({
+                ...credential,
+                password: this.credentialsService.decrypt(credential.encryptedPassword),
+            })),
+        };
     }
     async create(createAssetDto, userId) {
-        const { ipAddress, ...assetData } = createAssetDto;
-        const createData = {
-            ...assetData,
-            status: createAssetDto.status || client_1.AssetStatus.ACTIVE,
-            createdByUserId: userId,
-            ...(ipAddress ? {
-                ipAllocations: {
-                    create: [{ address: ipAddress }]
-                }
-            } : {})
-        };
-        if (createAssetDto.customMetadata !== undefined) {
-            createData.customMetadata = createAssetDto.customMetadata;
-        }
-        return this.prisma.asset.create({
-            data: createData,
-            include: {
-                ipAllocations: true
-            }
-        });
-    }
-    async findAll() {
-        return this.prisma.asset.findMany({
+        const { ips: _ips, credentials: _credentials, ...assetData } = createAssetDto;
+        const created = await this.prisma.asset.create({
+            data: {
+                ...assetData,
+                status: createAssetDto.status || client_1.AssetStatus.ACTIVE,
+                createdByUserId: userId,
+                ...this.buildCreateRelations(createAssetDto),
+            },
             include: {
                 patchInfo: true,
                 ipAllocations: true,
                 parent: true,
                 children: true,
+                credentials: true,
+            },
+        });
+        return this.toDetail(created);
+    }
+    async findAll() {
+        const assets = await this.prisma.asset.findMany({
+            include: {
+                patchInfo: true,
+                ipAllocations: true,
+                parent: true,
+                children: true,
+                credentials: true,
             },
             orderBy: { createdAt: 'desc' },
         });
+        return assets.map((asset) => this.toListItem(asset));
     }
     async findOne(id) {
         const asset = await this.prisma.asset.findUnique({
@@ -59,37 +137,43 @@ let AssetsService = class AssetsService {
                 ipAllocations: true,
                 parent: true,
                 children: true,
-                credentials: {
-                    select: { id: true, username: true, lastChangedDate: true }
-                },
+                credentials: true,
             },
         });
         if (!asset) {
             throw new common_1.NotFoundException(`Asset with ID ${id} not found`);
         }
-        return asset;
+        return this.toDetail(asset);
     }
     async update(id, updateAssetDto) {
         await this.findOne(id);
-        const { ipAddress, ...assetData } = updateAssetDto;
-        const updateData = { ...assetData };
-        if (updateAssetDto.customMetadata !== undefined) {
-            updateData.customMetadata = updateAssetDto.customMetadata;
-        }
-        return this.prisma.asset.update({
-            where: { id },
-            data: {
-                ...updateData,
-                ...(ipAddress ? {
-                    ipAllocations: {
-                        create: [{ address: ipAddress }]
-                    }
-                } : {})
-            },
-            include: {
-                ipAllocations: true
-            }
+        const { ips, credentials, ...assetData } = updateAssetDto;
+        const updated = await this.prisma.$transaction(async (tx) => {
+            return tx.asset.update({
+                where: { id },
+                data: {
+                    ...assetData,
+                    ...(updateAssetDto.customMetadata !== undefined
+                        ? { customMetadata: updateAssetDto.customMetadata }
+                        : {}),
+                    ...(ips !== undefined || credentials !== undefined
+                        ? this.buildReplaceRelations({
+                            ...updateAssetDto,
+                            ips: updateAssetDto.ips ?? [],
+                            credentials: updateAssetDto.credentials ?? [],
+                        })
+                        : {}),
+                },
+                include: {
+                    patchInfo: true,
+                    ipAllocations: true,
+                    parent: true,
+                    children: true,
+                    credentials: true,
+                },
+            });
         });
+        return this.toDetail(updated);
     }
     async remove(id) {
         await this.findOne(id);
@@ -101,6 +185,7 @@ let AssetsService = class AssetsService {
 exports.AssetsService = AssetsService;
 exports.AssetsService = AssetsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        credentials_service_1.CredentialsService])
 ], AssetsService);
 //# sourceMappingURL=assets.service.js.map

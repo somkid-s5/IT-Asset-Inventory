@@ -1,267 +1,376 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Server, Database, AppWindow, Monitor, Pencil, Trash2, Filter, ChevronRight } from 'lucide-react';
+import {
+  ChevronRight,
+  Database,
+  FolderTree,
+  HardDrive,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  Search,
+  Server,
+  Shield,
+  Trash2,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
-import { RiskBadge, StatusDot } from '@/components/StatusBadges';
 import { AssetFormDialog } from '@/components/AssetFormDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
-interface Asset {
-    id: string;
-    assetId?: string;
-    name: string;
-    type: string;
-    ipAllocations?: { address: string, type?: string }[];
-    osVersion: string;
-    status: 'ACTIVE' | 'OFFLINE' | 'DECOMMISSIONED' | 'MAINTENANCE';
-    environment?: string; // Phase 10 addition
-    location?: string;    // Phase 10 addition
-    customMetadata?: Record<string, any>; // Phase 10 flexible metadata
-    patchInfo?: {
-        eolDate?: string;
-    };
-    department: string;
-    owner?: string;
-    tags?: string[];
-    parentId?: string | null;
-    children?: Asset[];
+type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
+
+interface AssetIpAllocation {
+  id?: string;
+  address: string;
+  type?: string | null;
 }
 
-const getAssetRisk = (id: string) => {
-    // Generate deterministic mock risk data based on asset ID
-    const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const score = (hash % 60) + 40; // Score between 40 and 99
+interface Asset {
+  id: string;
+  assetId?: string | null;
+  name: string;
+  type: AssetType;
+  ipAllocations?: AssetIpAllocation[];
+  rack?: string | null;
+  brandModel?: string | null;
+  sn?: string | null;
+  parentId?: string | null;
+  children?: Asset[];
+}
 
-    if (score >= 90) return { level: 'Critical', score, style: 'bg-destructive/10 text-destructive border-destructive/20', dot: 'bg-destructive' };
-    if (score >= 70) return { level: 'High', score, style: 'bg-orange-500/10 text-orange-500 border-orange-500/20', dot: 'bg-orange-500' };
-    if (score >= 50) return { level: 'Medium', score, style: 'bg-amber-500/10 text-amber-500 border-amber-500/20', dot: 'bg-amber-500' };
-    return { level: 'Low', score, style: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', dot: 'bg-emerald-500' };
+const TABS: { label: string; value: 'ALL' | AssetType }[] = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Servers', value: 'SERVER' },
+  { label: 'Storage', value: 'STORAGE' },
+  { label: 'Switches', value: 'SWITCH' },
+  { label: 'SP', value: 'SP' },
+  { label: 'Network', value: 'NETWORK' },
+];
+
+const typeStyles: Record<AssetType, string> = {
+  SERVER: 'bg-emerald-500/8 text-emerald-700 dark:text-emerald-300',
+  STORAGE: 'bg-cyan-500/8 text-cyan-700 dark:text-cyan-300',
+  SWITCH: 'bg-amber-500/8 text-amber-700 dark:text-amber-300',
+  SP: 'bg-fuchsia-500/8 text-fuchsia-700 dark:text-fuchsia-300',
+  NETWORK: 'bg-indigo-500/8 text-indigo-700 dark:text-indigo-300',
 };
 
-const TABS = ['All', 'Servers', 'VMs', 'Applications', 'Databases'];
+function getAssetIcon(type: AssetType) {
+  const className = 'h-3.5 w-3.5';
+  switch (type) {
+    case 'STORAGE':
+      return <Database className={className} />;
+    case 'SWITCH':
+      return <Shield className={className} />;
+    case 'SP':
+      return <HardDrive className={className} />;
+    case 'NETWORK':
+      return <FolderTree className={className} />;
+    default:
+      return <Server className={className} />;
+  }
+}
 
 export default function AssetsPage() {
-    const { user } = useAuth();
-    const router = useRouter();
-    const [assets, setAssets] = useState<Asset[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState('All');
-    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingAsset, setEditingAsset] = useState<Asset | undefined>();
+  const { user } = useAuth();
+  const router = useRouter();
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'ALL' | AssetType>('ALL');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | undefined>();
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [assetPendingDelete, setAssetPendingDelete] = useState<Asset | null>(null);
+  const deferredSearch = useDeferredValue(searchTerm);
 
-    const toggleRow = (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
-        const next = new Set(expandedRows);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        setExpandedRows(next);
-    };
+  async function loadAssets() {
+    try {
+      const response = await api.get<Asset[]>('/assets');
+      setAssets(response.data);
+    } catch {
+      toast.error('Failed to load assets');
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    useEffect(() => {
-        fetchAssets();
-    }, []);
+  useEffect(() => {
+    void loadAssets();
+  }, []);
 
-    const fetchAssets = async () => {
-        try {
-            const response = await api.get('/assets');
-            setAssets(response.data);
-        } catch (error) {
-            toast.error('Failed to load IT Assets');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const filteredAssets = assets.filter((asset) => {
+    const query = deferredSearch.trim().toLowerCase();
+    const matchesSearch =
+      query.length === 0 ||
+      asset.name.toLowerCase().includes(query) ||
+      asset.assetId?.toLowerCase().includes(query) ||
+      asset.brandModel?.toLowerCase().includes(query) ||
+      asset.sn?.toLowerCase().includes(query) ||
+      asset.ipAllocations?.some((ip) => ip.address.toLowerCase().includes(query));
 
-    const filteredAssets = assets.filter((asset) => {
-        const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (asset.ipAllocations && asset.ipAllocations.some(ip => ip.address.includes(searchTerm.toLowerCase())));
+    return matchesSearch && (activeTab === 'ALL' || asset.type === activeTab);
+  });
 
-        let matchesTab = true;
-        if (activeTab === 'Servers') matchesTab = asset.type === 'SERVER';
-        if (activeTab === 'VMs') matchesTab = asset.type === 'VM';
-        if (activeTab === 'Applications') matchesTab = asset.type === 'APP';
-        if (activeTab === 'Databases') matchesTab = asset.type === 'DB';
+  const topLevelAssets =
+    deferredSearch.trim().length > 0 || activeTab !== 'ALL'
+      ? filteredAssets
+      : filteredAssets.filter((asset) => !asset.parentId);
 
-        return matchesSearch && matchesTab;
-    });
+  const openCreateDialog = () => {
+    setEditingAsset(undefined);
+    setDialogOpen(true);
+  };
 
-    const getAssetIcon = (type: string) => {
-        const iconProps = { className: "h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" };
-        switch (type) {
-            case 'SERVER': return <Server {...iconProps} />;
-            case 'VM': return <Monitor {...iconProps} />;
-            case 'DB': return <Database {...iconProps} />;
-            case 'APP': return <AppWindow {...iconProps} />;
-            default: return <Server {...iconProps} />;
-        }
+  const openEditDialog = async (assetId: string) => {
+    setLoadingEditId(assetId);
+    try {
+      const response = await api.get<Asset>(`/assets/${assetId}`);
+      setEditingAsset(response.data);
+      setDialogOpen(true);
+    } catch {
+      toast.error('Failed to load asset details for editing');
+    } finally {
+      setLoadingEditId(null);
+    }
+  };
+
+  const confirmDeleteAsset = async () => {
+    if (!assetPendingDelete) {
+      return;
     }
 
+    setDeletingId(assetPendingDelete.id);
+    try {
+      await api.delete(`/assets/${assetPendingDelete.id}`);
+      toast.success('Asset deleted');
+      setAssetPendingDelete(null);
+      await loadAssets();
+    } catch (error: unknown) {
+      const message =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : 'Failed to delete asset';
+
+      toast.error(message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const renderAssetRow = (asset: Asset, depth = 0): React.ReactNode => {
+    const hasChildren = (asset.children?.length ?? 0) > 0 && deferredSearch.trim().length === 0 && activeTab === 'ALL';
+    const expanded = expandedRows.has(asset.id);
+
     return (
-        <div className="space-y-6 pb-12">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-base font-semibold text-foreground">Asset Inventory</h1>
-                    <p className="text-xs text-muted-foreground mt-0.5">{assets.length} assets tracked</p>
-                </div>
-                {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
-                    <button
-                        onClick={() => { setEditingAsset(undefined); setIsDialogOpen(true); }}
-                        className="h-9 px-3 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shadow-sm">
-                        <Plus className="h-4 w-4" />
-                        Add Asset
-                    </button>
-                )}
+      <React.Fragment key={asset.id}>
+        <tr
+          className="group cursor-pointer border-b border-border/60 transition-colors hover:bg-foreground/[0.025]"
+          onClick={() => router.push(`/dashboard/assets/${asset.id}`)}
+        >
+          <td className="px-3 py-2.5">
+            <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 0.9}rem` }}>
+              {hasChildren ? (
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setExpandedRows((current) => {
+                      const next = new Set(current);
+                      next.has(asset.id) ? next.delete(asset.id) : next.add(asset.id);
+                      return next;
+                    });
+                  }}
+                  className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <ChevronRight className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                </button>
+              ) : (
+                <div className="w-4" />
+              )}
+              <span className="font-mono text-[11px] text-muted-foreground">{asset.assetId || '--'}</span>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="Search by name or IP..."
-                        className="h-8 w-64 rounded-lg border border-input bg-card pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div className="flex items-center gap-0.5 rounded-lg border border-input bg-card p-0.5">
-                    {TABS.map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${activeTab === tab
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:text-foreground"
-                                }`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
-                </div>
-                <span className="ml-auto text-xs text-muted-foreground">
-                    Showing {filteredAssets.length} of {assets.length} entries
-                </span>
+          </td>
+          <td className="px-3 py-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${typeStyles[asset.type]}`}>
+                {getAssetIcon(asset.type)}
+              </div>
+              <span className="truncate text-[13px] font-medium text-foreground">{asset.name}</span>
             </div>
+          </td>
+          <td className="px-3 py-2.5">
+            <span className={`inline-flex rounded-md px-2 py-1 text-[10px] font-medium ${typeStyles[asset.type]}`}>
+              {asset.type}
+            </span>
+          </td>
+          <td className="px-3 py-2.5 font-mono text-[12px] text-muted-foreground">{asset.rack || '--'}</td>
+          <td className="px-3 py-2.5 text-[12px] text-muted-foreground">{asset.brandModel || '--'}</td>
+          <td className="px-3 py-2.5 font-mono text-[12px] text-muted-foreground">{asset.sn || '--'}</td>
+          <td className="px-3 py-2.5 text-right" onClick={(event) => event.stopPropagation()}>
+            {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+              <div className="flex items-center justify-end gap-1">
+                <button
+                  onClick={() => void openEditDialog(asset.id)}
+                  className="rounded-md border border-border/70 bg-card/70 px-2 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {loadingEditId === asset.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
+                </button>
+                <button
+                  onClick={() => setAssetPendingDelete(asset)}
+                  disabled={deletingId === asset.id}
+                  className="rounded-md border border-border/70 bg-card/70 px-2 py-1.5 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                >
+                  {deletingId === asset.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            )}
+          </td>
+        </tr>
 
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <table className="data-table">
-                    <thead>
-                        <tr className="bg-muted/30">
-                            <th>Asset ID</th>
-                            <th>Asset</th>
-                            <th>Type</th>
-                            <th>IP Address</th>
-                            <th>OS</th>
-                            <th>Status</th>
-                            <th>Risk</th>
-                            <th>Score</th>
-                            <th>Owner</th>
-                            <th>Tags</th>
-                            <th className="w-20">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr>
-                                <td colSpan={10} className="px-6 py-12 text-center text-muted-foreground">
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                        Loading inventory...
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : filteredAssets.length === 0 ? (
-                            <tr>
-                                <td colSpan={10} className="px-6 py-12 text-center text-muted-foreground">
-                                    No assets found matching your criteria.
-                                </td>
-                            </tr>
-                        ) : (
-                            (() => {
-                                const isFiltering = searchTerm.trim().length > 0 || activeTab !== 'All';
-                                const displayAssets = isFiltering ? filteredAssets : filteredAssets.filter(a => !a.parentId);
-
-                                const renderAssetRow = (asset: Asset, depth: number = 0) => {
-                                    const risk = getAssetRisk(asset.id);
-                                    const hasChildren = asset.children && asset.children.length > 0 && !isFiltering;
-                                    const isExpanded = expandedRows.has(asset.id);
-
-                                    return (
-                                        <React.Fragment key={asset.id}>
-                                            <tr className={`animate-slide-in hover:bg-accent/40 transition-colors group cursor-pointer ${depth > 0 ? 'bg-muted/10' : ''}`} onClick={() => router.push(`/dashboard/assets/${asset.id}`)}>
-                                                <td>
-                                                    <div className="flex items-center gap-2" style={{ paddingLeft: `${depth * 1.5}rem` }}>
-                                                        {hasChildren ? (
-                                                            <button onClick={(e) => toggleRow(e, asset.id)} className="p-0.5 rounded-sm hover:bg-accent text-muted-foreground mr-1">
-                                                                <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                                                            </button>
-                                                        ) : (
-                                                            <div className="w-5 mr-1 bg-transparent" />
-                                                        )}
-                                                        <div className={`flex h-6 w-6 items-center justify-center rounded-md ${depth > 0 ? 'bg-background' : 'bg-accent'}`}>
-                                                            {getAssetIcon(asset.type)}
-                                                        </div>
-                                                        <span className="font-mono text-xs font-medium group-hover:text-primary transition-colors">{asset.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td><span className="font-mono text-xs text-muted-foreground">{asset.assetId || '--'}</span></td>
-                                                <td><span className="text-xs text-muted-foreground capitalize">{asset.type.toLowerCase()}</span></td>
-                                                <td className="font-mono text-xs text-muted-foreground">{asset.ipAllocations?.[0]?.address || '--'}</td>
-                                                <td className="text-xs text-muted-foreground">{asset.osVersion || '--'}</td>
-                                                <td>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <StatusDot status={asset.status.toLowerCase() === 'active' ? 'online' : asset.status.toLowerCase() === 'maintenance' ? 'degraded' : 'offline'} />
-                                                        <span className="text-xs capitalize text-foreground">{asset.status.toLowerCase()}</span>
-                                                    </div>
-                                                </td>
-                                                <td><RiskBadge level={risk.level.toLowerCase()} /></td>
-                                                <td className="font-mono text-xs font-medium text-foreground">{risk.score}</td>
-                                                <td className="text-xs text-muted-foreground">{asset.owner || '--'}</td>
-                                                <td>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        <span className="rounded-md bg-accent px-1.5 py-0.5 text-[10px] text-accent-foreground">{asset.department || "IT"}</span>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div className="flex items-center gap-1">
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setIsDialogOpen(true); }}
-                                                            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                                                            <Pencil className="h-3.5 w-3.5" />
-                                                        </button>
-                                                        <button onClick={(e) => { e.stopPropagation(); }} className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            {hasChildren && isExpanded && asset.children!
-                                                .filter(child => filteredAssets.some(f => f.id === child.id)) // ensuring child isn't globally hidden if we ever do deep filtering later
-                                                .map(child => renderAssetRow(child, depth + 1))}
-                                        </React.Fragment>
-                                    );
-                                };
-
-                                return displayAssets.map(asset => renderAssetRow(asset, 0));
-                            })()
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            <AssetFormDialog
-                open={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
-                assetToEdit={editingAsset}
-                onSuccess={fetchAssets}
-                availableParents={assets.filter(a => a.type === 'SERVER' || a.type === 'VM')}
-            />
-        </div>
+        {hasChildren &&
+          expanded &&
+          asset.children
+            ?.filter((child) => filteredAssets.some((filtered) => filtered.id === child.id))
+            .map((child) => renderAssetRow(child, depth + 1))}
+      </React.Fragment>
     );
+  };
+
+  return (
+    <>
+      <div className="space-y-3 pb-8">
+        <section className="rounded-2xl border border-border/70 bg-card/75 px-4 py-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">Assets</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">{assets.length} total records</p>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative min-w-[280px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search asset"
+                  className="h-9 w-full rounded-lg border border-border/70 bg-background/80 pl-9 pr-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+
+              {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+                <button
+                  onClick={openCreateDialog}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Asset
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {TABS.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                  activeTab === tab.value
+                    ? 'bg-foreground text-background'
+                    : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+            <div className="ml-auto text-[11px] text-muted-foreground">{filteredAssets.length} shown</div>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/75 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] border-collapse">
+              <thead>
+                <tr className="border-b border-border/70 bg-background/35 text-left text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <th className="px-3 py-2.5 font-semibold">Asset ID</th>
+                  <th className="px-3 py-2.5 font-semibold">Asset Name</th>
+                  <th className="px-3 py-2.5 font-semibold">Type</th>
+                  <th className="px-3 py-2.5 font-semibold">Rack</th>
+                  <th className="px-3 py-2.5 font-semibold">Brand / Model</th>
+                  <th className="px-3 py-2.5 font-semibold">SN</th>
+                  <th className="px-3 py-2.5 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
+                        <span className="text-sm">Loading assets...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : topLevelAssets.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                      No assets matched your filters.
+                    </td>
+                  </tr>
+                ) : (
+                  topLevelAssets.map((asset) => renderAssetRow(asset))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <AssetFormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          assetToEdit={editingAsset}
+          onSuccess={loadAssets}
+          availableParents={assets.map((asset) => ({ id: asset.id, name: asset.name, type: asset.type }))}
+        />
+      </div>
+
+      <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
+        <DialogContent className="max-w-md border-border/70 bg-card/96 p-0 shadow-[0_30px_80px_-40px_rgba(15,23,42,0.6)]">
+          <DialogHeader className="border-b border-border/70 px-5 py-4">
+            <DialogTitle className="text-base">Delete asset</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 px-5 py-5">
+            <p className="text-sm text-muted-foreground">
+              Delete <span className="font-medium text-foreground">{assetPendingDelete?.name}</span> and all linked access data?
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setAssetPendingDelete(null)} disabled={!!deletingId}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => void confirmDeleteAsset()}
+                disabled={!!deletingId}
+              >
+                {deletingId ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

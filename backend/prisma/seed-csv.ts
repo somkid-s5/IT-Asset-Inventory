@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, AssetType } from '@prisma/client';
 import * as fs from 'fs';
 import { parse } from 'csv-parse/sync';
 import * as crypto from 'crypto';
@@ -93,11 +93,13 @@ async function main() {
                 }
 
                 // Parse Asset Type
-                let assetType: 'SERVER' | 'VM' | 'DB' | 'APP' = 'SERVER';
+                let assetType: AssetType = AssetType.SERVER;
                 const brand = record['Brand/Model']?.toLowerCase() || '';
                 const system = record['System']?.toLowerCase() || '';
-                if (brand.includes('vmware') || system.includes('vm')) assetType = 'VM';
-                if (record['Database Type'] || record['Database Name/SID']) assetType = 'DB';
+                // Since we focus on hardware, we'll keep SERVER as default.
+                // We could map specific hardware brands to STORAGE/SWITCH if needed.
+                if (brand.includes('switch') || brand.includes('cisco')) assetType = AssetType.NETWORK;
+                if (brand.includes('storage') || brand.includes('emc') || brand.includes('netapp')) assetType = AssetType.STORAGE;
 
                 let name = record['DisplayName'] || record[' IP Address'] || record['IP Address'];
                 const spec = record['Specification'] || '';
@@ -108,7 +110,7 @@ async function main() {
 
                 // Discover Hierarchical Parent
                 let parentId = undefined;
-                if (assetType === 'VM' && system && system !== '') {
+                if ((brand.includes('vmware') || system.includes('vm')) && system && system !== '') {
                     let parentAsset = await prisma.asset.findFirst({
                         where: { name: system, type: 'SERVER' }
                     });
