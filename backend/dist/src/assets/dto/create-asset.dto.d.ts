@@ -2,11 +2,15 @@ import { AssetStatus, AssetType } from '@prisma/client';
 declare class IpAllocationDto {
     address: string;
     type?: string;
+    manageType?: string;
+    version?: string;
 }
 declare class AssetCredentialDto {
     username: string;
     password?: string;
     type?: string;
+    manageType?: string;
+    version?: string;
 }
 export declare class CreateAssetDto {
     name: string;

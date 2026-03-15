@@ -1,240 +1,281 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { AlertCircle, Server, ShieldAlert, Activity, ArrowUpRight, AlertTriangle, TrendingUp, Clock, Bug } from 'lucide-react';
+import { AlertTriangle, Boxes, Clock3, LoaderCircle, RefreshCw, Server, ShieldAlert, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
-import { RiskScoreRing, RiskBadge, StatusDot, PatchBadge } from '@/components/StatusBadges';
-
-function StatCard({
-    label,
-    value,
-    icon: Icon,
-    detail,
-    variant = "default",
-}: {
-    label: string;
-    value: string | number;
-    icon: typeof ShieldAlert;
-    detail?: string;
-    variant?: "default" | "critical" | "warning" | "success";
-}) {
-    const glowMap = {
-        default: "",
-        critical: "risk-glow-critical",
-        warning: "risk-glow-medium",
-        success: "risk-glow-low",
-    };
-
-    return (
-        <div className={`stat-card animate-slide-in ${glowMap[variant]}`}>
-            <div className="flex items-start justify-between">
-                <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-                    <p className="mt-1 text-2xl font-semibold font-mono">{value}</p>
-                    {detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}
-                </div>
-                <div className="rounded-md bg-primary/10 p-2">
-                    <Icon className="h-4 w-4 text-primary" />
-                </div>
-            </div>
-        </div>
-    );
-}
 
 interface DashboardData {
-    totalAssets: number;
-    activeAssets: number;
-    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-    riskFactors: {
-        eolAssets: number;
-        outdatedPatches: number;
-        oldCredentials: number;
-    };
+  totalAssets: number;
+  activeAssets: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  riskFactors: {
+    eolAssets: number;
+    outdatedPatches: number;
+    oldCredentials: number;
+  };
+}
+
+function getRiskTone(level: DashboardData['riskLevel']) {
+  switch (level) {
+    case 'CRITICAL':
+      return 'text-destructive';
+    case 'HIGH':
+      return 'text-warning';
+    case 'MEDIUM':
+      return 'text-warning';
+    default:
+      return 'text-success';
+  }
 }
 
 export default function DashboardPage() {
-    const { user } = useAuth();
-    const [data, setData] = useState<DashboardData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                setError(null);
-                const response = await api.get('/dashboard/overview');
-                setData(response.data);
-            } catch (err: any) {
-                console.error(err);
-                setError(err?.response?.data?.message || 'Failed to load dashboard data from server.');
-                toast.error('Failed to load dashboard data');
-            } finally {
-                setLoading(false);
-            }
-        };
+  async function loadDashboard() {
+    try {
+      setError(null);
+      const response = await api.get<DashboardData>('/dashboard/overview');
+      setData(response.data);
+    } catch (err: unknown) {
+      const apiMessage =
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        typeof (err as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : null;
 
-        if (user) {
-            fetchDashboardData();
-        }
-    }, [user]);
+      const message = apiMessage ?? 'Failed to load dashboard data from server.';
 
-    if (loading) {
-        return (
-            <div className="h-full w-full flex items-center justify-center min-h-[400px]">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-slate-400">Loading intelligence data...</p>
-                </div>
-            </div>
-        );
+      setError(message);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (user) {
+      void loadDashboard();
+    }
+  }, [user]);
+
+  const overviewRows = useMemo(() => {
+    if (!data) {
+      return [];
     }
 
-    if (error || !data) {
-        return (
-            <div className="h-full w-full flex items-center justify-center min-h-[400px]">
-                <div className="flex flex-col items-center gap-4 p-8 bg-destructive/10 rounded-lg border border-destructive/20 max-w-md">
-                    <AlertTriangle className="w-10 h-10 text-destructive" />
-                    <h3 className="text-lg font-semibold text-destructive">Data Initialization Failed</h3>
-                    <p className="text-sm text-center text-muted-foreground">{error || "No data received from backend."}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-                    >
-                        Retry Connection
-                    </button>
-                </div>
-            </div>
-        );
+    return [
+      {
+        id: 'risk',
+        category: 'Risk posture',
+        summary: `${data.riskLevel} overall infrastructure risk`,
+        value: data.riskLevel,
+        note: 'Based on current risk factors',
+      },
+      {
+        id: 'active',
+        category: 'Active assets',
+        summary: `${data.activeAssets} assets currently active`,
+        value: String(data.activeAssets),
+        note: `${Math.max(0, data.totalAssets - data.activeAssets)} inactive or retired`,
+      },
+      {
+        id: 'patch',
+        category: 'Patch backlog',
+        summary: `${data.riskFactors.outdatedPatches} patch items pending`,
+        value: String(data.riskFactors.outdatedPatches),
+        note: 'Outdated software or firmware',
+      },
+      {
+        id: 'credential',
+        category: 'Credential hygiene',
+        summary: `${data.riskFactors.oldCredentials} credentials need rotation`,
+        value: String(data.riskFactors.oldCredentials),
+        note: 'Old secrets requiring review',
+      },
+    ];
+  }, [data]);
+
+  const focusItems = useMemo(() => {
+    if (!data) {
+      return [];
     }
 
-    // Gauge Chart Logic
-    const riskScore = data.riskLevel === 'CRITICAL' ? 92
-        : data.riskLevel === 'HIGH' ? 75
-            : data.riskLevel === 'MEDIUM' ? 45
-                : 15;
-
-    const gaugeData = [
-        { name: 'Score', value: riskScore },
-        { name: 'Remaining', value: 100 - riskScore }
+    return [
+      `${data.riskFactors.eolAssets} assets are at or near end-of-life and should be reviewed first`,
+      `${data.riskFactors.outdatedPatches} systems have pending patch actions waiting for maintenance windows`,
+      `${data.riskFactors.oldCredentials} credentials are aging and should move into a rotation plan`,
     ];
+  }, [data]);
 
-    const gaugeColors = [
-        riskScore > 80 ? '#ef4444' : riskScore > 50 ? '#f59e0b' : '#22c55e',
-        '#1e293b' // background track
-    ];
-
-    // Mock Top Assets
-    const topVulnerableAssets = [
-        { name: 'db-prod-01', ip: '10.0.1.45', risk: 'Critical', score: 98, type: 'Server' },
-        { name: 'web-front-lb', ip: '10.0.2.12', risk: 'High', score: 82, type: 'Server' },
-        { name: 'auth-service-vm', ip: '10.0.5.99', risk: 'Medium', score: 55, type: 'Server' },
-        { name: 'internal-wiki', ip: '10.0.8.20', risk: 'Low', score: 12, type: 'Server' }
-    ];
-
+  if (loading) {
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-xl font-semibold">Infrastructure Overview</h1>
-                <p className="text-sm text-muted-foreground">Risk posture and asset intelligence</p>
-            </div>
-
-            {/* Stats */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard label="Total Assets" value={data.totalAssets} icon={Server} detail="Across all environments" />
-                <StatCard label="Critical Risk" value={data.riskFactors.eolAssets} icon={AlertTriangle} detail="Require immediate action" variant="critical" />
-                <StatCard label="Pending Patches" value={data.riskFactors.outdatedPatches} icon={Bug} detail="Outdated or EOL" variant="warning" />
-                <StatCard label="Avg Risk Score" value={riskScore} icon={TrendingUp} detail="Out of 100" variant={riskScore >= 50 ? "warning" : "success"} />
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-5">
-                {/* Risk Score Ring */}
-                <div className="stat-card col-span-2 flex flex-col items-center justify-center gap-4 glow-primary">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Infrastructure Risk Score
-                    </p>
-                    <RiskScoreRing score={riskScore} size={140} />
-                    <RiskBadge level={riskScore >= 75 ? "critical" : riskScore >= 50 ? "high" : riskScore >= 25 ? "medium" : "low"} />
-                </div>
-
-                {/* Top risk assets */}
-                <div className="stat-card col-span-3">
-                    <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Highest Risk Assets
-                    </p>
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Asset</th>
-                                <th>Status</th>
-                                <th>Risk</th>
-                                <th>Score</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {topVulnerableAssets.map((asset, i) => (
-                                <tr key={i}>
-                                    <td>
-                                        <div className="flex items-center gap-2">
-                                            <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span className="font-mono text-xs">{asset.name}</span>
-                                        </div>
-                                    </td>
-                                    <td><StatusDot status="online" /></td>
-                                    <td><RiskBadge level={asset.risk.toLowerCase()} /></td>
-                                    <td className="font-mono text-xs">{asset.score}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {/* Pending patches */}
-            <div className="stat-card">
-                <div className="mb-3 flex items-center justify-between">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Patch Intelligence
-                    </p>
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>Asset</th>
-                            <th>Software</th>
-                            <th>Current</th>
-                            <th>Latest</th>
-                            <th>Status</th>
-                            <th>CVEs</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td className="font-mono text-xs">db-prod-01</td>
-                            <td>PostgreSQL</td>
-                            <td className="font-mono text-xs">14.2</td>
-                            <td className="font-mono text-xs">14.9</td>
-                            <td><PatchBadge status="outdated" /></td>
-                            <td>
-                                <span className="font-mono text-xs text-destructive">2 CVEs</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td className="font-mono text-xs">web-front-lb</td>
-                            <td>Nginx</td>
-                            <td className="font-mono text-xs">1.18.0</td>
-                            <td className="font-mono text-xs">1.24.0</td>
-                            <td><PatchBadge status="eol" /></td>
-                            <td>
-                                <span className="font-mono text-xs text-destructive">1 CVE</span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+      <div className="flex min-h-[320px] items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <LoaderCircle className="h-5 w-5 animate-spin text-foreground" />
+          <p className="text-sm">Loading workspace overview...</p>
         </div>
+      </div>
     );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="space-y-4 pb-8">
+        <section className="surface-panel p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">Dashboard unavailable</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{error || 'No data received from backend.'}</p>
+              <button
+                onClick={() => {
+                  setLoading(true);
+                  void loadDashboard();
+                }}
+                className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 pb-8">
+      <section className="surface-panel p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">Operations Overview</h2>
+            <p className="mt-0.5 max-w-2xl text-xs leading-5 text-muted-foreground">
+              ภาพรวมของ inventory ปัจจุบัน เพื่อให้เห็นจำนวน asset, สถานะการใช้งาน และประเด็นที่ต้องจัดการต่อในฝั่ง infrastructure
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border border-border bg-background px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Total Assets</div>
+              <div className="mt-1 text-base font-semibold text-foreground">{data.totalAssets}</div>
+            </div>
+            <div className="rounded-lg border border-border bg-background px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Active Assets</div>
+              <div className="mt-1 text-base font-semibold text-foreground">{data.activeAssets}</div>
+            </div>
+            <div className="rounded-lg border border-border bg-background px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Risk Level</div>
+              <div className={`mt-1 text-base font-semibold ${getRiskTone(data.riskLevel)}`}>{data.riskLevel}</div>
+            </div>
+            <div className="rounded-lg border border-border bg-background px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Patch Backlog</div>
+              <div className="mt-1 text-base font-semibold text-foreground">{data.riskFactors.outdatedPatches}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="overflow-hidden rounded-[18px] border border-border bg-card">
+          <div className="border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Infrastructure Summary</h3>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Snapshot of the current operational posture</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-background/50 text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="px-3 py-3 font-medium">Category</th>
+                  <th className="px-3 py-3 font-medium">Summary</th>
+                  <th className="px-3 py-3 font-medium">Value</th>
+                  <th className="px-3 py-3 font-medium">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewRows.map((row) => (
+                  <tr key={row.id} className="border-b border-border/80 transition-colors hover:bg-accent/60 last:border-b-0">
+                    <td className="px-3 py-3 text-[12px] font-medium text-foreground">{row.category}</td>
+                    <td className="px-3 py-3 text-[12px] text-muted-foreground">{row.summary}</td>
+                    <td className="px-3 py-3 text-[12px] font-mono text-foreground">{row.value}</td>
+                    <td className="px-3 py-3 text-[12px] text-muted-foreground">{row.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="surface-panel p-4">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">Priority Focus</h3>
+            <div className="mt-3 space-y-2">
+              {focusItems.map((item) => (
+                <div key={item} className="flex items-start gap-2 rounded-lg border border-border bg-background px-3 py-2">
+                  <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground" />
+                  <span className="text-xs leading-5 text-muted-foreground">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="surface-panel p-4">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">Current Breakdown</h3>
+            <div className="mt-3 space-y-2">
+              <div className="rounded-lg border border-border bg-background px-3 py-2">
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <Boxes className="h-3.5 w-3.5" />
+                    End-of-life assets
+                  </span>
+                  <span className="font-semibold text-foreground">{data.riskFactors.eolAssets}</span>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-background px-3 py-2">
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <Wrench className="h-3.5 w-3.5" />
+                    Pending patches
+                  </span>
+                  <span className="font-semibold text-foreground">{data.riskFactors.outdatedPatches}</span>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-background px-3 py-2">
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    Old credentials
+                  </span>
+                  <span className="font-semibold text-foreground">{data.riskFactors.oldCredentials}</span>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-background px-3 py-2">
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <Server className="h-3.5 w-3.5" />
+                    Inactive assets
+                  </span>
+                  <span className="font-semibold text-foreground">{Math.max(0, data.totalAssets - data.activeAssets)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 }

@@ -13,10 +13,12 @@ export declare class AssetsController {
             password: string;
             type: string | null;
             assetId: string;
+            manageType: string | null;
             username: string;
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
         }[];
@@ -73,10 +75,12 @@ export declare class AssetsController {
         ipAllocations: {
             type: string | null;
             assetId: string;
+            manageType: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            version: string | null;
         }[];
         patchInfo: {
             assetId: string;
@@ -172,10 +176,12 @@ export declare class AssetsController {
         ipAllocations: {
             type: string | null;
             assetId: string;
+            manageType: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            version: string | null;
         }[];
         patchInfo: {
             assetId: string;
@@ -216,10 +222,12 @@ export declare class AssetsController {
             password: string;
             type: string | null;
             assetId: string;
+            manageType: string | null;
             username: string;
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
         }[];
@@ -276,10 +284,12 @@ export declare class AssetsController {
         ipAllocations: {
             type: string | null;
             assetId: string;
+            manageType: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            version: string | null;
         }[];
         patchInfo: {
             assetId: string;
@@ -320,10 +330,12 @@ export declare class AssetsController {
             password: string;
             type: string | null;
             assetId: string;
+            manageType: string | null;
             username: string;
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
         }[];
@@ -380,10 +392,12 @@ export declare class AssetsController {
         ipAllocations: {
             type: string | null;
             assetId: string;
+            manageType: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            version: string | null;
         }[];
         patchInfo: {
             assetId: string;

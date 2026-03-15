@@ -21,6 +21,7 @@ interface AccessUserFormValue {
 interface AccessPointFormValue {
   type: string;
   manageType: string;
+  version: string;
   address: string;
   users: AccessUserFormValue[];
 }
@@ -35,12 +36,16 @@ interface AssetCredential {
   username: string;
   password?: string;
   type?: string | null;
+  manageType?: string | null;
+  version?: string | null;
 }
 
 interface AssetIpAllocation {
   id?: string;
   address: string;
   type?: string | null;
+  manageType?: string | null;
+  version?: string | null;
 }
 
 interface AssetFormAsset {
@@ -48,7 +53,6 @@ interface AssetFormAsset {
   name: string;
   assetId?: string | null;
   type: AssetType;
-  osVersion?: string | null;
   rack?: string | null;
   location?: string | null;
   brandModel?: string | null;
@@ -81,6 +85,7 @@ const EMPTY_USER: AccessUserFormValue = {
 const EMPTY_ACCESS_POINT: AccessPointFormValue = {
   type: '',
   manageType: '',
+  version: '',
   address: '',
   users: [{ ...EMPTY_USER }],
 };
@@ -89,9 +94,8 @@ const DEFAULT_FORM_STATE = {
   name: '',
   assetId: '',
   type: 'SERVER' as AssetType,
-  osVersion: '',
   rack: '',
-  location: 'DC',
+  location: '',
   brandModel: '',
   sn: '',
 };
@@ -103,6 +107,18 @@ const typeOptions: { value: AssetType; label: string }[] = [
   { value: 'SP', label: 'Service Processor' },
   { value: 'NETWORK', label: 'Network' },
 ];
+
+const accessTypeOptions = ['Host', 'Management'];
+
+const manageTypeOptions = ['WEB', 'SSH'];
+
+function getSelectOptions(baseOptions: string[], currentValue: string) {
+  if (currentValue && !baseOptions.includes(currentValue)) {
+    return [currentValue, ...baseOptions];
+  }
+
+  return baseOptions;
+}
 
 export function AssetFormDialog({
   open,
@@ -129,64 +145,67 @@ export function AssetFormDialog({
     }
 
     const groupedMap = new Map<string, AccessPointFormValue>();
+    const makeAccessKey = (type?: string | null, manageType?: string | null, version?: string | null, address?: string | null) =>
+      [type?.trim().toLowerCase() || 'general', manageType?.trim().toLowerCase() || 'direct', version?.trim().toLowerCase() || 'no-version', address?.trim().toLowerCase() || 'no-address'].join('::');
 
     (assetToEdit.ipAllocations ?? []).forEach((ip, index) => {
-      const key = `${ip.type ?? 'general'}-${ip.address}-${index}`;
+      const key = makeAccessKey(ip.type, ip.manageType, ip.version, ip.address) || `${ip.type ?? 'general'}-${ip.address}-${index}`;
       groupedMap.set(key, {
         type: ip.type ?? '',
-        manageType: assetToEdit.manageType ?? '',
+        manageType: ip.manageType ?? assetToEdit.manageType ?? '',
+        version: ip.version ?? '',
         address: ip.address,
         users: [],
       });
     });
 
     (assetToEdit.credentials ?? []).forEach((credential, index) => {
-      const matchedEntry = Array.from(groupedMap.entries()).find(([key, value]) => {
-        const sameType = (value.type || '').toLowerCase() === (credential.type || '').toLowerCase();
-        return sameType && value.users.length === 0;
-      });
+      const key = makeAccessKey(credential.type, credential.manageType, credential.version, null);
+      const matchedEntry = groupedMap.get(key) ?? Array.from(groupedMap.values()).find(
+        (value) =>
+          (value.type || '').toLowerCase() === (credential.type || '').toLowerCase() &&
+          (value.manageType || '').toLowerCase() === (credential.manageType || '').toLowerCase() &&
+          (value.version || '').toLowerCase() === (credential.version || '').toLowerCase(),
+      );
 
       if (matchedEntry) {
-        matchedEntry[1].users.push({
+        matchedEntry.manageType = matchedEntry.manageType || credential.manageType || '';
+        matchedEntry.version = matchedEntry.version || credential.version || '';
+        matchedEntry.users.push({
           username: credential.username,
           password: credential.password ?? '',
         });
         return;
       }
 
-      groupedMap.set(`credential-${credential.type ?? 'general'}-${index}`, {
+      groupedMap.set(key || `credential-${credential.type ?? 'general'}-${index}`, {
         type: credential.type ?? '',
-        manageType: assetToEdit.manageType ?? '',
+        manageType: credential.manageType ?? assetToEdit.manageType ?? '',
+        version: credential.version ?? '',
         address: '',
-        users: [
-          {
-            username: credential.username,
-            password: credential.password ?? '',
-          },
-        ],
+        users: [{ username: credential.username, password: credential.password ?? '' }],
       });
     });
-
-    const resolvedAccessPoints =
-      groupedMap.size > 0
-        ? Array.from(groupedMap.values()).map((item) => ({
-            ...item,
-            users: item.users.length > 0 ? item.users : [{ ...EMPTY_USER }],
-          }))
-        : [{ ...EMPTY_ACCESS_POINT }];
 
     setFormData({
       name: assetToEdit.name || '',
       assetId: assetToEdit.assetId || '',
       type: assetToEdit.type || 'SERVER',
-      osVersion: assetToEdit.osVersion || '',
       rack: assetToEdit.rack || '',
-      location: assetToEdit.location || 'DC',
+      location: assetToEdit.location || '',
       brandModel: assetToEdit.brandModel || '',
       sn: assetToEdit.sn || '',
     });
 
-    setAccessPoints(resolvedAccessPoints);
+    setAccessPoints(
+      groupedMap.size > 0
+        ? Array.from(groupedMap.values()).map((item) => ({
+            ...item,
+            users: item.users.length > 0 ? item.users : [{ ...EMPTY_USER }],
+          }))
+        : [{ ...EMPTY_ACCESS_POINT }],
+    );
+
     setMetadataPairs(
       assetToEdit.customMetadata
         ? Object.entries(assetToEdit.customMetadata).map(([key, value]) => ({
@@ -203,12 +222,7 @@ export function AssetFormDialog({
     );
   };
 
-  const updateAccessUser = (
-    accessIndex: number,
-    userIndex: number,
-    field: keyof AccessUserFormValue,
-    value: string,
-  ) => {
+  const updateAccessUser = (accessIndex: number, userIndex: number, field: keyof AccessUserFormValue, value: string) => {
     setAccessPoints((current) =>
       current.map((item, itemIndex) =>
         itemIndex === accessIndex
@@ -245,7 +259,9 @@ export function AssetFormDialog({
         .filter((item) => item.address.trim())
         .map((item) => ({
           address: item.address.trim(),
-          type: item.type.trim() || item.manageType.trim() || undefined,
+          type: item.type.trim() || undefined,
+          manageType: item.manageType.trim() || undefined,
+          version: item.version.trim() || undefined,
         }));
 
       const finalCredentials = accessPoints.flatMap((item) =>
@@ -254,7 +270,9 @@ export function AssetFormDialog({
           .map((user) => ({
             username: user.username.trim(),
             password: user.password,
-            type: item.type.trim() || item.manageType.trim() || undefined,
+            type: item.type.trim() || undefined,
+            manageType: item.manageType.trim() || undefined,
+            version: item.version.trim() || undefined,
           })),
       );
 
@@ -265,7 +283,6 @@ export function AssetFormDialog({
         location: formData.location.trim() || undefined,
         brandModel: formData.brandModel.trim() || undefined,
         sn: formData.sn.trim() || undefined,
-        osVersion: formData.osVersion.trim() || undefined,
         ips: finalIps,
         credentials: finalCredentials,
         customMetadata: Object.keys(customMetadata).length > 0 ? customMetadata : undefined,
@@ -298,44 +315,46 @@ export function AssetFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto border-white/70 bg-white/92 p-0 shadow-[0_40px_120px_-50px_rgba(15,23,42,0.5)] backdrop-blur-2xl sm:max-w-4xl dark:border-white/10 dark:bg-card/95">
-        <DialogHeader className="border-b border-border/70 px-5 py-4">
-          <DialogTitle className="flex items-center gap-3 text-lg">
-            <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+      <DialogContent
+        key={assetToEdit?.id ?? 'new-asset'}
+        className="max-h-[92vh] overflow-y-auto border-border bg-card p-0 sm:max-w-4xl"
+      >
+        <DialogHeader className="border-b border-border px-5 py-4">
+          <DialogTitle className="flex items-center gap-3 text-base">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground">
               <HardDrive className="h-4 w-4" />
             </span>
             <span>{assetToEdit ? 'Edit Asset' : 'Create New Asset'}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5 px-5 py-5">
+        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5 px-5 py-5">
           <section className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-border/70 bg-background/65 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Identity</p>
+            <div className="rounded-xl border border-border bg-background p-4">
+              <p className="text-[11px] font-medium text-muted-foreground">Identity</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5 md:col-span-2">
                   <Label>Asset Name / Hostname</Label>
                   <Input
                     required
+                    autoComplete="off"
                     value={formData.name}
                     onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-                    placeholder="TRD-APIControlDom"
+                    placeholder="Enter asset name"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Asset ID</Label>
                   <Input
+                    autoComplete="off"
                     value={formData.assetId}
                     onChange={(event) => setFormData({ ...formData, assetId: event.target.value })}
-                    placeholder="6303-0001"
+                    placeholder="Enter asset ID"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Type</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value as AssetType })}
-                  >
+                  <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as AssetType })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -351,62 +370,54 @@ export function AssetFormDialog({
                 <div className="space-y-1.5">
                   <Label>Brand / Model</Label>
                   <Input
+                    autoComplete="off"
                     value={formData.brandModel}
                     onChange={(event) => setFormData({ ...formData, brandModel: event.target.value })}
-                    placeholder="HPE StoreFabric SN3600B"
+                    placeholder="Enter brand or model"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Serial Number</Label>
                   <Input
+                    autoComplete="off"
                     value={formData.sn}
                     onChange={(event) => setFormData({ ...formData, sn: event.target.value })}
-                    placeholder="CZC014WXEG"
+                    placeholder="Enter serial number"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border/70 bg-background/65 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Placement</p>
+            <div className="rounded-xl border border-border bg-background p-4">
+              <p className="text-[11px] font-medium text-muted-foreground">Placement</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Location</Label>
                   <Input
+                    autoComplete="off"
                     value={formData.location}
                     onChange={(event) => setFormData({ ...formData, location: event.target.value })}
-                    placeholder="DC"
+                    placeholder="Enter location"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Rack</Label>
                   <Input
+                    autoComplete="off"
                     value={formData.rack}
                     onChange={(event) => setFormData({ ...formData, rack: event.target.value })}
-                    placeholder="1C-04"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label>OS / Firmware</Label>
-                  <Input
-                    value={formData.osVersion}
-                    onChange={(event) => setFormData({ ...formData, osVersion: event.target.value })}
-                    placeholder="VMware ESXi 8.0.3"
+                    placeholder="Enter rack"
                   />
                 </div>
               </div>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-border/70 bg-background/65 p-4">
-            <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
+          <section className="rounded-xl border border-border bg-background p-4">
+            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  Access Points
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  One row per access context, with multiple users inside the same row.
-                </p>
+                <p className="text-[11px] font-medium text-muted-foreground">Access Points</p>
+                <p className="mt-1 text-xs text-muted-foreground">One row per context, with multiple users inside the same row.</p>
               </div>
               <Button type="button" size="sm" onClick={() => setAccessPoints((current) => [...current, { ...EMPTY_ACCESS_POINT }])}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -416,10 +427,10 @@ export function AssetFormDialog({
 
             <div className="mt-4 space-y-3">
               {accessPoints.map((point, index) => (
-                <div key={`${point.type}-${index}`} className="rounded-xl border border-border/70 bg-card/60 p-3">
+                <div key={`${point.type}-${index}`} className="rounded-lg border border-border bg-card p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <Shield className="h-4 w-4 text-primary" />
+                      <Shield className="h-4 w-4 text-muted-foreground" />
                       Access row {index + 1}
                     </div>
                     {accessPoints.length > 1 && (
@@ -435,37 +446,64 @@ export function AssetFormDialog({
                     )}
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-4">
                     <div className="space-y-1.5">
                       <Label>Access Type</Label>
-                      <Input
-                        value={point.type}
-                        onChange={(event) => updateAccessPoint(index, 'type', event.target.value)}
-                        placeholder="IPMI / Host"
-                      />
+                      <Select value={point.type || undefined} onValueChange={(value) => updateAccessPoint(index, 'type', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select access type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getSelectOptions(accessTypeOptions, point.type).map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Manage Type</Label>
-                      <Input
-                        value={point.manageType}
-                        onChange={(event) => updateAccessPoint(index, 'manageType', event.target.value)}
-                        placeholder="WEB / SSH"
-                      />
+                      <Label>Access Method</Label>
+                      <Select
+                        value={point.manageType || undefined}
+                        onValueChange={(value) => updateAccessPoint(index, 'manageType', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select access method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getSelectOptions(manageTypeOptions, point.manageType).map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1.5">
                       <Label>IP Address</Label>
                       <Input
+                        autoComplete="off"
                         value={point.address}
                         onChange={(event) => updateAccessPoint(index, 'address', event.target.value)}
-                        placeholder="192.168.41.151"
+                        placeholder="Enter IP address"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Version / Firmware</Label>
+                      <Input
+                        autoComplete="off"
+                        value={point.version}
+                        onChange={(event) => updateAccessPoint(index, 'version', event.target.value)}
+                        placeholder="Enter version or firmware"
                       />
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-xl border border-border/70 bg-background/70 p-3">
+                  <div className="mt-3 rounded-lg border border-border bg-background p-3">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-                        <UserRound className="h-3.5 w-3.5 text-primary" />
+                        <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
                         User accounts
                       </div>
                       <Button
@@ -490,15 +528,17 @@ export function AssetFormDialog({
                       {point.users.map((user, userIndex) => (
                         <div key={`${index}-${userIndex}`} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
                           <Input
+                            autoComplete="off"
                             value={user.username}
                             onChange={(event) => updateAccessUser(index, userIndex, 'username', event.target.value)}
-                            placeholder="Username"
+                            placeholder="Enter username"
                           />
                           <Input
                             type="password"
+                            autoComplete="new-password"
                             value={user.password}
                             onChange={(event) => updateAccessUser(index, userIndex, 'password', event.target.value)}
-                            placeholder="Password"
+                            placeholder="Enter password"
                           />
                           <Button
                             type="button"
@@ -532,12 +572,10 @@ export function AssetFormDialog({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-border/70 bg-background/65 p-4">
-            <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
+          <section className="rounded-xl border border-border bg-background p-4">
+            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  Extra Specs
-                </p>
+                <p className="text-[11px] font-medium text-muted-foreground">Extra Specs</p>
                 <p className="mt-1 text-xs text-muted-foreground">Optional metadata like RAM, CPU, or warranty.</p>
               </div>
               <Button
@@ -553,7 +591,7 @@ export function AssetFormDialog({
 
             <div className="mt-4 space-y-2">
               {metadataPairs.length === 0 && (
-                <div className="rounded-xl border border-dashed border-border/80 bg-background/70 px-4 py-4 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-border bg-card px-4 py-4 text-sm text-muted-foreground">
                   No extra specifications yet.
                 </div>
               )}
@@ -561,14 +599,16 @@ export function AssetFormDialog({
               {metadataPairs.map((pair, index) => (
                 <div key={`${pair.key}-${index}`} className="grid gap-2 md:grid-cols-[1fr_1.3fr_auto]">
                   <Input
+                    autoComplete="off"
                     value={pair.key}
                     onChange={(event) => updateMetadataField(index, 'key', event.target.value)}
-                    placeholder="Key"
+                    placeholder="Field name"
                   />
                   <Input
+                    autoComplete="off"
                     value={pair.value}
                     onChange={(event) => updateMetadataField(index, 'value', event.target.value)}
-                    placeholder="Value"
+                    placeholder="Field value"
                   />
                   <Button
                     type="button"
@@ -584,11 +624,11 @@ export function AssetFormDialog({
             </div>
           </section>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button type="submit" disabled={loading} className="bg-foreground text-background hover:bg-foreground/90">
               {loading ? (
                 <>
                   <Database className="mr-2 h-4 w-4 animate-pulse" />

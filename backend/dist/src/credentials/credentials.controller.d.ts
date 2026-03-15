@@ -7,10 +7,12 @@ export declare class CredentialsController {
     create(createCredentialDto: CreateCredentialDto): Promise<{
         type: string | null;
         assetId: string;
+        manageType: string | null;
         username: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
@@ -28,20 +30,24 @@ export declare class CredentialsController {
     update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{
         type: string | null;
         assetId: string;
+        manageType: string | null;
         username: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
     remove(id: string): Promise<{
         type: string | null;
         assetId: string;
+        manageType: string | null;
         username: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
