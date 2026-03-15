@@ -12,7 +12,9 @@ interface AppLayoutProps {
 
 const pageTitles: Record<string, string> = {
   '/dashboard/assets': 'Asset Inventory',
-  '/dashboard/vault': 'Credential Vault',
+  '/dashboard/vm': 'Virtual Machines',
+  '/dashboard/app': 'Applications',
+  '/dashboard/db': 'Databases',
   '/dashboard/settings': 'Settings',
   '/dashboard/feedback': 'Feedback',
   '/dashboard/help': 'Help Center',
@@ -35,37 +37,35 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-border/70 bg-background/88 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-20 border-b border-border bg-background/88 px-5 py-3 backdrop-blur sm:px-6 lg:px-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                  Workspace
-                </p>
-                <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+                <p className="text-[11px] font-medium text-muted-foreground">Workspace</p>
+                <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-foreground">{title}</h1>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="rounded-xl border border-border/70 bg-card/80 p-2.5 text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+                  className="rounded-lg border border-border bg-card p-2 text-muted-foreground transition-colors hover:text-foreground"
                   title="Toggle theme"
                 >
                   {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </button>
 
-                <button className="relative rounded-xl border border-border/70 bg-card/80 p-2.5 text-muted-foreground shadow-sm transition-colors hover:text-foreground">
+                <button className="relative rounded-lg border border-border bg-card p-2 text-muted-foreground transition-colors hover:text-foreground">
                   <Bell className="h-4 w-4" />
-                  <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary" />
+                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-foreground dark:bg-foreground" />
                 </button>
 
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-sm font-semibold text-primary">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-xs font-semibold text-foreground">
                   SA
                 </div>
               </div>
             </div>
           </header>
 
-          <main className="flex-1 px-4 pb-8 pt-5 sm:px-6 lg:px-8">{children}</main>
+          <main className="flex-1 px-5 pb-8 pt-5 sm:px-6 lg:px-8">{children}</main>
         </div>
       </div>
     </div>

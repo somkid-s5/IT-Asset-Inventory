@@ -4,19 +4,7 @@ import { useDeferredValue, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
-import {
-  ChevronRight,
-  Database,
-  FolderTree,
-  HardDrive,
-  LoaderCircle,
-  Pencil,
-  Plus,
-  Search,
-  Server,
-  Shield,
-  Trash2,
-} from 'lucide-react';
+import { ChevronRight, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
 import { AssetFormDialog } from '@/components/AssetFormDialog';
@@ -54,11 +42,11 @@ const TABS: { label: string; value: 'ALL' | AssetType }[] = [
 ];
 
 const typeStyles: Record<AssetType, string> = {
-  SERVER: 'bg-emerald-500/8 text-emerald-700 dark:text-emerald-300',
-  STORAGE: 'bg-cyan-500/8 text-cyan-700 dark:text-cyan-300',
-  SWITCH: 'bg-amber-500/8 text-amber-700 dark:text-amber-300',
-  SP: 'bg-fuchsia-500/8 text-fuchsia-700 dark:text-fuchsia-300',
-  NETWORK: 'bg-indigo-500/8 text-indigo-700 dark:text-indigo-300',
+  SERVER: 'bg-muted text-foreground',
+  STORAGE: 'bg-muted text-foreground',
+  SWITCH: 'bg-muted text-foreground',
+  SP: 'bg-muted text-foreground',
+  NETWORK: 'bg-muted text-foreground',
 };
 
 function getAssetIcon(type: AssetType) {
@@ -176,11 +164,11 @@ export default function AssetsPage() {
     return (
       <React.Fragment key={asset.id}>
         <tr
-          className="group cursor-pointer border-b border-border/60 transition-colors hover:bg-foreground/[0.025]"
+          className="group cursor-pointer border-b border-border/80 transition-colors hover:bg-accent/60"
           onClick={() => router.push(`/dashboard/assets/${asset.id}`)}
         >
-          <td className="px-3 py-2.5">
-            <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 0.9}rem` }}>
+          <td className="px-3 py-3">
+            <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 0.85}rem` }}>
               {hasChildren ? (
                 <button
                   onClick={(event) => {
@@ -201,35 +189,35 @@ export default function AssetsPage() {
               <span className="font-mono text-[11px] text-muted-foreground">{asset.assetId || '--'}</span>
             </div>
           </td>
-          <td className="px-3 py-2.5">
+          <td className="px-3 py-3">
             <div className="flex items-center gap-2.5">
-              <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${typeStyles[asset.type]}`}>
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background text-muted-foreground">
                 {getAssetIcon(asset.type)}
               </div>
               <span className="truncate text-[13px] font-medium text-foreground">{asset.name}</span>
             </div>
           </td>
-          <td className="px-3 py-2.5">
+          <td className="px-3 py-3">
             <span className={`inline-flex rounded-md px-2 py-1 text-[10px] font-medium ${typeStyles[asset.type]}`}>
               {asset.type}
             </span>
           </td>
-          <td className="px-3 py-2.5 font-mono text-[12px] text-muted-foreground">{asset.rack || '--'}</td>
-          <td className="px-3 py-2.5 text-[12px] text-muted-foreground">{asset.brandModel || '--'}</td>
-          <td className="px-3 py-2.5 font-mono text-[12px] text-muted-foreground">{asset.sn || '--'}</td>
-          <td className="px-3 py-2.5 text-right" onClick={(event) => event.stopPropagation()}>
+          <td className="px-3 py-3 font-mono text-[12px] text-muted-foreground">{asset.rack || '--'}</td>
+          <td className="px-3 py-3 text-[12px] text-muted-foreground">{asset.brandModel || '--'}</td>
+          <td className="px-3 py-3 font-mono text-[12px] text-muted-foreground">{asset.sn || '--'}</td>
+          <td className="px-3 py-3 text-right" onClick={(event) => event.stopPropagation()}>
             {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
               <div className="flex items-center justify-end gap-1">
                 <button
                   onClick={() => void openEditDialog(asset.id)}
-                  className="rounded-md border border-border/70 bg-card/70 px-2 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                  className="rounded-md border border-border bg-card px-2 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {loadingEditId === asset.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
                 </button>
                 <button
                   onClick={() => setAssetPendingDelete(asset)}
                   disabled={deletingId === asset.id}
-                  className="rounded-md border border-border/70 bg-card/70 px-2 py-1.5 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                  className="rounded-md border border-border bg-card px-2 py-1.5 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
                 >
                   {deletingId === asset.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 </button>
@@ -249,8 +237,8 @@ export default function AssetsPage() {
 
   return (
     <>
-      <div className="space-y-3 pb-8">
-        <section className="rounded-2xl border border-border/70 bg-card/75 px-4 py-4 shadow-sm">
+      <div className="space-y-4 pb-8">
+        <section className="surface-panel p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <h2 className="text-lg font-semibold tracking-tight text-foreground">Assets</h2>
@@ -264,8 +252,8 @@ export default function AssetsPage() {
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search asset"
-                  className="h-9 w-full rounded-lg border border-border/70 bg-background/80 pl-9 pr-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+                  placeholder="Search assets"
+                  className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all focus:border-foreground/20 focus:ring-2 focus:ring-foreground/5"
                 />
               </div>
 
@@ -289,7 +277,7 @@ export default function AssetsPage() {
                 className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
                   activeTab === tab.value
                     ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                 }`}
               >
                 {tab.label}
@@ -299,18 +287,18 @@ export default function AssetsPage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/75 shadow-sm">
+        <section className="overflow-hidden rounded-[18px] border border-border bg-card">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] border-collapse">
               <thead>
-                <tr className="border-b border-border/70 bg-background/35 text-left text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  <th className="px-3 py-2.5 font-semibold">Asset ID</th>
-                  <th className="px-3 py-2.5 font-semibold">Asset Name</th>
-                  <th className="px-3 py-2.5 font-semibold">Type</th>
-                  <th className="px-3 py-2.5 font-semibold">Rack</th>
-                  <th className="px-3 py-2.5 font-semibold">Brand / Model</th>
-                  <th className="px-3 py-2.5 font-semibold">SN</th>
-                  <th className="px-3 py-2.5 font-semibold text-right">Actions</th>
+                <tr className="border-b border-border bg-background/50 text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="px-3 py-3 font-medium">Asset ID</th>
+                  <th className="px-3 py-3 font-medium">Asset Name</th>
+                  <th className="px-3 py-3 font-medium">Type</th>
+                  <th className="px-3 py-3 font-medium">Rack</th>
+                  <th className="px-3 py-3 font-medium">Brand / Model</th>
+                  <th className="px-3 py-3 font-medium">SN</th>
+                  <th className="px-3 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -318,7 +306,7 @@ export default function AssetsPage() {
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
-                        <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
+                        <LoaderCircle className="h-4 w-4 animate-spin text-foreground" />
                         <span className="text-sm">Loading assets...</span>
                       </div>
                     </td>
@@ -347,8 +335,8 @@ export default function AssetsPage() {
       </div>
 
       <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
-        <DialogContent className="max-w-md border-border/70 bg-card/96 p-0 shadow-[0_30px_80px_-40px_rgba(15,23,42,0.6)]">
-          <DialogHeader className="border-b border-border/70 px-5 py-4">
+        <DialogContent className="max-w-md border-border bg-card p-0">
+          <DialogHeader className="border-b border-border px-5 py-4">
             <DialogTitle className="text-base">Delete asset</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 px-5 py-5">
@@ -359,11 +347,7 @@ export default function AssetsPage() {
               <Button variant="outline" onClick={() => setAssetPendingDelete(null)} disabled={!!deletingId}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => void confirmDeleteAsset()}
-                disabled={!!deletingId}
-              >
+              <Button variant="destructive" onClick={() => void confirmDeleteAsset()} disabled={!!deletingId}>
                 {deletingId ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Delete
               </Button>

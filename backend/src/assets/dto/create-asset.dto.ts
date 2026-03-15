@@ -9,6 +9,14 @@ class IpAllocationDto {
     @IsOptional()
     @IsString()
     type?: string;
+
+    @IsOptional()
+    @IsString()
+    manageType?: string;
+
+    @IsOptional()
+    @IsString()
+    version?: string;
 }
 
 class AssetCredentialDto {
@@ -22,6 +30,14 @@ class AssetCredentialDto {
     @IsOptional()
     @IsString()
     type?: string;
+
+    @IsOptional()
+    @IsString()
+    manageType?: string;
+
+    @IsOptional()
+    @IsString()
+    version?: string;
 }
 
 export class CreateAssetDto {
