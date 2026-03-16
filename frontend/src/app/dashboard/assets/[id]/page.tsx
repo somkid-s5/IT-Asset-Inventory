@@ -33,6 +33,7 @@ interface AssetCredential {
   username: string;
   password?: string;
   type?: string | null;
+  nodeLabel?: string | null;
   manageType?: string | null;
   version?: string | null;
   lastChangedDate?: string | null;
@@ -42,6 +43,7 @@ interface AssetIpAllocation {
   id?: string;
   address: string;
   type?: string | null;
+  nodeLabel?: string | null;
   manageType?: string | null;
   version?: string | null;
 }
@@ -61,8 +63,6 @@ interface Asset {
   sn?: string | null;
   credentials?: AssetCredential[];
   customMetadata?: Record<string, unknown> | null;
-  department?: string | null;
-  owner?: string | null;
   parentId?: string | null;
   parent?: { id: string; name: string; type: AssetType } | null;
   children?: { id: string; name: string; type: AssetType }[];
@@ -70,6 +70,7 @@ interface Asset {
 
 interface AccessRow {
   key: string;
+  nodeLabel: string;
   label: string;
   addresses: string[];
   methods: string[];
@@ -121,7 +122,7 @@ function extractMethods(...values: Array<string | null | undefined>) {
     .filter(Boolean);
 
   sources.forEach((token) => {
-    if (['WEB', 'HTTPS', 'HTTP', 'SSH', 'API', 'CLI', 'IPMI', 'ILO', 'IDRAC', 'SNMP', 'CONSOLE'].includes(token)) {
+    if (['WEB', 'HTTPS', 'HTTP', 'SSH', 'API', 'CLI', 'SNMP', 'CONSOLE'].includes(token)) {
       tokens.add(token === 'HTTPS' || token === 'HTTP' ? 'WEB' : token);
     }
   });
@@ -175,10 +176,12 @@ export default function AssetDetailsPage() {
     const groups = new Map<string, AccessRow>();
 
     (asset.ipAllocations ?? []).forEach((ip) => {
+      const nodeLabel = ip.nodeLabel?.trim() || 'Primary';
       const label = ip.type?.trim() || 'Primary';
-      const key = label.toLowerCase();
+      const key = `${nodeLabel.toLowerCase()}::${label.toLowerCase()}`;
       const existing = groups.get(key) ?? {
         key,
+        nodeLabel,
         label,
         addresses: [],
         methods: extractMethods(ip.manageType, asset.manageType),
@@ -193,10 +196,12 @@ export default function AssetDetailsPage() {
     });
 
     (asset.credentials ?? []).forEach((credential) => {
+      const nodeLabel = credential.nodeLabel?.trim() || 'Primary';
       const label = credential.type?.trim() || 'Primary';
-      const key = label.toLowerCase();
+      const key = `${nodeLabel.toLowerCase()}::${label.toLowerCase()}`;
       const existing = groups.get(key) ?? {
         key,
+        nodeLabel,
         label,
         addresses: [],
         methods: extractMethods(credential.manageType, asset.manageType),
@@ -216,8 +221,28 @@ export default function AssetDetailsPage() {
         ...row,
         addresses: Array.from(new Set(row.addresses)),
       }))
-      .sort((left, right) => left.label.localeCompare(right.label));
+      .sort((left, right) => {
+        const nodeCompare = left.nodeLabel.localeCompare(right.nodeLabel);
+        if (nodeCompare !== 0) {
+          return nodeCompare;
+        }
+
+        return left.label.localeCompare(right.label);
+      });
   }, [asset]);
+
+  const groupedNodes = useMemo(() => {
+    return accessRows.reduce<Array<{ nodeLabel: string; rows: AccessRow[] }>>((result, row) => {
+      const existing = result.find((item) => item.nodeLabel === row.nodeLabel);
+      if (existing) {
+        existing.rows.push(row);
+        return result;
+      }
+
+      result.push({ nodeLabel: row.nodeLabel, rows: [row] });
+      return result;
+    }, []);
+  }, [accessRows]);
 
   if (loading) {
     return (
@@ -234,35 +259,15 @@ export default function AssetDetailsPage() {
 
   const status = getStatusPresentation(asset.status);
   const properties = [
-    {
-      label: 'Type',
-      value: asset.type,
-      icon: <Boxes className="h-4 w-4" />,
-    },
-    {
-      label: 'Location',
-      value: asset.location || '--',
-      icon: <MapPin className="h-4 w-4" />,
-    },
-    {
-      label: 'Rack',
-      value: asset.rack || '--',
-      icon: <Waypoints className="h-4 w-4" />,
-    },
-    {
-      label: 'Serial Num.',
-      value: asset.sn || '--',
-      icon: <Hash className="h-4 w-4" />,
-    },
-    {
-      label: 'Updated',
-      value: formatExactDateTime(asset.updatedAt),
-      icon: <CalendarClock className="h-4 w-4" />,
-    },
+    { label: 'Type', value: asset.type, icon: <Boxes className="h-4 w-4" /> },
+    { label: 'Location', value: asset.location || '--', icon: <MapPin className="h-4 w-4" /> },
+    { label: 'Rack', value: asset.rack || '--', icon: <Waypoints className="h-4 w-4" /> },
+    { label: 'Serial Num.', value: asset.sn || '--', icon: <Hash className="h-4 w-4" /> },
+    { label: 'Updated', value: formatExactDateTime(asset.updatedAt), icon: <CalendarClock className="h-4 w-4" /> },
   ];
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-3 pb-6">
       <button
         onClick={() => router.push('/dashboard/assets')}
         className="inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -271,7 +276,7 @@ export default function AssetDetailsPage() {
         Back to Inventory
       </button>
 
-      <section className="surface-panel p-4">
+      <section className="surface-panel p-3.5">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
@@ -282,7 +287,7 @@ export default function AssetDetailsPage() {
 
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">{asset.name}</h1>
+                    <h1 className="truncate text-[15px] font-semibold tracking-tight text-foreground">{asset.name}</h1>
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${status.className}`}
                     >
@@ -296,7 +301,7 @@ export default function AssetDetailsPage() {
                     )}
                   </div>
 
-                  <p className="text-sm text-muted-foreground">{asset.brandModel || 'Unknown platform'}</p>
+                  <p className="text-[12px] text-muted-foreground">{asset.brandModel || 'Unknown platform'}</p>
                 </div>
               </div>
             </div>
@@ -304,15 +309,15 @@ export default function AssetDetailsPage() {
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="rounded-lg border border-border bg-background px-3 py-2">
                 <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Interfaces</div>
-                <div className="mt-1 text-base font-semibold text-foreground">{accessRows.length}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{accessRows.length}</div>
               </div>
               <div className="rounded-lg border border-border bg-background px-3 py-2">
                 <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">IP Addresses</div>
-                <div className="mt-1 text-base font-semibold text-foreground">{asset.ipAllocations?.length ?? 0}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{asset.ipAllocations?.length ?? 0}</div>
               </div>
               <div className="rounded-lg border border-border bg-background px-3 py-2">
                 <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Credentials</div>
-                <div className="mt-1 text-base font-semibold text-foreground">{asset.credentials?.length ?? 0}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{asset.credentials?.length ?? 0}</div>
               </div>
             </div>
           </div>
@@ -351,117 +356,115 @@ export default function AssetDetailsPage() {
           </div>
 
           <div className="overflow-hidden rounded-[18px] border border-border bg-card">
-            <div className="hidden grid-cols-[1.15fr_1fr_0.8fr_1fr_1fr] gap-3 border-b border-border bg-background/50 px-4 py-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground md:grid">
-              <div>Interface Type</div>
-              <div>IP Address</div>
-              <div>Access Via</div>
-              <div>Username</div>
-              <div>Password</div>
-            </div>
-
             {accessRows.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-muted-foreground">No IP addresses or credentials for this asset.</div>
             ) : (
               <div className="divide-y divide-border">
-                {accessRows.map((row) => (
-                  <div key={row.key} className="grid gap-3 px-4 py-3 transition-colors hover:bg-accent/60 md:grid-cols-[1.15fr_1fr_0.8fr_1fr_1fr]">
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Interface Type</div>
-                      <div className="text-sm font-semibold text-foreground">{row.label}</div>
-                      <div className="text-xs text-muted-foreground">{row.version || '--'}</div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">IP Address</div>
-                      {row.addresses.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {row.addresses.map((address) => (
-                            <button
-                              key={address}
-                              onClick={() => {
-                                void navigator.clipboard.writeText(address);
-                                toast.success('IP copied');
-                              }}
-                              className="flex items-center gap-1.5 font-mono text-sm text-foreground transition-colors hover:text-foreground/80"
-                            >
-                              <Globe className="h-3 w-3 text-muted-foreground" />
-                              {address}
-                              <Copy className="h-3 w-3 text-muted-foreground/70" />
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground">--</div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Access Via</div>
-                      <div className="flex flex-wrap gap-2">
-                        {(row.methods.length > 0 ? row.methods : ['DIRECT']).map((method) => (
-                          <span
-                            key={`${row.key}-${method}`}
-                            className="rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground"
-                          >
-                            {method}
-                          </span>
-                        ))}
+                {groupedNodes.map((node) => (
+                  <div key={node.nodeLabel}>
+                    {node.nodeLabel !== 'Primary' && (
+                      <div className="border-b border-border bg-background/30 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground">
+                        {node.nodeLabel}
                       </div>
+                    )}
+
+                    <div className="hidden grid-cols-[1.1fr_1fr_0.75fr_1.55fr] gap-3 border-b border-border bg-background/50 px-4 py-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground md:grid">
+                      <div>Interface Type</div>
+                      <div>IP Address</div>
+                      <div>Access Via</div>
+                      <div>Accounts</div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Username</div>
-                      {row.credentials.length > 0 ? (
-                        row.credentials.map((credential, index) => (
-                          <div key={credential.id} className="flex items-center gap-1.5 text-sm text-foreground">
-                            {index > 0 && <ChevronRight className="h-3.5 w-3.5 rotate-90 text-muted-foreground/70" />}
-                            <span className="font-mono">{credential.username}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-sm text-muted-foreground">--</div>
-                      )}
-                    </div>
+                    {node.rows.map((row) => (
+                      <div key={row.key} className="grid gap-3 px-4 py-3 transition-colors hover:bg-accent/60 md:grid-cols-[1.1fr_1fr_0.75fr_1.55fr]">
+                        <div className="space-y-1.5">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Interface Type</div>
+                          <div className="text-sm font-semibold text-foreground">{row.label}</div>
+                          <div className="text-xs text-muted-foreground">{row.version || '--'}</div>
+                        </div>
 
-                    <div className="space-y-2">
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Password</div>
-                      {row.credentials.length > 0 ? (
-                        row.credentials.map((credential) => {
-                          const visible = revealed.has(credential.id);
-
-                          return (
-                            <div key={`${credential.id}-password`} className="flex items-center gap-1.5">
-                              <div className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 font-mono text-xs text-foreground">
-                                {visible ? credential.password || '--' : '••••••••••••'}
-                              </div>
-                              <button
-                                onClick={() =>
-                                  setRevealed((current) => {
-                                    const next = new Set(current);
-                                    next.has(credential.id) ? next.delete(credential.id) : next.add(credential.id);
-                                    return next;
-                                  })
-                                }
-                                className="rounded-md border border-border bg-background p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-                              >
-                                {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  void navigator.clipboard.writeText(credential.password || '');
-                                  toast.success('Password copied');
-                                }}
-                                className="rounded-md border border-border bg-background p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </button>
+                        <div className="space-y-1.5">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">IP Address</div>
+                          {row.addresses.length > 0 ? (
+                            <div className="space-y-1.5">
+                              {row.addresses.map((address) => (
+                                <button
+                                  key={address}
+                                  onClick={() => {
+                                    void navigator.clipboard.writeText(address);
+                                    toast.success('IP copied');
+                                  }}
+                                  className="flex items-center gap-1.5 font-mono text-sm text-foreground transition-colors hover:text-foreground/80"
+                                >
+                                  <Globe className="h-3 w-3 text-muted-foreground" />
+                                  {address}
+                                  <Copy className="h-3 w-3 text-muted-foreground/70" />
+                                </button>
+                              ))}
                             </div>
-                          );
-                        })
-                      ) : (
-                        <div className="text-sm text-muted-foreground">--</div>
-                      )}
-                    </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">--</div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Access Via</div>
+                          <div className="flex flex-wrap gap-2">
+                            {(row.methods.length > 0 ? row.methods : ['DIRECT']).map((method) => (
+                              <span
+                                key={`${row.key}-${method}`}
+                                className="rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground"
+                              >
+                                {method}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Accounts</div>
+                          {row.credentials.length > 0 ? (
+                            row.credentials.map((credential) => {
+                              const visible = revealed.has(credential.id);
+
+                              return (
+                                <div key={`${credential.id}-account`} className="flex items-center gap-2 py-1">
+                                  <div className="min-w-0 w-[112px] shrink-0 font-mono text-sm text-foreground">
+                                    {credential.username}
+                                  </div>
+                                  <div className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-foreground">
+                                    {visible ? credential.password || '--' : '************'}
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      setRevealed((current) => {
+                                        const next = new Set(current);
+                                        next.has(credential.id) ? next.delete(credential.id) : next.add(credential.id);
+                                        return next;
+                                      })
+                                    }
+                                    className="rounded-md border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                                  >
+                                    {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      void navigator.clipboard.writeText(credential.password || '');
+                                      toast.success('Password copied');
+                                    }}
+                                    className="rounded-md border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-sm text-muted-foreground">--</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

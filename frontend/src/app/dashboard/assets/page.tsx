@@ -1,10 +1,10 @@
 'use client';
 
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
 import { AssetFormDialog } from '@/components/AssetFormDialog';
@@ -32,13 +32,14 @@ interface Asset {
   children?: Asset[];
 }
 
+type SortKey = 'assetId' | 'name' | 'type' | 'rack' | 'brandModel' | 'sn';
+type SortDirection = 'asc' | 'desc';
+
 const TABS: { label: string; value: 'ALL' | AssetType }[] = [
   { label: 'All', value: 'ALL' },
   { label: 'Servers', value: 'SERVER' },
   { label: 'Storage', value: 'STORAGE' },
   { label: 'Switches', value: 'SWITCH' },
-  { label: 'SP', value: 'SP' },
-  { label: 'Network', value: 'NETWORK' },
 ];
 
 const typeStyles: Record<AssetType, string> = {
@@ -78,6 +79,10 @@ export default function AssetsPage() {
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [assetPendingDelete, setAssetPendingDelete] = useState<Asset | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('assetId');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const deferredSearch = useDeferredValue(searchTerm);
 
   async function loadAssets() {
@@ -108,10 +113,44 @@ export default function AssetsPage() {
     return matchesSearch && (activeTab === 'ALL' || asset.type === activeTab);
   });
 
-  const topLevelAssets =
-    deferredSearch.trim().length > 0 || activeTab !== 'ALL'
-      ? filteredAssets
-      : filteredAssets.filter((asset) => !asset.parentId);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [deferredSearch, activeTab, sortKey, sortDirection, pageSize]);
+
+  const compareAssets = (left: Asset, right: Asset) => {
+    const leftValue = (left[sortKey] ?? '').toString().toLowerCase();
+    const rightValue = (right[sortKey] ?? '').toString().toLowerCase();
+
+    if (leftValue < rightValue) {
+      return sortDirection === 'asc' ? -1 : 1;
+    }
+
+    if (leftValue > rightValue) {
+      return sortDirection === 'asc' ? 1 : -1;
+    }
+
+    return 0;
+  };
+
+  const sortAssetTree = (items: Asset[]): Asset[] =>
+    [...items]
+      .sort(compareAssets)
+      .map((asset) => ({
+        ...asset,
+        children: asset.children ? sortAssetTree(asset.children) : asset.children,
+      }));
+
+  const topLevelAssets = useMemo(() => {
+    const baseAssets =
+      deferredSearch.trim().length > 0 || activeTab !== 'ALL'
+        ? filteredAssets
+        : filteredAssets.filter((asset) => !asset.parentId);
+
+    return sortAssetTree(baseAssets);
+  }, [filteredAssets, deferredSearch, activeTab, sortKey, sortDirection]);
+
+  const totalPages = Math.max(1, Math.ceil(topLevelAssets.length / pageSize));
+  const pagedAssets = topLevelAssets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const openCreateDialog = () => {
     setEditingAsset(undefined);
@@ -155,6 +194,24 @@ export default function AssetsPage() {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortKey(key);
+    setSortDirection('asc');
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/70" />;
+    }
+
+    return sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
   };
 
   const renderAssetRow = (asset: Asset, depth = 0): React.ReactNode => {
@@ -237,15 +294,15 @@ export default function AssetsPage() {
 
   return (
     <>
-      <div className="space-y-4 pb-8">
-        <section className="surface-panel p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">Assets</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">{assets.length} total records</p>
-            </div>
+    <div className="space-y-3 pb-6">
+      <section className="surface-panel p-3.5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-[15px] font-semibold tracking-tight text-foreground">Assets</h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{assets.length} total records</p>
+          </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="relative min-w-[280px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -253,14 +310,14 @@ export default function AssetsPage() {
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search assets"
-                  className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition-all focus:border-foreground/20 focus:ring-2 focus:ring-foreground/5"
+                  className="h-8 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-[12px] outline-none transition-all focus:border-foreground/20 focus:ring-2 focus:ring-foreground/5"
                 />
               </div>
 
               {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
                 <button
                   onClick={openCreateDialog}
-                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+                  className="inline-flex h-8 items-center gap-2 rounded-lg bg-foreground px-3 text-[12px] font-medium text-background transition-colors hover:bg-foreground/90"
                 >
                   <Plus className="h-4 w-4" />
                   Add Asset
@@ -283,7 +340,7 @@ export default function AssetsPage() {
                 {tab.label}
               </button>
             ))}
-            <div className="ml-auto text-[11px] text-muted-foreground">{filteredAssets.length} shown</div>
+            <div className="ml-auto text-[11px] text-muted-foreground">{topLevelAssets.length} shown</div>
           </div>
         </section>
 
@@ -292,12 +349,42 @@ export default function AssetsPage() {
             <table className="w-full min-w-[860px] border-collapse">
               <thead>
                 <tr className="border-b border-border bg-background/50 text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  <th className="px-3 py-3 font-medium">Asset ID</th>
-                  <th className="px-3 py-3 font-medium">Asset Name</th>
-                  <th className="px-3 py-3 font-medium">Type</th>
-                  <th className="px-3 py-3 font-medium">Rack</th>
-                  <th className="px-3 py-3 font-medium">Brand / Model</th>
-                  <th className="px-3 py-3 font-medium">SN</th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('assetId')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Asset ID
+                      {renderSortIcon('assetId')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Asset Name
+                      {renderSortIcon('name')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('type')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Type
+                      {renderSortIcon('type')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('rack')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Rack
+                      {renderSortIcon('rack')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('brandModel')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Brand / Model
+                      {renderSortIcon('brandModel')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('sn')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      SN
+                      {renderSortIcon('sn')}
+                    </button>
+                  </th>
                   <th className="px-3 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -318,11 +405,55 @@ export default function AssetsPage() {
                     </td>
                   </tr>
                 ) : (
-                  topLevelAssets.map((asset) => renderAssetRow(asset))
+                  pagedAssets.map((asset) => renderAssetRow(asset))
                 )}
               </tbody>
             </table>
           </div>
+
+          {!loading && topLevelAssets.length > 0 && (
+            <div className="flex flex-col gap-3 border-t border-border px-4 py-2.5 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <span>Rows per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(event) => setPageSize(Number(event.target.value))}
+                  className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none"
+                >
+                  {[10, 20, 50].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+                <span>
+                  {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, topLevelAssets.length)} of {topLevelAssets.length}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((current) => Math.max(1, current - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Previous
+                </button>
+                <span>
+                  Page {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         <AssetFormDialog

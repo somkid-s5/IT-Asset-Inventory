@@ -43,10 +43,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
+const client_1 = require("@prisma/client");
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../prisma/prisma.service");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
+const prisma_service_1 = require("../prisma/prisma.service");
+const avatar_seed_1 = require("./avatar-seed");
 let AuthService = class AuthService {
     prisma;
     jwtService;
@@ -55,12 +57,12 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
     }
     async register(registerDto) {
-        const { email, password } = registerDto;
+        const { username, displayName, password } = registerDto;
         const existingUser = await this.prisma.user.findUnique({
-            where: { email },
+            where: { username },
         });
         if (existingUser) {
-            throw new common_1.ConflictException('Email already exists');
+            throw new common_1.ConflictException('Username already exists');
         }
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
@@ -68,17 +70,33 @@ let AuthService = class AuthService {
         const role = userCount === 0 ? 'ADMIN' : 'VIEWER';
         const user = await this.prisma.user.create({
             data: {
-                email,
+                username,
+                displayName,
+                avatarSeed: (0, avatar_seed_1.createAvatarSeed)(),
+                email: null,
                 passwordHash,
                 role,
+            },
+        });
+        await this.prisma.auditLog.create({
+            data: {
+                userId: user.id,
+                action: client_1.AuditAction.CREATE_USER,
+                targetId: user.id,
+                details: JSON.stringify({
+                    username: user.username,
+                    displayName: user.displayName,
+                    role: user.role,
+                    source: 'self-register',
+                }),
             },
         });
         return this.generateToken(user);
     }
     async login(loginDto) {
-        const { email, password } = loginDto;
+        const { username, password } = loginDto;
         const user = await this.prisma.user.findUnique({
-            where: { email },
+            where: { username },
         });
         if (!user) {
             throw new common_1.UnauthorizedException('Invalid credentials');
@@ -89,13 +107,67 @@ let AuthService = class AuthService {
         }
         return this.generateToken(user);
     }
+    async updateProfile(userId, displayName, avatarSeed, avatarImage) {
+        if (avatarImage && !avatarImage.startsWith('data:image/')) {
+            throw new common_1.ConflictException('Avatar image format is invalid');
+        }
+        const user = await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                ...(displayName ? { displayName } : {}),
+                ...(avatarSeed ? { avatarSeed } : {}),
+                ...(avatarImage !== undefined ? { avatarImage } : {}),
+            },
+        });
+        return {
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
+                role: user.role,
+            },
+        };
+    }
+    async changePassword(userId, currentPassword, newPassword) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+        if (!user) {
+            throw new common_1.UnauthorizedException('User not found');
+        }
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!isPasswordValid) {
+            throw new common_1.UnauthorizedException('Current password is incorrect');
+        }
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash },
+        });
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: client_1.AuditAction.CHANGE_OWN_PASSWORD,
+                targetId: userId,
+                details: JSON.stringify({
+                    source: 'self-service',
+                }),
+            },
+        });
+        return { success: true };
+    }
     generateToken(user) {
-        const payload = { sub: user.id, email: user.email, role: user.role };
+        const payload = { sub: user.id, username: user.username, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
                 id: user.id,
-                email: user.email,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
                 role: user.role,
             },
         };

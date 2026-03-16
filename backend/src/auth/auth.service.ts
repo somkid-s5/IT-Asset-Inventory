@@ -1,9 +1,11 @@
+import { AuditAction } from '@prisma/client';
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../prisma/prisma.service';
+import { createAvatarSeed } from './avatar-seed';
 
 @Injectable()
 export class AuthService {
@@ -13,14 +15,14 @@ export class AuthService {
     ) { }
 
     async register(registerDto: RegisterDto) {
-        const { email, password } = registerDto;
+        const { username, displayName, password } = registerDto;
 
         const existingUser = await this.prisma.user.findUnique({
-            where: { email },
+            where: { username },
         });
 
         if (existingUser) {
-            throw new ConflictException('Email already exists');
+            throw new ConflictException('Username already exists');
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -32,9 +34,26 @@ export class AuthService {
 
         const user = await this.prisma.user.create({
             data: {
-                email,
+                username,
+                displayName,
+                avatarSeed: createAvatarSeed(),
+                email: null,
                 passwordHash,
                 role,
+            },
+        });
+
+        await this.prisma.auditLog.create({
+            data: {
+                userId: user.id,
+                action: AuditAction.CREATE_USER,
+                targetId: user.id,
+                details: JSON.stringify({
+                    username: user.username,
+                    displayName: user.displayName,
+                    role: user.role,
+                    source: 'self-register',
+                }),
             },
         });
 
@@ -42,10 +61,10 @@ export class AuthService {
     }
 
     async login(loginDto: LoginDto) {
-        const { email, password } = loginDto;
+        const { username, password } = loginDto;
 
         const user = await this.prisma.user.findUnique({
-            where: { email },
+            where: { username },
         });
 
         if (!user) {
@@ -61,13 +80,78 @@ export class AuthService {
         return this.generateToken(user);
     }
 
+    async updateProfile(userId: string, displayName?: string, avatarSeed?: string, avatarImage?: string | null) {
+        if (avatarImage && !avatarImage.startsWith('data:image/')) {
+            throw new ConflictException('Avatar image format is invalid');
+        }
+
+        const user = await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                ...(displayName ? { displayName } : {}),
+                ...(avatarSeed ? { avatarSeed } : {}),
+                ...(avatarImage !== undefined ? { avatarImage } : {}),
+            },
+        });
+
+        return {
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
+                role: user.role,
+            },
+        };
+    }
+
+    async changePassword(userId: string, currentPassword: string, newPassword: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+
+        if (!isPasswordValid) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash },
+        });
+
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: AuditAction.CHANGE_OWN_PASSWORD,
+                targetId: userId,
+                details: JSON.stringify({
+                    source: 'self-service',
+                }),
+            },
+        });
+
+        return { success: true };
+    }
+
     private generateToken(user: any) {
-        const payload = { sub: user.id, email: user.email, role: user.role };
+        const payload = { sub: user.id, username: user.username, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
                 id: user.id,
-                email: user.email,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
                 role: user.role,
             },
         };

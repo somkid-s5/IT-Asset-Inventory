@@ -35,6 +35,10 @@ enum AuditAction {
   VIEW_PASSWORD
   COPY_PASSWORD
   LOGIN
+  CREATE_USER
+  UPDATE_USER_ROLE
+  RESET_USER_PASSWORD
+  CHANGE_OWN_PASSWORD
   CREATE_ASSET
   UPDATE_ASSET
   DELETE_ASSET
@@ -44,20 +48,26 @@ enum AuditAction {
 
 model User {
   id           String   @id @default(uuid())
-  email        String   @unique
+  username     String   @unique
+  displayName  String
+  avatarSeed   String
+  avatarImage  String?
+  email        String?  @unique
   passwordHash String
   role         Role     @default(VIEWER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  assets    Asset[]
-  auditLogs AuditLog[]
+  assets              Asset[]
+  databaseInventories DatabaseInventory[]
+  auditLogs           AuditLog[]
 }
 
 model IPAllocation {
   id      String  @id @default(uuid())
   address String  // e.g. 192.168.1.50
   type    String? // e.g. Management, VIP, Backup, Data, IPMI, Host, Service Processor
+  nodeLabel String?
   manageType String? // e.g. WEB, SSH, API
   version String? // e.g. iLO 2.81, ESXi 8.0.3
   assetId String
@@ -132,6 +142,7 @@ model Credential {
   username          String
   encryptedPassword String
   type              String? // e.g. 'IPMI', 'OS', 'SSH', 'WEB'
+  nodeLabel         String?
   manageType        String? // e.g. WEB, SSH, API
   version           String? // e.g. iLO 2.81, ESXi 8.0.3
 
@@ -152,4 +163,45 @@ model AuditLog {
   details   String? // Optional JSON or text details
 
   timestamp DateTime @default(now())
+}
+
+model DatabaseInventory {
+  id                String   @id @default(uuid())
+  name              String
+  engine            String
+  version           String?
+  environment       String?
+  host              String
+  ipAddress         String
+  port              String?
+  serviceName       String?
+  owner             String?
+  backupPolicy      String?
+  replication       String?
+  linkedApps        String[]
+  maintenanceWindow String?
+  status            String?
+  note              String?
+
+  createdByUserId String
+  createdByUser   User @relation(fields: [createdByUserId], references: [id])
+
+  accounts  DatabaseAccount[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DatabaseAccount {
+  id                  String   @id @default(uuid())
+  databaseInventoryId String
+  databaseInventory   DatabaseInventory @relation(fields: [databaseInventoryId], references: [id], onDelete: Cascade)
+
+  username          String
+  role              String?
+  encryptedPassword String
+  privileges        String[]
+  note              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -16,20 +16,23 @@ function encryptPassword(text: string): string {
 }
 
 async function main() {
-    console.log('🌱 Starting hardware-focused database seeding...');
+    console.log('ðŸŒ± Starting hardware-focused database seeding...');
 
     // 1. Create Default Admin User
     const adminPassword = await bcrypt.hash('admin123', 10);
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@infrapilot.local' },
+        where: { username: 'admin' },
         update: { passwordHash: adminPassword },
         create: {
+            username: 'admin',
+            displayName: 'Infra Admin',
+            avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'admin@infrapilot.local',
             passwordHash: adminPassword,
             role: 'ADMIN',
         },
     });
-    console.log(`👤 Created Admin user: ${admin.email}`);
+    console.log(`ðŸ‘¤ Created Admin user: ${admin.username}`);
 
     // 2. Physical Servers
     const server1 = await prisma.asset.create({
@@ -90,7 +93,7 @@ async function main() {
     });
 
     // 3. Create Credentials
-    console.log('🔑 Seeding encrypted credentials...');
+    console.log('ðŸ”‘ Seeding encrypted credentials...');
 
     await prisma.credential.createMany({
         data: [
@@ -100,7 +103,7 @@ async function main() {
         ]
     });
 
-    console.log('✅ Seed complete. Hardware-only focus applied.');
+    console.log('âœ… Seed complete. Hardware-only focus applied.');
 }
 
 main()

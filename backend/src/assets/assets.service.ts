@@ -30,6 +30,7 @@ export class AssetsService {
                           create: (dto.ips ?? []).map((ip) => ({
                               address: ip.address.trim(),
                               type: ip.type?.trim() || null,
+                              nodeLabel: ip.nodeLabel?.trim() || null,
                               manageType: ip.manageType?.trim() || null,
                               version: ip.version?.trim() || null,
                           })),
@@ -44,6 +45,7 @@ export class AssetsService {
                               .map((credential) => ({
                                   username: credential.username.trim(),
                                   type: credential.type?.trim() || null,
+                                  nodeLabel: credential.nodeLabel?.trim() || null,
                                   manageType: credential.manageType?.trim() || null,
                                   version: credential.version?.trim() || null,
                                   encryptedPassword: this.credentialsService.encrypt(credential.password ?? ''),
@@ -63,6 +65,7 @@ export class AssetsService {
                           create: (dto.ips ?? []).map((ip) => ({
                               address: ip.address.trim(),
                               type: ip.type?.trim() || null,
+                              nodeLabel: ip.nodeLabel?.trim() || null,
                               manageType: ip.manageType?.trim() || null,
                               version: ip.version?.trim() || null,
                           })),
@@ -78,6 +81,7 @@ export class AssetsService {
                               .map((credential) => ({
                                   username: credential.username.trim(),
                                   type: credential.type?.trim() || null,
+                                  nodeLabel: credential.nodeLabel?.trim() || null,
                                   manageType: credential.manageType?.trim() || null,
                                   version: credential.version?.trim() || null,
                                   encryptedPassword: this.credentialsService.encrypt(credential.password ?? ''),

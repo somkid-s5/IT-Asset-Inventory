@@ -18,6 +18,7 @@ export declare class AssetsController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            nodeLabel: string | null;
             version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
@@ -80,6 +81,7 @@ export declare class AssetsController {
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            nodeLabel: string | null;
             version: string | null;
         }[];
         patchInfo: {
@@ -181,6 +183,7 @@ export declare class AssetsController {
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            nodeLabel: string | null;
             version: string | null;
         }[];
         patchInfo: {
@@ -227,6 +230,7 @@ export declare class AssetsController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            nodeLabel: string | null;
             version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
@@ -289,6 +293,7 @@ export declare class AssetsController {
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            nodeLabel: string | null;
             version: string | null;
         }[];
         patchInfo: {
@@ -335,6 +340,7 @@ export declare class AssetsController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            nodeLabel: string | null;
             version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
@@ -397,6 +403,7 @@ export declare class AssetsController {
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            nodeLabel: string | null;
             version: string | null;
         }[];
         patchInfo: {

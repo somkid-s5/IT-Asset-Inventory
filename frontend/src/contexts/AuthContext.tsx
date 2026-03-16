@@ -2,12 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
-import api from '../services/api';
 import { useRouter } from 'next/navigation';
 
 interface User {
     id: string;
-    email: string;
+    username: string;
+    displayName: string;
+    avatarSeed: string;
+    avatarImage?: string | null;
     role: 'ADMIN' | 'EDITOR' | 'VIEWER';
 }
 
@@ -15,6 +17,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (token: string, userData: User) => void;
+    updateUser: (userData: User) => void;
     logout: () => void;
 }
 
@@ -22,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
     login: () => { },
+    updateUser: () => { },
     logout: () => { },
 });
 
@@ -54,6 +58,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         router.push('/dashboard');
     };
 
+    const updateUser = (userData: User) => {
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+    };
+
     const logout = () => {
         Cookies.remove('token');
         localStorage.removeItem('user');
@@ -62,7 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, updateUser, logout }}>
             {children}
         </AuthContext.Provider>
     );

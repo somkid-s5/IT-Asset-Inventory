@@ -6,8 +6,8 @@ import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'InfraPilot',
-  description: 'IT Asset & Patch Intelligence Platform',
+  title: 'AssetOps',
+  description: 'IT Asset Operations Platform',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

@@ -12,6 +12,7 @@ export declare class CredentialsController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
@@ -35,6 +36,7 @@ export declare class CredentialsController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
@@ -47,6 +49,7 @@ export declare class CredentialsController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
