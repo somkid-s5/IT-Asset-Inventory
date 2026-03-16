@@ -1,119 +1,146 @@
-# 🛰️ InfraPilot: IT Asset and Patch Intelligence Platform
+# AssetOps
 
-**InfraPilot** คือแพลตฟอร์มรวมศูนย์สำหรับบริหารจัดการสินทรัพย์ไอที (IT Asset Management) ออกแบบมาเพื่อให้ทีม IT สามารถติดตามข้อมูลโครงสร้างพื้นฐาน, จัดเก็บรหัสผ่านอย่างปลอดภัย (Credential Vault), และวิเคราะห์ความเสี่ยงของระบบ (Risk Scoring) ได้อย่างมีประสิทธิภาพในที่เดียว
+AssetOps is an internal infrastructure inventory web app for managing assets, access records, database inventory, and user accounts in one place.
 
----
+## Current Scope
 
-## 🌟 ฟีเจอร์หลัก (Core Features)
+- Assets inventory with grouped access points and multi-node support
+- Database inventory with real CRUD
+- Database accounts with encrypted passwords, roles, and privileges
+- Username-based authentication
+- Admin user management
+- Profile management with avatar upload or generated avatar
 
-*   **🖥️ IT Asset Inventory:** จัดการเซิร์ฟเวอร์ (Physical/VM), แอปพลิเคชัน, และฐานข้อมูล รองรับการเก็บ Metadata แบบยืดหยุ่น (Flexible Metadata) ไม่จำกัดรูปแบบ
-*   **🔗 Hierarchical Relationship:** แสดงความสัมพันธ์ระหว่างระบบแบบลำดับชั้น (เช่น VM รันอยู่บน Host ไหน หรือ App ใช้ DB ตัวไหน)
-*   **🔐 Secure Credential Vault:** จัดเก็บรหัสผ่านและคีย์สำคัญด้วยการเข้ารหัส **AES-256-GCM** (ระดับมาตรฐานธนาคาร) พร้อมระบบตรวจสอบประวัติการเข้าชม (Audit Logs)
-*   **📊 Infrastructure Risk Scoring:** คำนวณคะแนนความเสี่ยงอัตโนมัติจากสถานะประกัน (Warranty), ซอฟต์แวร์หมดอายุ (EOL), และประวัติการแพตช์ (Patching)
-*   **📡 Network IP Management:** รองรับการจัดสรร IP Address หลายรายการต่อหนึ่ง Asset (Multiple IP Allocation)
-*   **📅 Patch & EOL Tracking:** ระบบติดตามเวอร์ชันซอฟต์แวร์และแจ้งเตือนวันหมดอายุการสนับสนุน (End-of-Life)
-
----
-
-## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
+## Stack
 
 ### Frontend
-- **Framework:** Next.js 15+ (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS + [shadcn/ui](https://ui.shadcn.com/)
-- **Icons:** Lucide React
+
+- Next.js 16
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
 
 ### Backend
-- **Framework:** NestJS (Node.js)
-- **ORM:** Prisma ORM
-- **Authentication:** JWT (JSON Web Token) + Passport.js
-- **Security:** bcrypt (Password hashing), crypto (AES-256-GCM for Vault)
 
-### Infrastructure
-- **Database:** PostgreSQL 15
-- **Container:** Docker & Docker Compose
-- **Tooling:** PgAdmin 4 (Database Management)
+- NestJS
+- Prisma
+- PostgreSQL
+- JWT authentication
 
----
+## Main Modules
 
-## 🚀 วิธีการติดตั้งและเริ่มใช้งาน (Getting Started)
+### Assets
 
-### 1. ความต้องการของระบบ (Prerequisites)
-- [Node.js](https://nodejs.org/) (เวอร์ชัน 20 หรือใหม่กว่า)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (สำหรับรัน Database)
-- Git
+- Track physical infrastructure assets
+- Store multiple access points under one asset
+- Support single assets and multi-node assets
+- Show compact list view and dense detail view
 
-### 2. เตรียมฐานข้อมูล (Database)
-ใช้ Docker Compose เพื่อเริ่มการทำงานของ PostgreSQL:
+### Database
+
+- Store DB name, engine, environment, host, IP, port, owner, and notes
+- Manage multiple database accounts per database
+- Track account username, password, role, privileges, and notes
+- Create, edit, delete, list, and inspect database records through real API endpoints
+
+### Users
+
+- Username + display name based accounts
+- Admin can create users, change roles, reset passwords, and delete users
+- Users can update profile, avatar, and password
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL
+- npm
+
+### Backend setup
+
 ```bash
-docker-compose -f docker-compose.prod.yml up -d postgres pgadmin
+cd backend
+npm install
 ```
-*PgAdmin จะเข้าใช้งานได้ที่: http://localhost:5050 (User: admin@infrapilot.com / Pass: admin123)*
 
-### 3. ตั้งค่าสภาพแวดล้อม (Environment Setup)
-สร้างไฟล์ `.env` ในโฟลเดอร์ `backend/`:
-```bash
-# backend/.env
-DATABASE_URL="postgresql://infrapilot:securepassword123@localhost:5432/infrapilot_db?schema=public"
-JWT_SECRET="super-secret-jwt-key-change-me-in-prod"
-ENCRYPTION_KEY="12345678123456781234567812345678"
+Create `backend/.env`:
+
+```env
+DATABASE_URL="postgresql://assetops:securepassword123@localhost:5432/assetops_db?schema=public"
+JWT_SECRET="change-me"
+CREDENTIAL_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 PORT=3001
 ```
 
-### 4. เตรียมโค้ดและข้อมูล (Install & Seed)
-```bash
-# ติดตั้ง Backend และเตรียม DB
-cd backend
-npm install
-npx prisma db push
-npx prisma db seed
+Apply schema and generate Prisma client:
 
-# ติดตั้ง Frontend
-cd ../frontend
-npm install
+```bash
+npx prisma migrate deploy
+npx prisma generate
 ```
 
----
+Optional seed:
 
-## 💻 การรันโปรเจคในโหมดพัฒนา (Development)
-
-เปิด Terminal 2 หน้าต่างแยกกัน:
-
-**หน้าต่างที่ 1: Backend API**
 ```bash
-cd backend
+npx prisma db seed
+```
+
+Start backend:
+
+```bash
 npm run start:dev
 ```
-*API จะทำงานที่: http://localhost:3001/api*
 
-**หน้าต่างที่ 2: Frontend UI**
+### Frontend setup
+
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
-*แอปพลิเคชันจะทำงานที่: http://localhost:3000*
 
----
+Frontend runs at [http://localhost:3000](http://localhost:3000)  
+Backend API runs at [http://localhost:3001/api](http://localhost:3001/api)
 
-## 🔑 ข้อมูลเข้าใช้งานเริ่มต้น (Default Credentials)
+## Default Access
 
-| User Role | Email | Password |
-| :--- | :--- | :--- |
-| **Administrator** | `admin@infrapilot.local` | `admin123` |
+Seeded default account:
 
----
+- Username: `admin`
+- Password: `admin123`
 
-## 📂 โครงสร้างโฟลเดอร์ (Project Structure)
+Self-register is disabled. New users are created by an admin from the Users page.
 
-- `backend/`: NestJS API, Prisma Schema & Seeds
-- `frontend/`: Next.js Application, UI Components (shadcn/ui)
-- `prisma/`: ไฟล์สำหรับการ Import ข้อมูลจาก CSV/XLSX (ถ้ามี)
-- `docker-compose.prod.yml`: การตั้งค่า Docker สำหรับ PostgreSQL/PgAdmin
+## Useful Commands
 
----
+### Backend
 
-## 📄 ใบอนุญาต (License)
-โปรเจคนี้จัดทำขึ้นภายใต้ลิขสิทธิ์เฉพาะ (UNLICENSED) สำหรับการใช้งานภายในองค์กร
+```bash
+npm run start:dev
+npm run build
+npx prisma migrate deploy
+npx prisma generate
+```
 
----
-*พัฒนาโดยทีม InfraPilot - "Mastering your Infrastructure, One Asset at a Time"*
+### Frontend
+
+```bash
+npm run dev
+npm run build
+```
+
+## Project Structure
+
+- `backend/` NestJS API, Prisma schema, migrations, seeds
+- `frontend/` Next.js app and UI components
+- `backend/scripts/` import and maintenance scripts
+
+## Notes
+
+- Passwords for asset/database credentials are encrypted on the backend before storage
+- If Prisma generate fails on Windows with an `EPERM` file lock, stop the running backend process and run `npx prisma generate` again
+
+## License
+
+UNLICENSED

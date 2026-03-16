@@ -19,6 +19,7 @@ interface AccessUserFormValue {
 }
 
 interface AccessPointFormValue {
+  nodeLabel: string;
   type: string;
   manageType: string;
   version: string;
@@ -36,6 +37,7 @@ interface AssetCredential {
   username: string;
   password?: string;
   type?: string | null;
+  nodeLabel?: string | null;
   manageType?: string | null;
   version?: string | null;
 }
@@ -44,6 +46,7 @@ interface AssetIpAllocation {
   id?: string;
   address: string;
   type?: string | null;
+  nodeLabel?: string | null;
   manageType?: string | null;
   version?: string | null;
 }
@@ -83,6 +86,7 @@ const EMPTY_USER: AccessUserFormValue = {
 };
 
 const EMPTY_ACCESS_POINT: AccessPointFormValue = {
+  nodeLabel: '',
   type: '',
   manageType: '',
   version: '',
@@ -131,6 +135,8 @@ export function AssetFormDialog({
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
   const [accessPoints, setAccessPoints] = useState<AccessPointFormValue[]>([{ ...EMPTY_ACCESS_POINT }]);
   const [metadataPairs, setMetadataPairs] = useState<MetadataPair[]>([]);
+  const [assetMode, setAssetMode] = useState<'single' | 'multi'>('single');
+  const [nodeLabels, setNodeLabels] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) {
@@ -141,16 +147,33 @@ export function AssetFormDialog({
       setFormData(DEFAULT_FORM_STATE);
       setAccessPoints([{ ...EMPTY_ACCESS_POINT }]);
       setMetadataPairs([]);
+      setAssetMode('single');
+      setNodeLabels([]);
       return;
     }
 
     const groupedMap = new Map<string, AccessPointFormValue>();
-    const makeAccessKey = (type?: string | null, manageType?: string | null, version?: string | null, address?: string | null) =>
-      [type?.trim().toLowerCase() || 'general', manageType?.trim().toLowerCase() || 'direct', version?.trim().toLowerCase() || 'no-version', address?.trim().toLowerCase() || 'no-address'].join('::');
+    const makeAccessKey = (
+      nodeLabel?: string | null,
+      type?: string | null,
+      manageType?: string | null,
+      version?: string | null,
+      address?: string | null,
+    ) =>
+      [
+        nodeLabel?.trim().toLowerCase() || 'primary',
+        type?.trim().toLowerCase() || 'general',
+        manageType?.trim().toLowerCase() || 'direct',
+        version?.trim().toLowerCase() || 'no-version',
+        address?.trim().toLowerCase() || 'no-address',
+      ].join('::');
 
     (assetToEdit.ipAllocations ?? []).forEach((ip, index) => {
-      const key = makeAccessKey(ip.type, ip.manageType, ip.version, ip.address) || `${ip.type ?? 'general'}-${ip.address}-${index}`;
+      const key =
+        makeAccessKey(ip.nodeLabel, ip.type, ip.manageType, ip.version, ip.address) ||
+        `${ip.type ?? 'general'}-${ip.address}-${index}`;
       groupedMap.set(key, {
+        nodeLabel: ip.nodeLabel ?? '',
         type: ip.type ?? '',
         manageType: ip.manageType ?? assetToEdit.manageType ?? '',
         version: ip.version ?? '',
@@ -160,9 +183,10 @@ export function AssetFormDialog({
     });
 
     (assetToEdit.credentials ?? []).forEach((credential, index) => {
-      const key = makeAccessKey(credential.type, credential.manageType, credential.version, null);
+      const key = makeAccessKey(credential.nodeLabel, credential.type, credential.manageType, credential.version, null);
       const matchedEntry = groupedMap.get(key) ?? Array.from(groupedMap.values()).find(
         (value) =>
+          (value.nodeLabel || '').toLowerCase() === (credential.nodeLabel || '').toLowerCase() &&
           (value.type || '').toLowerCase() === (credential.type || '').toLowerCase() &&
           (value.manageType || '').toLowerCase() === (credential.manageType || '').toLowerCase() &&
           (value.version || '').toLowerCase() === (credential.version || '').toLowerCase(),
@@ -179,6 +203,7 @@ export function AssetFormDialog({
       }
 
       groupedMap.set(key || `credential-${credential.type ?? 'general'}-${index}`, {
+        nodeLabel: credential.nodeLabel ?? '',
         type: credential.type ?? '',
         manageType: credential.manageType ?? assetToEdit.manageType ?? '',
         version: credential.version ?? '',
@@ -206,6 +231,17 @@ export function AssetFormDialog({
         : [{ ...EMPTY_ACCESS_POINT }],
     );
 
+    const existingNodeLabels = Array.from(
+      new Set(
+        [
+          ...(assetToEdit.ipAllocations ?? []).map((item) => item.nodeLabel?.trim()).filter(Boolean),
+          ...(assetToEdit.credentials ?? []).map((item) => item.nodeLabel?.trim()).filter(Boolean),
+        ] as string[],
+      ),
+    );
+    setAssetMode(existingNodeLabels.length > 0 ? 'multi' : 'single');
+    setNodeLabels(existingNodeLabels);
+
     setMetadataPairs(
       assetToEdit.customMetadata
         ? Object.entries(assetToEdit.customMetadata).map(([key, value]) => ({
@@ -215,6 +251,17 @@ export function AssetFormDialog({
         : [],
     );
   }, [assetToEdit, open]);
+
+  useEffect(() => {
+    if (assetMode === 'single') {
+      setAccessPoints((current) => current.map((item) => ({ ...item, nodeLabel: '' })));
+    } else if (assetMode === 'multi' && nodeLabels.length === 0) {
+      setNodeLabels(['Node A']);
+      setAccessPoints((current) =>
+        current.map((item, index) => ({ ...item, nodeLabel: item.nodeLabel || (index === 0 ? 'Node A' : '') })),
+      );
+    }
+  }, [assetMode, nodeLabels.length]);
 
   const updateAccessPoint = (index: number, field: keyof Omit<AccessPointFormValue, 'users'>, value: string) => {
     setAccessPoints((current) =>
@@ -260,6 +307,7 @@ export function AssetFormDialog({
         .map((item) => ({
           address: item.address.trim(),
           type: item.type.trim() || undefined,
+          nodeLabel: assetMode === 'multi' ? item.nodeLabel.trim() || undefined : undefined,
           manageType: item.manageType.trim() || undefined,
           version: item.version.trim() || undefined,
         }));
@@ -271,6 +319,7 @@ export function AssetFormDialog({
             username: user.username.trim(),
             password: user.password,
             type: item.type.trim() || undefined,
+            nodeLabel: assetMode === 'multi' ? item.nodeLabel.trim() || undefined : undefined,
             manageType: item.manageType.trim() || undefined,
             version: item.version.trim() || undefined,
           })),
@@ -311,6 +360,45 @@ export function AssetFormDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  const addNodeLabel = () => {
+    const nextLabel = `Node ${String.fromCharCode(65 + nodeLabels.length)}`;
+    setNodeLabels((current) => [...current, nextLabel]);
+  };
+
+  const removeNodeLabel = (indexToRemove: number) => {
+    const labelToRemove = nodeLabels[indexToRemove];
+    if (!labelToRemove) {
+      return;
+    }
+
+    setNodeLabels((current) => current.filter((_, index) => index !== indexToRemove));
+    setAccessPoints((current) => {
+      const remaining = current.filter((item) => item.nodeLabel !== labelToRemove);
+      return remaining.length > 0 ? remaining : [{ ...EMPTY_ACCESS_POINT }];
+    });
+  };
+
+  const renameNodeLabel = (indexToRename: number, nextLabel: string) => {
+    const previousLabel = nodeLabels[indexToRename];
+    if (!previousLabel) {
+      return;
+    }
+
+    const sanitized = nextLabel.replace(/^\s+/, '');
+    const duplicateIndex = nodeLabels.findIndex(
+      (label, index) => index !== indexToRename && label.toLowerCase() === sanitized.trim().toLowerCase(),
+    );
+
+    if (!sanitized || duplicateIndex !== -1) {
+      return;
+    }
+
+    setNodeLabels((current) => current.map((label, index) => (index === indexToRename ? sanitized : label)));
+    setAccessPoints((current) =>
+      current.map((item) => (item.nodeLabel === previousLabel ? { ...item, nodeLabel: sanitized } : item)),
+    );
   };
 
   return (
@@ -419,11 +507,56 @@ export function AssetFormDialog({
                 <p className="text-[11px] font-medium text-muted-foreground">Access Points</p>
                 <p className="mt-1 text-xs text-muted-foreground">One row per context, with multiple users inside the same row.</p>
               </div>
-              <Button type="button" size="sm" onClick={() => setAccessPoints((current) => [...current, { ...EMPTY_ACCESS_POINT }])}>
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Add Row
-              </Button>
+              <div className="flex items-center gap-2">
+                <Select value={assetMode} onValueChange={(value) => setAssetMode(value as 'single' | 'multi')}>
+                  <SelectTrigger className="h-8 w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single Asset</SelectItem>
+                    <SelectItem value="multi">Multi-node Asset</SelectItem>
+                  </SelectContent>
+                </Select>
+                {assetMode === 'multi' && (
+                  <Button type="button" variant="outline" size="sm" onClick={addNodeLabel}>
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    Add Node
+                  </Button>
+                )}
+                <Button type="button" size="sm" onClick={() => setAccessPoints((current) => [...current, { ...EMPTY_ACCESS_POINT, nodeLabel: assetMode === 'multi' ? nodeLabels[0] || 'Node A' : '' }])}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  Add Row
+                </Button>
+              </div>
             </div>
+
+            {assetMode === 'multi' && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {nodeLabels.map((label, index) => (
+                  <div
+                    key={index}
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1"
+                  >
+                    <Input
+                      value={label}
+                      onChange={(event) => renameNodeLabel(index, event.target.value)}
+                      className="h-6 min-w-[88px] border-0 bg-transparent px-1 text-[11px] font-medium text-foreground shadow-none focus-visible:ring-0"
+                      aria-label="Node name"
+                    />
+                    {nodeLabels.length > 1 && (
+                      <button
+                        type="button"
+                        className="rounded-sm p-0.5 text-muted-foreground transition hover:bg-background hover:text-foreground"
+                        onClick={() => removeNodeLabel(index)}
+                        aria-label={`Remove ${label}`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-4 space-y-3">
               {accessPoints.map((point, index) => (
@@ -446,7 +579,24 @@ export function AssetFormDialog({
                     )}
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-4">
+                  <div className={`grid gap-3 ${assetMode === 'multi' ? 'md:grid-cols-2 xl:grid-cols-5' : 'md:grid-cols-2 xl:grid-cols-4'}`}>
+                    {assetMode === 'multi' && (
+                      <div className="space-y-1.5">
+                        <Label>Node</Label>
+                        <Select value={point.nodeLabel || undefined} onValueChange={(value) => updateAccessPoint(index, 'nodeLabel', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select node" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {nodeLabels.map((label) => (
+                              <SelectItem key={label} value={label}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       <Label>Access Type</Label>
                       <Select value={point.type || undefined} onValueChange={(value) => updateAccessPoint(index, 'type', value)}>

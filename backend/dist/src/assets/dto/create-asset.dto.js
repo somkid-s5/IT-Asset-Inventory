@@ -16,6 +16,7 @@ const class_transformer_1 = require("class-transformer");
 class IpAllocationDto {
     address;
     type;
+    nodeLabel;
     manageType;
     version;
 }
@@ -32,6 +33,11 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
+], IpAllocationDto.prototype, "nodeLabel", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
 ], IpAllocationDto.prototype, "manageType", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
@@ -42,6 +48,7 @@ class AssetCredentialDto {
     username;
     password;
     type;
+    nodeLabel;
     manageType;
     version;
 }
@@ -59,6 +66,11 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], AssetCredentialDto.prototype, "type", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AssetCredentialDto.prototype, "nodeLabel", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

@@ -6,9 +6,11 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AssetsModule } from './assets/assets.module';
 import { CredentialsModule } from './credentials/credentials.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { UsersModule } from './users/users.module';
+import { DatabasesModule } from './databases/databases.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, AssetsModule, CredentialsModule, DashboardModule],
+  imports: [PrismaModule, AuthModule, AssetsModule, CredentialsModule, DashboardModule, UsersModule, DatabasesModule],
   controllers: [AppController],
   providers: [AppService],
 })
