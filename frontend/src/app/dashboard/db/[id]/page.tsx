@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, Copy, Database, Eye, EyeOff, HardDrive, LoaderCircle, Pencil, Server, ShieldCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,7 +20,7 @@ export default function DatabaseDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  async function loadDatabase(id: string) {
+  const loadDatabase = useCallback(async (id: string) => {
     try {
       const response = await api.get<DatabaseInventoryDetail>(`/databases/${id}`);
       setDatabase(response.data);
@@ -30,13 +30,13 @@ export default function DatabaseDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
 
   useEffect(() => {
     if (typeof params.id === 'string') {
       void loadDatabase(params.id);
     }
-  }, [params.id, router]);
+  }, [loadDatabase, params.id]);
 
   const databaseStats = useMemo(() => {
     if (!database) {
@@ -128,27 +128,27 @@ export default function DatabaseDetailPage() {
   };
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="workspace-page">
       <button
         onClick={() => router.push('/dashboard/db')}
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Database Inventory
       </button>
 
-      <section className="surface-panel p-4">
+      <section className="workspace-hero">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground">
+                <div className="icon-chip h-11 w-11 shrink-0 text-foreground">
                   <Database className="h-5 w-5" />
                 </div>
 
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="truncate text-[15px] font-semibold tracking-tight text-foreground">{database.name}</h1>
+                    <h1 className="truncate font-display text-xl font-semibold uppercase tracking-[0.06em] text-foreground">{database.name}</h1>
                     <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs text-muted-foreground">
                       {database.environment}
                     </span>
@@ -162,17 +162,17 @@ export default function DatabaseDetailPage() {
               </div>
             </div>
 
-            <div className="grid gap-2 lg:grid-cols-3">
-              <div className="rounded-lg border border-border bg-background px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Accounts</div>
+            <div className="stats-grid lg:grid-cols-3">
+              <div className="stat-tile">
+                <div className="stat-kicker">Accounts</div>
                 <div className="mt-1 text-base font-semibold text-foreground">{databaseStats.accounts}</div>
               </div>
-              <div className="rounded-lg border border-border bg-background px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Linked Apps</div>
+              <div className="stat-tile">
+                <div className="stat-kicker">Linked Apps</div>
                 <div className="mt-1 text-base font-semibold text-foreground">{databaseStats.linkedApps}</div>
               </div>
-              <div className="rounded-lg border border-border bg-background px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Backup</div>
+              <div className="stat-tile">
+                <div className="stat-kicker">Backup</div>
                 <div className="mt-1 text-sm font-semibold text-foreground">{database.backupPolicy}</div>
               </div>
             </div>
@@ -215,11 +215,11 @@ export default function DatabaseDetailPage() {
             <h3 className="text-sm font-semibold tracking-tight text-foreground">Database Accounts</h3>
           </div>
 
-          <div className="overflow-hidden rounded-[18px] border border-border bg-card">
+          <div className="table-shell">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse">
+              <table className="table-frame min-w-[900px]">
                 <thead>
-                  <tr className="border-b border-border bg-background/50 text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <tr className="table-head-row">
                     <th className="px-3 py-3 font-medium">Username</th>
                     <th className="px-3 py-3 font-medium">Password</th>
                     <th className="px-3 py-3 font-medium">Role</th>
@@ -232,7 +232,7 @@ export default function DatabaseDetailPage() {
                     const revealed = Boolean(revealedPasswords[account.id]);
 
                     return (
-                      <tr key={account.id} className="border-b border-border/80 transition-colors hover:bg-accent/40 last:border-b-0">
+                      <tr key={account.id} className="table-row">
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
                             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
@@ -307,8 +307,8 @@ export default function DatabaseDetailPage() {
       />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="max-w-md border-border bg-card p-0">
-          <DialogHeader className="border-b border-border px-5 py-4">
+        <DialogContent className="max-w-md bg-card p-0">
+          <DialogHeader className="border-b border-border/70 px-5 py-4">
             <DialogTitle className="text-base">Delete database</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 px-5 py-5">

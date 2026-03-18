@@ -129,7 +129,6 @@ export function AssetFormDialog({
   onOpenChange,
   assetToEdit,
   onSuccess,
-  availableParents: _availableParents,
 }: AssetFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
@@ -405,11 +404,11 @@ export function AssetFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         key={assetToEdit?.id ?? 'new-asset'}
-        className="max-h-[92vh] overflow-y-auto border-border bg-card p-0 sm:max-w-4xl"
+        className="max-h-[92vh] overflow-y-auto bg-card p-0 sm:max-w-4xl"
       >
-        <DialogHeader className="border-b border-border px-5 py-4">
+        <DialogHeader className="border-b border-border/70 px-5 py-4">
           <DialogTitle className="flex items-center gap-3 text-base">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground">
+            <span className="icon-chip h-8 w-8 p-0 text-muted-foreground">
               <HardDrive className="h-4 w-4" />
             </span>
             <span>{assetToEdit ? 'Edit Asset' : 'Create New Asset'}</span>
@@ -418,8 +417,8 @@ export function AssetFormDialog({
 
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5 px-5 py-5">
           <section className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-border bg-background p-4">
-              <p className="text-[11px] font-medium text-muted-foreground">Identity</p>
+            <div className="muted-panel p-4">
+              <p className="workspace-subtle">Identity</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5 md:col-span-2">
                   <Label>Asset Name / Hostname</Label>
@@ -476,8 +475,8 @@ export function AssetFormDialog({
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-background p-4">
-              <p className="text-[11px] font-medium text-muted-foreground">Placement</p>
+            <div className="muted-panel p-4">
+              <p className="workspace-subtle">Placement</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Location</Label>
@@ -501,10 +500,10 @@ export function AssetFormDialog({
             </div>
           </section>
 
-          <section className="rounded-xl border border-border bg-background p-4">
-            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+          <section className="muted-panel p-4">
+            <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
               <div>
-                <p className="text-[11px] font-medium text-muted-foreground">Access Points</p>
+                <p className="workspace-subtle">Access Points</p>
                 <p className="mt-1 text-xs text-muted-foreground">One row per context, with multiple users inside the same row.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -535,7 +534,7 @@ export function AssetFormDialog({
                 {nodeLabels.map((label, index) => (
                   <div
                     key={index}
-                    className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1"
+                    className="inline-flex items-center gap-1 rounded-2xl border border-border/70 bg-card/70 px-2 py-1.5"
                   >
                     <Input
                       value={label}
@@ -546,7 +545,7 @@ export function AssetFormDialog({
                     {nodeLabels.length > 1 && (
                       <button
                         type="button"
-                        className="rounded-sm p-0.5 text-muted-foreground transition hover:bg-background hover:text-foreground"
+                        className="rounded-xl p-1 text-muted-foreground transition hover:bg-background hover:text-foreground"
                         onClick={() => removeNodeLabel(index)}
                         aria-label={`Remove ${label}`}
                       >
@@ -560,7 +559,7 @@ export function AssetFormDialog({
 
             <div className="mt-4 space-y-3">
               {accessPoints.map((point, index) => (
-                <div key={`${point.type}-${index}`} className="rounded-lg border border-border bg-card p-3">
+                <div key={`${point.type}-${index}`} className="rounded-[24px] border border-border/70 bg-card/72 p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <Shield className="h-4 w-4 text-muted-foreground" />
@@ -650,7 +649,7 @@ export function AssetFormDialog({
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-lg border border-border bg-background p-3">
+                  <div className="mt-3 rounded-[22px] border border-border/70 bg-background/60 p-3">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-xs font-medium text-foreground">
                         <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
@@ -722,10 +721,10 @@ export function AssetFormDialog({
             </div>
           </section>
 
-          <section className="rounded-xl border border-border bg-background p-4">
-            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+          <section className="muted-panel p-4">
+            <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
               <div>
-                <p className="text-[11px] font-medium text-muted-foreground">Extra Specs</p>
+                <p className="workspace-subtle">Extra Specs</p>
                 <p className="mt-1 text-xs text-muted-foreground">Optional metadata like RAM, CPU, or warranty.</p>
               </div>
               <Button
@@ -741,7 +740,7 @@ export function AssetFormDialog({
 
             <div className="mt-4 space-y-2">
               {metadataPairs.length === 0 && (
-                <div className="rounded-lg border border-dashed border-border bg-card px-4 py-4 text-sm text-muted-foreground">
+                <div className="rounded-[22px] border border-dashed border-border/70 bg-card/70 px-4 py-4 text-sm text-muted-foreground">
                   No extra specifications yet.
                 </div>
               )}
@@ -774,11 +773,11 @@ export function AssetFormDialog({
             </div>
           </section>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex flex-col-reverse gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-foreground text-background hover:bg-foreground/90">
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
                   <Database className="mr-2 h-4 w-4 animate-pulse" />

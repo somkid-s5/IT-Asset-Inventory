@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, ChevronsUpDown, Database, LoaderCircle, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { DatabaseFormDialog } from '@/components/DatabaseFormDialog';
 import { ENVIRONMENT_FILTERS, type DatabaseEnvironment, type DatabaseInventoryItem } from '@/lib/database-inventory';
 import api from '@/services/api';
@@ -98,49 +99,50 @@ export default function DbPage() {
   };
 
   return (
-    <div className="space-y-4 pb-8">
-      <section className="surface-panel p-4">
+    <div className="workspace-page">
+      <section className="workspace-hero">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold tracking-tight text-foreground">Database Inventory</h2>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Compact database overview. Open a record to inspect full connection and account details.</p>
+            <p className="workspace-subtle">Data Layer</p>
+            <h2 className="workspace-heading mt-2">Database Inventory</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Compact database overview. Open a record to inspect full connection and account details.</p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="relative min-w-[280px]">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <input
+            <div className="toolbar-input-wrap">
+              <Search className="toolbar-input-icon" />
+              <Input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search database, host, IP, or user"
-                className="h-8 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-[12px] outline-none transition-all focus:border-foreground/20 focus:ring-2 focus:ring-foreground/5"
+                className="pl-10"
               />
             </div>
 
-            <Button className="h-9 gap-2 rounded-lg" onClick={() => setDialogOpen(true)}>
+            <Button size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4" />
               Add Database
             </Button>
           </div>
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-4">
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Databases</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{stats.databases}</div>
+        <div className="stats-grid">
+          <div className="stat-tile">
+            <div className="stat-kicker">Databases</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{stats.databases}</div>
           </div>
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Database Accounts</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{stats.accounts}</div>
+          <div className="stat-tile">
+            <div className="stat-kicker">Database Accounts</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{stats.accounts}</div>
           </div>
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Production DB</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{stats.production}</div>
+          <div className="stat-tile">
+            <div className="stat-kicker">Production DB</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{stats.production}</div>
           </div>
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Engines</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{stats.engines}</div>
+          <div className="stat-tile">
+            <div className="stat-kicker">Engines</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{stats.engines}</div>
           </div>
         </div>
 
@@ -149,10 +151,10 @@ export default function DbPage() {
             <button
               key={filter.value}
               onClick={() => setActiveEnvironment(filter.value)}
-              className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+              className={`filter-chip ${
                 activeEnvironment === filter.value
-                  ? 'bg-foreground text-background'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  ? 'filter-chip-active'
+                  : ''
               }`}
             >
               {filter.label}
@@ -162,11 +164,11 @@ export default function DbPage() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[18px] border border-border bg-card">
+      <section className="table-shell">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse">
+          <table className="table-frame min-w-[860px]">
             <thead>
-              <tr className="border-b border-border bg-background/50 text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <tr className="table-head-row">
                 <th className="px-3 py-3 font-medium">
                   <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                     DB Name
@@ -221,12 +223,12 @@ export default function DbPage() {
                 filteredDatabases.map((database) => (
                   <tr
                     key={database.id}
-                    className="cursor-pointer border-b border-border/80 transition-colors hover:bg-accent/60 last:border-b-0"
+                    className="table-row cursor-pointer"
                     onClick={() => router.push(`/dashboard/db/${database.id}`)}
                   >
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background text-muted-foreground">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground">
                           <Database className="h-3.5 w-3.5" />
                         </div>
                         <div>

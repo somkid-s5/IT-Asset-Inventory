@@ -267,27 +267,27 @@ export default function AssetDetailsPage() {
   ];
 
   return (
-    <div className="space-y-3 pb-6">
+    <div className="workspace-page">
       <button
         onClick={() => router.push('/dashboard/assets')}
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Inventory
       </button>
 
-      <section className="surface-panel p-3.5">
+      <section className="workspace-hero">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground">
+                <div className="icon-chip h-11 w-11 shrink-0 text-foreground">
                   {getAssetIcon(asset.type, 'h-5 w-5')}
                 </div>
 
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="truncate text-[15px] font-semibold tracking-tight text-foreground">{asset.name}</h1>
+                    <h1 className="truncate font-display text-xl font-semibold uppercase tracking-[0.06em] text-foreground">{asset.name}</h1>
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${status.className}`}
                     >
@@ -306,17 +306,17 @@ export default function AssetDetailsPage() {
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-3">
-              <div className="rounded-lg border border-border bg-background px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Interfaces</div>
+            <div className="stats-grid sm:grid-cols-3">
+              <div className="stat-tile">
+                <div className="stat-kicker">Interfaces</div>
                 <div className="mt-1 text-sm font-semibold text-foreground">{accessRows.length}</div>
               </div>
-              <div className="rounded-lg border border-border bg-background px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">IP Addresses</div>
+              <div className="stat-tile">
+                <div className="stat-kicker">IP Addresses</div>
                 <div className="mt-1 text-sm font-semibold text-foreground">{asset.ipAllocations?.length ?? 0}</div>
               </div>
-              <div className="rounded-lg border border-border bg-background px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Credentials</div>
+              <div className="stat-tile">
+                <div className="stat-kicker">Credentials</div>
                 <div className="mt-1 text-sm font-semibold text-foreground">{asset.credentials?.length ?? 0}</div>
               </div>
             </div>
@@ -344,7 +344,7 @@ export default function AssetDetailsPage() {
         <div className="surface-panel p-4">
           <div className="mb-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg border border-border bg-background p-1.5 text-foreground">
+              <div className="icon-chip h-8 w-8 p-0 text-foreground">
                 <Shield className="h-3.5 w-3.5" />
               </div>
               <h2 className="text-base font-semibold tracking-[-0.03em] text-foreground">Access Interfaces</h2>
@@ -355,7 +355,7 @@ export default function AssetDetailsPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[18px] border border-border bg-card">
+          <div className="table-shell">
             {accessRows.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-muted-foreground">No IP addresses or credentials for this asset.</div>
             ) : (
@@ -368,7 +368,7 @@ export default function AssetDetailsPage() {
                       </div>
                     )}
 
-                    <div className="hidden grid-cols-[1.1fr_1fr_0.75fr_1.55fr] gap-3 border-b border-border bg-background/50 px-4 py-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground md:grid">
+                    <div className="hidden grid-cols-[1.1fr_1fr_0.75fr_1.55fr] gap-3 border-b border-border/70 bg-background/45 px-4 py-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground md:grid">
                       <div>Interface Type</div>
                       <div>IP Address</div>
                       <div>Access Via</div>
@@ -413,7 +413,7 @@ export default function AssetDetailsPage() {
                             {(row.methods.length > 0 ? row.methods : ['DIRECT']).map((method) => (
                               <span
                                 key={`${row.key}-${method}`}
-                                className="rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground"
+                                className="rounded-full border border-border/70 bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground"
                               >
                                 {method}
                               </span>
@@ -432,18 +432,22 @@ export default function AssetDetailsPage() {
                                   <div className="min-w-0 w-[112px] shrink-0 font-mono text-sm text-foreground">
                                     {credential.username}
                                   </div>
-                                  <div className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-foreground">
+                                  <div className="min-w-0 flex-1 rounded-2xl border border-border/70 bg-card/70 px-2.5 py-1.5 font-mono text-xs text-foreground">
                                     {visible ? credential.password || '--' : '************'}
                                   </div>
                                   <button
                                     onClick={() =>
                                       setRevealed((current) => {
                                         const next = new Set(current);
-                                        next.has(credential.id) ? next.delete(credential.id) : next.add(credential.id);
+                                        if (next.has(credential.id)) {
+                                          next.delete(credential.id);
+                                        } else {
+                                          next.add(credential.id);
+                                        }
                                         return next;
                                       })
                                     }
-                                    className="rounded-md border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                                    className="rounded-xl border border-border/70 bg-card/70 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
                                   >
                                     {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                   </button>
@@ -452,7 +456,7 @@ export default function AssetDetailsPage() {
                                       void navigator.clipboard.writeText(credential.password || '');
                                       toast.success('Password copied');
                                     }}
-                                    className="rounded-md border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                                    className="rounded-xl border border-border/70 bg-card/70 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
                                   >
                                     <Copy className="h-3.5 w-3.5" />
                                   </button>

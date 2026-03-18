@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useSyncExternalStore } from 'react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 
@@ -29,44 +29,104 @@ const AuthContext = createContext<AuthContextType>({
     logout: () => { },
 });
 
+type Listener = () => void;
+
+const listeners = new Set<Listener>();
+let cachedUserStorageValue: string | null = null;
+let cachedTokenValue: string | undefined;
+let cachedUserSnapshot: User | null = null;
+
+function emitAuthChange() {
+    listeners.forEach((listener) => listener());
+}
+
+function subscribe(listener: Listener) {
+    listeners.add(listener);
+
+    if (typeof window !== 'undefined') {
+        const handleStorage = () => listener();
+        window.addEventListener('storage', handleStorage);
+
+        return () => {
+            listeners.delete(listener);
+            window.removeEventListener('storage', handleStorage);
+        };
+    }
+
+    return () => {
+        listeners.delete(listener);
+    };
+}
+
+function getClientUserSnapshot(): User | null {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const token = Cookies.get('token');
+    const storedUser = window.localStorage.getItem('user');
+
+    if (!token || !storedUser) {
+        cachedTokenValue = token;
+        cachedUserStorageValue = storedUser;
+        cachedUserSnapshot = null;
+        return null;
+    }
+
+    if (cachedTokenValue === token && cachedUserStorageValue === storedUser) {
+        return cachedUserSnapshot;
+    }
+
+    try {
+        cachedTokenValue = token;
+        cachedUserStorageValue = storedUser;
+        cachedUserSnapshot = JSON.parse(storedUser) as User;
+        return cachedUserSnapshot;
+    } catch (e) {
+        console.error("Failed to parse stored user", e);
+        Cookies.remove('token');
+        window.localStorage.removeItem('user');
+        cachedTokenValue = undefined;
+        cachedUserStorageValue = null;
+        cachedUserSnapshot = null;
+        return null;
+    }
+}
+
+function getServerUserSnapshot(): User | null {
+    return null;
+}
+
+function getClientHydratedSnapshot() {
+    return true;
+}
+
+function getServerHydratedSnapshot() {
+    return false;
+}
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const user = useSyncExternalStore(subscribe, getClientUserSnapshot, getServerUserSnapshot);
+    const hydrated = useSyncExternalStore(subscribe, getClientHydratedSnapshot, getServerHydratedSnapshot);
+    const loading = !hydrated;
     const router = useRouter();
-
-    useEffect(() => {
-        // Check for stored token and user data on load
-        const token = Cookies.get('token');
-        const storedUser = localStorage.getItem('user');
-
-        if (token && storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error("Failed to parse stored user", e);
-                Cookies.remove('token');
-                localStorage.removeItem('user');
-            }
-        }
-        setLoading(false);
-    }, []);
 
     const login = (token: string, userData: User) => {
         Cookies.set('token', token, { expires: 1 }); // 1 day
         localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
+        emitAuthChange();
         router.push('/dashboard');
     };
 
     const updateUser = (userData: User) => {
         localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
+        emitAuthChange();
     };
 
     const logout = () => {
         Cookies.remove('token');
         localStorage.removeItem('user');
-        setUser(null);
+        emitAuthChange();
         router.push('/login');
     };
 

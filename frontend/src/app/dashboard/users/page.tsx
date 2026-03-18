@@ -192,49 +192,45 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-4 pb-8">
-      <section className="surface-panel p-4">
+    <div className="workspace-page">
+      <section className="workspace-hero">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Access Control</p>
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">User Accounts</h2>
-            <p className="max-w-2xl text-xs leading-5 text-muted-foreground">
+            <p className="workspace-subtle">Access Control</p>
+            <h2 className="workspace-heading">User Accounts</h2>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
               Create workspace accounts, assign roles, and keep at least one admin active in the system.
             </p>
           </div>
-          <Button
-            type="button"
-            className="bg-foreground text-background hover:bg-foreground/90"
-            onClick={() => setCreateOpen(true)}
-          >
+          <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Create user
           </Button>
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-4">
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Total Users</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{stats.total}</div>
+        <div className="stats-grid">
+          <div className="stat-tile">
+            <div className="stat-kicker">Total Users</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{stats.total}</div>
           </div>
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Admins</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{stats.admins}</div>
+          <div className="stat-tile">
+            <div className="stat-kicker">Admins</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{stats.admins}</div>
           </div>
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Editors</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{stats.editors}</div>
+          <div className="stat-tile">
+            <div className="stat-kicker">Editors</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{stats.editors}</div>
           </div>
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Viewers</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{stats.viewers}</div>
+          <div className="stat-tile">
+            <div className="stat-kicker">Viewers</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{stats.viewers}</div>
           </div>
         </div>
       </section>
 
       <section>
-        <div className="overflow-hidden rounded-[18px] border border-border bg-card">
-          <div className="border-b border-border px-4 py-3">
+        <div className="table-shell">
+          <div className="table-section-header">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Workspace Users</h3>
@@ -244,9 +240,9 @@ export default function UsersPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse">
+            <table className="table-frame min-w-[640px]">
               <thead>
-                <tr className="border-b border-border bg-background/50 text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                <tr className="table-head-row">
                   <th className="px-3 py-3 font-medium">User</th>
                   <th className="px-3 py-3 font-medium">Role</th>
                   <th className="px-3 py-3 font-medium">Created</th>
@@ -259,7 +255,7 @@ export default function UsersPage() {
                   const isCurrentUser = item.id === user?.id;
 
                   return (
-                    <tr key={item.id} className="border-b border-border/80 transition-colors hover:bg-accent/60 last:border-b-0">
+                    <tr key={item.id} className="table-row">
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2.5">
                           <UserAvatar seed={item.avatarSeed} imageUrl={item.avatarImage} label={item.displayName} className="h-8 w-8" />
@@ -338,7 +334,7 @@ export default function UsersPage() {
       </section>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="border-border bg-card sm:max-w-md">
+        <DialogContent className="bg-card sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create User</DialogTitle>
           </DialogHeader>
@@ -398,7 +394,7 @@ export default function UsersPage() {
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={submitting}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-foreground text-background hover:bg-foreground/90" disabled={submitting}>
+              <Button type="submit" disabled={submitting}>
                 {submitting ? 'Creating...' : 'Create user'}
               </Button>
             </div>
@@ -407,7 +403,7 @@ export default function UsersPage() {
       </Dialog>
 
       <Dialog open={Boolean(resetTarget)} onOpenChange={(open) => !open && setResetTarget(null)}>
-        <DialogContent className="border-border bg-card sm:max-w-md">
+        <DialogContent className="bg-card sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Reset Password</DialogTitle>
           </DialogHeader>
@@ -444,7 +440,7 @@ export default function UsersPage() {
               <Button type="button" variant="outline" onClick={() => setResetTarget(null)} disabled={resetSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-foreground text-background hover:bg-foreground/90" disabled={resetSubmitting}>
+              <Button type="submit" disabled={resetSubmitting}>
                 {resetSubmitting ? 'Resetting...' : 'Reset password'}
               </Button>
             </div>
@@ -453,7 +449,7 @@ export default function UsersPage() {
       </Dialog>
 
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="border-border bg-card sm:max-w-md">
+        <DialogContent className="bg-card sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
           </DialogHeader>

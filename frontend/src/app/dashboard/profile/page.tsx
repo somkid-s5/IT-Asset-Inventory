@@ -143,21 +143,21 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-4 pb-8">
-      <section className="surface-panel p-4">
+    <div className="workspace-page">
+      <section className="workspace-hero">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">My Account</p>
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">Profile & Security</h2>
-            <p className="max-w-2xl text-xs leading-5 text-muted-foreground">
+            <p className="workspace-subtle">My Account</p>
+            <h2 className="workspace-heading">Profile And Security</h2>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
               Review your current access level and change your own password without asking an admin.
             </p>
           </div>
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Avatar</div>
+        <div className="stats-grid sm:grid-cols-3">
+            <div className="stat-tile">
+            <div className="stat-kicker">Avatar</div>
             <div className="mt-2">
               <UserAvatar
                 seed={avatarSeed}
@@ -167,13 +167,13 @@ export default function ProfilePage() {
               />
             </div>
           </div>
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Username</div>
-            <div className="mt-1 text-base font-semibold text-foreground">@{user?.username ?? '--'}</div>
+          <div className="stat-tile">
+            <div className="stat-kicker">Username</div>
+            <div className="mt-2 text-base font-semibold text-foreground">@{user?.username ?? '--'}</div>
           </div>
-          <div className="rounded-lg border border-border bg-background px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Role</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{user?.role ?? '--'}</div>
+          <div className="stat-tile">
+            <div className="stat-kicker">Role</div>
+            <div className="mt-2 text-base font-semibold text-foreground">{user?.role ?? '--'}</div>
           </div>
         </div>
       </section>
@@ -181,7 +181,7 @@ export default function ProfilePage() {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <div className="surface-panel p-4">
           <div className="flex items-center gap-2">
-            <div className="rounded-lg border border-border bg-background p-1.5 text-foreground">
+            <div className="icon-chip h-8 w-8 p-0 text-foreground">
               <Shield className="h-3.5 w-3.5" />
             </div>
             <h3 className="text-sm font-semibold tracking-tight text-foreground">Profile</h3>
@@ -202,7 +202,7 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <Label>Avatar</Label>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-              <div className="flex items-center gap-3">
+              <div className="muted-panel flex flex-wrap items-center gap-3 px-4 py-4">
                 <UserAvatar
                   seed={avatarSeed}
                   imageUrl={avatarImage}
@@ -237,7 +237,7 @@ export default function ProfilePage() {
           </form>
 
           <div className="mt-4 flex items-center gap-2">
-            <div className="rounded-lg border border-border bg-background p-1.5 text-foreground">
+            <div className="icon-chip h-8 w-8 p-0 text-foreground">
               <KeyRound className="h-3.5 w-3.5" />
             </div>
             <h3 className="text-sm font-semibold tracking-tight text-foreground">Change Password</h3>
@@ -281,7 +281,7 @@ export default function ProfilePage() {
               />
             </div>
 
-            <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" disabled={saving}>
+            <Button type="submit" className="w-full" disabled={saving}>
               {saving ? 'Updating password...' : 'Update password'}
             </Button>
           </form>
@@ -289,20 +289,20 @@ export default function ProfilePage() {
 
         <div className="surface-panel p-4">
           <div className="flex items-center gap-2">
-            <div className="rounded-lg border border-border bg-background p-1.5 text-foreground">
+            <div className="icon-chip h-8 w-8 p-0 text-foreground">
               <Shield className="h-3.5 w-3.5" />
             </div>
             <h3 className="text-sm font-semibold tracking-tight text-foreground">Security Notes</h3>
           </div>
 
           <div className="mt-4 space-y-2">
-            <div className="rounded-lg border border-border bg-background px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <div className="muted-panel px-3 py-3 text-xs leading-5 text-muted-foreground">
               {PASSWORD_POLICY_MESSAGE}
             </div>
-            <div className="rounded-lg border border-border bg-background px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <div className="muted-panel px-3 py-3 text-xs leading-5 text-muted-foreground">
               If you forget your password, an admin can reset it from the <span className="font-medium text-foreground">Users</span> page.
             </div>
-            <div className="rounded-lg border border-border bg-background px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <div className="muted-panel px-3 py-3 text-xs leading-5 text-muted-foreground">
               Role changes still require an admin and are intentionally separated from personal profile settings.
             </div>
           </div>

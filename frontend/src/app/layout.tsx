@@ -1,9 +1,20 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { Open_Sans, Orbitron } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/ThemeProvider';
+
+const openSans = Open_Sans({
+  subsets: ['latin'],
+  variable: '--font-open-sans',
+});
+
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  variable: '--font-orbitron',
+});
 
 export const metadata: Metadata = {
   title: 'AssetOps',
@@ -13,7 +24,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className="font-sans antialiased selection:bg-primary/30">
+      <body className={`${openSans.variable} ${orbitron.variable} font-sans antialiased selection:bg-primary/30`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -22,7 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         >
           <AuthProvider>
             {children}
-            <Toaster theme="dark" />
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </body>
