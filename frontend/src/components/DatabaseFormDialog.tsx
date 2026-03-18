@@ -153,7 +153,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto border-border bg-card sm:max-w-4xl">
+      <DialogContent className="max-h-[88vh] overflow-y-auto bg-card sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{databaseToEdit ? 'Edit Database' : 'Create Database'}</DialogTitle>
         </DialogHeader>
@@ -222,7 +222,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="muted-panel space-y-3 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Database Accounts</h3>
@@ -236,7 +236,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
             <div className="space-y-3">
               {accounts.map((account, index) => (
-                <div key={`account-${index}`} className="rounded-xl border border-border bg-background p-3">
+                <div key={`account-${index}`} className="rounded-[24px] border border-border/70 bg-background/62 p-3">
                   <div className="mb-3 flex items-center justify-between">
                     <div className="text-xs font-medium text-foreground">Account {index + 1}</div>
                     <Button

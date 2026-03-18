@@ -43,7 +43,8 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
-  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: var(--font-open-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-orbitron), ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", monospace;
   --animate-slide-in: slide-in 0.22s ease-out;
 
@@ -63,94 +64,94 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: 40 18% 97%;
-  --foreground: 222 16% 10%;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 7%;
   --card: 0 0% 100%;
-  --card-foreground: 222 16% 10%;
+  --card-foreground: 0 0% 7%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 16% 10%;
-  --primary: 222 16% 10%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 220 17% 94%;
-  --secondary-foreground: 222 14% 18%;
-  --muted: 220 18% 93%;
-  --muted-foreground: 222 10% 36%;
-  --accent: 220 16% 92%;
-  --accent-foreground: 222 16% 10%;
+  --popover-foreground: 0 0% 7%;
+  --primary: 355 74% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 13%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 38%;
+  --accent: 356 60% 94%;
+  --accent-foreground: 0 0% 9%;
   --destructive: 0 75% 52%;
   --destructive-foreground: 0 0% 100%;
-  --warning: 36 100% 48%;
+  --warning: 28 89% 55%;
   --warning-foreground: 0 0% 100%;
-  --success: 142 72% 32%;
+  --success: 147 58% 36%;
   --success-foreground: 0 0% 100%;
   --info: 216 92% 52%;
   --info-foreground: 0 0% 100%;
   --critical: 0 75% 52%;
-  --high: 18 92% 52%;
-  --medium: 36 100% 48%;
-  --low: 142 72% 32%;
-  --border: 220 12% 84%;
-  --input: 220 12% 84%;
-  --ring: 222 16% 14%;
-  --radius: 0.75rem;
-  --sidebar-background: 40 18% 98%;
-  --sidebar-foreground: 222 10% 28%;
-  --sidebar-primary: 222 16% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 220 16% 93%;
-  --sidebar-accent-foreground: 222 16% 10%;
-  --sidebar-border: 220 12% 84%;
-  --sidebar-ring: 222 16% 14%;
+  --high: 14 82% 55%;
+  --medium: 28 89% 55%;
+  --low: 147 58% 36%;
+  --border: 0 0% 87%;
+  --input: 0 0% 87%;
+  --ring: 355 74% 53%;
+  --radius: 0.8rem;
+  --sidebar-background: 0 0% 99%;
+  --sidebar-foreground: 0 0% 28%;
+  --sidebar-primary: 355 74% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 356 48% 96%;
+  --sidebar-accent-foreground: 0 0% 8%;
+  --sidebar-border: 0 0% 89%;
+  --sidebar-ring: 355 74% 53%;
 }
 
 :root.dark,
 .dark {
-  --background: 240 10% 5%;
+  --background: 0 0% 4%;
   --foreground: 0 0% 95%;
-  --card: 240 8% 7%;
+  --card: 0 0% 7%;
   --card-foreground: 0 0% 95%;
-  --popover: 240 8% 8%;
+  --popover: 0 0% 8%;
   --popover-foreground: 0 0% 95%;
-  --primary: 0 0% 96%;
-  --primary-foreground: 0 0% 7%;
-  --secondary: 240 6% 11%;
-  --secondary-foreground: 0 0% 88%;
-  --muted: 240 6% 11%;
-  --muted-foreground: 240 5% 70%;
-  --accent: 240 5% 12%;
+  --primary: 355 74% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 92%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 68%;
+  --accent: 355 35% 14%;
   --accent-foreground: 0 0% 96%;
-  --destructive: 0 75% 58%;
+  --destructive: 0 80% 60%;
   --destructive-foreground: 0 0% 100%;
-  --warning: 36 100% 56%;
+  --warning: 28 89% 58%;
   --warning-foreground: 0 0% 8%;
-  --success: 142 72% 42%;
+  --success: 147 58% 42%;
   --success-foreground: 0 0% 8%;
   --info: 216 92% 60%;
   --info-foreground: 0 0% 8%;
-  --critical: 0 75% 58%;
-  --high: 18 92% 58%;
-  --medium: 36 100% 56%;
-  --low: 142 72% 42%;
-  --border: 240 5% 18%;
-  --input: 240 5% 18%;
-  --ring: 0 0% 86%;
-  --sidebar-background: 240 10% 5%;
-  --sidebar-foreground: 240 5% 72%;
-  --sidebar-primary: 0 0% 96%;
-  --sidebar-primary-foreground: 0 0% 7%;
-  --sidebar-accent: 240 5% 10%;
+  --critical: 0 80% 60%;
+  --high: 14 82% 61%;
+  --medium: 28 89% 58%;
+  --low: 147 58% 42%;
+  --border: 0 0% 17%;
+  --input: 0 0% 17%;
+  --ring: 355 74% 53%;
+  --sidebar-background: 0 0% 6%;
+  --sidebar-foreground: 0 0% 76%;
+  --sidebar-primary: 355 74% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 355 26% 11%;
   --sidebar-accent-foreground: 0 0% 96%;
-  --sidebar-border: 240 5% 18%;
-  --sidebar-ring: 0 0% 86%;
+  --sidebar-border: 0 0% 16%;
+  --sidebar-ring: 355 74% 53%;
 }
 
 @layer components {
   .surface-panel {
-    @apply rounded-2xl border border-border/80 bg-card;
+    @apply rounded-[18px] border border-border/70 bg-card/88 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.55)] backdrop-blur-xl;
   }
 
   .stat-card {
-    @apply rounded-2xl border border-border/80 bg-card;
+    @apply rounded-[16px] border border-border/70 bg-card/88 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)] backdrop-blur-xl;
   }
 
   .app-shell {
@@ -159,6 +160,119 @@
 
   .compact-input {
     @apply h-8 rounded-lg text-[13px];
+  }
+
+  .brand-grid {
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, hsl(var(--foreground)) 6%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, hsl(var(--foreground)) 6%, transparent) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .sidebar-blend {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, hsl(var(--sidebar-background)) 92%, transparent) 0%, color-mix(in oklab, hsl(var(--sidebar-background)) 86%, transparent) 100%),
+      linear-gradient(to right, color-mix(in oklab, hsl(var(--primary)) 7%, transparent) 0%, transparent 42%),
+      linear-gradient(to right, color-mix(in oklab, hsl(var(--foreground)) 6%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, hsl(var(--foreground)) 6%, transparent) 1px, transparent 1px);
+    background-size: auto, auto, 28px 28px, 28px 28px;
+  }
+
+  .content-bridge {
+    background:
+      radial-gradient(circle at left center, color-mix(in oklab, hsl(var(--primary)) 10%, transparent) 0%, transparent 28%),
+      linear-gradient(to right, color-mix(in oklab, hsl(var(--sidebar-background)) 38%, transparent) 0%, transparent 18%);
+  }
+
+  .app-backdrop {
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, hsl(var(--primary)) 28%, transparent) 0%, transparent 36%),
+      radial-gradient(circle at bottom right, color-mix(in oklab, hsl(var(--primary)) 18%, transparent) 0%, transparent 34%),
+      linear-gradient(180deg, color-mix(in oklab, hsl(var(--background)) 92%, black 8%) 0%, hsl(var(--background)) 52%, color-mix(in oklab, hsl(var(--background)) 85%, hsl(var(--primary)) 15%) 100%);
+  }
+
+  .glass-card {
+    @apply rounded-[22px] border border-border/70 bg-card/84 shadow-[0_30px_120px_-45px_rgba(0,0,0,0.75)] backdrop-blur-2xl;
+  }
+
+  .brand-chip {
+    @apply inline-flex items-center gap-2 rounded-[10px] border border-border/70 bg-card/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-muted-foreground backdrop-blur-xl;
+  }
+
+  .workspace-page {
+    @apply space-y-4 pb-8;
+  }
+
+  .workspace-hero {
+    @apply rounded-[18px] border border-border/70 bg-card/88 p-4 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:p-5;
+  }
+
+  .workspace-heading {
+    @apply font-display text-xl font-semibold uppercase tracking-[0.08em] text-foreground;
+  }
+
+  .workspace-subtle {
+    @apply text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground;
+  }
+
+  .toolbar-input-wrap {
+    @apply relative min-w-[280px];
+  }
+
+  .toolbar-input-icon {
+    @apply pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground;
+  }
+
+  .filter-chip {
+    @apply rounded-[10px] border border-border/70 bg-card/64 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground backdrop-blur transition-all hover:border-primary/20 hover:bg-accent hover:text-foreground;
+  }
+
+  .filter-chip-active {
+    @apply border-primary/20 bg-primary text-primary-foreground shadow-[0_16px_38px_-24px_color-mix(in_oklab,hsl(var(--primary))_85%,transparent)];
+  }
+
+  .stats-grid {
+    @apply mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .stat-tile {
+    @apply rounded-[16px] border border-border/70 bg-card/88 px-4 py-3 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)] backdrop-blur-xl;
+  }
+
+  .stat-kicker {
+    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded-[18px] border border-border/70 bg-card/88 shadow-[0_24px_80px_-42px_rgba(0,0,0,0.6)] backdrop-blur-xl;
+  }
+
+  .table-section-header {
+    @apply flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3;
+  }
+
+  .table-frame {
+    @apply w-full border-collapse;
+  }
+
+  .table-head-row {
+    @apply border-b border-border/70 bg-background/45 text-left text-[10px] uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .table-row {
+    @apply border-b border-border/70 transition-colors hover:bg-accent/40 last:border-b-0;
+  }
+
+  .metric-pair {
+    @apply flex items-start gap-3 rounded-[14px] border border-border/70 bg-background/52 px-4 py-3 backdrop-blur;
+  }
+
+  .muted-panel {
+    @apply rounded-[14px] border border-border/70 bg-background/56 backdrop-blur;
+  }
+
+  .icon-chip {
+    @apply flex h-10 w-10 items-center justify-center rounded-[12px] border border-border/70 bg-background/75 text-muted-foreground;
   }
 }
 
@@ -172,6 +286,19 @@
   }
 
   body {
-    @apply bg-background font-sans text-[13px] text-foreground antialiased;
+    @apply min-h-screen font-sans text-[13px] text-foreground antialiased;
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, hsl(var(--primary)) 28%, transparent) 0%, transparent 36%),
+      radial-gradient(circle at bottom right, color-mix(in oklab, hsl(var(--primary)) 18%, transparent) 0%, transparent 34%),
+      linear-gradient(180deg, color-mix(in oklab, hsl(var(--background)) 92%, black 8%) 0%, hsl(var(--background)) 52%, color-mix(in oklab, hsl(var(--background)) 85%, hsl(var(--primary)) 15%) 100%);
+  }
+
+  ::selection {
+    background: color-mix(in oklab, hsl(var(--primary)) 30%, transparent);
+  }
+
+  [data-slot="card"],
+  [data-slot="dropdown-menu-content"] {
+    box-shadow: 0 24px 90px -48px rgba(0, 0, 0, 0.7);
   }
 }

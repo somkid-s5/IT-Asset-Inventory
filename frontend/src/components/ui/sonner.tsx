@@ -26,7 +26,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            'rounded-2xl border border-border/70 bg-popover/95 text-popover-foreground shadow-[0_20px_60px_-30px_rgba(15,23,42,0.5)]',
+            'rounded-[24px] border border-border/70 bg-popover/92 text-popover-foreground shadow-[0_24px_80px_-36px_rgba(0,0,0,0.7)] backdrop-blur-2xl',
           title: 'text-sm font-semibold',
           description: 'text-xs text-muted-foreground',
           success: '!border-emerald-500/30 !bg-emerald-500/12 !text-emerald-950 dark:!text-emerald-100',
@@ -47,7 +47,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
-          '--border-radius': '1rem',
+          '--border-radius': '1.25rem',
         } as CSSProperties
       }
       {...props}

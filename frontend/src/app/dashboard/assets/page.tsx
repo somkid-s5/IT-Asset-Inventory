@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,7 @@ import React from 'react';
 import { AssetFormDialog } from '@/components/AssetFormDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -117,7 +118,7 @@ export default function AssetsPage() {
     setCurrentPage(1);
   }, [deferredSearch, activeTab, sortKey, sortDirection, pageSize]);
 
-  const compareAssets = (left: Asset, right: Asset) => {
+  const compareAssets = useCallback((left: Asset, right: Asset) => {
     const leftValue = (left[sortKey] ?? '').toString().toLowerCase();
     const rightValue = (right[sortKey] ?? '').toString().toLowerCase();
 
@@ -130,15 +131,18 @@ export default function AssetsPage() {
     }
 
     return 0;
-  };
+  }, [sortDirection, sortKey]);
 
-  const sortAssetTree = (items: Asset[]): Asset[] =>
-    [...items]
-      .sort(compareAssets)
-      .map((asset) => ({
-        ...asset,
-        children: asset.children ? sortAssetTree(asset.children) : asset.children,
-      }));
+  const sortAssetTree = useCallback(
+    (items: Asset[]): Asset[] =>
+      [...items]
+        .sort(compareAssets)
+        .map((asset) => ({
+          ...asset,
+          children: asset.children ? sortAssetTree(asset.children) : asset.children,
+        })),
+    [compareAssets],
+  );
 
   const topLevelAssets = useMemo(() => {
     const baseAssets =
@@ -147,7 +151,7 @@ export default function AssetsPage() {
         : filteredAssets.filter((asset) => !asset.parentId);
 
     return sortAssetTree(baseAssets);
-  }, [filteredAssets, deferredSearch, activeTab, sortKey, sortDirection]);
+  }, [filteredAssets, deferredSearch, activeTab, sortAssetTree]);
 
   const totalPages = Math.max(1, Math.ceil(topLevelAssets.length / pageSize));
   const pagedAssets = topLevelAssets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -221,7 +225,7 @@ export default function AssetsPage() {
     return (
       <React.Fragment key={asset.id}>
         <tr
-          className="group cursor-pointer border-b border-border/80 transition-colors hover:bg-accent/60"
+          className="table-row group cursor-pointer"
           onClick={() => router.push(`/dashboard/assets/${asset.id}`)}
         >
           <td className="px-3 py-3">
@@ -232,11 +236,15 @@ export default function AssetsPage() {
                     event.stopPropagation();
                     setExpandedRows((current) => {
                       const next = new Set(current);
-                      next.has(asset.id) ? next.delete(asset.id) : next.add(asset.id);
+                      if (next.has(asset.id)) {
+                        next.delete(asset.id);
+                      } else {
+                        next.add(asset.id);
+                      }
                       return next;
                     });
                   }}
-                  className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="rounded-xl p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
                   <ChevronRight className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`} />
                 </button>
@@ -248,7 +256,7 @@ export default function AssetsPage() {
           </td>
           <td className="px-3 py-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background text-muted-foreground">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground">
                 {getAssetIcon(asset.type)}
               </div>
               <span className="truncate text-[13px] font-medium text-foreground">{asset.name}</span>
@@ -267,14 +275,14 @@ export default function AssetsPage() {
               <div className="flex items-center justify-end gap-1">
                 <button
                   onClick={() => void openEditDialog(asset.id)}
-                  className="rounded-md border border-border bg-card px-2 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                  className="rounded-xl border border-border/70 bg-card/70 px-2 py-2 text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {loadingEditId === asset.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
                 </button>
                 <button
                   onClick={() => setAssetPendingDelete(asset)}
                   disabled={deletingId === asset.id}
-                  className="rounded-md border border-border bg-card px-2 py-1.5 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                  className="rounded-xl border border-border/70 bg-card/70 px-2 py-2 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
                 >
                   {deletingId === asset.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 </button>
@@ -294,34 +302,35 @@ export default function AssetsPage() {
 
   return (
     <>
-    <div className="space-y-3 pb-6">
-      <section className="surface-panel p-3.5">
+    <div className="workspace-page">
+      <section className="workspace-hero">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold tracking-tight text-foreground">Assets</h2>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{assets.length} total records</p>
+            <p className="workspace-subtle">Hardware Inventory</p>
+            <h2 className="workspace-heading mt-2">Assets</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{assets.length} total records across infrastructure hardware.</p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative min-w-[280px]">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <input
+              <div className="toolbar-input-wrap">
+                <Search className="toolbar-input-icon" />
+                <Input
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search assets"
-                  className="h-8 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-[12px] outline-none transition-all focus:border-foreground/20 focus:ring-2 focus:ring-foreground/5"
+                  className="pl-10"
                 />
               </div>
 
               {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
-                <button
+                <Button
                   onClick={openCreateDialog}
-                  className="inline-flex h-8 items-center gap-2 rounded-lg bg-foreground px-3 text-[12px] font-medium text-background transition-colors hover:bg-foreground/90"
+                  size="lg"
                 >
                   <Plus className="h-4 w-4" />
                   Add Asset
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -331,10 +340,10 @@ export default function AssetsPage() {
               <button
                 key={tab.value}
                 onClick={() => setActiveTab(tab.value)}
-                className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                className={`filter-chip ${
                   activeTab === tab.value
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    ? 'filter-chip-active'
+                    : ''
                 }`}
               >
                 {tab.label}
@@ -344,11 +353,11 @@ export default function AssetsPage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-[18px] border border-border bg-card">
+        <section className="table-shell">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse">
+            <table className="table-frame min-w-[860px]">
               <thead>
-                <tr className="border-b border-border bg-background/50 text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                <tr className="table-head-row">
                   <th className="px-3 py-3 font-medium">
                     <button onClick={() => toggleSort('assetId')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                       Asset ID
@@ -412,13 +421,13 @@ export default function AssetsPage() {
           </div>
 
           {!loading && topLevelAssets.length > 0 && (
-            <div className="flex flex-col gap-3 border-t border-border px-4 py-2.5 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 border-t border-border/70 px-4 py-3 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <span>Rows per page</span>
                 <select
                   value={pageSize}
                   onChange={(event) => setPageSize(Number(event.target.value))}
-                  className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none"
+                  className="h-9 rounded-2xl border border-border/70 bg-background/70 px-3 text-xs text-foreground outline-none"
                 >
                   {[10, 20, 50].map((size) => (
                     <option key={size} value={size}>
@@ -435,7 +444,7 @@ export default function AssetsPage() {
                 <button
                   onClick={() => setCurrentPage((current) => Math.max(1, current - 1))}
                   disabled={currentPage === 1}
-                  className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-1 rounded-2xl border border-border/70 bg-background/70 px-3 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                   Previous
@@ -446,7 +455,7 @@ export default function AssetsPage() {
                 <button
                   onClick={() => setCurrentPage((current) => Math.min(totalPages, current + 1))}
                   disabled={currentPage === totalPages}
-                  className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-1 rounded-2xl border border-border/70 bg-background/70 px-3 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
                 >
                   Next
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -466,8 +475,8 @@ export default function AssetsPage() {
       </div>
 
       <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
-        <DialogContent className="max-w-md border-border bg-card p-0">
-          <DialogHeader className="border-b border-border px-5 py-4">
+        <DialogContent className="max-w-md bg-card p-0">
+          <DialogHeader className="border-b border-border/70 px-5 py-4">
             <DialogTitle className="text-base">Delete asset</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 px-5 py-5">
