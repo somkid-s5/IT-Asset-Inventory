@@ -47,17 +47,23 @@ async function main() {
     const adminPasswordHash = await bcrypt.hash('admin123', 10);
     const adminValue = await prisma.user.create({
         data: {
+            username: 'admin',
+            displayName: 'Infra Admin',
+            avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'admin@infrapilot.local',
             passwordHash: adminPasswordHash,
             role: Role.ADMIN,
         },
     });
-    console.log(`Created admin user: ${adminValue.email}`);
+    console.log(`Created admin user: ${adminValue.username}`);
 
     // Create an Editor user
     const editorPasswordHash = await bcrypt.hash('editor123', 10);
     const editorValue = await prisma.user.create({
         data: {
+            username: 'soc_analyst',
+            displayName: 'SOC Analyst',
+            avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'soc-analyst@infrapilot.local',
             passwordHash: editorPasswordHash,
             role: Role.EDITOR,

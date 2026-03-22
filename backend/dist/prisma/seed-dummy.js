@@ -48,18 +48,21 @@ function encryptPassword(text) {
     return `${iv.toString('hex')}:${encrypted}:${authTag}`;
 }
 async function main() {
-    console.log('🌱 Starting hardware-focused database seeding...');
+    console.log('ðŸŒ± Starting hardware-focused database seeding...');
     const adminPassword = await bcrypt.hash('admin123', 10);
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@infrapilot.local' },
+        where: { username: 'admin' },
         update: { passwordHash: adminPassword },
         create: {
+            username: 'admin',
+            displayName: 'Infra Admin',
+            avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'admin@infrapilot.local',
             passwordHash: adminPassword,
             role: 'ADMIN',
         },
     });
-    console.log(`👤 Created Admin user: ${admin.email}`);
+    console.log(`ðŸ‘¤ Created Admin user: ${admin.username}`);
     const server1 = await prisma.asset.create({
         data: {
             name: 'API-3PARSP',
@@ -114,7 +117,7 @@ async function main() {
             createdByUserId: admin.id,
         }
     });
-    console.log('🔑 Seeding encrypted credentials...');
+    console.log('ðŸ”‘ Seeding encrypted credentials...');
     await prisma.credential.createMany({
         data: [
             { assetId: server1.id, username: 'administrator', type: 'iLO', encryptedPassword: encryptPassword('ZYHMSWL2'), lastChangedDate: new Date() },
@@ -122,7 +125,7 @@ async function main() {
             { assetId: switch1.id, username: 'admin', type: 'WEB/SSH', encryptedPassword: encryptPassword('P@ssw0rd'), lastChangedDate: new Date() },
         ]
     });
-    console.log('✅ Seed complete. Hardware-only focus applied.');
+    console.log('âœ… Seed complete. Hardware-only focus applied.');
 }
 main()
     .catch((e) => {

@@ -12,6 +12,10 @@ class IpAllocationDto {
 
     @IsOptional()
     @IsString()
+    nodeLabel?: string;
+
+    @IsOptional()
+    @IsString()
     manageType?: string;
 
     @IsOptional()
@@ -30,6 +34,10 @@ class AssetCredentialDto {
     @IsOptional()
     @IsString()
     type?: string;
+
+    @IsOptional()
+    @IsString()
+    nodeLabel?: string;
 
     @IsOptional()
     @IsString()

@@ -54,6 +54,9 @@ async function main() {
     if (!ownerUser) {
         ownerUser = await prisma.user.create({
             data: {
+                username: 'admin',
+                displayName: 'Infra Admin',
+                avatarSeed: crypto.randomBytes(8).toString('hex'),
                 email: 'admin@infrapilot.local',
                 passwordHash: '$2b$10$8P.mIvz.pAnrl5w1ekwz8eY983MH3vkmYA336qgT0Fbf1dz8SP1Si',
                 role: 'ADMIN',
