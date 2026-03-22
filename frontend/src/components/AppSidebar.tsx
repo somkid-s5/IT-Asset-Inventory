@@ -1,34 +1,54 @@
 'use client';
 
-import { BrandMark } from '@/components/BrandMark';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
-import { Database, LayoutDashboard, Monitor, Server, Users } from 'lucide-react';
+import { Database, LayoutDashboard, Monitor, Server, Shield, Users } from 'lucide-react';
 
 const navItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Overview', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Assets', url: '/dashboard/assets', icon: Server },
-  { title: 'VM', url: '/dashboard/vm', icon: Monitor },
-  { title: 'DB', url: '/dashboard/db', icon: Database },
+  { title: 'Virtual Machines', url: '/dashboard/vm', icon: Monitor },
+  { title: 'Databases', url: '/dashboard/db', icon: Database },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  collapsed: boolean;
+}
+
+export function AppSidebar({ collapsed }: AppSidebarProps) {
   const { user } = useAuth();
   const pathname = usePathname();
   const currentPath = pathname || '/';
-  const visibleNavItems = user?.role === 'ADMIN' ? [...navItems, { title: 'Users', url: '/dashboard/users', icon: Users }] : navItems;
+  const visibleNavItems = user?.role === 'ADMIN' ? [...navItems, { title: 'User Accounts', url: '/dashboard/users', icon: Users }] : navItems;
 
   return (
-    <aside className="sidebar-blend hidden min-h-screen w-64 shrink-0 border-r border-sidebar-border/60 bg-sidebar/72 backdrop-blur-xl lg:flex lg:flex-col">
-      <div className="border-b border-sidebar-border/60 px-4 py-4">
-        <BrandMark compact />
+    <aside
+      className={cn(
+        'sidebar-blend hidden min-h-screen shrink-0 border-r border-sidebar-border/60 bg-sidebar/72 backdrop-blur-xl transition-[width] duration-200 lg:flex lg:flex-col',
+        collapsed ? 'w-[88px]' : 'w-64',
+      )}
+    >
+      <div className={cn('flex min-h-[73px] items-center border-b border-sidebar-border/60', collapsed ? 'justify-center px-2' : 'px-4')}>
+        <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-3')}>
+          <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-[1rem] border border-primary/25 bg-[linear-gradient(180deg,hsl(var(--primary))_0%,color-mix(in_oklab,hsl(var(--primary))_55%,black_45%)_100%)] text-primary-foreground shadow-[0_16px_40px_-18px_color-mix(in_oklab,hsl(var(--primary))_60%,transparent)]">
+            <div className="absolute inset-[1px] rounded-[0.95rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.28),transparent_55%)]" />
+            <Shield className="relative h-[16px] w-[16px]" />
+          </div>
+          {!collapsed ? (
+            <div className="min-w-0">
+              <p className="font-display text-base font-semibold uppercase tracking-[0.18em] text-foreground">AssetOps</p>
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4">
-        <div className="mb-3 px-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Workspace</p>
+      <nav className={cn('flex-1 py-4', collapsed ? 'px-2' : 'px-3')}>
+        <div className={cn('mb-3', collapsed ? 'px-0 text-center' : 'px-2')}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+            {collapsed ? 'Nav' : 'Workspace'}
+          </p>
         </div>
         <div className="space-y-1.5">
           {visibleNavItems.map((item) => {
@@ -40,9 +60,11 @@ export function AppSidebar() {
                 key={item.url}
                 href={item.url}
                 end={item.url === '/dashboard'}
+                title={item.title}
                 className={cn(
-                  'group flex items-center gap-3 rounded-[14px] border border-transparent px-3 py-2.5 text-[12px] text-sidebar-foreground transition-all duration-200',
+                  'group flex rounded-[14px] border border-transparent text-[12px] text-sidebar-foreground transition-all duration-200',
                   'hover:border-primary/10 hover:bg-sidebar-accent/78 hover:text-sidebar-accent-foreground',
+                  collapsed ? 'justify-center px-2 py-2.5' : 'items-center gap-3 px-3 py-2.5',
                 )}
                 activeClassName="border-primary/15 bg-sidebar-accent/86 text-sidebar-accent-foreground shadow-[0_14px_36px_-24px_color-mix(in_oklab,hsl(var(--primary))_38%,transparent)]"
               >
@@ -54,7 +76,7 @@ export function AppSidebar() {
                 >
                   <item.icon className="h-3.5 w-3.5" />
                 </div>
-                <span>{item.title}</span>
+                {!collapsed ? <span>{item.title}</span> : null}
               </NavLink>
             );
           })}

@@ -232,11 +232,11 @@
   }
 
   .stats-grid {
-    @apply mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+    @apply mt-3 grid grid-cols-4 gap-2.5;
   }
 
   .stat-tile {
-    @apply rounded-[16px] border border-border/70 bg-card/88 px-4 py-3 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)] backdrop-blur-xl;
+    @apply rounded-[14px] border border-border/70 bg-card/88 px-3.5 py-2.5 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)] backdrop-blur-xl;
   }
 
   .stat-kicker {

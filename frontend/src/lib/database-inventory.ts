@@ -6,6 +6,11 @@ export interface DatabaseAccountFormValue {
   note: string;
 }
 
+export interface DatabaseLinkedAppFormValue {
+  ipAddress: string;
+  description: string;
+}
+
 export type DatabaseEnvironment = 'PROD' | 'TEST' | 'DEV';
 
 export interface DatabaseInventoryItem {
@@ -86,4 +91,32 @@ export function splitCommaSeparated(value: string) {
 
 export function joinCommaSeparated(values?: string[] | null) {
   return (values ?? []).join(', ');
+}
+
+export function parseLinkedAppEntry(value: string): DatabaseLinkedAppFormValue {
+  const [ipAddress, ...rest] = value.split('|');
+
+  return {
+    ipAddress: ipAddress?.trim() ?? '',
+    description: rest.join('|').trim(),
+  };
+}
+
+export function parseLinkedApps(values?: string[] | null) {
+  return (values ?? []).map((value) => parseLinkedAppEntry(value));
+}
+
+export function serializeLinkedApps(values: DatabaseLinkedAppFormValue[]) {
+  return values
+    .map(({ ipAddress, description }) => {
+      const normalizedIp = ipAddress.trim();
+      const normalizedDescription = description.trim();
+
+      if (!normalizedIp && !normalizedDescription) {
+        return null;
+      }
+
+      return normalizedDescription ? `${normalizedIp} | ${normalizedDescription}` : normalizedIp;
+    })
+    .filter((value): value is string => Boolean(value));
 }
