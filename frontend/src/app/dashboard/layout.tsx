@@ -21,7 +21,7 @@ export default function DashboardLayout({
     }, [user, loading, router]);
 
     if (loading || !user) {
-        return <div className="min-h-screen bg-background flex flex-col justify-center items-center text-slate-400">Loading...</div>;
+        return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground">Loading...</div>;
     }
 
     return (

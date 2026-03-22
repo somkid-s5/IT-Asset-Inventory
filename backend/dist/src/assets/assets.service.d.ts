@@ -21,6 +21,7 @@ export declare class AssetsService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            nodeLabel: string | null;
             version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
@@ -83,6 +84,7 @@ export declare class AssetsService {
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            nodeLabel: string | null;
             version: string | null;
         }[];
         patchInfo: {
@@ -184,6 +186,7 @@ export declare class AssetsService {
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            nodeLabel: string | null;
             version: string | null;
         }[];
         patchInfo: {
@@ -230,6 +233,7 @@ export declare class AssetsService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            nodeLabel: string | null;
             version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
@@ -292,6 +296,7 @@ export declare class AssetsService {
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            nodeLabel: string | null;
             version: string | null;
         }[];
         patchInfo: {
@@ -338,6 +343,7 @@ export declare class AssetsService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            nodeLabel: string | null;
             version: string | null;
             encryptedPassword: string;
             lastChangedDate: Date | null;
@@ -400,6 +406,7 @@ export declare class AssetsService {
             createdAt: Date;
             updatedAt: Date;
             address: string;
+            nodeLabel: string | null;
             version: string | null;
         }[];
         patchInfo: {

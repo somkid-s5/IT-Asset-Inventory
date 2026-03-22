@@ -1,7 +1,7 @@
-import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { PrismaService } from '../prisma/prisma.service';
 export declare class AuthService {
     private prisma;
     private jwtService;
@@ -10,7 +10,10 @@ export declare class AuthService {
         access_token: string;
         user: {
             id: any;
-            email: any;
+            username: any;
+            displayName: any;
+            avatarSeed: any;
+            avatarImage: any;
             role: any;
         };
     }>;
@@ -18,9 +21,25 @@ export declare class AuthService {
         access_token: string;
         user: {
             id: any;
-            email: any;
+            username: any;
+            displayName: any;
+            avatarSeed: any;
+            avatarImage: any;
             role: any;
         };
+    }>;
+    updateProfile(userId: string, displayName?: string, avatarSeed?: string, avatarImage?: string | null): Promise<{
+        user: {
+            id: string;
+            username: string;
+            displayName: string;
+            avatarSeed: string;
+            avatarImage: string | null;
+            role: import(".prisma/client").$Enums.Role;
+        };
+    }>;
+    changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{
+        success: boolean;
     }>;
     private generateToken;
 }
