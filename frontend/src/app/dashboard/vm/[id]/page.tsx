@@ -1,30 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, CircleOff, Copy, Eye, EyeOff, LoaderCircle, Monitor, Server, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, CircleOff, Copy, Eye, EyeOff, Monitor, Server, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VmFormDialog } from '@/components/VmFormDialog';
-import { getVmRecord, type VmInventoryDetail } from '@/lib/vm-inventory';
+import { getVmRecord, VM_CRITICALITY_OPTIONS, type VmInventoryDetail } from '@/lib/vm-inventory';
 
 export default function VmDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [vm, setVm] = useState<VmInventoryDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
-
-  useEffect(() => {
-    if (typeof params.id === 'string') {
-      const record = getVmRecord(params.id);
-      setVm(record);
-      setLoading(false);
-    }
-  }, [params.id]);
+  const vm = typeof params.id === 'string' ? getVmRecord(params.id) : null;
 
   const copyValue = async (value: string, label: string) => {
     try {
@@ -47,15 +38,6 @@ export default function VmDetailPage() {
       tags: vm.tags.length,
     };
   }, [vm]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-muted-foreground">
-        <LoaderCircle className="mb-3 h-6 w-6 animate-spin text-foreground" />
-        <p className="text-sm">Loading VM details...</p>
-      </div>
-    );
-  }
 
   if (!vm) {
     return (
@@ -94,6 +76,9 @@ export default function VmDetailPage() {
       : vm.lifecycleState === 'DELETED_IN_VCENTER'
         ? 'This VM no longer exists in vCenter. Keep the record archived or remove it after review.'
         : 'This VM is active and in sync with the connected source.';
+  const criticalityLabel =
+    VM_CRITICALITY_OPTIONS.find((item) => item.value === vm.criticality)?.label ??
+    vm.criticality;
 
   return (
     <div className="space-y-4 pb-8">
@@ -146,6 +131,7 @@ export default function VmDetailPage() {
                     <span>{vm.host}</span>
                   </div>
 
+                  <div className="text-sm font-semibold text-foreground">{vm.systemName}</div>
                   <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{vm.description}</p>
                 </div>
               </div>
@@ -236,6 +222,26 @@ export default function VmDetailPage() {
                       <div className="text-[11px] text-muted-foreground">{vm.guestOs}</div>
                     </div>
                   </div>
+                  <div className="metric-pair">
+                    <div className="icon-chip h-9 w-9 text-muted-foreground">
+                      <Server className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">CPU / Memory</div>
+                      <div className="text-sm font-semibold text-foreground">{vm.cpuCores} vCPU / {vm.memoryGb} GB</div>
+                      <div className="text-[11px] text-muted-foreground">Source synced spec</div>
+                    </div>
+                  </div>
+                  <div className="metric-pair">
+                    <div className="icon-chip h-9 w-9 text-muted-foreground">
+                      <Server className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Storage / Network</div>
+                      <div className="text-sm font-semibold text-foreground">{vm.storageGb} GB</div>
+                      <div className="text-[11px] text-muted-foreground">{vm.networkLabel}</div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -275,6 +281,16 @@ export default function VmDetailPage() {
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </div>
                     <div>
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">System Name</div>
+                      <div className="text-sm font-semibold text-foreground">{vm.systemName}</div>
+                      <div className="text-[11px] text-muted-foreground">AssetOps context</div>
+                    </div>
+                  </div>
+                  <div className="metric-pair">
+                    <div className="icon-chip h-9 w-9 text-muted-foreground">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
                       <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Environment</div>
                       <div className="text-sm font-semibold text-foreground">{vm.environment}</div>
                       <div className="text-[11px] text-muted-foreground">Manual context</div>
@@ -302,12 +318,22 @@ export default function VmDetailPage() {
                   </div>
                   <div className="metric-pair">
                     <div className="icon-chip h-9 w-9 text-muted-foreground">
+                      <Sparkles className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Service Role</div>
+                      <div className="text-sm font-semibold text-foreground">{vm.serviceRole}</div>
+                      <div className="text-[11px] text-muted-foreground">{criticalityLabel}</div>
+                    </div>
+                  </div>
+                  <div className="metric-pair">
+                    <div className="icon-chip h-9 w-9 text-muted-foreground">
                       <Monitor className="h-3.5 w-3.5" />
                     </div>
                     <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Description</div>
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Service Purpose</div>
                       <div className="text-sm font-semibold text-foreground">{vm.description}</div>
-                      <div className="text-[11px] text-muted-foreground">Editable metadata</div>
+                      <div className="text-[11px] text-muted-foreground">Business context</div>
                     </div>
                   </div>
                 </div>
@@ -439,7 +465,7 @@ export default function VmDetailPage() {
               <div className="muted-panel px-3 py-3">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Managed manually</div>
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  Owner, environment, business unit, SLA tier, description, notes, and guest OS credentials.
+                  System name, owner, environment, business unit, SLA tier, description, notes, and guest OS credentials.
                 </p>
               </div>
             </div>
@@ -459,7 +485,7 @@ export default function VmDetailPage() {
         </div>
       </section>
 
-      <VmFormDialog open={editOpen} onOpenChange={setEditOpen} vmToEdit={vm} />
+      <VmFormDialog key={`vm-edit-${vm.id}-${editOpen ? 'open' : 'closed'}`} open={editOpen} onOpenChange={setEditOpen} vmToEdit={vm} />
 
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <DialogContent className="max-w-md bg-card p-0">

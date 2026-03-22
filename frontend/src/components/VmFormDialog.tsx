@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { VM_ENVIRONMENT_FILTERS, VM_LIFECYCLE_FILTERS, type VmDiscoveryItem, type VmInventoryDetail } from '@/lib/vm-inventory';
+import { VM_CRITICALITY_OPTIONS, VM_ENVIRONMENT_FILTERS, VM_LIFECYCLE_FILTERS, type VmDiscoveryItem, type VmInventoryDetail } from '@/lib/vm-inventory';
 
 interface VmAccountFormValue {
   username: string;
@@ -35,6 +35,7 @@ const EMPTY_ACCOUNT: VmAccountFormValue = {
 
 const DEFAULT_FORM = {
   name: '',
+  systemName: '',
   moid: '',
   vcenterName: '',
   vcenterVersion: '',
@@ -43,20 +44,104 @@ const DEFAULT_FORM = {
   host: '',
   guestOs: '',
   primaryIp: '',
+  cpuCores: '',
+  memoryGb: '',
+  storageGb: '',
+  networkLabel: '',
   environment: 'PROD',
   owner: '',
   businessUnit: '',
   slaTier: '',
+  serviceRole: '',
+  criticality: 'STANDARD',
   description: '',
   notes: '',
   lifecycleState: 'DRAFT',
   tags: '',
 };
 
+function buildFormData(vmToEdit?: VmInventoryDetail | null, discoveryVm?: VmDiscoveryItem | null) {
+  if (vmToEdit) {
+    return {
+      name: vmToEdit.name,
+      systemName: vmToEdit.systemName,
+      moid: vmToEdit.moid,
+      vcenterName: vmToEdit.vcenterName,
+      vcenterVersion: vmToEdit.vcenterVersion,
+      powerState: vmToEdit.powerState,
+      cluster: vmToEdit.cluster,
+      host: vmToEdit.host,
+      guestOs: vmToEdit.guestOs,
+      primaryIp: vmToEdit.primaryIp,
+      cpuCores: String(vmToEdit.cpuCores),
+      memoryGb: String(vmToEdit.memoryGb),
+      storageGb: String(vmToEdit.storageGb),
+      networkLabel: vmToEdit.networkLabel,
+      environment: vmToEdit.environment,
+      owner: vmToEdit.owner,
+      businessUnit: vmToEdit.businessUnit,
+      slaTier: vmToEdit.slaTier,
+      serviceRole: vmToEdit.serviceRole,
+      criticality: vmToEdit.criticality,
+      description: vmToEdit.description,
+      notes: vmToEdit.notes,
+      lifecycleState: vmToEdit.lifecycleState,
+      tags: vmToEdit.tags.join(', '),
+    };
+  }
+
+  if (discoveryVm) {
+    return {
+      name: discoveryVm.name,
+      systemName: discoveryVm.systemName ?? '',
+      moid: discoveryVm.moid,
+      vcenterName: discoveryVm.sourceName,
+      vcenterVersion: discoveryVm.sourceVersion,
+      powerState: discoveryVm.powerState,
+      cluster: discoveryVm.cluster,
+      host: discoveryVm.host,
+      guestOs: discoveryVm.guestOs,
+      primaryIp: discoveryVm.primaryIp,
+      cpuCores: String(discoveryVm.cpuCores),
+      memoryGb: String(discoveryVm.memoryGb),
+      storageGb: String(discoveryVm.storageGb),
+      networkLabel: discoveryVm.networkLabel,
+      environment: discoveryVm.suggestedEnvironment ?? 'PROD',
+      owner: discoveryVm.suggestedOwner ?? '',
+      businessUnit: '',
+      slaTier: '',
+      serviceRole: discoveryVm.suggestedServiceRole ?? '',
+      criticality: discoveryVm.suggestedCriticality ?? 'STANDARD',
+      description: discoveryVm.note ?? '',
+      notes: '',
+      lifecycleState: 'DRAFT',
+      tags: discoveryVm.tags.join(', '),
+    };
+  }
+
+  return DEFAULT_FORM;
+}
+
+function buildAccounts(vmToEdit?: VmInventoryDetail | null) {
+  if (!vmToEdit) {
+    return [{ ...EMPTY_ACCOUNT }];
+  }
+
+  return vmToEdit.guestAccounts.length > 0
+    ? vmToEdit.guestAccounts.map((account) => ({
+        username: account.username,
+        password: account.password,
+        accessMethod: account.accessMethod,
+        role: account.role,
+        note: account.note ?? '',
+      }))
+    : [{ ...EMPTY_ACCOUNT }];
+}
+
 export function VmFormDialog({ open, onOpenChange, vmToEdit, discoveryVm }: VmFormDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(DEFAULT_FORM);
-  const [accounts, setAccounts] = useState<VmAccountFormValue[]>([{ ...EMPTY_ACCOUNT }]);
+  const [formData, setFormData] = useState(() => buildFormData(vmToEdit, discoveryVm));
+  const [accounts, setAccounts] = useState<VmAccountFormValue[]>(() => buildAccounts(vmToEdit));
 
   const lifecycleLabel = VM_LIFECYCLE_FILTERS.find((item) => item.value === formData.lifecycleState)?.label ?? 'Draft';
 
@@ -64,72 +149,6 @@ export function VmFormDialog({ open, onOpenChange, vmToEdit, discoveryVm }: VmFo
     setFormData(DEFAULT_FORM);
     setAccounts([{ ...EMPTY_ACCOUNT }]);
   };
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    if (!vmToEdit && !discoveryVm) {
-      resetForm();
-      return;
-    }
-
-    if (vmToEdit) {
-      setFormData({
-        name: vmToEdit.name,
-        moid: vmToEdit.moid,
-        vcenterName: vmToEdit.vcenterName,
-        vcenterVersion: vmToEdit.vcenterVersion,
-        powerState: vmToEdit.powerState,
-        cluster: vmToEdit.cluster,
-        host: vmToEdit.host,
-        guestOs: vmToEdit.guestOs,
-        primaryIp: vmToEdit.primaryIp,
-        environment: vmToEdit.environment,
-        owner: vmToEdit.owner,
-        businessUnit: vmToEdit.businessUnit,
-        slaTier: vmToEdit.slaTier,
-        description: vmToEdit.description,
-        notes: vmToEdit.notes,
-        lifecycleState: vmToEdit!.lifecycleState,
-        tags: vmToEdit.tags.join(', '),
-      });
-      setAccounts(
-        vmToEdit.guestAccounts.length > 0
-          ? vmToEdit.guestAccounts.map((account) => ({
-              username: account.username,
-              password: account.password,
-              accessMethod: account.accessMethod,
-              role: account.role,
-              note: account.note ?? '',
-            }))
-          : [{ ...EMPTY_ACCOUNT }],
-      );
-      return;
-    }
-
-    setFormData({
-      name: discoveryVm?.name ?? '',
-      moid: discoveryVm?.moid ?? '',
-      vcenterName: discoveryVm?.sourceName ?? '',
-      vcenterVersion: discoveryVm?.sourceVersion ?? '',
-      powerState: discoveryVm?.powerState ?? 'RUNNING',
-      cluster: discoveryVm?.cluster ?? '',
-      host: discoveryVm?.host ?? '',
-      guestOs: discoveryVm?.guestOs ?? '',
-      primaryIp: discoveryVm?.primaryIp ?? '',
-      environment: discoveryVm?.suggestedEnvironment ?? 'PROD',
-      owner: discoveryVm?.suggestedOwner ?? '',
-      businessUnit: '',
-      slaTier: '',
-      description: discoveryVm?.note ?? '',
-      notes: '',
-      lifecycleState: 'DRAFT',
-      tags: discoveryVm?.tags.join(', ') ?? '',
-    });
-    setAccounts([{ ...EMPTY_ACCOUNT }]);
-  }, [discoveryVm, open, vmToEdit]);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -155,7 +174,7 @@ export function VmFormDialog({ open, onOpenChange, vmToEdit, discoveryVm }: VmFo
         <DialogHeader>
           <DialogTitle>{vmToEdit ? 'Edit VM Draft' : discoveryVm ? 'Complete VM Draft' : 'Create VM Draft'}</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Prototype UX for syncing from vCenter while keeping AssetOps fields editable by the team.
+            Source Sync stays read-only from vCenter, while AssetOps Context is owned and maintained by the team.
           </p>
         </DialogHeader>
 
@@ -174,25 +193,26 @@ export function VmFormDialog({ open, onOpenChange, vmToEdit, discoveryVm }: VmFo
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-1.5">
                 <Label htmlFor="vm-name">VM Name</Label>
-                <Input id="vm-name" value={formData.name} onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))} />
+                <Input id="vm-name" value={formData.name} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-moid">MoID</Label>
-                <Input id="vm-moid" value={formData.moid} onChange={(event) => setFormData((current) => ({ ...current, moid: event.target.value }))} placeholder="vm-123" />
+                <Input id="vm-moid" value={formData.moid} readOnly className="pointer-events-none" placeholder="vm-123" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-vcenter">vCenter</Label>
-                <Input id="vm-vcenter" value={formData.vcenterName} onChange={(event) => setFormData((current) => ({ ...current, vcenterName: event.target.value }))} placeholder="vc-prod-01" />
+                <Input id="vm-vcenter" value={formData.vcenterName} readOnly className="pointer-events-none" placeholder="vc-prod-01" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-vcenter-version">vCenter Version</Label>
-                <Input id="vm-vcenter-version" value={formData.vcenterVersion} onChange={(event) => setFormData((current) => ({ ...current, vcenterVersion: event.target.value }))} placeholder="8.0.2" />
+                <Input id="vm-vcenter-version" value={formData.vcenterVersion} readOnly className="pointer-events-none" placeholder="8.0.2" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-state">Power State</Label>
                 <Select
                   value={formData.powerState}
-                  onValueChange={(value) => setFormData((current) => ({ ...current, powerState: value }))}
+                  onValueChange={() => undefined}
+                  disabled
                 >
                   <SelectTrigger id="vm-state" className="w-full">
                     <SelectValue placeholder="Select state" />
@@ -206,19 +226,35 @@ export function VmFormDialog({ open, onOpenChange, vmToEdit, discoveryVm }: VmFo
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-cluster">Cluster</Label>
-                <Input id="vm-cluster" value={formData.cluster} onChange={(event) => setFormData((current) => ({ ...current, cluster: event.target.value }))} />
+                <Input id="vm-cluster" value={formData.cluster} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-host">Host</Label>
-                <Input id="vm-host" value={formData.host} onChange={(event) => setFormData((current) => ({ ...current, host: event.target.value }))} />
+                <Input id="vm-host" value={formData.host} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-os">Guest OS</Label>
-                <Input id="vm-os" value={formData.guestOs} onChange={(event) => setFormData((current) => ({ ...current, guestOs: event.target.value }))} placeholder="Ubuntu 22.04 LTS" />
+                <Input id="vm-os" value={formData.guestOs} readOnly className="pointer-events-none" placeholder="Ubuntu 22.04 LTS" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-ip">Primary IP</Label>
-                <Input id="vm-ip" value={formData.primaryIp} onChange={(event) => setFormData((current) => ({ ...current, primaryIp: event.target.value }))} placeholder="10.30.10.41" />
+                <Input id="vm-ip" value={formData.primaryIp} readOnly className="pointer-events-none" placeholder="10.30.10.41" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-cpu">CPU Cores</Label>
+                <Input id="vm-cpu" value={formData.cpuCores} readOnly className="pointer-events-none" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-memory">Memory (GB)</Label>
+                <Input id="vm-memory" value={formData.memoryGb} readOnly className="pointer-events-none" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-storage">Storage (GB)</Label>
+                <Input id="vm-storage" value={formData.storageGb} readOnly className="pointer-events-none" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-network">Network</Label>
+                <Input id="vm-network" value={formData.networkLabel} readOnly className="pointer-events-none" />
               </div>
             </div>
           </section>
@@ -235,6 +271,15 @@ export function VmFormDialog({ open, onOpenChange, vmToEdit, discoveryVm }: VmFo
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-system-name">System Name</Label>
+                <Input
+                  id="vm-system-name"
+                  value={formData.systemName}
+                  onChange={(event) => setFormData((current) => ({ ...current, systemName: event.target.value }))}
+                  placeholder="Trade API Platform"
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-env">Environment</Label>
                 <Select
@@ -265,14 +310,41 @@ export function VmFormDialog({ open, onOpenChange, vmToEdit, discoveryVm }: VmFo
                 <Label htmlFor="vm-sla">SLA Tier</Label>
                 <Input id="vm-sla" value={formData.slaTier} onChange={(event) => setFormData((current) => ({ ...current, slaTier: event.target.value }))} placeholder="Tier 2" />
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-service-role">Service Role</Label>
+                <Input
+                  id="vm-service-role"
+                  value={formData.serviceRole}
+                  onChange={(event) => setFormData((current) => ({ ...current, serviceRole: event.target.value }))}
+                  placeholder="API Runtime"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-criticality">Criticality</Label>
+                <Select
+                  value={formData.criticality}
+                  onValueChange={(value) => setFormData((current) => ({ ...current, criticality: value as typeof formData.criticality }))}
+                >
+                  <SelectTrigger id="vm-criticality" className="w-full">
+                    <SelectValue placeholder="Select criticality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VM_CRITICALITY_OPTIONS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
-                <Label htmlFor="vm-description">Description</Label>
+                <Label htmlFor="vm-description">Service Purpose</Label>
                 <textarea
                   id="vm-description"
                   value={formData.description}
                   onChange={(event) => setFormData((current) => ({ ...current, description: event.target.value }))}
                   className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-4 py-3 text-sm text-foreground shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)] outline-none transition-[color,box-shadow,border-color,background-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35"
-                  placeholder="Why this VM exists and who owns the context"
+                  placeholder="What business system or service this VM supports"
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2 xl:col-span-2">

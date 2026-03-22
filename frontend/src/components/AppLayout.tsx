@@ -1,12 +1,12 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { BrandMark } from '@/components/BrandMark';
 import { UserAvatar } from '@/components/UserAvatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, MonitorCog, Moon, Sun } from 'lucide-react';
+import { LogOut, MonitorCog, Moon, PanelLeft, Sun } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 
@@ -18,16 +18,40 @@ export function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem('assetops.sidebar.collapsed');
+    if (saved === 'true') {
+      setSidebarCollapsed(true);
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem('assetops.sidebar.collapsed', String(next));
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-screen">
       <div className="flex min-h-screen w-full">
-        <AppSidebar />
+        <AppSidebar collapsed={sidebarCollapsed} />
 
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 border-b border-border/50 bg-background/38 px-4 py-3 backdrop-blur-2xl sm:px-5 lg:px-6">
             <div className="app-shell flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={toggleSidebar}
+                  className="hidden rounded-2xl border border-border/70 bg-card/70 p-2.5 text-muted-foreground shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] backdrop-blur transition-all hover:border-primary/20 hover:text-foreground lg:inline-flex"
+                  title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                  <PanelLeft className="h-4 w-4" />
+                </button>
                 <div className="lg:hidden">
                   <BrandMark compact />
                 </div>

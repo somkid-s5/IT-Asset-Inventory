@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowDown, ArrowUp, ChevronsUpDown, Database, LoaderCircle, Plus, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Database, LoaderCircle, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DatabaseFormDialog } from '@/components/DatabaseFormDialog';
-import { ENVIRONMENT_FILTERS, type DatabaseEnvironment, type DatabaseInventoryItem } from '@/lib/database-inventory';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ENVIRONMENT_FILTERS, type DatabaseEnvironment, type DatabaseInventoryDetail, type DatabaseInventoryItem } from '@/lib/database-inventory';
 import api from '@/services/api';
 import { toast } from 'sonner';
 
-type SortKey = 'name' | 'engine' | 'environment' | 'host' | 'ipAddress';
+type SortKey = 'name' | 'engine' | 'version' | 'environment' | 'host' | 'ipAddress';
 type SortDirection = 'asc' | 'desc';
 
 export default function DbPage() {
@@ -22,6 +23,10 @@ export default function DbPage() {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [databaseToEdit, setDatabaseToEdit] = useState<DatabaseInventoryDetail | null>(null);
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DatabaseInventoryItem | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function loadDatabases() {
     try {
@@ -98,6 +103,37 @@ export default function DbPage() {
     return sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
   };
 
+  const handleEdit = async (databaseId: string) => {
+    setLoadingEditId(databaseId);
+    try {
+      const response = await api.get<DatabaseInventoryDetail>(`/databases/${databaseId}`);
+      setDatabaseToEdit(response.data);
+      setDialogOpen(true);
+    } catch {
+      toast.error('Failed to load database details');
+    } finally {
+      setLoadingEditId(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      await api.delete(`/databases/${deleteTarget.id}`);
+      toast.success('Database deleted');
+      setDeleteTarget(null);
+      await loadDatabases();
+    } catch {
+      toast.error('Failed to delete database');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
@@ -166,47 +202,53 @@ export default function DbPage() {
 
       <section className="table-shell">
         <div className="overflow-x-auto">
-          <table className="table-frame min-w-[860px]">
+          <table className="table-frame min-w-[900px]">
             <thead>
               <tr className="table-head-row">
-                <th className="px-3 py-3 font-medium">
+                <th className="px-2 py-2.5 font-medium">
                   <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                     DB Name
                     {renderSortIcon('name')}
                   </button>
                 </th>
-                <th className="px-3 py-3 font-medium">
+                <th className="px-2 py-2.5 font-medium">
                   <button onClick={() => toggleSort('engine')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                     Engine
                     {renderSortIcon('engine')}
                   </button>
                 </th>
-                <th className="px-3 py-3 font-medium">
+                <th className="px-2 py-2.5 font-medium">
+                  <button onClick={() => toggleSort('version')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                    Version
+                    {renderSortIcon('version')}
+                  </button>
+                </th>
+                <th className="px-2 py-2.5 font-medium">
                   <button onClick={() => toggleSort('environment')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                     Environment
                     {renderSortIcon('environment')}
                   </button>
                 </th>
-                <th className="px-3 py-3 font-medium">
+                <th className="px-2 py-2.5 font-medium">
                   <button onClick={() => toggleSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                     Host
                     {renderSortIcon('host')}
                   </button>
                 </th>
-                <th className="px-3 py-3 font-medium">
+                <th className="px-2 py-2.5 font-medium">
                   <button onClick={() => toggleSort('ipAddress')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                     IP
                     {renderSortIcon('ipAddress')}
                   </button>
                 </th>
-                <th className="px-3 py-3 font-medium">Accounts</th>
-                <th className="px-3 py-3 font-medium">Status</th>
+                <th className="px-2 py-2.5 font-medium">Accounts</th>
+                <th className="px-2 py-2.5 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <LoaderCircle className="h-4 w-4 animate-spin text-foreground" />
                       <span className="text-sm">Loading databases...</span>
@@ -215,7 +257,7 @@ export default function DbPage() {
                 </tr>
               ) : filteredDatabases.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-6 py-12 text-center text-sm text-muted-foreground">
                     No databases matched your filters.
                   </td>
                 </tr>
@@ -226,27 +268,43 @@ export default function DbPage() {
                     className="table-row cursor-pointer"
                     onClick={() => router.push(`/dashboard/db/${database.id}`)}
                   >
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground">
+                    <td className="px-2 py-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/70 bg-background/70 text-muted-foreground">
                           <Database className="h-3.5 w-3.5" />
                         </div>
                         <div>
-                          <div className="text-[13px] font-medium text-foreground">{database.name}</div>
-                          <div className="mt-0.5 text-[11px] text-muted-foreground">{database.version}</div>
+                          <div className="text-[12px] font-medium text-foreground">{database.name}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-[12px] text-muted-foreground">{database.engine}</td>
-                    <td className="px-3 py-3">
-                      <span className="inline-flex rounded-md bg-muted px-2 py-1 text-[10px] font-medium text-foreground">
+                    <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.engine}</td>
+                    <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.version || '--'}</td>
+                    <td className="px-2 py-2.5">
+                      <span className="inline-flex rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
                         {database.environment}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-[12px] text-muted-foreground">{database.host}</td>
-                    <td className="px-3 py-3 font-mono text-[12px] text-muted-foreground">{database.ipAddress}</td>
-                    <td className="px-3 py-3 text-[12px] text-muted-foreground">{database.accountsCount}</td>
-                    <td className="px-3 py-3 text-[12px] text-muted-foreground">{database.status}</td>
+                    <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.host}</td>
+                    <td className="px-2 py-2.5 font-mono text-[11px] text-muted-foreground">{database.ipAddress}</td>
+                    <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.accountsCount}</td>
+                    <td className="px-2 py-2.5 text-right" onClick={(event) => event.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => void handleEdit(database.id)}
+                          className="rounded-lg border border-border/70 bg-card/70 px-1.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          {loadingEditId === database.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(database)}
+                          disabled={deleteLoading && deleteTarget?.id === database.id}
+                          className="rounded-lg border border-border/70 bg-card/70 px-1.5 py-1.5 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                        >
+                          {deleteLoading && deleteTarget?.id === database.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -255,7 +313,39 @@ export default function DbPage() {
         </div>
       </section>
 
-      <DatabaseFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadDatabases} />
+      <DatabaseFormDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setDatabaseToEdit(null);
+          }
+        }}
+        databaseToEdit={databaseToEdit}
+        onSuccess={loadDatabases}
+      />
+
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-md bg-card p-0">
+          <DialogHeader className="border-b border-border/70 px-5 py-4">
+            <DialogTitle className="text-base">Delete database</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 px-5 py-5">
+            <p className="text-sm text-muted-foreground">
+              Delete <span className="font-medium text-foreground">{deleteTarget?.name}</span> and all linked accounts?
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteLoading}>
+                {deleteLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+                Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

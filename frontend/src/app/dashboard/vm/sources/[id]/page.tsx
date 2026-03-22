@@ -1,29 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CircleOff, Eye, EyeOff, LoaderCircle, Monitor, Server, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, CircleOff, Eye, EyeOff, Monitor, Server, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VmFormDialog } from '@/components/VmFormDialog';
-import { getDiscoveryRecord, type VmDiscoveryItem } from '@/lib/vm-inventory';
+import { getDiscoveryRecord, VM_CRITICALITY_OPTIONS } from '@/lib/vm-inventory';
 
 export default function VmSourceDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [draft, setDraft] = useState<VmDiscoveryItem | null>(null);
-  const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [revealedNotes, setRevealedNotes] = useState(false);
-
-  useEffect(() => {
-    if (typeof params.id === 'string') {
-      setDraft(getDiscoveryRecord(params.id));
-      setLoading(false);
-    }
-  }, [params.id]);
+  const draft = typeof params.id === 'string' ? getDiscoveryRecord(params.id) : null;
 
   const draftStats = useMemo(() => {
     if (!draft) {
@@ -36,15 +28,6 @@ export default function VmSourceDetailPage() {
       accounts: draft.guestAccountsCount,
     };
   }, [draft]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-muted-foreground">
-        <LoaderCircle className="mb-3 h-6 w-6 animate-spin text-foreground" />
-        <p className="text-sm">Loading discovery details...</p>
-      </div>
-    );
-  }
 
   if (!draft) {
     return (
@@ -74,6 +57,10 @@ export default function VmSourceDetailPage() {
       : draft.state === 'DRIFTED'
         ? 'border-amber-500/25 bg-amber-500/10 text-amber-300'
         : 'border-violet-500/25 bg-violet-500/10 text-violet-300';
+  const suggestedCriticalityLabel =
+    VM_CRITICALITY_OPTIONS.find(
+      (item) => item.value === draft.suggestedCriticality,
+    )?.label ?? '--';
 
   return (
     <div className="space-y-4 pb-8">
@@ -100,6 +87,10 @@ export default function VmSourceDetailPage() {
                   <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs text-muted-foreground">
                     {draft.sourceName} / {draft.sourceVersion}
                   </span>
+                </div>
+
+                <div className="text-sm font-semibold text-foreground">
+                  {draft.systemName || 'System name not set'}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
@@ -192,6 +183,26 @@ export default function VmSourceDetailPage() {
                   <div className="text-[11px] text-muted-foreground">{draft.primaryIp}</div>
                 </div>
               </div>
+              <div className="metric-pair">
+                <div className="icon-chip h-9 w-9 text-muted-foreground">
+                  <Server className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">CPU / Memory</div>
+                  <div className="text-sm font-semibold text-foreground">{draft.cpuCores} vCPU / {draft.memoryGb} GB</div>
+                  <div className="text-[11px] text-muted-foreground">Read-only from source sync</div>
+                </div>
+              </div>
+              <div className="metric-pair">
+                <div className="icon-chip h-9 w-9 text-muted-foreground">
+                  <Server className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Storage / Network</div>
+                  <div className="text-sm font-semibold text-foreground">{draft.storageGb} GB</div>
+                  <div className="text-[11px] text-muted-foreground">{draft.networkLabel}</div>
+                </div>
+              </div>
             </div>
 
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
@@ -221,10 +232,19 @@ export default function VmSourceDetailPage() {
           <section className="surface-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Manual Context To Fill</h3>
+              <h3 className="text-sm font-semibold text-foreground">AssetOps Context To Fill</h3>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-2">
+              <div className="metric-pair">
+                <div className="icon-chip h-9 w-9 text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">System Name</div>
+                  <div className="text-sm font-semibold text-foreground">{draft.systemName || '--'}</div>
+                </div>
+              </div>
               <div className="metric-pair">
                 <div className="icon-chip h-9 w-9 text-muted-foreground">
                   <Sparkles className="h-3.5 w-3.5" />
@@ -241,6 +261,24 @@ export default function VmSourceDetailPage() {
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Environment</div>
                   <div className="text-sm font-semibold text-foreground">{draft.suggestedEnvironment || '--'}</div>
+                </div>
+              </div>
+              <div className="metric-pair">
+                <div className="icon-chip h-9 w-9 text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Service Role</div>
+                  <div className="text-sm font-semibold text-foreground">{draft.suggestedServiceRole || '--'}</div>
+                </div>
+              </div>
+              <div className="metric-pair">
+                <div className="icon-chip h-9 w-9 text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Criticality</div>
+                  <div className="text-sm font-semibold text-foreground">{suggestedCriticalityLabel}</div>
                 </div>
               </div>
             </div>
@@ -293,7 +331,7 @@ export default function VmSourceDetailPage() {
         </div>
       </section>
 
-      <VmFormDialog open={editOpen} onOpenChange={setEditOpen} discoveryVm={draft} />
+      <VmFormDialog key={`draft-edit-${draft.id}-${editOpen ? 'open' : 'closed'}`} open={editOpen} onOpenChange={setEditOpen} discoveryVm={draft} />
 
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <DialogContent className="max-w-md bg-card p-0">
