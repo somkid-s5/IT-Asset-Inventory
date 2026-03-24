@@ -1,13 +1,59 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, CircleOff, Copy, Eye, EyeOff, Monitor, Server, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Copy, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VmFormDialog } from '@/components/VmFormDialog';
-import { getVmRecord, VM_CRITICALITY_OPTIONS, type VmInventoryDetail } from '@/lib/vm-inventory';
+import type { VmInventoryDetail } from '@/lib/vm-inventory';
+import { archiveVmInventory, getVmInventoryById } from '@/services/vm';
+
+type DetailListItem = {
+  label: string;
+  value: ReactNode;
+  meta?: ReactNode;
+};
+
+function DetailListSection({ title, items }: { title: string; items: DetailListItem[] }) {
+  return (
+    <section className="rounded-xl border border-border/70 bg-background/35 p-4">
+      <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{title}</div>
+      <dl className="space-y-3">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="grid gap-1 sm:grid-cols-[140px_minmax(0,1fr)] sm:items-start sm:gap-4"
+          >
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</dt>
+            <dd className="min-w-0">
+              {typeof item.meta === 'string' ? (
+                <div className="text-sm font-semibold text-foreground">
+                  {item.value}
+                  <span className="ml-2 text-[11px] font-normal text-muted-foreground">{item.meta}</span>
+                </div>
+              ) : (
+                <div className="text-sm font-semibold text-foreground">{item.value}</div>
+              )}
+              {item.meta && typeof item.meta !== 'string' ? <div className="mt-1 text-[11px] text-muted-foreground">{item.meta}</div> : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function TextSection({ title, content }: { title: string; content: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-border/70 bg-background/35 p-4">
+      <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{title}</div>
+      <div className="text-sm leading-6 text-muted-foreground">{content}</div>
+    </section>
+  );
+}
 
 export default function VmDetailPage() {
   const params = useParams();
@@ -15,7 +61,29 @@ export default function VmDetailPage() {
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const vm = typeof params.id === 'string' ? getVmRecord(params.id) : null;
+  const [vm, setVm] = useState<VmInventoryDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadVm = useCallback(async () => {
+    if (typeof params.id !== 'string') {
+      setVm(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setVm(await getVmInventoryById(params.id));
+    } catch {
+      setVm(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    void loadVm();
+  }, [loadVm]);
 
   const copyValue = async (value: string, label: string) => {
     try {
@@ -26,18 +94,9 @@ export default function VmDetailPage() {
     }
   };
 
-  const vmStats = useMemo(() => {
-    if (!vm) {
-      return { guestAccounts: 0, syncedFields: 0, manualFields: 0, tags: 0 };
-    }
-
-    return {
-      guestAccounts: vm.guestAccounts.length,
-      syncedFields: vm.syncedFields.length,
-      manualFields: vm.managedFields.length,
-      tags: vm.tags.length,
-    };
-  }, [vm]);
+  if (loading) {
+    return <div className="surface-panel p-4 text-sm text-muted-foreground">Loading VM details...</div>;
+  }
 
   if (!vm) {
     return (
@@ -67,7 +126,15 @@ export default function VmDetailPage() {
   };
 
   const getSyncBadgeClassName = () => {
-    return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
+    if (vm.syncState === 'Synced') {
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
+    }
+
+    if (vm.syncState === 'Ready to sync') {
+      return 'border-sky-500/25 bg-sky-500/10 text-sky-300';
+    }
+
+    return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
   };
 
   const lifecycleMessage =
@@ -76,9 +143,99 @@ export default function VmDetailPage() {
       : vm.lifecycleState === 'DELETED_IN_VCENTER'
         ? 'This VM no longer exists in vCenter. Keep the record archived or remove it after review.'
         : 'This VM is active and in sync with the connected source.';
-  const criticalityLabel =
-    VM_CRITICALITY_OPTIONS.find((item) => item.value === vm.criticality)?.label ??
-    vm.criticality;
+  const storageValue =
+    vm.disks && vm.disks.length > 0 ? `${vm.storageGb} GB total (${vm.disks.length} disk${vm.disks.length > 1 ? 's' : ''})` : `${vm.storageGb} GB`;
+  const storageMeta =
+    vm.disks && vm.disks.length > 0 ? (
+      <div className="space-y-1">
+        {vm.disks.map((disk) => (
+          <div key={`${disk.label}-${disk.sizeGb}-${disk.datastore ?? 'default'}`}>
+            {disk.label}: {disk.sizeGb} GB{disk.datastore ? ` (${disk.datastore})` : ''}
+          </div>
+        ))}
+      </div>
+    ) : (
+      'Total provisioned capacity'
+    );
+  const identityAndPlacementDetails: DetailListItem[] = [
+    {
+      label: 'vCenter',
+      value: vm.vcenterName,
+    },
+    {
+      label: 'MoID',
+      value: vm.moid,
+    },
+    {
+      label: 'Primary IP',
+      value: vm.primaryIp,
+    },
+    {
+      label: 'Power',
+      value: vm.powerState,
+      meta: vm.lastSyncAt === '--' ? undefined : vm.lastSyncAt,
+    },
+    {
+      label: 'Host',
+      value: vm.host,
+    },
+    {
+      label: 'Cluster',
+      value: vm.cluster,
+    },
+  ];
+  const infrastructureDetails: DetailListItem[] = [
+    {
+      label: 'Guest OS',
+      value: vm.guestOs,
+    },
+    {
+      label: 'CPU',
+      value: `${vm.cpuCores} vCPU`,
+    },
+    {
+      label: 'Memory',
+      value: `${vm.memoryGb} GB`,
+    },
+    {
+      label: 'Storage',
+      value: storageValue,
+      meta: storageMeta,
+    },
+    {
+      label: 'Network',
+      value: vm.networkLabel,
+    },
+  ];
+  const assetOpsDetails: DetailListItem[] = [
+    {
+      label: 'System Name',
+      value: vm.systemName,
+    },
+    {
+      label: 'Environment',
+      value: vm.environment,
+    },
+    {
+      label: 'Service Role',
+      value: vm.serviceRole,
+    },
+    {
+      label: 'Tags',
+      value:
+        vm.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {vm.tags.map((tag) => (
+              <span key={tag} className="rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : (
+          '--'
+        ),
+    },
+  ];
 
   return (
     <div className="space-y-4 pb-8">
@@ -103,389 +260,144 @@ export default function VmDetailPage() {
       ) : null}
 
       <section className="workspace-hero">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-start gap-3">
-                <div className="icon-chip h-11 w-11 shrink-0 text-foreground">
-                  <Monitor className="h-5 w-5" />
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="truncate text-[22px] font-semibold tracking-[0.01em] text-foreground">{vm.name}</h1>
+                  <span className={`rounded-full border px-2.5 py-0.5 text-xs ${getLifecycleBadgeClassName(vm.lifecycleState)}`}>
+                    {vm.lifecycleState}
+                  </span>
+                  <span className={`rounded-full border px-2.5 py-0.5 text-xs ${getSyncBadgeClassName()}`}>{vm.syncState}</span>
                 </div>
+                <div className="text-sm font-medium text-foreground/90">{vm.systemName}</div>
+              </div>
 
-                <div className="min-w-0 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="truncate font-display text-xl font-semibold uppercase tracking-[0.06em] text-foreground">{vm.name}</h1>
-                    <span className={`rounded-full border px-2.5 py-0.5 text-xs ${getLifecycleBadgeClassName(vm.lifecycleState)}`}>
-                      {vm.lifecycleState}
-                    </span>
-                    <span className={`rounded-full border px-2.5 py-0.5 text-xs ${getSyncBadgeClassName()}`}>{vm.syncState}</span>
-                    <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs text-muted-foreground">
-                      {vm.vcenterName} / {vm.vcenterVersion}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
-                    <span>MoID {vm.moid}</span>
-                    <span>•</span>
-                    <span>{vm.cluster}</span>
-                    <span>•</span>
-                    <span>{vm.host}</span>
-                  </div>
-
-                  <div className="text-sm font-semibold text-foreground">{vm.systemName}</div>
-                  <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{vm.description}</p>
-                </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
+                <span>IP <span className="font-medium text-foreground">{vm.primaryIp}</span></span>
+                <span>Host <span className="font-medium text-foreground">{vm.host}</span></span>
+                <span>Cluster <span className="font-medium text-foreground">{vm.cluster}</span></span>
+                <span>Source <span className="font-medium text-foreground">{vm.vcenterName}</span></span>
               </div>
             </div>
 
-            <div className="stats-grid sm:grid-cols-2 xl:grid-cols-4">
-              <div className="stat-tile">
-                <div className="stat-kicker">Guest Accounts</div>
-                <div className="mt-2 text-lg font-semibold text-foreground">{vmStats.guestAccounts}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="stat-kicker">Synced Fields</div>
-                <div className="mt-2 text-lg font-semibold text-foreground">{vmStats.syncedFields}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="stat-kicker">Manual Fields</div>
-                <div className="mt-2 text-lg font-semibold text-foreground">{vmStats.manualFields}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="stat-kicker">Tags</div>
-                <div className="mt-2 text-lg font-semibold text-foreground">{vmStats.tags}</div>
-              </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                Edit VM
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setArchiveOpen(true)}>
+                Archive
+              </Button>
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-3">
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-              Edit Draft
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => toast.info('Approval flow will connect to backend later')}>
-              Approve
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => setArchiveOpen(true)}>
-              Archive
-            </Button>
-          </div>
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-4">
-          <section className="surface-panel p-4">
-            <div className="border-b border-border/70 pb-3">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">VM Details</h2>
+      <section className="space-y-4">
+        <section className="surface-panel p-4">
+          <div className="border-b border-border/70 pb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">VM Details</h2>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <DetailListSection title="Identity & Placement" items={identityAndPlacementDetails} />
+            <DetailListSection title="Infrastructure" items={infrastructureDetails} />
+            <DetailListSection title="AssetOps Context" items={assetOpsDetails} />
+            <div className="space-y-4">
+              <TextSection title="Service Purpose" content={vm.description || '--'} />
+              <TextSection title="Notes" content={vm.notes || '--'} />
             </div>
+          </div>
+        </section>
 
-            <div className="mt-4 grid gap-5 lg:grid-cols-2">
-              <div className="space-y-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Synced from vCenter</div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Server className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">vCenter</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.vcenterName}</div>
-                      <div className="text-[11px] text-muted-foreground">{vm.vcenterVersion}</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Power</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.powerState}</div>
-                      <div className="text-[11px] text-muted-foreground">{vm.lastSyncAt}</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <CircleOff className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">MoID</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.moid}</div>
-                      <div className="text-[11px] text-muted-foreground">Managed object id</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Monitor className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Primary IP</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.primaryIp}</div>
-                      <div className="text-[11px] text-muted-foreground">{vm.guestOs}</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Server className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">CPU / Memory</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.cpuCores} vCPU / {vm.memoryGb} GB</div>
-                      <div className="text-[11px] text-muted-foreground">Source synced spec</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Server className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Storage / Network</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.storageGb} GB</div>
-                      <div className="text-[11px] text-muted-foreground">{vm.networkLabel}</div>
-                    </div>
-                  </div>
-                </div>
+        <section className="surface-panel p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Guest OS Accounts</h3>
+          </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Server className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Cluster</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.cluster}</div>
-                      <div className="text-[11px] text-muted-foreground">{vm.host}</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Tags</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {vm.tags.map((tag) => (
-                          <span key={tag} className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-muted-foreground">
-                            {tag}
+          <div className="table-shell">
+            <div className="overflow-x-auto">
+              <table className="table-frame min-w-[880px]">
+                <thead>
+                  <tr className="table-head-row">
+                    <th className="px-3 py-3 font-medium">Username</th>
+                    <th className="px-3 py-3 font-medium">Password</th>
+                    <th className="px-3 py-3 font-medium">Access</th>
+                    <th className="px-3 py-3 font-medium">Role</th>
+                    <th className="px-3 py-3 font-medium">Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vm.guestAccounts.map((account) => {
+                    const revealed = Boolean(revealedPasswords[account.username]);
+
+                    return (
+                      <tr key={account.username} className="table-row">
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                            <span className="font-mono text-[13px] font-semibold text-foreground">{account.username}</span>
+                            <button
+                              type="button"
+                              onClick={() => void copyValue(account.username, 'Username')}
+                              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[13px] font-semibold tracking-[0.18em] text-foreground">
+                              {revealed ? account.password : '************'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setRevealedPasswords((current) => ({ ...current, [account.username]: !revealed }))}
+                              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                            >
+                              {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void copyValue(account.password, 'Password')}
+                              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="inline-flex rounded-md border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground">
+                            {account.accessMethod}
                           </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Managed in AssetOps</div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">System Name</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.systemName}</div>
-                      <div className="text-[11px] text-muted-foreground">AssetOps context</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Environment</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.environment}</div>
-                      <div className="text-[11px] text-muted-foreground">Manual context</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Owner</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.owner}</div>
-                      <div className="text-[11px] text-muted-foreground">{vm.businessUnit}</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">SLA Tier</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.slaTier}</div>
-                      <div className="text-[11px] text-muted-foreground">{vm.syncState}</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Service Role</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.serviceRole}</div>
-                      <div className="text-[11px] text-muted-foreground">{criticalityLabel}</div>
-                    </div>
-                  </div>
-                  <div className="metric-pair">
-                    <div className="icon-chip h-9 w-9 text-muted-foreground">
-                      <Monitor className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Service Purpose</div>
-                      <div className="text-sm font-semibold text-foreground">{vm.description}</div>
-                      <div className="text-[11px] text-muted-foreground">Business context</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="muted-panel px-4 py-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Notes</div>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{vm.notes}</p>
-                </div>
-              </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="inline-flex rounded-md border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground">
+                            {account.role}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-[12px] text-muted-foreground">{account.note || '--'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </section>
-
-          <section className="surface-panel p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Guest OS Accounts</h3>
-            </div>
-
-            <div className="table-shell">
-              <div className="overflow-x-auto">
-                <table className="table-frame min-w-[880px]">
-                  <thead>
-                    <tr className="table-head-row">
-                      <th className="px-3 py-3 font-medium">Username</th>
-                      <th className="px-3 py-3 font-medium">Password</th>
-                      <th className="px-3 py-3 font-medium">Access</th>
-                      <th className="px-3 py-3 font-medium">Role</th>
-                      <th className="px-3 py-3 font-medium">Note</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vm.guestAccounts.map((account) => {
-                      const revealed = Boolean(revealedPasswords[account.username]);
-
-                      return (
-                        <tr key={account.username} className="table-row">
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                              <span className="font-mono text-[13px] font-semibold text-foreground">{account.username}</span>
-                              <button
-                                type="button"
-                                onClick={() => void copyValue(account.username, 'Username')}
-                                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-[13px] font-semibold tracking-[0.18em] text-foreground">
-                                {revealed ? account.password : '************'}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setRevealedPasswords((current) => ({ ...current, [account.username]: !revealed }))}
-                                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                              >
-                                {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void copyValue(account.password, 'Password')}
-                                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3">
-                            <span className="inline-flex rounded-md border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground">
-                              {account.accessMethod}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3">
-                            <span className="inline-flex rounded-md border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground">
-                              {account.role}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-[12px] text-muted-foreground">{account.note || '--'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div className="space-y-4">
-          <section className="surface-panel p-4">
-            <div className="flex items-center gap-2">
-              <Server className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Source History</h3>
-            </div>
-            <div className="mt-3 space-y-2">
-              {vm.sourceHistory.map((source) => (
-                <div key={`${source.label}-${source.version}`} className="metric-pair">
-                  <div className="icon-chip h-9 w-9 text-muted-foreground">
-                    <Server className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="truncate text-xs font-semibold text-foreground">{source.label}</div>
-                      <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground">{source.version}</span>
-                    </div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">{source.lastSeen}</div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">{source.status}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="surface-panel p-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Sync Scope</h3>
-            </div>
-            <div className="mt-3 space-y-3">
-              <div className="muted-panel px-3 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Synced automatically</div>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  VM name, MoID, power state, host, cluster, guest OS, primary IP, and vCenter tags.
-                </p>
-              </div>
-              <div className="muted-panel px-3 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Managed manually</div>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  System name, owner, environment, business unit, SLA tier, description, notes, and guest OS credentials.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="surface-panel p-4">
-            <div className="flex items-center gap-2">
-              <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Lifecycle</h3>
-            </div>
-            <div className="mt-3 space-y-2 text-xs leading-5 text-muted-foreground">
-              <p>Draft records are created from discovery and held for approval.</p>
-              <p>Active records are the operational inventory that the team relies on.</p>
-              <p>Deleted records remain visible for audit history before archive or purge.</p>
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </section>
 
-      <VmFormDialog key={`vm-edit-${vm.id}-${editOpen ? 'open' : 'closed'}`} open={editOpen} onOpenChange={setEditOpen} vmToEdit={vm} />
+      <VmFormDialog
+        key={`vm-edit-${vm.id}-${editOpen ? 'open' : 'closed'}`}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        vmToEdit={vm}
+        onSuccess={() => void loadVm()}
+      />
 
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <DialogContent className="max-w-md bg-card p-0">
@@ -502,9 +414,15 @@ export default function VmDetailPage() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => {
-                  setArchiveOpen(false);
-                  toast.success('Archive flow will connect to the backend later');
+                onClick={async () => {
+                  try {
+                    await archiveVmInventory(vm.id);
+                    setArchiveOpen(false);
+                    toast.success('VM archived');
+                    router.push('/dashboard/vm');
+                  } catch {
+                    toast.error('Failed to archive VM');
+                  }
                 }}
               >
                 Archive

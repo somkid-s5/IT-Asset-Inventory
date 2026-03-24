@@ -31,6 +31,38 @@ enum AssetStatus {
   DECOMMISSIONED
 }
 
+enum VmPowerState {
+  RUNNING
+  STOPPED
+  SUSPENDED
+}
+
+enum VmEnvironment {
+  PROD
+  TEST
+  UAT
+}
+
+enum VmDiscoveryState {
+  NEEDS_CONTEXT
+  READY_TO_PROMOTE
+  DRIFTED
+  ARCHIVED
+}
+
+enum VmLifecycleState {
+  DRAFT
+  ACTIVE
+  DELETED_IN_VCENTER
+  ARCHIVED
+}
+
+enum VmCriticality {
+  MISSION_CRITICAL
+  BUSINESS_CRITICAL
+  STANDARD
+}
+
 enum AuditAction {
   VIEW_PASSWORD
   COPY_PASSWORD
@@ -60,18 +92,21 @@ model User {
 
   assets              Asset[]
   databaseInventories DatabaseInventory[]
+  vmVCenterSources    VmVCenterSource[]
+  vmDiscoveries       VmDiscovery[]
+  vmInventories       VmInventory[]
   auditLogs           AuditLog[]
 }
 
 model IPAllocation {
-  id      String  @id @default(uuid())
-  address String  // e.g. 192.168.1.50
-  type    String? // e.g. Management, VIP, Backup, Data, IPMI, Host, Service Processor
-  nodeLabel String?
+  id         String  @id @default(uuid())
+  address    String // e.g. 192.168.1.50
+  type       String? // e.g. Management, VIP, Backup, Data, IPMI, Host, Service Processor
+  nodeLabel  String?
   manageType String? // e.g. WEB, SSH, API
-  version String? // e.g. iLO 2.81, ESXi 8.0.3
-  assetId String
-  asset   Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  version    String? // e.g. iLO 2.81, ESXi 8.0.3
+  assetId    String
+  asset      Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,14 +119,14 @@ model Asset {
   assetId        String?     @unique // e.g., '6303-0003'
   name           String
   type           AssetType
-  environment    String?     // e.g., 'PROD', 'UAT', 'DEV'
-  location       String?     // e.g., 'DC'
-  rack           String?     // e.g., '1C-04'
-  osVersion      String?     // e.g., 'Fabric OS: v8.2.1c'
-  manageType     String?     // e.g., 'WEB/SSH'
-  brandModel     String?     // e.g., 'HPE StoreFabric SN3600B'
-  sn             String?     // Serial Number
-  customMetadata Json?       // Flexible JSON structure for other specs
+  environment    String? // e.g., 'PROD', 'UAT', 'DEV'
+  location       String? // e.g., 'DC'
+  rack           String? // e.g., '1C-04'
+  osVersion      String? // e.g., 'Fabric OS: v8.2.1c'
+  manageType     String? // e.g., 'WEB/SSH'
+  brandModel     String? // e.g., 'HPE StoreFabric SN3600B'
+  sn             String? // Serial Number
+  customMetadata Json? // Flexible JSON structure for other specs
   status         AssetStatus @default(ACTIVE)
 
   // Financial & Info
@@ -184,15 +219,15 @@ model DatabaseInventory {
   note              String?
 
   createdByUserId String
-  createdByUser   User @relation(fields: [createdByUserId], references: [id])
+  createdByUser   User   @relation(fields: [createdByUserId], references: [id])
 
   accounts  DatabaseAccount[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 }
 
 model DatabaseAccount {
-  id                  String   @id @default(uuid())
+  id                  String            @id @default(uuid())
   databaseInventoryId String
   databaseInventory   DatabaseInventory @relation(fields: [databaseInventoryId], references: [id], onDelete: Cascade)
 
@@ -201,6 +236,139 @@ model DatabaseAccount {
   encryptedPassword String
   privileges        String[]
   note              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VmVCenterSource {
+  id                String    @id @default(uuid())
+  name              String    @unique
+  endpoint          String
+  version           String
+  username          String?
+  encryptedPassword String?
+  syncInterval      String
+  status            String
+  lastSyncAt        DateTime?
+  notes             String?
+
+  createdByUserId String?
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id])
+
+  discoveries VmDiscovery[]
+  inventories VmInventory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VmDiscovery {
+  id                   String           @id @default(uuid())
+  name                 String
+  systemName           String?
+  moid                 String           @unique
+  sourceId             String
+  source               VmVCenterSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  cluster              String
+  clusterResolution    String           @default("UNKNOWN")
+  host                 String
+  hostResolution       String           @default("UNKNOWN")
+  computerName         String?
+  guestOs              String
+  primaryIp            String
+  cpuCores             Int
+  memoryGb             Int
+  storageGb            Int
+  disks                Json?
+  networkLabel         String
+  powerState           VmPowerState
+  state                VmDiscoveryState
+  completeness         Int
+  missingFields        String[]
+  lastSeenAt           DateTime
+  tags                 String[]
+  guestAccountsCount   Int              @default(0)
+  owner                String?
+  environment          VmEnvironment?
+  businessUnit         String?
+  slaTier              String?
+  serviceRole          String?
+  criticality          VmCriticality?
+  description          String?
+  notes                String?
+  suggestedOwner       String?
+  suggestedEnvironment VmEnvironment?
+  suggestedServiceRole String?
+  suggestedCriticality VmCriticality?
+
+  createdByUserId String?
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id])
+
+  guestAccounts VmGuestAccount[]
+  inventory     VmInventory?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VmInventory {
+  id             String           @id @default(uuid())
+  discoveryId    String?          @unique
+  discovery      VmDiscovery?     @relation(fields: [discoveryId], references: [id], onDelete: SetNull)
+  sourceId       String?
+  source         VmVCenterSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  name           String
+  systemName     String
+  moid           String           @unique
+  environment    VmEnvironment
+  cluster        String
+  clusterResolution String         @default("UNKNOWN")
+  host           String
+  hostResolution String            @default("UNKNOWN")
+  computerName   String?
+  guestOs        String
+  primaryIp      String
+  cpuCores       Int
+  memoryGb       Int
+  storageGb      Int
+  disks          Json?
+  networkLabel   String
+  powerState     VmPowerState
+  lifecycleState VmLifecycleState
+  syncState      String
+  owner          String
+  businessUnit   String
+  slaTier        String
+  serviceRole    String
+  criticality    VmCriticality
+  description    String
+  tags           String[]
+  lastSyncAt     DateTime
+  syncedFields   String[]
+  managedFields  String[]
+  notes          String
+
+  createdByUserId String?
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id])
+
+  guestAccounts VmGuestAccount[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VmGuestAccount {
+  id                String       @id @default(uuid())
+  username          String
+  encryptedPassword String
+  accessMethod      String
+  role              String
+  note              String?
+  discoveryId       String?
+  discovery         VmDiscovery? @relation(fields: [discoveryId], references: [id], onDelete: Cascade)
+  inventoryId       String?
+  inventory         VmInventory? @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

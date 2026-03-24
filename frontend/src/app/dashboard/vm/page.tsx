@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
@@ -8,23 +9,32 @@ import {
   ChevronRight,
   Clock3,
   Monitor,
-  MoreHorizontal,
   RefreshCw,
   Search,
   Server,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { VmFormDialog } from '@/components/VmFormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
-  VM_DISCOVERY_QUEUE,
-  VM_INVENTORY_RECORDS,
-  VM_VCENTER_SOURCES,
   type VmDiscoveryItem,
   type VmInventoryItem,
 } from '@/lib/vm-inventory';
+import { getVmDiscoveries, getVmDiscovery, getVmInventory, getVmSources } from '@/services/vm';
 
 type InventoryView = 'PENDING' | 'ACTIVE' | 'ORPHANED';
+type OrphanedVmRecord = {
+  id: string;
+  name: string;
+  displayName?: string | null;
+  sourceName: string;
+  host: string;
+  primaryIp: string;
+  lastSeen: string;
+  route: string;
+};
 
 const VIEW_COPY: Record<
   InventoryView,
@@ -49,7 +59,7 @@ const VIEW_COPY: Record<
   ORPHANED: {
     title: 'Orphaned',
     description:
-      'VMs with drift or missing source visibility that need investigation before the record goes stale.',
+      'Previously active VMs that are no longer returned by the latest source sync and are now kept as historical records.',
     searchPlaceholder: 'Search missing VM, source, or issue...',
   },
 };
@@ -69,15 +79,83 @@ export default function VmPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState<InventoryView>('ACTIVE');
+  const [discoveries, setDiscoveries] = useState<VmDiscoveryItem[]>([]);
+  const [inventory, setInventory] = useState<VmInventoryItem[]>([]);
+  const [selectedDiscovery, setSelectedDiscovery] = useState<VmDiscoveryItem | null>(null);
+  const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
+  const [openingPendingId, setOpeningPendingId] = useState<string | null>(null);
+  const [sourceCount, setSourceCount] = useState(0);
+  const [lastSyncLabel, setLastSyncLabel] = useState('--');
+  const [loading, setLoading] = useState(true);
   const normalizedQuery = searchTerm.trim().toLowerCase();
 
+  const loadVmData = async () => {
+    try {
+      setLoading(true);
+      const [sources, discoveryRecords, inventoryRecords] = await Promise.all([
+        getVmSources(),
+        getVmDiscoveries(),
+        getVmInventory(),
+      ]);
+      setDiscoveries(discoveryRecords);
+      setInventory(inventoryRecords);
+      setSourceCount(sources.length);
+      setLastSyncLabel(`${sources[0]?.lastSyncAt ?? '--'} from ${sources.length} sources`);
+    } catch {
+      toast.error('Failed to load VM inventory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadVmData();
+  }, []);
+
+  const openPendingSetup = async (id: string) => {
+    try {
+      setOpeningPendingId(id);
+      const discovery = await getVmDiscovery(id);
+      setSelectedDiscovery(discovery);
+      setPendingDialogOpen(true);
+    } catch {
+      toast.error('Failed to open VM setup');
+    } finally {
+      setOpeningPendingId(null);
+    }
+  };
+
   const pendingQueue = useMemo(
-    () => VM_DISCOVERY_QUEUE.filter((vm) => vm.state !== 'DRIFTED'),
-    [],
+    () => discoveries.filter((vm) => vm.state !== 'DRIFTED'),
+    [discoveries],
   );
-  const orphanedQueue = useMemo(
-    () => VM_DISCOVERY_QUEUE.filter((vm) => vm.state === 'DRIFTED'),
-    [],
+  const activeInventoryQueue = useMemo(
+    () =>
+      inventory.filter(
+        (vm) =>
+          vm.lifecycleState === 'ACTIVE' && vm.syncState !== 'Missing from source',
+      ),
+    [inventory],
+  );
+  const orphanedQueue = useMemo<OrphanedVmRecord[]>(
+    () =>
+      inventory
+        .filter(
+          (vm) =>
+            vm.syncState === 'Missing from source' ||
+            vm.lifecycleState === 'DELETED_IN_VCENTER',
+        )
+        .map((vm) => ({
+          id: vm.id,
+          name: vm.name,
+          displayName: vm.systemName,
+          sourceName: vm.vcenterName,
+          host: vm.host,
+          primaryIp: vm.primaryIp,
+          lastSeen: vm.lastSyncAt,
+          route: `/dashboard/vm/${vm.id}`,
+        })),
+    [inventory],
   );
 
   const filteredPendingQueue = useMemo(
@@ -99,7 +177,7 @@ export default function VmPage() {
 
   const filteredActiveInventory = useMemo(
     () =>
-      VM_INVENTORY_RECORDS.filter((vm) =>
+      activeInventoryQueue.filter((vm) =>
         matchesQuery(normalizedQuery, [
           vm.name,
           vm.primaryIp,
@@ -109,7 +187,7 @@ export default function VmPage() {
           vm.description,
         ]),
       ),
-    [normalizedQuery],
+    [activeInventoryQueue, normalizedQuery],
   );
 
   const filteredOrphanedQueue = useMemo(
@@ -117,11 +195,10 @@ export default function VmPage() {
       orphanedQueue.filter((vm) =>
         matchesQuery(normalizedQuery, [
           vm.name,
+          vm.displayName,
           vm.primaryIp,
           vm.sourceName,
           vm.host,
-          vm.note,
-          vm.missingFields.join(' '),
         ]),
       ),
     [normalizedQuery, orphanedQueue],
@@ -129,13 +206,13 @@ export default function VmPage() {
 
   const inventoryStats = useMemo(
     () => ({
-      active: VM_INVENTORY_RECORDS.length,
+      active: activeInventoryQueue.length,
       pending: pendingQueue.length,
       orphaned: orphanedQueue.length,
-      sources: VM_VCENTER_SOURCES.length,
-      lastSyncLabel: `${VM_VCENTER_SOURCES[0]?.lastSyncAt ?? '--'} from ${VM_VCENTER_SOURCES.length} sources`,
+      sources: sourceCount,
+      lastSyncLabel,
     }),
-    [orphanedQueue.length, pendingQueue.length],
+    [activeInventoryQueue.length, orphanedQueue.length, pendingQueue.length, sourceCount, lastSyncLabel],
   );
 
   const currentCount =
@@ -282,39 +359,104 @@ export default function VmPage() {
           </div>
         </div>
 
-        {activeView === 'PENDING' ? (
+        {loading ? (
+          <EmptyState
+            title="Loading VM records"
+            description="Fetching sources, discovery queue, and active inventory."
+          />
+        ) : sourceCount === 0 ? (
+          <EmptyState
+            title="No vCenter sources connected"
+            description="Add at least one vCenter source before discovery and active inventory records can appear here."
+            action={(
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={() => router.push('/dashboard/vm/sources')}
+              >
+                <Server className="h-4 w-4" />
+                Add vCenter Source
+              </Button>
+            )}
+          />
+        ) : activeView === 'PENDING' ? (
           <PendingSetupTable
             items={filteredPendingQueue}
-            onOpenRecord={(id) => router.push(`/dashboard/vm/sources/${id}`)}
+            openingId={openingPendingId}
+            onOpenRecord={(id) => void openPendingSetup(id)}
           />
-        ) : null}
-
-        {activeView === 'ACTIVE' ? (
+        ) : activeView === 'ACTIVE' ? (
           <ActiveInventoryTable
             items={filteredActiveInventory}
             onOpenRecord={(id) => router.push(`/dashboard/vm/${id}`)}
           />
-        ) : null}
-
-        {activeView === 'ORPHANED' ? (
+        ) : activeView === 'ORPHANED' ? (
           <OrphanedTable
             items={filteredOrphanedQueue}
-            onOpenRecord={(id) => router.push(`/dashboard/vm/sources/${id}`)}
-            onManageSources={() => router.push('/dashboard/vm/sources')}
+            onOpenRecord={(route) => router.push(route)}
           />
         ) : null}
       </section>
+
+      <VmFormDialog
+        open={pendingDialogOpen}
+        onOpenChange={setPendingDialogOpen}
+        discoveryVm={selectedDiscovery}
+        submitMode="promote"
+        onPromoted={(inventoryDetail) => {
+          router.push(`/dashboard/vm/${inventoryDetail.id}`);
+        }}
+        onSuccess={() => void loadVmData()}
+      />
     </div>
   );
 }
 
 function PendingSetupTable({
   items,
+  openingId,
   onOpenRecord,
 }: {
   items: VmDiscoveryItem[];
+  openingId: string | null;
   onOpenRecord: (id: string) => void;
 }) {
+  const getQueueStatusLabel = (state: VmDiscoveryItem['state']) => {
+    if (state === 'READY_TO_PROMOTE') {
+      return 'Ready to promote';
+    }
+
+    if (state === 'DRIFTED') {
+      return 'Needs review';
+    }
+
+    return 'Needs context';
+  };
+
+  const getQueueStatusClassName = (state: VmDiscoveryItem['state']) => {
+    if (state === 'READY_TO_PROMOTE') {
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
+    }
+
+    if (state === 'DRIFTED') {
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
+    }
+
+    return 'border-violet-500/25 bg-violet-500/10 text-violet-300';
+  };
+
+  const getPowerStateClassName = (powerState: VmDiscoveryItem['powerState']) => {
+    if (powerState === 'RUNNING') {
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
+    }
+
+    if (powerState === 'SUSPENDED') {
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
+    }
+
+    return 'border-border bg-background text-muted-foreground';
+  };
+
   if (items.length === 0) {
     return (
       <EmptyState
@@ -326,10 +468,14 @@ function PendingSetupTable({
 
   return (
     <>
-      <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.3fr)_180px] gap-4 border-b border-border/70 bg-background/45 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
+      <div className="hidden grid-cols-[minmax(0,1.4fr)_140px_minmax(0,1fr)_160px_120px_140px_140px_180px] gap-4 border-b border-border/70 bg-background/45 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
         <div>Discovered VM Name</div>
-        <div>Source (vCenter)</div>
-        <div>Missing Details</div>
+        <div>IP Address</div>
+        <div>Source</div>
+        <div>Host</div>
+        <div>Power</div>
+        <div>Last Seen</div>
+        <div>Queue Status</div>
         <div className="text-right">Action</div>
       </div>
 
@@ -337,7 +483,7 @@ function PendingSetupTable({
         {items.map((vm) => (
           <div
             key={vm.id}
-            className="grid gap-4 border-b border-border/70 px-4 py-4 transition-colors hover:bg-accent/30 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.3fr)_180px] md:items-center last:border-b-0"
+            className="grid gap-4 border-b border-border/70 px-4 py-4 transition-colors hover:bg-accent/30 md:grid-cols-[minmax(0,1.4fr)_140px_minmax(0,1fr)_160px_120px_140px_140px_180px] md:items-center last:border-b-0"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -348,43 +494,55 @@ function PendingSetupTable({
                   <div className="truncate text-[13px] font-semibold text-foreground">
                     {vm.name}
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                    <span>{vm.primaryIp}</span>
-                    <span>Found {vm.lastSeen}</span>
-                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="text-[12px] font-medium text-foreground">
-                {vm.sourceName}
-              </div>
-              <div className="text-[11px] text-muted-foreground">
-                Host {vm.host}
+            <div className="font-mono text-[12px] text-foreground">
+              {vm.primaryIp}
+            </div>
+
+            <div className="text-[12px] font-medium text-foreground">
+              {vm.sourceName}
+            </div>
+
+            <div>
+              <div className="text-[12px] text-muted-foreground">
+                {vm.host}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-1.5">
-              {vm.missingFields.map((field) => (
-                <span
-                  key={`${vm.id}-${field}`}
-                  className={cn(
-                    'inline-flex rounded-md border px-2 py-1 text-[10px] font-medium',
-                    field.toLowerCase().includes('account')
-                      ? 'border-amber-500/25 bg-amber-500/10 text-amber-300'
-                      : 'border-rose-500/25 bg-rose-500/10 text-rose-300',
-                  )}
-                >
-                  {field}
-                </span>
-              ))}
+            <div>
+              <span
+                className={cn(
+                  'inline-flex rounded-md border px-2 py-1 text-[10px] font-medium',
+                  getPowerStateClassName(vm.powerState),
+                )}
+              >
+                {vm.powerState}
+              </span>
+            </div>
+
+            <div className="text-[12px] text-muted-foreground">
+              {vm.lastSeen}
+            </div>
+
+            <div>
+              <span
+                className={cn(
+                  'inline-flex rounded-md border px-2 py-1 text-[10px] font-medium',
+                  getQueueStatusClassName(vm.state),
+                )}
+              >
+                {getQueueStatusLabel(vm.state)}
+              </span>
             </div>
 
             <div className="flex items-center justify-start md:justify-end">
-              <Button size="sm" className="gap-1.5" onClick={() => onOpenRecord(vm.id)}>
-                Complete Setup
-                <ChevronRight className="h-3.5 w-3.5" />
+              <Button size="sm" className="gap-1.5" onClick={() => onOpenRecord(vm.id)} disabled={openingId === vm.id}>
+                {openingId === vm.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : null}
+                {openingId === vm.id ? 'Opening...' : 'Complete Setup'}
+                {openingId === vm.id ? null : <ChevronRight className="h-3.5 w-3.5" />}
               </Button>
             </div>
           </div>
@@ -401,6 +559,34 @@ function ActiveInventoryTable({
   items: VmInventoryItem[];
   onOpenRecord: (id: string) => void;
 }) {
+  const getPowerStateClassName = (powerState: VmInventoryItem['powerState']) => {
+    if (powerState === 'RUNNING') {
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
+    }
+
+    if (powerState === 'SUSPENDED') {
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
+    }
+
+    return 'border-border bg-background text-muted-foreground';
+  };
+
+  const getSyncStateClassName = (syncState: VmInventoryItem['syncState']) => {
+    if (syncState === 'Synced') {
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
+    }
+
+    if (syncState === 'Missing from source') {
+      return 'border-rose-500/25 bg-rose-500/10 text-rose-300';
+    }
+
+    if (syncState === 'Connection failed') {
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
+    }
+
+    return 'border-border bg-background text-muted-foreground';
+  };
+
   if (items.length === 0) {
     return (
       <EmptyState
@@ -412,11 +598,14 @@ function ActiveInventoryTable({
 
   return (
     <>
-      <div className="hidden grid-cols-[minmax(0,1.4fr)_140px_140px_minmax(0,1fr)_80px] gap-4 border-b border-border/70 bg-background/45 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
+      <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_140px_minmax(0,1fr)_160px_120px_140px_180px] gap-4 border-b border-border/70 bg-background/45 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
+        <div>System Name</div>
         <div>VM Name</div>
         <div>IP Address</div>
         <div>Source</div>
-        <div>OS</div>
+        <div>Host</div>
+        <div>Power</div>
+        <div>Sync Status</div>
         <div className="text-right">Action</div>
       </div>
 
@@ -424,8 +613,7 @@ function ActiveInventoryTable({
         {items.map((vm) => (
           <div
             key={vm.id}
-            onClick={() => onOpenRecord(vm.id)}
-            className="grid cursor-pointer gap-4 border-b border-border/70 px-4 py-4 transition-colors hover:bg-accent/30 md:grid-cols-[minmax(0,1.4fr)_140px_140px_minmax(0,1fr)_80px] md:items-center last:border-b-0"
+            className="grid gap-4 border-b border-border/70 px-4 py-4 transition-colors hover:bg-accent/30 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_140px_minmax(0,1fr)_160px_120px_140px_180px] md:items-center last:border-b-0"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -436,36 +624,52 @@ function ActiveInventoryTable({
                   <div className="truncate text-[13px] font-semibold text-foreground">
                     {vm.systemName}
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
-                    {vm.name} - Owner: {vm.owner}
-                  </div>
                 </div>
               </div>
+            </div>
+
+            <div className="text-[12px] font-medium text-foreground">
+              {vm.name}
             </div>
 
             <div className="font-mono text-[12px] text-foreground">
               {vm.primaryIp}
             </div>
 
+            <div className="text-[12px] font-medium text-foreground">
+              {vm.vcenterName}
+            </div>
+
+            <div className="text-[12px] text-muted-foreground">
+              {vm.host}
+            </div>
+
             <div>
-              <span className="inline-flex rounded-lg border border-border/70 bg-background/55 px-2.5 py-1 text-[11px] text-foreground">
-                {vm.vcenterName}
+              <span
+                className={cn(
+                  'inline-flex rounded-md border px-2 py-1 text-[10px] font-medium',
+                  getPowerStateClassName(vm.powerState),
+                )}
+              >
+                {vm.powerState}
               </span>
             </div>
 
-            <div className="text-[12px] text-muted-foreground">{vm.guestOs}</div>
+            <div>
+              <span
+                className={cn(
+                  'inline-flex rounded-md border px-2 py-1 text-[10px] font-medium',
+                  getSyncStateClassName(vm.syncState),
+                )}
+              >
+                {vm.syncState}
+              </span>
+            </div>
 
             <div className="flex items-center justify-start md:justify-end">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenRecord(vm.id);
-                }}
-                aria-label={`Open ${vm.name}`}
-              >
-                <MoreHorizontal className="h-4 w-4" />
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => onOpenRecord(vm.id)}>
+                View Details
+                <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -478,27 +682,29 @@ function ActiveInventoryTable({
 function OrphanedTable({
   items,
   onOpenRecord,
-  onManageSources,
 }: {
-  items: VmDiscoveryItem[];
-  onOpenRecord: (id: string) => void;
-  onManageSources: () => void;
+  items: OrphanedVmRecord[];
+  onOpenRecord: (route: string) => void;
 }) {
   if (items.length === 0) {
     return (
       <EmptyState
         title="No orphaned VMs"
-        description="Current discovery data does not show any drifted or missing VM records."
+        description="No previously active VM is currently missing from the connected source."
       />
     );
   }
 
   return (
     <>
-      <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.3fr)_220px] gap-4 border-b border-border/70 bg-background/45 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
-        <div>Missing VM</div>
-        <div>Last Known Source</div>
-        <div>Issue Detected</div>
+      <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_140px_minmax(0,1fr)_160px_140px_140px_180px] gap-4 border-b border-border/70 bg-background/45 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
+        <div>System Name</div>
+        <div>VM Name</div>
+        <div>IP Address</div>
+        <div>Source</div>
+        <div>Host</div>
+        <div>Last Seen</div>
+        <div>Orphaned Status</div>
         <div className="text-right">Action Required</div>
       </div>
 
@@ -506,43 +712,54 @@ function OrphanedTable({
         {items.map((vm) => (
           <div
             key={vm.id}
-            className="grid gap-4 border-b border-border/70 px-4 py-4 transition-colors hover:bg-accent/30 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.3fr)_220px] md:items-center last:border-b-0"
+            className="grid gap-4 border-b border-border/70 px-4 py-4 transition-colors hover:bg-accent/30 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_140px_minmax(0,1fr)_160px_140px_140px_180px] md:items-center last:border-b-0"
           >
             <div className="min-w-0">
-              <div className="truncate text-[13px] font-semibold text-foreground line-through decoration-foreground/35">
-                {vm.name}
-              </div>
-              <div className="mt-1 text-[11px] text-rose-300">
-                Missing since {vm.lastSeen}
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-500/25 bg-rose-500/10 text-rose-300">
+                  <Monitor className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-semibold text-foreground line-through decoration-foreground/35">
+                    {vm.displayName || vm.name}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="text-[12px] font-medium text-foreground">
-                {vm.sourceName}
-              </div>
-              <div className="text-[11px] text-muted-foreground">{vm.primaryIp}</div>
+            <div className="text-[12px] font-medium text-foreground">
+              {vm.name}
             </div>
 
-            <div className="flex items-start gap-2 text-[12px] text-muted-foreground">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" />
-              <span>{vm.note || 'Not found in latest vCenter sync.'}</span>
+            <div className="font-mono text-[12px] text-foreground">
+              {vm.primaryIp}
+            </div>
+
+            <div className="text-[12px] font-medium text-foreground">
+              {vm.sourceName}
+            </div>
+
+            <div className="text-[12px] text-muted-foreground">
+              {vm.host}
+            </div>
+
+            <div className="text-[12px] text-muted-foreground">
+              {vm.lastSeen}
+            </div>
+
+            <div>
+              <span className="inline-flex rounded-md border border-rose-500/25 bg-rose-500/10 px-2 py-1 text-[10px] font-medium text-rose-300">
+                Missing from source
+              </span>
             </div>
 
             <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onOpenRecord(vm.id)}
+                onClick={() => onOpenRecord(vm.route)}
               >
                 View Details
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={onManageSources}
-              >
-                Manage Sources
               </Button>
             </div>
           </div>
@@ -555,9 +772,11 @@ function OrphanedTable({
 function EmptyState({
   title,
   description,
+  action,
 }: {
   title: string;
   description: string;
+  action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
@@ -566,6 +785,7 @@ function EmptyState({
       </div>
       <div className="text-sm font-semibold text-foreground">{title}</div>
       <div className="max-w-md text-sm text-muted-foreground">{description}</div>
+      {action ? <div className="pt-2">{action}</div> : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { BrandMark } from '@/components/BrandMark';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -18,14 +18,13 @@ export function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem('assetops.sidebar.collapsed');
-    if (saved === 'true') {
-      setSidebarCollapsed(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
     }
-  }, []);
+
+    return window.localStorage.getItem('assetops.sidebar.collapsed') === 'true';
+  });
 
   const toggleSidebar = () => {
     setSidebarCollapsed((current) => {

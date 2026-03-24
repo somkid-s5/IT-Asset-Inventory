@@ -19,63 +19,96 @@ let DashboardService = class DashboardService {
         this.prisma = prisma;
     }
     async getOverview() {
-        const totalAssets = await this.prisma.asset.count();
-        const activeAssets = await this.prisma.asset.count({
-            where: { status: client_1.AssetStatus.ACTIVE },
-        });
-        const now = new Date();
-        const eolAssets = await this.prisma.asset.count({
-            where: {
-                patchInfo: {
-                    is: {
-                        eolDate: {
-                            lt: now,
-                        },
+        const [totalAssets, activeAssets, assetTypeGroups, totalDatabases, productionDatabases, totalDatabaseAccounts, totalUsers, totalSources, healthySources, connectionFailedSources, readyToSyncSources, pendingVmSetup, activeVmInventory, orphanedVmInventory, latestVmSync, adminUsers,] = await Promise.all([
+            this.prisma.asset.count(),
+            this.prisma.asset.count({
+                where: { status: client_1.AssetStatus.ACTIVE },
+            }),
+            this.prisma.asset.groupBy({
+                by: ['type'],
+                _count: {
+                    _all: true,
+                },
+            }),
+            this.prisma.databaseInventory.count(),
+            this.prisma.databaseInventory.count({
+                where: { environment: 'PROD' },
+            }),
+            this.prisma.databaseAccount.count(),
+            this.prisma.user.count(),
+            this.prisma.vmVCenterSource.count(),
+            this.prisma.vmVCenterSource.count({
+                where: { status: 'Healthy' },
+            }),
+            this.prisma.vmVCenterSource.count({
+                where: { status: 'Connection failed' },
+            }),
+            this.prisma.vmVCenterSource.count({
+                where: { status: 'Ready to sync' },
+            }),
+            this.prisma.vmDiscovery.count({
+                where: {
+                    state: {
+                        in: [client_1.VmDiscoveryState.NEEDS_CONTEXT, client_1.VmDiscoveryState.READY_TO_PROMOTE],
                     },
                 },
-            },
-        });
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setDate(now.getDate() - 180);
-        const outdatedPatches = await this.prisma.asset.count({
-            where: {
-                patchInfo: {
-                    is: {
-                        lastPatchedDate: {
-                            lt: sixMonthsAgo,
-                        },
+            }),
+            this.prisma.vmInventory.count({
+                where: {
+                    lifecycleState: client_1.VmLifecycleState.ACTIVE,
+                    syncState: {
+                        not: 'Missing from source',
                     },
                 },
-            },
-        });
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(now.getDate() - 90);
-        const oldCredentials = await this.prisma.credential.count({
-            where: {
-                lastChangedDate: {
-                    lt: ninetyDaysAgo,
+            }),
+            this.prisma.vmInventory.count({
+                where: {
+                    OR: [
+                        { syncState: 'Missing from source' },
+                        { lifecycleState: client_1.VmLifecycleState.DELETED_IN_VCENTER },
+                    ],
                 },
-            },
-        });
-        let riskLevel = 'LOW';
-        if (eolAssets > 0) {
-            riskLevel = 'CRITICAL';
-        }
-        else if (outdatedPatches > 0) {
-            riskLevel = 'HIGH';
-        }
-        else if (oldCredentials > 0) {
-            riskLevel = 'MEDIUM';
-        }
+            }),
+            this.prisma.vmVCenterSource.aggregate({
+                _max: {
+                    lastSyncAt: true,
+                },
+            }),
+            this.prisma.user.count({
+                where: { role: client_1.Role.ADMIN },
+            }),
+        ]);
+        const assetBreakdown = assetTypeGroups.map((group) => ({
+            label: group.type,
+            count: group._count._all,
+        }));
         return {
-            totalAssets,
-            activeAssets,
-            riskLevel,
-            riskFactors: {
-                eolAssets,
-                outdatedPatches,
-                oldCredentials,
-            }
+            assets: {
+                total: totalAssets,
+                active: activeAssets,
+                inactive: Math.max(0, totalAssets - activeAssets),
+                breakdown: assetBreakdown,
+            },
+            vm: {
+                sources: totalSources,
+                healthySources,
+                connectionFailedSources,
+                readyToSyncSources,
+                pendingSetup: pendingVmSetup,
+                activeInventory: activeVmInventory,
+                orphaned: orphanedVmInventory,
+                latestSyncAt: latestVmSync._max.lastSyncAt,
+            },
+            databases: {
+                total: totalDatabases,
+                production: productionDatabases,
+                accounts: totalDatabaseAccounts,
+            },
+            users: {
+                total: totalUsers,
+                admins: adminUsers,
+                nonAdmins: Math.max(0, totalUsers - adminUsers),
+            },
         };
     }
 };

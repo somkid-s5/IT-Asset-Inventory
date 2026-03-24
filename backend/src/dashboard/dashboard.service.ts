@@ -1,79 +1,121 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AssetStatus } from '@prisma/client';
+import { AssetStatus, VmDiscoveryState, VmLifecycleState, Role } from '@prisma/client';
 
 @Injectable()
 export class DashboardService {
     constructor(private prisma: PrismaService) { }
 
     async getOverview() {
-        const totalAssets = await this.prisma.asset.count();
-        const activeAssets = await this.prisma.asset.count({
-            where: { status: AssetStatus.ACTIVE },
-        });
-
-        // Compute basic risk score
-        // 1. Find assets with expired EOL
-        const now = new Date();
-        const eolAssets = await this.prisma.asset.count({
-            where: {
-                patchInfo: {
-                    is: {
-                        eolDate: {
-                            lt: now,
-                        },
-                    },
-                },
-            },
-        });
-
-        // 2. Find assets not patched in > 6 months (180 days)
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setDate(now.getDate() - 180);
-
-        const outdatedPatches = await this.prisma.asset.count({
-            where: {
-                patchInfo: {
-                    is: {
-                        lastPatchedDate: {
-                            lt: sixMonthsAgo,
-                        },
-                    },
-                },
-            },
-        });
-
-        // 3. Find credentials older than 90 days
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(now.getDate() - 90);
-
-        const oldCredentials = await this.prisma.credential.count({
-            where: {
-                lastChangedDate: {
-                    lt: ninetyDaysAgo,
-                },
-            },
-        });
-
-        // Calculate a naive risk score
-        let riskLevel = 'LOW';
-        if (eolAssets > 0) {
-            riskLevel = 'CRITICAL';
-        } else if (outdatedPatches > 0) {
-            riskLevel = 'HIGH';
-        } else if (oldCredentials > 0) {
-            riskLevel = 'MEDIUM';
-        }
-
-        return {
+        const [
             totalAssets,
             activeAssets,
-            riskLevel,
-            riskFactors: {
-                eolAssets,
-                outdatedPatches,
-                oldCredentials,
-            }
+            assetTypeGroups,
+            totalDatabases,
+            productionDatabases,
+            totalDatabaseAccounts,
+            totalUsers,
+            totalSources,
+            healthySources,
+            connectionFailedSources,
+            readyToSyncSources,
+            pendingVmSetup,
+            activeVmInventory,
+            orphanedVmInventory,
+            latestVmSync,
+            adminUsers,
+        ] = await Promise.all([
+            this.prisma.asset.count(),
+            this.prisma.asset.count({
+                where: { status: AssetStatus.ACTIVE },
+            }),
+            this.prisma.asset.groupBy({
+                by: ['type'],
+                _count: {
+                    _all: true,
+                },
+            }),
+            this.prisma.databaseInventory.count(),
+            this.prisma.databaseInventory.count({
+                where: { environment: 'PROD' },
+            }),
+            this.prisma.databaseAccount.count(),
+            this.prisma.user.count(),
+            this.prisma.vmVCenterSource.count(),
+            this.prisma.vmVCenterSource.count({
+                where: { status: 'Healthy' },
+            }),
+            this.prisma.vmVCenterSource.count({
+                where: { status: 'Connection failed' },
+            }),
+            this.prisma.vmVCenterSource.count({
+                where: { status: 'Ready to sync' },
+            }),
+            this.prisma.vmDiscovery.count({
+                where: {
+                    state: {
+                        in: [VmDiscoveryState.NEEDS_CONTEXT, VmDiscoveryState.READY_TO_PROMOTE],
+                    },
+                },
+            }),
+            this.prisma.vmInventory.count({
+                where: {
+                    lifecycleState: VmLifecycleState.ACTIVE,
+                    syncState: {
+                        not: 'Missing from source',
+                    },
+                },
+            }),
+            this.prisma.vmInventory.count({
+                where: {
+                    OR: [
+                        { syncState: 'Missing from source' },
+                        { lifecycleState: VmLifecycleState.DELETED_IN_VCENTER },
+                    ],
+                },
+            }),
+            this.prisma.vmVCenterSource.aggregate({
+                _max: {
+                    lastSyncAt: true,
+                },
+            }),
+            this.prisma.user.count({
+                where: { role: Role.ADMIN },
+            }),
+        ]);
+
+        const assetBreakdown = assetTypeGroups.map((group) => ({
+            label: group.type,
+            count: group._count._all,
+        }));
+
+        return {
+            assets: {
+                total: totalAssets,
+                active: activeAssets,
+                inactive: Math.max(0, totalAssets - activeAssets),
+                breakdown: assetBreakdown,
+            },
+            vm: {
+                sources: totalSources,
+                healthySources,
+                connectionFailedSources,
+                readyToSyncSources,
+                pendingSetup: pendingVmSetup,
+                activeInventory: activeVmInventory,
+                orphaned: orphanedVmInventory,
+                latestSyncAt: latestVmSync._max.lastSyncAt,
+            },
+            databases: {
+                total: totalDatabases,
+                production: productionDatabases,
+                accounts: totalDatabaseAccounts,
+            },
+            users: {
+                total: totalUsers,
+                admins: adminUsers,
+                nonAdmins: Math.max(0, totalUsers - adminUsers),
+            },
         };
     }
 }
