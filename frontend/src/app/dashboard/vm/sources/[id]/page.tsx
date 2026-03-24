@@ -1,13 +1,26 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, CircleOff, Eye, EyeOff, Monitor, Server, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VmFormDialog } from '@/components/VmFormDialog';
-import { getDiscoveryRecord, VM_CRITICALITY_OPTIONS } from '@/lib/vm-inventory';
+import { VM_CRITICALITY_OPTIONS, type VmDiscoveryItem } from '@/lib/vm-inventory';
+import { archiveVmDiscovery, getVmDiscovery, promoteVmDiscovery } from '@/services/vm';
+
+function getPlacementResolutionCopy(resolution?: string, scope: 'host' | 'cluster') {
+  if (resolution === 'DIRECT_VM') {
+    return `Exact per-VM ${scope} from vCenter`;
+  }
+
+  if (resolution === 'SOURCE_SINGLE_HOST' || resolution === 'SOURCE_SINGLE_CLUSTER') {
+    return `Fallback from source-level ${scope} inventory`;
+  }
+
+  return `${scope === 'host' ? 'Host' : 'Cluster'} placement was not returned by the source`;
+}
 
 export default function VmSourceDetailPage() {
   const params = useParams();
@@ -15,7 +28,29 @@ export default function VmSourceDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [revealedNotes, setRevealedNotes] = useState(false);
-  const draft = typeof params.id === 'string' ? getDiscoveryRecord(params.id) : null;
+  const [draft, setDraft] = useState<VmDiscoveryItem | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadDraft = useCallback(async () => {
+    if (typeof params.id !== 'string') {
+      setDraft(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setDraft(await getVmDiscovery(params.id));
+    } catch {
+      setDraft(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    void loadDraft();
+  }, [loadDraft]);
 
   const draftStats = useMemo(() => {
     if (!draft) {
@@ -28,6 +63,10 @@ export default function VmSourceDetailPage() {
       accounts: draft.guestAccountsCount,
     };
   }, [draft]);
+
+  if (loading) {
+    return <div className="surface-panel p-4 text-sm text-muted-foreground">Loading VM discovery...</div>;
+  }
 
   if (!draft) {
     return (
@@ -62,6 +101,27 @@ export default function VmSourceDetailPage() {
       (item) => item.value === draft.suggestedCriticality,
     )?.label ?? '--';
 
+  const buildPromotePayload = () => ({
+    systemName: draft.systemName ?? '',
+    environment: draft.environment ?? draft.suggestedEnvironment ?? 'PROD',
+    owner: draft.owner ?? draft.suggestedOwner ?? '',
+    businessUnit: draft.businessUnit ?? '',
+    slaTier: draft.slaTier ?? '',
+    serviceRole: draft.serviceRole ?? draft.suggestedServiceRole ?? '',
+    criticality: draft.criticality ?? draft.suggestedCriticality ?? 'STANDARD',
+    description: draft.description ?? draft.note ?? '',
+    notes: draft.notes ?? '',
+    lifecycleState: 'ACTIVE' as const,
+    tags: draft.tags.join(', '),
+    guestAccounts: (draft.guestAccounts ?? []).map((account) => ({
+      username: account.username,
+      password: account.password,
+      accessMethod: account.accessMethod,
+      role: account.role,
+      note: account.note ?? '',
+    })),
+  });
+
   return (
     <div className="space-y-4 pb-8">
       <button
@@ -85,7 +145,7 @@ export default function VmSourceDetailPage() {
                   <h1 className="truncate font-display text-xl font-semibold uppercase tracking-[0.06em] text-foreground">{draft.name}</h1>
                   <span className={`rounded-full border px-2.5 py-0.5 text-xs ${stateClassName}`}>{stateLabel}</span>
                   <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs text-muted-foreground">
-                    {draft.sourceName} / {draft.sourceVersion}
+                    {draft.sourceName}
                   </span>
                 </div>
 
@@ -95,9 +155,9 @@ export default function VmSourceDetailPage() {
 
                 <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
                   <span>MoID {draft.moid}</span>
-                  <span>•</span>
+                  <span>/</span>
                   <span>{draft.cluster}</span>
-                  <span>•</span>
+                  <span>/</span>
                   <span>{draft.host}</span>
                 </div>
 
@@ -126,7 +186,23 @@ export default function VmSourceDetailPage() {
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
             Complete Draft
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => toast.info('Approval flow will connect to backend later')}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              if (draft.completeness < 100) {
+                toast.error('Complete all required VM context fields before approval');
+                return;
+              }
+              try {
+                const inventory = await promoteVmDiscovery(draft.id, buildPromotePayload());
+                toast.success('VM promoted to active inventory');
+                router.push(`/dashboard/vm/${inventory.id}`);
+              } catch {
+                toast.error('Failed to promote VM');
+              }
+            }}
+          >
             Approve
           </Button>
           <Button variant="destructive" size="sm" onClick={() => setArchiveOpen(true)}>
@@ -150,7 +226,7 @@ export default function VmSourceDetailPage() {
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Source</div>
                   <div className="text-sm font-semibold text-foreground">{draft.sourceName}</div>
-                  <div className="text-[11px] text-muted-foreground">{draft.sourceVersion}</div>
+                  <div className="text-[11px] text-muted-foreground">Connected vCenter source</div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -203,27 +279,55 @@ export default function VmSourceDetailPage() {
                   <div className="text-[11px] text-muted-foreground">{draft.networkLabel}</div>
                 </div>
               </div>
+              <div className="metric-pair">
+                <div className="icon-chip h-9 w-9 text-muted-foreground">
+                  <Server className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Host</div>
+                  <div className="text-sm font-semibold text-foreground">{draft.host}</div>
+                  <div className="text-[11px] text-muted-foreground">{getPlacementResolutionCopy(draft.hostResolution, 'host')}</div>
+                </div>
+              </div>
+              <div className="metric-pair">
+                <div className="icon-chip h-9 w-9 text-muted-foreground">
+                  <Server className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Cluster</div>
+                  <div className="text-sm font-semibold text-foreground">{draft.cluster}</div>
+                  <div className="text-[11px] text-muted-foreground">{getPlacementResolutionCopy(draft.clusterResolution, 'cluster')}</div>
+                </div>
+              </div>
             </div>
 
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
               <div className="muted-panel px-4 py-3">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Missing Fields</div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {draft.missingFields.map((field) => (
-                    <span key={field} className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-foreground">
-                      {field}
-                    </span>
-                  ))}
+                  {draft.missingFields.length > 0 ? (
+                    draft.missingFields.map((field) => (
+                      <span key={field} className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-foreground">
+                        {field}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No missing fields.</span>
+                  )}
                 </div>
               </div>
               <div className="muted-panel px-4 py-3">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tags</div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {draft.tags.map((tag) => (
-                    <span key={tag} className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-muted-foreground">
-                      {tag}
-                    </span>
-                  ))}
+                  {draft.tags.length > 0 ? (
+                    draft.tags.map((tag) => (
+                      <span key={tag} className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No tags returned by the source.</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -331,7 +435,13 @@ export default function VmSourceDetailPage() {
         </div>
       </section>
 
-      <VmFormDialog key={`draft-edit-${draft.id}-${editOpen ? 'open' : 'closed'}`} open={editOpen} onOpenChange={setEditOpen} discoveryVm={draft} />
+      <VmFormDialog
+        key={`draft-edit-${draft.id}-${editOpen ? 'open' : 'closed'}`}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        discoveryVm={draft}
+        onSuccess={() => void loadDraft()}
+      />
 
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <DialogContent className="max-w-md bg-card p-0">
@@ -348,9 +458,15 @@ export default function VmSourceDetailPage() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => {
-                  setArchiveOpen(false);
-                  toast.success('Discovery item archived');
+                onClick={async () => {
+                  try {
+                    await archiveVmDiscovery(draft.id);
+                    setArchiveOpen(false);
+                    toast.success('Discovery item archived');
+                    router.push('/dashboard/vm/sources');
+                  } catch {
+                    toast.error('Failed to archive discovery item');
+                  }
                 }}
               >
                 Archive

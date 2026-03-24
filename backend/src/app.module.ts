@@ -8,9 +8,10 @@ import { CredentialsModule } from './credentials/credentials.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { UsersModule } from './users/users.module';
 import { DatabasesModule } from './databases/databases.module';
+import { VmModule } from './vm/vm.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, AssetsModule, CredentialsModule, DashboardModule, UsersModule, DatabasesModule],
+  imports: [PrismaModule, AuthModule, AssetsModule, CredentialsModule, DashboardModule, UsersModule, DatabasesModule, VmModule],
   controllers: [AppController],
   providers: [AppService],
 })
