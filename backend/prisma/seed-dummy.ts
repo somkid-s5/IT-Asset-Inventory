@@ -6,9 +6,15 @@ const prisma = new PrismaClient();
 
 function encryptPassword(text: string): string {
     const algorithm = 'aes-256-gcm';
-    const secretKey = process.env.ENCRYPTION_KEY || '12345678123456781234567812345678';
+    const secretKey =
+        process.env.CREDENTIAL_ENCRYPTION_KEY ||
+        process.env.ENCRYPTION_KEY ||
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(algorithm, Buffer.from(secretKey), iv);
+    const keyBuffer = /^[0-9a-fA-F]{64}$/.test(secretKey)
+        ? Buffer.from(secretKey, 'hex')
+        : Buffer.from(secretKey);
+    const cipher = crypto.createCipheriv(algorithm, keyBuffer, iv);
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag().toString('hex');
@@ -19,7 +25,8 @@ async function main() {
     console.log('ðŸŒ± Starting hardware-focused database seeding...');
 
     // 1. Create Default Admin User
-    const adminPassword = await bcrypt.hash('admin123', 10);
+    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'ChangeMe#Admin2026!';
+    const adminPassword = await bcrypt.hash(defaultAdminPassword, 10);
     const admin = await prisma.user.upsert({
         where: { username: 'admin' },
         update: { passwordHash: adminPassword },

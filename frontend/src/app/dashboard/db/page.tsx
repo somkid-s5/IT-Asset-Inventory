@@ -1,11 +1,13 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, ChevronsUpDown, Database, LoaderCircle, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DatabaseFormDialog } from '@/components/DatabaseFormDialog';
+import { DatabaseFormDialog } from '@/components/LazyLoadedDialogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ENVIRONMENT_FILTERS, type DatabaseEnvironment, type DatabaseInventoryDetail, type DatabaseInventoryItem } from '@/lib/database-inventory';
 import api from '@/services/api';
@@ -187,11 +189,10 @@ export default function DbPage() {
             <button
               key={filter.value}
               onClick={() => setActiveEnvironment(filter.value)}
-              className={`filter-chip ${
-                activeEnvironment === filter.value
-                  ? 'filter-chip-active'
-                  : ''
-              }`}
+              className={`filter-chip ${activeEnvironment === filter.value
+                ? 'filter-chip-active'
+                : ''
+                }`}
             >
               {filter.label}
             </button>

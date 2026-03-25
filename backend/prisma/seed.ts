@@ -33,6 +33,9 @@ function encryptPasswordForSeed(password: string, hexKey: string): string {
 
 
 async function main() {
+    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'ChangeMe#Admin2026!';
+    const defaultEditorPassword = process.env.DEFAULT_EDITOR_PASSWORD || 'ChangeMe#Editor2026!';
+
     console.log('Clearing old data...');
     // Delete in reverse dependency order
     await prisma.auditLog.deleteMany();
@@ -44,7 +47,7 @@ async function main() {
     console.log('Old data cleared. Starting seed...');
 
     // 1. Create a mock admin user
-    const adminPasswordHash = await bcrypt.hash('admin123', 10);
+    const adminPasswordHash = await bcrypt.hash(defaultAdminPassword, 10);
     const adminValue = await prisma.user.create({
         data: {
             username: 'admin',
@@ -58,7 +61,7 @@ async function main() {
     console.log(`Created admin user: ${adminValue.username}`);
 
     // Create an Editor user
-    const editorPasswordHash = await bcrypt.hash('editor123', 10);
+    const editorPasswordHash = await bcrypt.hash(defaultEditorPassword, 10);
     const editorValue = await prisma.user.create({
         data: {
             username: 'soc_analyst',

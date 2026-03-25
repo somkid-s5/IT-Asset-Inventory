@@ -9,23 +9,23 @@ export declare class AuthService {
     register(registerDto: RegisterDto): Promise<{
         access_token: string;
         user: {
-            id: any;
-            username: any;
-            displayName: any;
-            avatarSeed: any;
-            avatarImage: any;
-            role: any;
+            id: string;
+            username: string;
+            displayName: string;
+            avatarSeed: string;
+            avatarImage: string | null;
+            role: import(".prisma/client").$Enums.Role;
         };
     }>;
     login(loginDto: LoginDto): Promise<{
         access_token: string;
         user: {
-            id: any;
-            username: any;
-            displayName: any;
-            avatarSeed: any;
-            avatarImage: any;
-            role: any;
+            id: string;
+            username: string;
+            displayName: string;
+            avatarSeed: string;
+            avatarImage: string | null;
+            role: import(".prisma/client").$Enums.Role;
         };
     }>;
     updateProfile(userId: string, displayName?: string, avatarSeed?: string, avatarImage?: string | null): Promise<{
@@ -41,5 +41,4 @@ export declare class AuthService {
     changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{
         success: boolean;
     }>;
-    private generateToken;
 }

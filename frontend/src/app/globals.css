@@ -44,7 +44,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
   --font-sans: var(--font-open-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: var(--font-orbitron), ui-sans-serif, sans-serif;
+  --font-display: var(--font-open-sans), ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", monospace;
   --animate-slide-in: slide-in 0.22s ease-out;
 
@@ -63,192 +63,251 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================
+   LIGHT MODE - ขาวนวล (Warm Gray)
+   ============================================ */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 7%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 7%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 7%;
-  --primary: 355 74% 53%;
+  /* Background: ขาวนวลผสมเทา (มี warmth) */
+  --background: 45 8% 94%;
+  --foreground: 0 0% 18%;
+
+  /* Card: ขาวนวลผสมเทา เพื่อแยกจากพื้นหลัง */
+  --card: 45 10% 97%;
+  --card-foreground: 0 0% 18%;
+
+  --popover: 45 10% 97%;
+  --popover-foreground: 0 0% 18%;
+
+  /* Primary: แดงโทนเย็น (ดูเป็นผู้ใหญ่ เหมาะกับ Enterprise) */
+  --primary: 350 65% 48%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 13%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 38%;
-  --accent: 356 60% 94%;
-  --accent-foreground: 0 0% 9%;
-  --destructive: 0 75% 52%;
+
+  /* Secondary: เทาอ่อน */
+  --secondary: 45 8% 89%;
+  --secondary-foreground: 0 0% 22%;
+
+  /* Muted: เทา */
+  --muted: 45 8% 89%;
+  --muted-foreground: 0 0% 42%;
+
+  /* Accent: แดงอ่อน */
+  --accent: 350 15% 91%;
+  --accent-foreground: 0 0% 18%;
+
+  /* Destructive: แดงเข้ม */
+  --destructive: 0 65% 48%;
   --destructive-foreground: 0 0% 100%;
-  --warning: 28 89% 55%;
+
+  /* Semantic Colors */
+  --warning: 38 85% 52%;
   --warning-foreground: 0 0% 100%;
-  --success: 147 58% 36%;
+  --success: 142 65% 38%;
   --success-foreground: 0 0% 100%;
-  --info: 216 92% 52%;
+  --info: 210 75% 48%;
   --info-foreground: 0 0% 100%;
-  --critical: 0 75% 52%;
-  --high: 14 82% 55%;
-  --medium: 28 89% 55%;
-  --low: 147 58% 36%;
-  --border: 0 0% 87%;
-  --input: 0 0% 87%;
-  --ring: 355 74% 53%;
-  --radius: 0.8rem;
-  --sidebar-background: 0 0% 99%;
+  --critical: 0 65% 48%;
+
+  /* Status Colors */
+  --high: 0 65% 48%;
+  --medium: 38 85% 52%;
+  --low: 142 65% 38%;
+
+  /* Border & Input: เทา */
+  --border: 45 8% 80%;
+  --input: 45 8% 80%;
+  --ring: 350 65% 48%;
+
+  --radius: 0.75rem;
+
+  /* Sidebar */
+  --sidebar-background: 45 8% 95%;
   --sidebar-foreground: 0 0% 28%;
-  --sidebar-primary: 355 74% 53%;
+  --sidebar-primary: 350 65% 48%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 356 48% 96%;
-  --sidebar-accent-foreground: 0 0% 8%;
-  --sidebar-border: 0 0% 89%;
-  --sidebar-ring: 355 74% 53%;
+  --sidebar-accent: 350 12% 91%;
+  --sidebar-accent-foreground: 0 0% 20%;
+  --sidebar-border: 45 8% 83%;
+  --sidebar-ring: 350 65% 48%;
 }
 
+/* ============================================
+   DARK MODE - ปรับให้ contrast พอดี สบายตา
+   ============================================ */
 :root.dark,
 .dark {
-  --background: 0 0% 4%;
-  --foreground: 0 0% 95%;
-  --card: 0 0% 7%;
-  --card-foreground: 0 0% 95%;
-  --popover: 0 0% 8%;
-  --popover-foreground: 0 0% 95%;
-  --primary: 355 74% 53%;
+  /* Background: เทาเข้มอมดำ (ไม่ดำจัด) */
+  --background: 0 0% 8%;
+  --foreground: 0 0% 92%;
+
+  /* Card: เทาเข้ม เพื่อแยก layer */
+  --card: 0 0% 12%;
+  --card-foreground: 0 0% 92%;
+
+  --popover: 0 0% 12%;
+  --popover-foreground: 0 0% 92%;
+
+  /* Primary: แดงสดใส (แต่ไม่แสบตา) */
+  --primary: 350 65% 55%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 10%;
-  --secondary-foreground: 0 0% 92%;
-  --muted: 0 0% 10%;
-  --muted-foreground: 0 0% 68%;
-  --accent: 355 35% 14%;
-  --accent-foreground: 0 0% 96%;
-  --destructive: 0 80% 60%;
+
+  /* Secondary: เทาเข้ม */
+  --secondary: 0 0% 16%;
+  --secondary-foreground: 0 0% 90%;
+
+  /* Muted: เทาเข้ม */
+  --muted: 0 0% 16%;
+  --muted-foreground: 0 0% 60%;
+
+  /* Accent: แดงเข้ม */
+  --accent: 350 30% 20%;
+  --accent-foreground: 0 0% 90%;
+
+  /* Destructive: แดง */
+  --destructive: 0 65% 50%;
   --destructive-foreground: 0 0% 100%;
-  --warning: 28 89% 58%;
-  --warning-foreground: 0 0% 8%;
-  --success: 147 58% 42%;
-  --success-foreground: 0 0% 8%;
-  --info: 216 92% 60%;
-  --info-foreground: 0 0% 8%;
-  --critical: 0 80% 60%;
-  --high: 14 82% 61%;
-  --medium: 28 89% 58%;
-  --low: 147 58% 42%;
-  --border: 0 0% 17%;
-  --input: 0 0% 17%;
-  --ring: 355 74% 53%;
-  --sidebar-background: 0 0% 6%;
-  --sidebar-foreground: 0 0% 76%;
-  --sidebar-primary: 355 74% 53%;
+
+  /* Semantic Colors */
+  --warning: 38 92% 55%;
+  --warning-foreground: 0 0% 10%;
+  --success: 142 70% 42%;
+  --success-foreground: 0 0% 10%;
+  --info: 210 80% 52%;
+  --info-foreground: 0 0% 10%;
+  --critical: 0 65% 50%;
+
+  /* Status Colors */
+  --high: 0 65% 50%;
+  --medium: 38 92% 55%;
+  --low: 142 70% 42%;
+
+  /* Border & Input: เทา */
+  --border: 0 0% 22%;
+  --input: 0 0% 22%;
+  --ring: 350 65% 55%;
+
+  /* Sidebar */
+  --sidebar-background: 0 0% 10%;
+  --sidebar-foreground: 0 0% 75%;
+  --sidebar-primary: 350 65% 55%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 355 26% 11%;
-  --sidebar-accent-foreground: 0 0% 96%;
-  --sidebar-border: 0 0% 16%;
-  --sidebar-ring: 355 74% 53%;
+  --sidebar-accent: 350 25% 16%;
+  --sidebar-accent-foreground: 0 0% 90%;
+  --sidebar-border: 0 0% 20%;
+  --sidebar-ring: 350 65% 55%;
 }
 
 @layer components {
+
+  /* ============================================
+     SURFACE STYLES - สม่ำเสมอทั้งแอป
+     ============================================ */
   .surface-panel {
-    @apply rounded-[18px] border border-border/70 bg-card/88 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.55)] backdrop-blur-xl;
+    @apply rounded-xl border border-border bg-card shadow-sm;
   }
 
   .stat-card {
-    @apply rounded-[16px] border border-border/70 bg-card/88 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)] backdrop-blur-xl;
+    @apply rounded-xl border border-border bg-card shadow-sm;
   }
 
   .app-shell {
-    @apply mx-auto w-full max-w-[1560px];
+    @apply mx-auto w-full max-w-7xl;
   }
 
   .compact-input {
-    @apply h-8 rounded-lg text-[13px];
+    @apply h-9 rounded-lg text-sm;
   }
 
+  /* Brand Grid Pattern - ลบ gradient */
   .brand-grid {
-    background-image:
-      linear-gradient(to right, color-mix(in oklab, hsl(var(--foreground)) 6%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, hsl(var(--foreground)) 6%, transparent) 1px, transparent 1px);
-    background-size: 28px 28px;
+    background-color: hsl(var(--background));
   }
 
+  /* Sidebar Background - ลบ gradient */
   .sidebar-blend {
-    background:
-      linear-gradient(180deg, color-mix(in oklab, hsl(var(--sidebar-background)) 92%, transparent) 0%, color-mix(in oklab, hsl(var(--sidebar-background)) 86%, transparent) 100%),
-      linear-gradient(to right, color-mix(in oklab, hsl(var(--primary)) 7%, transparent) 0%, transparent 42%),
-      linear-gradient(to right, color-mix(in oklab, hsl(var(--foreground)) 6%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, hsl(var(--foreground)) 6%, transparent) 1px, transparent 1px);
-    background-size: auto, auto, 28px 28px, 28px 28px;
+    background-color: hsl(var(--sidebar-background));
   }
 
   .content-bridge {
-    background:
-      radial-gradient(circle at left center, color-mix(in oklab, hsl(var(--primary)) 10%, transparent) 0%, transparent 28%),
-      linear-gradient(to right, color-mix(in oklab, hsl(var(--sidebar-background)) 38%, transparent) 0%, transparent 18%);
+    background: transparent;
   }
 
   .app-backdrop {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, hsl(var(--primary)) 28%, transparent) 0%, transparent 36%),
-      radial-gradient(circle at bottom right, color-mix(in oklab, hsl(var(--primary)) 18%, transparent) 0%, transparent 34%),
-      linear-gradient(180deg, color-mix(in oklab, hsl(var(--background)) 92%, black 8%) 0%, hsl(var(--background)) 52%, color-mix(in oklab, hsl(var(--background)) 85%, hsl(var(--primary)) 15%) 100%);
+    background-color: hsl(var(--background));
   }
 
   .glass-card {
-    @apply rounded-[22px] border border-border/70 bg-card/84 shadow-[0_30px_120px_-45px_rgba(0,0,0,0.75)] backdrop-blur-2xl;
+    @apply rounded-2xl border border-border bg-card shadow-md;
   }
 
   .brand-chip {
-    @apply inline-flex items-center gap-2 rounded-[10px] border border-border/70 bg-card/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-muted-foreground backdrop-blur-xl;
+    @apply inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground;
   }
 
+  /* ============================================
+     PAGE LAYOUTS
+     ============================================ */
   .workspace-page {
-    @apply space-y-4 pb-8;
+    @apply space-y-4 pb-6;
   }
 
   .workspace-hero {
-    @apply rounded-[18px] border border-border/70 bg-card/88 p-4 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:p-5;
+    @apply rounded-xl border border-border bg-card p-4 shadow-sm lg:p-6;
   }
 
   .workspace-heading {
-    @apply font-display text-xl font-semibold uppercase tracking-[0.08em] text-foreground;
+    @apply font-sans text-lg font-semibold text-foreground;
   }
 
   .workspace-subtle {
-    @apply text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground;
+    @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
   }
 
+  /* ============================================
+     FORM ELEMENTS
+     ============================================ */
   .toolbar-input-wrap {
     @apply relative min-w-[280px];
   }
 
   .toolbar-input-icon {
-    @apply pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground;
+    @apply pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground;
   }
 
+  /* ============================================
+     FILTER CHIPS
+     ============================================ */
   .filter-chip {
-    @apply rounded-[10px] border border-border/70 bg-card/64 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground backdrop-blur transition-all hover:border-primary/20 hover:bg-accent hover:text-foreground;
+    @apply rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-accent hover:text-foreground;
   }
 
   .filter-chip-active {
-    @apply border-primary/20 bg-primary text-primary-foreground shadow-[0_16px_38px_-24px_color-mix(in_oklab,hsl(var(--primary))_85%,transparent)];
+    @apply border-primary bg-primary text-primary-foreground shadow-sm;
   }
 
+  /* ============================================
+     STATS & METRICS
+     ============================================ */
   .stats-grid {
-    @apply mt-3 grid grid-cols-4 gap-2.5;
+    @apply mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4;
   }
 
   .stat-tile {
-    @apply rounded-[14px] border border-border/70 bg-card/88 px-3.5 py-2.5 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)] backdrop-blur-xl;
+    @apply rounded-lg border border-border bg-card px-4 py-3 shadow-sm;
   }
 
   .stat-kicker {
-    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+    @apply text-xs font-medium uppercase tracking-wide text-muted-foreground;
   }
 
+  /* ============================================
+     TABLES
+     ============================================ */
   .table-shell {
-    @apply overflow-hidden rounded-[18px] border border-border/70 bg-card/88 shadow-[0_24px_80px_-42px_rgba(0,0,0,0.6)] backdrop-blur-xl;
+    @apply overflow-hidden rounded-xl border border-border bg-card shadow-sm;
   }
 
   .table-section-header {
-    @apply flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3;
+    @apply flex items-center justify-between gap-3 border-b border-border bg-card/50 px-4 py-3;
   }
 
   .table-frame {
@@ -256,23 +315,26 @@
   }
 
   .table-head-row {
-    @apply border-b border-border/70 bg-background/45 text-left text-[10px] uppercase tracking-[0.18em] text-muted-foreground;
+    @apply border-b border-border bg-muted/30 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground;
   }
 
   .table-row {
-    @apply border-b border-border/70 transition-colors hover:bg-accent/40 last:border-b-0;
+    @apply border-b border-border transition-colors hover:bg-muted/40 last:border-b-0;
   }
 
+  /* ============================================
+     MISC COMPONENTS
+     ============================================ */
   .metric-pair {
-    @apply flex items-start gap-3 rounded-[14px] border border-border/70 bg-background/52 px-4 py-3 backdrop-blur;
+    @apply flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3;
   }
 
   .muted-panel {
-    @apply rounded-[14px] border border-border/70 bg-background/56 backdrop-blur;
+    @apply rounded-lg border border-border bg-muted/30;
   }
 
   .icon-chip {
-    @apply flex h-10 w-10 items-center justify-center rounded-[12px] border border-border/70 bg-background/75 text-muted-foreground;
+    @apply flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground;
   }
 }
 
@@ -286,19 +348,16 @@
   }
 
   body {
-    @apply min-h-screen font-sans text-[13px] text-foreground antialiased;
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, hsl(var(--primary)) 28%, transparent) 0%, transparent 36%),
-      radial-gradient(circle at bottom right, color-mix(in oklab, hsl(var(--primary)) 18%, transparent) 0%, transparent 34%),
-      linear-gradient(180deg, color-mix(in oklab, hsl(var(--background)) 92%, black 8%) 0%, hsl(var(--background)) 52%, color-mix(in oklab, hsl(var(--background)) 85%, hsl(var(--primary)) 15%) 100%);
+    @apply min-h-screen font-sans text-sm text-foreground antialiased;
+    background-color: hsl(var(--background));
   }
 
   ::selection {
-    background: color-mix(in oklab, hsl(var(--primary)) 30%, transparent);
+    background: color-mix(in oklab, hsl(var(--primary)) 25%, transparent);
   }
 
   [data-slot="card"],
   [data-slot="dropdown-menu-content"] {
-    box-shadow: 0 24px 90px -48px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
   }
 }

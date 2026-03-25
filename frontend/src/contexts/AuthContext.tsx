@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useSyncExternalStore } from 'react';
-import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import api from '@/services/api';
 
 interface User {
     id: string;
@@ -16,9 +16,9 @@ interface User {
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (token: string, userData: User) => void;
+    login: (userData: User) => void;
     updateUser: (userData: User) => void;
-    logout: () => void;
+    logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,14 +26,13 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
     login: () => { },
     updateUser: () => { },
-    logout: () => { },
+    logout: async () => { },
 });
 
 type Listener = () => void;
 
 const listeners = new Set<Listener>();
 let cachedUserStorageValue: string | null = null;
-let cachedTokenValue: string | undefined;
 let cachedUserSnapshot: User | null = null;
 
 function emitAuthChange() {
@@ -63,30 +62,25 @@ function getClientUserSnapshot(): User | null {
         return null;
     }
 
-    const token = Cookies.get('token');
     const storedUser = window.localStorage.getItem('user');
 
-    if (!token || !storedUser) {
-        cachedTokenValue = token;
-        cachedUserStorageValue = storedUser;
+    if (!storedUser) {
+        cachedUserStorageValue = null;
         cachedUserSnapshot = null;
         return null;
     }
 
-    if (cachedTokenValue === token && cachedUserStorageValue === storedUser) {
+    if (cachedUserStorageValue === storedUser) {
         return cachedUserSnapshot;
     }
 
     try {
-        cachedTokenValue = token;
         cachedUserStorageValue = storedUser;
         cachedUserSnapshot = JSON.parse(storedUser) as User;
         return cachedUserSnapshot;
     } catch (e) {
         console.error("Failed to parse stored user", e);
-        Cookies.remove('token');
         window.localStorage.removeItem('user');
-        cachedTokenValue = undefined;
         cachedUserStorageValue = null;
         cachedUserSnapshot = null;
         return null;
@@ -111,8 +105,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const loading = !hydrated;
     const router = useRouter();
 
-    const login = (token: string, userData: User) => {
-        Cookies.set('token', token, { expires: 1 }); // 1 day
+    const login = (userData: User) => {
+        // Token is stored in HttpOnly cookie on backend
+        // Only store user data in localStorage for display purposes
         localStorage.setItem('user', JSON.stringify(userData));
         emitAuthChange();
         router.push('/dashboard');
@@ -123,11 +118,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         emitAuthChange();
     };
 
-    const logout = () => {
-        Cookies.remove('token');
-        localStorage.removeItem('user');
-        emitAuthChange();
-        router.push('/login');
+    const logout = async () => {
+        try {
+            // Call backend to clear HttpOnly cookie
+            await api.post('/auth/logout');
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            localStorage.removeItem('user');
+            emitAuthChange();
+            router.push('/login');
+        }
     };
 
     return (

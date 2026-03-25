@@ -26,31 +26,33 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        'sidebar-blend hidden min-h-screen shrink-0 border-r border-sidebar-border/60 bg-sidebar/72 backdrop-blur-xl transition-[width] duration-200 lg:flex lg:flex-col',
-        collapsed ? 'w-[88px]' : 'w-64',
+        'sidebar-blend hidden min-h-screen shrink-0 border-r border-border bg-sidebar transition-[width] duration-200 lg:flex lg:flex-col',
+        collapsed ? 'w-[84px]' : 'w-64',
       )}
+      aria-label="Main navigation"
     >
-      <div className={cn('flex min-h-[73px] items-center border-b border-sidebar-border/60', collapsed ? 'justify-center px-2' : 'px-4')}>
+      <div className={cn('flex min-h-[72px] items-center border-b border-border', collapsed ? 'justify-center px-2' : 'px-4')}>
         <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-3')}>
-          <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-[1rem] border border-primary/25 bg-[linear-gradient(180deg,hsl(var(--primary))_0%,color-mix(in_oklab,hsl(var(--primary))_55%,black_45%)_100%)] text-primary-foreground shadow-[0_16px_40px_-18px_color-mix(in_oklab,hsl(var(--primary))_60%,transparent)]">
-            <div className="absolute inset-[1px] rounded-[0.95rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.28),transparent_55%)]" />
-            <Shield className="relative h-[16px] w-[16px]" />
+          <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-primary/30 bg-primary text-primary-foreground shadow-sm"
+            aria-label="AssetOps logo">
+            <div className="absolute inset-[1px] rounded-md bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.2),transparent_55%)]" />
+            <Shield className="relative h-4 w-4" />
           </div>
           {!collapsed ? (
             <div className="min-w-0">
-              <p className="font-display text-base font-semibold uppercase tracking-[0.18em] text-foreground">AssetOps</p>
+              <p className="font-sans text-base font-semibold text-foreground">AssetOps</p>
             </div>
           ) : null}
         </div>
       </div>
 
-      <nav className={cn('flex-1 py-4', collapsed ? 'px-2' : 'px-3')}>
-        <div className={cn('mb-3', collapsed ? 'px-0 text-center' : 'px-2')}>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+      <nav className={cn('flex-1 py-4', collapsed ? 'px-2' : 'px-3')} role="navigation" aria-label="Main navigation menu">
+        <div className={cn('mb-3 px-2')}>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {collapsed ? 'Nav' : 'Workspace'}
           </p>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" role="menubar">
           {visibleNavItems.map((item) => {
             const active =
               item.url === '/dashboard' ? currentPath === '/dashboard' : currentPath.startsWith(item.url);
@@ -61,20 +63,22 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
                 href={item.url}
                 end={item.url === '/dashboard'}
                 title={item.title}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'group flex rounded-[14px] border border-transparent text-[12px] text-sidebar-foreground transition-all duration-200',
-                  'hover:border-primary/10 hover:bg-sidebar-accent/78 hover:text-sidebar-accent-foreground',
-                  collapsed ? 'justify-center px-2 py-2.5' : 'items-center gap-3 px-3 py-2.5',
+                  'group flex rounded-lg border border-transparent text-sm text-sidebar-foreground transition-all duration-200',
+                  'hover:border-primary/20 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                  collapsed ? 'justify-center px-2 py-2' : 'items-center gap-3 px-3 py-2',
                 )}
-                activeClassName="border-primary/15 bg-sidebar-accent/86 text-sidebar-accent-foreground shadow-[0_14px_36px_-24px_color-mix(in_oklab,hsl(var(--primary))_38%,transparent)]"
+                activeClassName="border-primary/30 bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
               >
                 <div
                   className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground transition-all',
-                    active && 'border-primary/20 bg-primary text-primary-foreground shadow-[0_16px_34px_-22px_color-mix(in_oklab,hsl(var(--primary))_80%,transparent)]',
+                    'flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition-all',
+                    active && 'border-primary/30 bg-primary text-primary-foreground shadow-sm',
                   )}
+                  aria-hidden="true"
                 >
-                  <item.icon className="h-3.5 w-3.5" />
+                  <item.icon className="h-4 w-4" />
                 </div>
                 {!collapsed ? <span>{item.title}</span> : null}
               </NavLink>

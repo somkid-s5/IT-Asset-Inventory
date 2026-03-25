@@ -57,7 +57,17 @@ export class AuthService {
             },
         });
 
-        return this.generateToken(user);
+        return {
+            access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
+                role: user.role,
+            },
+        };
     }
 
     async login(loginDto: LoginDto) {
@@ -77,7 +87,17 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        return this.generateToken(user);
+        return {
+            access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
+                role: user.role,
+            },
+        };
     }
 
     async updateProfile(userId: string, displayName?: string, avatarSeed?: string, avatarImage?: string | null) {
@@ -140,20 +160,5 @@ export class AuthService {
         });
 
         return { success: true };
-    }
-
-    private generateToken(user: any) {
-        const payload = { sub: user.id, username: user.username, role: user.role };
-        return {
-            access_token: this.jwtService.sign(payload),
-            user: {
-                id: user.id,
-                username: user.username,
-                displayName: user.displayName,
-                avatarSeed: user.avatarSeed,
-                avatarImage: user.avatarImage,
-                role: user.role,
-            },
-        };
     }
 }

@@ -49,13 +49,13 @@ const crypto = __importStar(require("crypto"));
 let CredentialsService = class CredentialsService {
     prisma;
     algorithm = 'aes-256-gcm';
-    secretKey = process.env.ENCRYPTION_KEY || '12345678123456781234567812345678';
+    secretKey = process.env.CREDENTIAL_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
     constructor(prisma) {
         this.prisma = prisma;
     }
     encrypt(text) {
         const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv(this.algorithm, Buffer.from(this.secretKey), iv);
+        const cipher = crypto.createCipheriv(this.algorithm, this.getKeyBuffer(), iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
         const authTag = cipher.getAuthTag().toString('hex');
@@ -63,7 +63,7 @@ let CredentialsService = class CredentialsService {
     }
     decrypt(text) {
         const [ivHex, encryptedHex, authTagHex] = text.split(':');
-        const decipher = crypto.createDecipheriv(this.algorithm, Buffer.from(this.secretKey), Buffer.from(ivHex, 'hex'));
+        const decipher = crypto.createDecipheriv(this.algorithm, this.getKeyBuffer(), Buffer.from(ivHex, 'hex'));
         decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
         let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
@@ -127,6 +127,12 @@ let CredentialsService = class CredentialsService {
         return this.prisma.credential.delete({
             where: { id },
         });
+    }
+    getKeyBuffer() {
+        if (/^[0-9a-fA-F]{64}$/.test(this.secretKey)) {
+            return Buffer.from(this.secretKey, 'hex');
+        }
+        return Buffer.from(this.secretKey);
     }
 };
 exports.CredentialsService = CredentialsService;
