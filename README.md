@@ -67,9 +67,11 @@ npm install
 Create `backend/.env`:
 
 ```env
-DATABASE_URL="postgresql://assetops:securepassword123@localhost:5432/assetops_db?schema=public"
-JWT_SECRET="change-me"
+DATABASE_URL="postgresql://assetops:ChangeMe%23Postgres2026!@localhost:5432/assetops_db?schema=public"
+JWT_SECRET="ChangeMe-JWT-Secret-2026-Long-Random-Value"
 CREDENTIAL_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+DEFAULT_ADMIN_PASSWORD="ChangeMe#Admin2026!"
+DEFAULT_EDITOR_PASSWORD="ChangeMe#Editor2026!"
 PORT=3001
 ```
 
@@ -108,7 +110,9 @@ Backend API runs at [http://localhost:3001/api](http://localhost:3001/api)
 Seeded default account:
 
 - Username: `admin`
-- Password: `admin123`
+- Password: `ChangeMe#Admin2026!`
+
+Change the seeded default passwords in `backend/.env` before using the app outside local setup.
 
 Self-register is disabled. New users are created by an admin from the Users page.
 

@@ -91,7 +91,17 @@ let AuthService = class AuthService {
                 }),
             },
         });
-        return this.generateToken(user);
+        return {
+            access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
+                role: user.role,
+            },
+        };
     }
     async login(loginDto) {
         const { username, password } = loginDto;
@@ -105,7 +115,17 @@ let AuthService = class AuthService {
         if (!isPasswordValid) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        return this.generateToken(user);
+        return {
+            access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
+                role: user.role,
+            },
+        };
     }
     async updateProfile(userId, displayName, avatarSeed, avatarImage) {
         if (avatarImage && !avatarImage.startsWith('data:image/')) {
@@ -157,20 +177,6 @@ let AuthService = class AuthService {
             },
         });
         return { success: true };
-    }
-    generateToken(user) {
-        const payload = { sub: user.id, username: user.username, role: user.role };
-        return {
-            access_token: this.jwtService.sign(payload),
-            user: {
-                id: user.id,
-                username: user.username,
-                displayName: user.displayName,
-                avatarSeed: user.avatarSeed,
-                avatarImage: user.avatarImage,
-                role: user.role,
-            },
-        };
     }
 };
 exports.AuthService = AuthService;

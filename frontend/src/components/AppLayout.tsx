@@ -40,13 +40,15 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar collapsed={sidebarCollapsed} />
 
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-border/50 bg-background/38 px-4 py-3 backdrop-blur-2xl sm:px-5 lg:px-6">
+          <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 py-3 sm:px-5 lg:px-6">
             <div className="app-shell flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
                   onClick={toggleSidebar}
-                  className="hidden rounded-2xl border border-border/70 bg-card/70 p-2.5 text-muted-foreground shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] backdrop-blur transition-all hover:border-primary/20 hover:text-foreground lg:inline-flex"
+                  aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  aria-expanded={!sidebarCollapsed}
+                  className="hidden rounded-lg border border-border bg-card p-2 text-muted-foreground shadow-sm transition-all hover:border-primary/30 hover:bg-accent hover:text-foreground lg:inline-flex"
                   title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                   <PanelLeft className="h-4 w-4" />
@@ -63,7 +65,8 @@ export function AppLayout({ children }: AppLayoutProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="rounded-2xl border border-border/70 bg-card/70 p-2.5 text-muted-foreground shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] backdrop-blur transition-all hover:border-primary/20 hover:text-foreground"
+                  aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                  className="rounded-lg border border-border bg-card p-2 text-muted-foreground shadow-sm transition-all hover:border-primary/30 hover:bg-accent hover:text-foreground"
                   title="Toggle theme"
                 >
                   {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -71,7 +74,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card/72 px-2.5 py-1.5 text-left shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] backdrop-blur transition-all hover:border-primary/20 hover:bg-accent/40">
+                    <button className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 text-left shadow-sm transition-all hover:border-primary/30 hover:bg-accent/50">
                       <UserAvatar
                         seed={user?.avatarSeed}
                         imageUrl={user?.avatarImage}
@@ -84,8 +87,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 border-border/70 bg-popover/95 backdrop-blur-2xl">
-                      <DropdownMenuLabel className="space-y-1">
+                  <DropdownMenuContent align="end" className="w-56 border-border bg-popover">
+                    <DropdownMenuLabel className="space-y-1">
                       <div className="text-sm font-medium text-foreground">{user?.displayName ?? 'Account'}</div>
                       <div className="text-[11px] text-muted-foreground">@{user?.username ?? 'user'} - {user?.role ?? 'USER'}</div>
                     </DropdownMenuLabel>
@@ -103,7 +106,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </header>
 
-          <main className="relative flex-1 px-4 pb-6 pt-4 sm:px-5 lg:px-6">
+          <main id="main-content" className="relative flex-1 px-4 pb-6 pt-4 sm:px-5 lg:px-6" tabIndex={-1}>
             <div className="app-shell">{children}</div>
           </main>
         </div>

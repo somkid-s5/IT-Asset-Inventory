@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,7 +16,7 @@ import {
   Server,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { VmFormDialog } from '@/components/VmFormDialog';
+import { VmFormDialog } from '@/components/LazyLoadedDialogs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -315,11 +317,11 @@ export default function VmPage() {
                     className={cn(
                       'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
                       tab.key === 'ACTIVE' &&
-                        'bg-emerald-500/15 text-emerald-300',
+                      'bg-emerald-500/15 text-emerald-300',
                       tab.key === 'PENDING' &&
-                        'bg-amber-500/15 text-amber-300',
+                      'bg-amber-500/15 text-amber-300',
                       tab.key === 'ORPHANED' &&
-                        'bg-rose-500/15 text-rose-300',
+                      'bg-rose-500/15 text-rose-300',
                     )}
                   >
                     {tab.count}

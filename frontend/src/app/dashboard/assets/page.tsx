@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
-import { AssetFormDialog } from '@/components/AssetFormDialog';
+import { AssetFormDialog } from '@/components/LazyLoadedDialogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -188,9 +188,9 @@ export default function AssetsPage() {
     } catch (error: unknown) {
       const message =
         typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+          error !== null &&
+          'response' in error &&
+          typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
           ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
           : 'Failed to delete asset';
 
@@ -302,16 +302,16 @@ export default function AssetsPage() {
 
   return (
     <>
-    <div className="workspace-page">
-      <section className="workspace-hero">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <p className="workspace-subtle">Hardware Inventory</p>
-            <h2 className="workspace-heading mt-2">Assets</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{assets.length} total records across infrastructure hardware.</p>
-          </div>
+      <div className="workspace-page">
+        <section className="workspace-hero">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <p className="workspace-subtle">Hardware Inventory</p>
+              <h2 className="workspace-heading mt-2">Assets</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{assets.length} total records across infrastructure hardware.</p>
+            </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="toolbar-input-wrap">
                 <Search className="toolbar-input-icon" />
                 <Input
@@ -340,11 +340,10 @@ export default function AssetsPage() {
               <button
                 key={tab.value}
                 onClick={() => setActiveTab(tab.value)}
-                className={`filter-chip ${
-                  activeTab === tab.value
-                    ? 'filter-chip-active'
-                    : ''
-                }`}
+                className={`filter-chip ${activeTab === tab.value
+                  ? 'filter-chip-active'
+                  : ''
+                  }`}
               >
                 {tab.label}
               </button>

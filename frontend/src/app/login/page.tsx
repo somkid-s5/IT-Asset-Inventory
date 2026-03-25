@@ -10,6 +10,9 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema, type LoginFormData } from '@/hooks/useFormValidation';
 
 function getErrorMessage(error: unknown) {
   if (
@@ -27,9 +30,15 @@ function getErrorMessage(error: unknown) {
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading, login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -37,13 +46,13 @@ export default function LoginPage() {
     }
   }, [authLoading, router, user]);
 
-  const handleLogin = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleLogin = async (data: LoginFormData) => {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login', { username, password });
-      login(response.data.access_token, response.data.user);
+      const response = await api.post('/auth/login', data);
+      // Token is stored in HttpOnly cookie, only pass user data to context
+      login(response.data.user);
       toast.success('Signed in successfully');
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
@@ -57,43 +66,42 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="brand-grid min-h-screen px-4 py-6 md:px-6 md:py-8">
-      <div className="glass-card mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl overflow-hidden">
-        <div className="relative hidden w-[47%] flex-col justify-between border-r border-border/70 bg-[linear-gradient(180deg,color-mix(in_oklab,hsl(var(--primary))_48%,black_52%)_0%,color-mix(in_oklab,hsl(var(--background))_75%,black_25%)_100%)] p-8 text-white lg:flex">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(223,37,49,0.22),transparent_42%)]" />
+    <div className="min-h-screen bg-background px-4 py-6 md:px-6 md:py-8">
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+        <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-primary p-8 text-white lg:flex">
 
           <div>
             <BrandMark tone="inverse" className="relative z-10" />
             <div className="relative z-10 mt-10">
-              <p className="brand-chip border-white/12 bg-white/8 text-white/60">Secure Operations</p>
-              <h1 className="mt-5 max-w-md font-display text-4xl font-semibold uppercase leading-tight tracking-[0.08em] text-white">
+              <p className="brand-chip border-white/20 bg-white/10 text-white/80">Secure Operations</p>
+              <h1 className="mt-5 max-w-md font-sans text-3xl font-semibold leading-tight text-white">
                 Keep asset control sharp and unified.
               </h1>
-              <p className="mt-4 max-w-sm text-sm leading-6 text-white/72">
+              <p className="mt-4 max-w-sm text-sm leading-6 text-white/80">
                 Sign in to manage infrastructure assets, access records, and operational inventory in one shared workspace.
               </p>
             </div>
           </div>
 
           <div className="relative z-10 space-y-4">
-            <div className="rounded-[28px] border border-white/10 bg-white/6 p-5 backdrop-blur-xl">
-              <div className="text-[11px] uppercase tracking-[0.22em] text-white/56">Operations Workspace</div>
+            <div className="rounded-xl border border-white/20 bg-white/10 p-5">
+              <div className="text-xs font-medium uppercase tracking-wide text-white/70">Operations Workspace</div>
               <div className="mt-3 text-sm font-medium text-white">Assets, VM, and DB stay aligned in one internal system.</div>
             </div>
 
-            <div className="rounded-[24px] border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-xl">
+            <div className="rounded-xl border border-white/20 bg-black/20 px-4 py-3">
               <div className="flex items-center gap-3">
-                <Sparkles className="h-4 w-4 text-primary" />
+                <Sparkles className="h-4 w-4 text-white" />
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/72">Live Inventory</div>
-                  <div className="mt-1 text-sm text-white/58">A cleaner control layer for hardware, VM, and database records.</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-white/70">Live Inventory</div>
+                  <div className="mt-1 text-sm text-white/80">A cleaner control layer for hardware, VM, and database records.</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="relative flex flex-1 items-center justify-center bg-card/48 p-6 sm:p-8 lg:p-10">
+        <div className="relative flex flex-1 items-center justify-center bg-background p-6 sm:p-8 lg:p-10">
           <div className="w-full max-w-md">
             <div className="lg:hidden">
               <BrandMark />
@@ -101,21 +109,27 @@ export default function LoginPage() {
 
             <div className="mt-6">
               <p className="brand-chip">Sign In</p>
-              <h2 className="mt-5 font-display text-3xl font-semibold uppercase tracking-[0.08em] text-foreground">Welcome back</h2>
+              <h2 className="mt-5 font-sans text-2xl font-semibold text-foreground">Welcome back</h2>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">Use your assigned account to continue into the asset workspace.</p>
             </div>
 
-            <form onSubmit={handleLogin} className="mt-8 space-y-5">
+            <form onSubmit={handleSubmit(handleLogin)} className="mt-8 space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
                   autoComplete="username"
                   placeholder="Enter your username"
-                  required
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
+                  disabled={loading}
+                  {...register('username')}
+                  aria-invalid={!!errors.username}
+                  aria-describedby={errors.username ? 'username-error' : undefined}
                 />
+                {errors.username && (
+                  <p id="username-error" className="text-xs text-destructive" role="alert">
+                    {errors.username.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -125,10 +139,16 @@ export default function LoginPage() {
                   type="password"
                   autoComplete="current-password"
                   placeholder="Enter your password"
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  disabled={loading}
+                  {...register('password')}
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
                 />
+                {errors.password && (
+                  <p id="password-error" className="text-xs text-destructive" role="alert">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
               <Button type="submit" className="h-12 w-full" disabled={loading}>

@@ -25,11 +25,24 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    register(registerDto) {
-        return this.authService.register(registerDto);
+    async register(registerDto, res) {
+        const result = await this.authService.register(registerDto);
+        this.setAuthCookie(res, result.access_token);
+        return { user: result.user };
     }
-    login(loginDto) {
-        return this.authService.login(loginDto);
+    async login(loginDto, res) {
+        const result = await this.authService.login(loginDto);
+        this.setAuthCookie(res, result.access_token);
+        return { user: result.user };
+    }
+    setAuthCookie(res, token) {
+        res.cookie('access_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000,
+            path: '/',
+        });
     }
     changePassword(changePasswordDto, req) {
         return this.authService.changePassword(req.user.id, changePasswordDto.currentPassword, changePasswordDto.newPassword);
@@ -37,22 +50,33 @@ let AuthController = class AuthController {
     updateProfile(updateProfileDto, req) {
         return this.authService.updateProfile(req.user.id, updateProfileDto.displayName, updateProfileDto.avatarSeed, updateProfileDto.avatarImage);
     }
+    logout(res) {
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/',
+        });
+        return { success: true };
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('register'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [register_dto_1.RegisterDto, Object]),
+    __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
 __decorate([
     (0, common_1.Post)('login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
+    __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
     (0, common_1.Patch)('change-password'),
@@ -72,6 +96,14 @@ __decorate([
     __metadata("design:paramtypes", [update_profile_dto_1.UpdateProfileDto, Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "updateProfile", null);
+__decorate([
+    (0, common_1.Post)('logout'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Res)({ passthrough: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "logout", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('api/auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

@@ -7,14 +7,15 @@ import * as crypto from 'crypto';
 @Injectable()
 export class CredentialsService {
     private readonly algorithm = 'aes-256-gcm';
-    // Use a secure 32-byte key from env in production!
-    private readonly secretKey = process.env.ENCRYPTION_KEY || '12345678123456781234567812345678';
+    // Prefer the standardized hex-based key, but keep backward compatibility.
+    private readonly secretKey =
+        process.env.CREDENTIAL_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
     constructor(private prisma: PrismaService) { }
 
     public encrypt(text: string): string {
         const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv(this.algorithm, Buffer.from(this.secretKey), iv);
+        const cipher = crypto.createCipheriv(this.algorithm, this.getKeyBuffer(), iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
         const authTag = cipher.getAuthTag().toString('hex');
@@ -25,7 +26,7 @@ export class CredentialsService {
         const [ivHex, encryptedHex, authTagHex] = text.split(':');
         const decipher = crypto.createDecipheriv(
             this.algorithm,
-            Buffer.from(this.secretKey),
+            this.getKeyBuffer(),
             Buffer.from(ivHex, 'hex'),
         );
         decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
@@ -106,5 +107,13 @@ export class CredentialsService {
         return this.prisma.credential.delete({
             where: { id },
         });
+    }
+
+    private getKeyBuffer(): Buffer {
+        if (/^[0-9a-fA-F]{64}$/.test(this.secretKey)) {
+            return Buffer.from(this.secretKey, 'hex');
+        }
+
+        return Buffer.from(this.secretKey);
     }
 }

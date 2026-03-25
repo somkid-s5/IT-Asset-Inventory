@@ -1,5 +1,4 @@
 import axios from 'axios';
-import Cookies from 'js-cookie';
 
 const getBaseUrl = () => {
     if (process.env.NEXT_PUBLIC_API_URL) {
@@ -16,29 +15,52 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true, // Send cookies with requests
 });
 
-api.interceptors.request.use((config) => {
-    const token = Cookies.get('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
+// Retry logic with exponential backoff
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            Cookies.remove('token');
+    async (error) => {
+        const config = error.config;
+
+        // Don't retry on 401/403 errors (auth issues)
+        if (error.response?.status === 401 || error.response?.status === 403) {
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('user');
                 if (window.location.pathname !== '/login') {
                     window.location.href = '/login';
                 }
             }
+            return Promise.reject(error);
         }
-        return Promise.reject(error);
+
+        // Don't retry if method is not in retryMethods
+        const retryMethods = ['get', 'put', 'patch', 'delete'];
+        if (!config.method || !retryMethods.includes(config.method)) {
+            return Promise.reject(error);
+        }
+
+        // Check if we have retries left
+        config.retryCount = config.retryCount || 0;
+        if (config.retryCount >= MAX_RETRIES) {
+            return Promise.reject(error);
+        }
+
+        // Increment retry count
+        config.retryCount += 1;
+
+        // Calculate delay with exponential backoff
+        const delay = RETRY_DELAY * Math.pow(2, config.retryCount - 1);
+
+        // Wait before retrying
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        // Retry the request
+        return api(config);
     }
 );
 

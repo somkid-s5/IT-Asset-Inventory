@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -7,28 +8,27 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
-    register(registerDto: RegisterDto): Promise<{
-        access_token: string;
+    register(registerDto: RegisterDto, res: Response): Promise<{
         user: {
-            id: any;
-            username: any;
-            displayName: any;
-            avatarSeed: any;
-            avatarImage: any;
-            role: any;
+            id: string;
+            username: string;
+            displayName: string;
+            avatarSeed: string;
+            avatarImage: string | null;
+            role: import(".prisma/client").$Enums.Role;
         };
     }>;
-    login(loginDto: LoginDto): Promise<{
-        access_token: string;
+    login(loginDto: LoginDto, res: Response): Promise<{
         user: {
-            id: any;
-            username: any;
-            displayName: any;
-            avatarSeed: any;
-            avatarImage: any;
-            role: any;
+            id: string;
+            username: string;
+            displayName: string;
+            avatarSeed: string;
+            avatarImage: string | null;
+            role: import(".prisma/client").$Enums.Role;
         };
     }>;
+    private setAuthCookie;
     changePassword(changePasswordDto: ChangePasswordDto, req: Request & {
         user: {
             id: string;
@@ -50,4 +50,7 @@ export declare class AuthController {
             role: import(".prisma/client").$Enums.Role;
         };
     }>;
+    logout(res: Response): {
+        success: boolean;
+    };
 }

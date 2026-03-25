@@ -10,7 +10,7 @@ import { VmFormDialog } from '@/components/VmFormDialog';
 import { VM_CRITICALITY_OPTIONS, type VmDiscoveryItem } from '@/lib/vm-inventory';
 import { archiveVmDiscovery, getVmDiscovery, promoteVmDiscovery } from '@/services/vm';
 
-function getPlacementResolutionCopy(resolution?: string, scope: 'host' | 'cluster') {
+function getPlacementResolutionCopy(resolution: string | undefined, scope: 'host' | 'cluster') {
   if (resolution === 'DIRECT_VM') {
     return `Exact per-VM ${scope} from vCenter`;
   }

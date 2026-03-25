@@ -12,9 +12,11 @@ docker-compose -f docker-compose.prod.yml up -d postgres
 #### ขั้นตอนที่ 2: ตั้งค่า Environment (.env) สำหรับ Backend
 สร้างไฟล์ `.env` ไว้ในโฟลเดอร์ `backend/` (สามารถคัดลอกไฟล์จาก `.env.example` ก็ได้) โดยใส่ข้อมูลดังนี้:
 ```env
-DATABASE_URL="postgresql://infrapilot:securepassword123@localhost:5432/infrapilot_db?schema=public"
-JWT_SECRET="super-secret-jwt-key-change-me-in-prod"
-ENCRYPTION_KEY="12345678123456781234567812345678"
+DATABASE_URL="postgresql://infrapilot:ChangeMe%23Postgres2026!@localhost:5432/infrapilot_db?schema=public"
+JWT_SECRET="ChangeMe-JWT-Secret-2026-Long-Random-Value"
+CREDENTIAL_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+DEFAULT_ADMIN_PASSWORD="ChangeMe#Admin2026!"
+DEFAULT_EDITOR_PASSWORD="ChangeMe#Editor2026!"
 PORT=3001
 ```
 

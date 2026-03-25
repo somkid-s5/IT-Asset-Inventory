@@ -58,4 +58,5 @@ export declare class CredentialsService {
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
+    private getKeyBuffer;
 }

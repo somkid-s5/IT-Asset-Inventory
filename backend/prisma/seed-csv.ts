@@ -1,15 +1,22 @@
 import { PrismaClient, AssetType } from '@prisma/client';
 import * as fs from 'fs';
 import { parse } from 'csv-parse/sync';
+import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
 const algorithm = 'aes-256-gcm';
-const secretKey = process.env.ENCRYPTION_KEY || '12345678123456781234567812345678';
+const secretKey =
+    process.env.CREDENTIAL_ENCRYPTION_KEY ||
+    process.env.ENCRYPTION_KEY ||
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 function encrypt(text: string): string {
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(algorithm, Buffer.from(secretKey), iv);
+    const keyBuffer = /^[0-9a-fA-F]{64}$/.test(secretKey)
+        ? Buffer.from(secretKey, 'hex')
+        : Buffer.from(secretKey);
+    const cipher = crypto.createCipheriv(algorithm, keyBuffer, iv);
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag().toString('hex');
@@ -18,16 +25,18 @@ function encrypt(text: string): string {
 
 async function main() {
     console.log('Starting Extended CSV Migration...');
+    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'ChangeMe#Admin2026!';
 
     let ownerUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
     if (!ownerUser) {
+        const passwordHash = await bcrypt.hash(defaultAdminPassword, 10);
         ownerUser = await prisma.user.create({
             data: {
                 username: 'admin',
                 displayName: 'Infra Admin',
                 avatarSeed: crypto.randomBytes(8).toString('hex'),
                 email: 'admin@infrapilot.local',
-                passwordHash: '$2b$10$8P.mIvz.pAnrl5w1ekwz8eY983MH3vkmYA336qgT0Fbf1dz8SP1Si',
+                passwordHash,
                 role: 'ADMIN',
             }
         });
