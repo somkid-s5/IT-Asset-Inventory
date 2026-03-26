@@ -278,6 +278,16 @@ export default function AssetDetailsPage() {
 
       <section className="workspace-hero">
         <div className="flex flex-col gap-4">
+          <div className="page-breadcrumb">
+            <span>Workspace</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>Infrastructure</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>Assets</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>{asset.name}</span>
+          </div>
+
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <div className="flex items-start gap-3">
@@ -306,19 +316,10 @@ export default function AssetDetailsPage() {
               </div>
             </div>
 
-            <div className="stats-grid sm:grid-cols-3">
-              <div className="stat-tile">
-                <div className="stat-kicker">Interfaces</div>
-                <div className="mt-1 text-sm font-semibold text-foreground">{accessRows.length}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="stat-kicker">IP Addresses</div>
-                <div className="mt-1 text-sm font-semibold text-foreground">{asset.ipAllocations?.length ?? 0}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="stat-kicker">Credentials</div>
-                <div className="mt-1 text-sm font-semibold text-foreground">{asset.credentials?.length ?? 0}</div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <div className="brand-chip">Interfaces <span className="font-medium normal-case tracking-normal text-foreground">{accessRows.length}</span></div>
+              <div className="brand-chip">IPs <span className="font-medium normal-case tracking-normal text-foreground">{asset.ipAllocations?.length ?? 0}</span></div>
+              <div className="brand-chip">Credentials <span className="font-medium normal-case tracking-normal text-foreground">{asset.credentials?.length ?? 0}</span></div>
             </div>
           </div>
 

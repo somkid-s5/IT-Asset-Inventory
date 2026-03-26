@@ -197,6 +197,16 @@ export default function DatabaseDetailPage() {
 
       <section className="workspace-hero">
         <div className="flex flex-col gap-4">
+          <div className="page-breadcrumb">
+            <span>Workspace</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>Data Layer</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>Databases</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>{database.name}</span>
+          </div>
+
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-3">
@@ -217,25 +227,10 @@ export default function DatabaseDetailPage() {
               </div>
             </div>
 
-            <div className="stats-grid lg:grid-cols-3">
-              <div className="stat-tile">
-                <div className="stat-kicker">Accounts</div>
-                <div className="mt-1 text-base font-semibold text-foreground">
-                  {databaseStats.accounts}
-                </div>
-              </div>
-              <div className="stat-tile">
-                <div className="stat-kicker">App IPs</div>
-                <div className="mt-1 text-base font-semibold text-foreground">
-                  {databaseStats.appIps}
-                </div>
-              </div>
-              <div className="stat-tile">
-                <div className="stat-kicker">Service Name</div>
-                <div className="mt-1 text-sm font-semibold text-foreground">
-                  {database.serviceName || "--"}
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <div className="brand-chip">Accounts <span className="font-medium normal-case tracking-normal text-foreground">{databaseStats.accounts}</span></div>
+              <div className="brand-chip">App IPs <span className="font-medium normal-case tracking-normal text-foreground">{databaseStats.appIps}</span></div>
+              <div className="brand-chip">Service <span className="font-medium normal-case tracking-normal text-foreground">{database.serviceName || "--"}</span></div>
             </div>
           </div>
 

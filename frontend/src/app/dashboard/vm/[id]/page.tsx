@@ -261,6 +261,16 @@ export default function VmDetailPage() {
 
       <section className="workspace-hero">
         <div className="flex flex-col gap-6">
+          <div className="page-breadcrumb">
+            <span>Workspace</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>Compute</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>VM Inventory</span>
+            <span className="page-breadcrumb-separator">/</span>
+            <span>{vm.name}</span>
+          </div>
+
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 flex-1 space-y-3">
               <div className="space-y-2">

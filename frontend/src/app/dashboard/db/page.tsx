@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowDown, ArrowUp, ChevronsUpDown, Database, LoaderCircle, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, ChevronsUpDown, Database, LoaderCircle, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DatabaseFormDialog } from '@/components/LazyLoadedDialogs';
@@ -139,69 +139,81 @@ export default function DbPage() {
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <p className="workspace-subtle">Data Layer</p>
-            <h2 className="workspace-heading mt-2">Database Inventory</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Compact database overview. Open a record to inspect full connection and account details.</p>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="toolbar-input-wrap">
-              <Search className="toolbar-input-icon" />
-              <Input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search database, host, IP, or user"
-                className="pl-10"
-              />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="page-breadcrumb">
+                <span>Workspace</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>Data Layer</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>Databases</span>
+              </div>
+              <p className="workspace-subtle mt-3">Data Layer</p>
+              <h2 className="workspace-heading mt-1.5">Database Inventory</h2>
+              <p className="mt-2 text-[13px] text-muted-foreground">Compact database overview. Open a record to inspect full connection and account details.</p>
             </div>
 
-            <Button size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add Database
-            </Button>
-          </div>
-        </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="toolbar-input-wrap">
+                <Search className="toolbar-input-icon" />
+                <Input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search database, host, IP, or user"
+                  className="pl-10"
+                />
+              </div>
 
-        <div className="stats-grid">
-          <div className="stat-tile">
-            <div className="stat-kicker">Databases</div>
-            <div className="mt-2 text-lg font-semibold text-foreground">{stats.databases}</div>
+              <Button size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Add Database
+              </Button>
+            </div>
           </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Database Accounts</div>
-            <div className="mt-2 text-lg font-semibold text-foreground">{stats.accounts}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Production DB</div>
-            <div className="mt-2 text-lg font-semibold text-foreground">{stats.production}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Engines</div>
-            <div className="mt-2 text-lg font-semibold text-foreground">{stats.engines}</div>
-          </div>
-        </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {ENVIRONMENT_FILTERS.map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setActiveEnvironment(filter.value)}
-              className={`filter-chip ${activeEnvironment === filter.value
-                ? 'filter-chip-active'
-                : ''
-                }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-          <div className="ml-auto text-[11px] text-muted-foreground">{filteredDatabases.length} shown</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {ENVIRONMENT_FILTERS.map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setActiveEnvironment(filter.value)}
+                className={`filter-chip ${activeEnvironment === filter.value
+                  ? 'filter-chip-active'
+                  : ''
+                  }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+            <div className="ml-auto inline-flex items-center gap-2 rounded-full border border-border/80 bg-background px-3 py-1.5 text-[10px] text-muted-foreground">
+              Visible rows
+              <span className="font-semibold text-foreground">{filteredDatabases.length}</span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">Databases <span className="font-semibold text-foreground">{stats.databases}</span></span>
+              <span className="inline-flex items-center gap-1.5">Accounts <span className="font-semibold text-foreground">{stats.accounts}</span></span>
+              <span className="inline-flex items-center gap-1.5">Production <span className="font-semibold text-foreground">{stats.production}</span></span>
+              <span className="inline-flex items-center gap-1.5">Engines <span className="font-semibold text-foreground">{stats.engines}</span></span>
+            </div>
+          </div>
         </div>
       </section>
 
       <section className="table-shell">
+        <div className="toolbar-strip">
+          <div>
+            <h3 className="app-panel-title">Database Register</h3>
+            <p className="app-panel-copy">Tracked engines, environments, hosts, and linked account coverage.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')}>
+            Dashboard
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
         <div className="overflow-x-auto">
           <table className="table-frame min-w-[900px]">
             <thead>
@@ -282,7 +294,7 @@ export default function DbPage() {
                     <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.engine}</td>
                     <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.version || '--'}</td>
                     <td className="px-2 py-2.5">
-                      <span className="inline-flex rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+                      <span className={`data-label ${database.environment === 'PROD' ? 'data-label-danger' : database.environment === 'UAT' ? 'data-label-warning' : 'data-label-neutral'}`}>
                         {database.environment}
                       </span>
                     </td>
@@ -293,14 +305,14 @@ export default function DbPage() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => void handleEdit(database.id)}
-                          className="rounded-lg border border-border/70 bg-card/70 px-1.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                          className="rounded-lg border border-border/70 bg-card px-1.5 py-1.5 text-muted-foreground opacity-100 transition-all hover:border-primary/20 hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
                         >
                           {loadingEditId === database.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
                         </button>
                         <button
                           onClick={() => setDeleteTarget(database)}
                           disabled={deleteLoading && deleteTarget?.id === database.id}
-                          className="rounded-lg border border-border/70 bg-card/70 px-1.5 py-1.5 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                          className="rounded-lg border border-border/70 bg-card px-1.5 py-1.5 text-muted-foreground opacity-100 transition-all hover:border-destructive/20 hover:text-destructive disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
                         >
                           {deleteLoading && deleteTarget?.id === database.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                         </button>

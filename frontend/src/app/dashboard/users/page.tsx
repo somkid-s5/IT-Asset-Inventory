@@ -194,36 +194,35 @@ export default function UsersPage() {
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <p className="workspace-subtle">Access Control</p>
-            <h2 className="workspace-heading">User Accounts</h2>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Create workspace accounts, assign roles, and keep at least one admin active in the system.
-            </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <div className="page-breadcrumb">
+                <span>Workspace</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>Access Control</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>Users</span>
+              </div>
+              <p className="workspace-subtle mt-3">Access Control</p>
+              <h2 className="workspace-heading">User Accounts</h2>
+              <p className="max-w-2xl text-[13px] leading-6 text-muted-foreground">
+                Create workspace accounts, assign roles, and keep at least one admin active in the system.
+              </p>
+            </div>
+            <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Create user
+            </Button>
           </div>
-          <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Create user
-          </Button>
-        </div>
 
-        <div className="stats-grid">
-          <div className="stat-tile">
-            <div className="stat-kicker">Total Users</div>
-            <div className="mt-2 text-lg font-semibold text-foreground">{stats.total}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Admins</div>
-            <div className="mt-2 text-lg font-semibold text-foreground">{stats.admins}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Editors</div>
-            <div className="mt-2 text-lg font-semibold text-foreground">{stats.editors}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Viewers</div>
-            <div className="mt-2 text-lg font-semibold text-foreground">{stats.viewers}</div>
+          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">Total <span className="font-semibold text-foreground">{stats.total}</span></span>
+              <span className="inline-flex items-center gap-1.5">Admins <span className="font-semibold text-foreground">{stats.admins}</span></span>
+              <span className="inline-flex items-center gap-1.5">Editors <span className="font-semibold text-foreground">{stats.editors}</span></span>
+              <span className="inline-flex items-center gap-1.5">Viewers <span className="font-semibold text-foreground">{stats.viewers}</span></span>
+            </div>
           </div>
         </div>
       </section>
@@ -233,8 +232,8 @@ export default function UsersPage() {
           <div className="table-section-header">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Workspace Users</h3>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">Manage who can view, edit, or administer the system.</p>
+                <h3 className="app-panel-title">Workspace Users</h3>
+                <p className="app-panel-copy">Manage who can view, edit, or administer the system.</p>
               </div>
             </div>
           </div>

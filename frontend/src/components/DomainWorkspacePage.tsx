@@ -49,23 +49,27 @@ export function DomainWorkspacePage({
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl space-y-2">
-            <p className="workspace-subtle">{eyebrow}</p>
-            <h2 className="workspace-heading">{title}</h2>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl space-y-2">
+              <p className="workspace-subtle">{eyebrow}</p>
+              <h2 className="workspace-heading">{title}</h2>
+              <p className="max-w-2xl text-[13px] leading-6 text-muted-foreground">{description}</p>
+            </div>
+
+            {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
           </div>
 
-          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-        </div>
-
-        <div className="stats-grid sm:grid-cols-3">
-          {stats.map((item) => (
-            <div key={item.label} className="stat-tile">
-              <div className="stat-kicker">{item.label}</div>
-              <div className="mt-2 text-lg font-semibold text-foreground">{item.value}</div>
+          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
+              {stats.map((item) => (
+                <span key={item.label} className="inline-flex items-center gap-1.5">
+                  <span>{item.label}</span>
+                  <span className="font-semibold text-foreground">{item.value}</span>
+                </span>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
@@ -74,10 +78,10 @@ export function DomainWorkspacePage({
           <div className="table-section-header">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Inventory Overview</h3>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{footerHint}</p>
+                <h3 className="app-panel-title">Inventory Overview</h3>
+                <p className="app-panel-copy">{footerHint}</p>
               </div>
-              <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/65 px-3 py-1.5 text-[11px] text-muted-foreground">
+              <div className="brand-chip">
                 Ready for API model
                 <ArrowUpRight className="h-3 w-3" />
               </div>

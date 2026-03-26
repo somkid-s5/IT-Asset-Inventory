@@ -226,12 +226,19 @@ export default function VmPage() {
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-4 min-[1080px]:flex-row min-[1080px]:items-start min-[1080px]:justify-between">
             <div className="min-w-0 space-y-2">
-              <p className="workspace-subtle">Virtual Machines</p>
+              <div className="page-breadcrumb">
+                <span>Workspace</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>Compute</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>VM Inventory</span>
+              </div>
+              <p className="workspace-subtle mt-3">Virtual Machines</p>
               <h2 className="workspace-heading">Compute Inventory</h2>
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+              <p className="max-w-3xl text-[13px] leading-6 text-muted-foreground">
                 Manage discovered VMs, complete missing metadata, and keep active records aligned with vCenter sync results.
               </p>
             </div>
@@ -263,6 +270,14 @@ export default function VmPage() {
             </div>
           </div>
 
+          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">Active <span className="font-semibold text-foreground">{inventoryStats.active}</span></span>
+              <span className="inline-flex items-center gap-1.5">Pending <span className="font-semibold text-foreground">{inventoryStats.pending}</span></span>
+              <span className="inline-flex items-center gap-1.5">Orphaned <span className="font-semibold text-foreground">{inventoryStats.orphaned}</span></span>
+              <span className="inline-flex items-center gap-1.5">Sources <span className="font-semibold text-foreground">{inventoryStats.sources}</span></span>
+            </div>
+          </div>
         </div>
       </section>
 

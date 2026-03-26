@@ -228,12 +228,19 @@ export default function VmSourcesPage() {
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <p className="workspace-subtle">Compute Sync Settings</p>
+              <div className="page-breadcrumb">
+                <span>Workspace</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>Compute</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>vCenter Sources</span>
+              </div>
+              <p className="workspace-subtle mt-3">Compute Sync Settings</p>
               <h2 className="workspace-heading">vCenter Sources</h2>
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+              <p className="max-w-3xl text-[13px] leading-6 text-muted-foreground">
                 Manage source connections, trigger discovery syncs, and review what enters the VM promotion queue before it becomes active inventory.
               </p>
             </div>
@@ -271,6 +278,14 @@ export default function VmSourcesPage() {
             </div>
           </div>
 
+          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">Connected <span className="font-semibold text-foreground">{sources.length}</span></span>
+              <span className="inline-flex items-center gap-1.5">Healthy <span className="font-semibold text-foreground">{sources.filter((source) => source.status === 'Healthy').length}</span></span>
+              <span className="inline-flex items-center gap-1.5">Attention <span className="font-semibold text-foreground">{sources.filter((source) => source.status !== 'Healthy').length}</span></span>
+            </div>
+          </div>
+
           {syncingAll || syncingSourceIds.length > 0 ? (
             <div className="inline-flex w-fit items-center gap-2 rounded-[12px] border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-[11px] font-medium text-sky-200">
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -287,8 +302,8 @@ export default function VmSourcesPage() {
       <section className="table-shell">
         <div className="table-section-header">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Source Control</h3>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
+            <h3 className="app-panel-title">Source Control</h3>
+            <p className="app-panel-copy">
               Track connection health, VM coverage, and trigger syncs without leaving the page.
             </p>
           </div>
