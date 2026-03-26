@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Database, LoaderCircle, RefreshCw, Server, ShieldCheck, Users, Waypoints } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Database, RefreshCw, Server, ShieldCheck, Users, Waypoints } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import api from '@/services/api';
@@ -182,6 +182,41 @@ export default function DashboardPage() {
     return items;
   }, [data]);
 
+  const healthSegments = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    const totalValue = Math.max(
+      data.assets.total + data.vm.activeInventory + data.databases.total,
+      1,
+    );
+
+    return [
+      {
+        id: 'assets',
+        label: 'Assets',
+        value: data.assets.active,
+        className: 'bg-[linear-gradient(90deg,#14b8a6,#10b981)]',
+      },
+      {
+        id: 'pending',
+        label: 'Pending VM setup',
+        value: data.vm.pendingSetup,
+        className: 'bg-[linear-gradient(90deg,#f59e0b,#fbbf24)]',
+      },
+      {
+        id: 'risk',
+        label: 'Orphaned or failed',
+        value: data.vm.orphaned + data.vm.connectionFailedSources,
+        className: 'bg-[linear-gradient(90deg,#f43f5e,#e11d48)]',
+      },
+    ].map((segment) => ({
+      ...segment,
+      width: `${Math.max((segment.value / totalValue) * 100, segment.value > 0 ? 8 : 0)}%`,
+    }));
+  }, [data]);
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -217,59 +252,125 @@ export default function DashboardPage() {
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 max-w-3xl">
-            <p className="workspace-subtle">Operations Overview</p>
-            <h2 className="workspace-heading mt-2">Infrastructure Dashboard</h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Real-time summary of assets, VM inventory, databases, and user access based on the live records inside AssetOps.
-            </p>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 max-w-3xl">
+              <div className="page-breadcrumb">
+                <span>Workspace</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>Overview</span>
+              </div>
+              <p className="workspace-subtle mt-3">Operations Overview</p>
+              <h2 className="workspace-heading mt-1.5">Infrastructure Dashboard</h2>
+              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground">
+                Real-time summary of assets, VM inventory, databases, and user access across the live operational workspace.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-start gap-1.5 lg:items-end">
+              <div className="brand-chip">
+                Latest VM sync
+                <span className="font-medium normal-case tracking-normal text-foreground">{formatSyncTime(data.vm.latestSyncAt)}</span>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setLoading(true);
+                  void loadDashboard();
+                }}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh Dashboard
+              </Button>
+            </div>
           </div>
 
-          <div className="flex flex-col items-start gap-2 lg:items-end">
-            <div className="text-[11px] text-muted-foreground">Latest VM sync: {formatSyncTime(data.vm.latestSyncAt)}</div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setLoading(true);
-                void loadDashboard();
-              }}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Dashboard
-            </Button>
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.75fr)]">
+            <div className="rounded-xl border border-border/80 bg-muted/35 p-3.5">
+              <div className="flex flex-col gap-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="workspace-subtle">Portfolio Health</p>
+                    <h3 className="mt-1.5 text-base font-semibold tracking-[-0.03em] text-foreground">Coverage and operational mix</h3>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-muted-foreground">Tracked records</div>
+                    <div className="mt-0.5 text-[1.35rem] font-semibold tracking-[-0.04em] text-foreground">
+                      {data.assets.total + data.vm.activeInventory + data.databases.total}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex h-2.5 overflow-hidden rounded-full bg-background">
+                    {healthSegments.map((segment) => (
+                      <div key={segment.id} className={segment.className} style={{ width: segment.width }} />
+                    ))}
+                  </div>
+                  <div className="mt-2.5 grid gap-1.5 sm:grid-cols-3">
+                    {healthSegments.map((segment) => (
+                      <div key={segment.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className={`h-2 w-2 rounded-full ${segment.className}`} />
+                        <span>{segment.label}</span>
+                        <span className="font-semibold text-foreground">{segment.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/80 bg-background/70 p-3.5">
+              <p className="workspace-subtle">Workspace Summary</p>
+              <div className="mt-3 space-y-2.5">
+                <div className="metric-pair">
+                  <Server className="mt-0.5 h-4 w-4 text-primary" />
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-foreground">{data.assets.active} assets in active service</div>
+                    <div className="app-panel-copy">Inactive inventory remains visible but separated from operational assets.</div>
+                  </div>
+                </div>
+                <div className="metric-pair">
+                  <Waypoints className="mt-0.5 h-4 w-4 text-primary" />
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-foreground">{data.vm.readyToSyncSources} VM sources ready to sync</div>
+                    <div className="app-panel-copy">Keep source sync fresh to reduce orphaned records and setup backlog.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="stats-grid sm:grid-cols-2 xl:grid-cols-4">
           <div className="stat-tile">
             <div className="stat-kicker">Assets</div>
-            <div className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Server className="h-4 w-4 text-muted-foreground" />
+            <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
+              <Server className="h-4 w-4 text-primary" />
               {data.assets.total}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">{data.assets.active} active</div>
           </div>
           <div className="stat-tile">
             <div className="stat-kicker">Active VM</div>
-            <div className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Waypoints className="h-4 w-4 text-muted-foreground" />
+            <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
+              <Waypoints className="h-4 w-4 text-primary" />
               {data.vm.activeInventory}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">{data.vm.pendingSetup} pending setup</div>
           </div>
           <div className="stat-tile">
             <div className="stat-kicker">Databases</div>
-            <div className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Database className="h-4 w-4 text-muted-foreground" />
+            <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
+              <Database className="h-4 w-4 text-primary" />
               {data.databases.total}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">{data.databases.production} production</div>
           </div>
           <div className="stat-tile">
             <div className="stat-kicker">Users</div>
-            <div className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
+              <Users className="h-4 w-4 text-primary" />
               {data.users.total}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">{data.users.admins} admin accounts</div>
@@ -281,9 +382,13 @@ export default function DashboardPage() {
         <div className="table-shell">
           <div className="table-section-header">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Inventory Summary</h3>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Operational overview of the core modules in this system</p>
+              <h3 className="app-panel-title">Inventory Summary</h3>
+              <p className="app-panel-copy">Operational overview of the core modules in this workspace</p>
             </div>
+            <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/assets')}>
+              Open Asset Register
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
           </div>
 
           <div className="overflow-x-auto">
@@ -315,11 +420,11 @@ export default function DashboardPage() {
                 ) : (
                   summaryRows.map((row) => (
                     <tr key={row.id} className="table-row">
-                      <td className="px-3 py-3 text-[12px] font-medium text-foreground">{row.module}</td>
-                      <td className="px-3 py-3 font-mono text-[12px] text-foreground">{row.records}</td>
-                      <td className="px-3 py-3 text-[12px] text-muted-foreground">{row.status}</td>
+                      <td className="px-4 py-4 text-[12px] font-medium text-foreground">{row.module}</td>
+                      <td className="px-4 py-4 font-mono text-[12px] text-foreground">{row.records}</td>
+                      <td className="px-4 py-4 text-[12px] text-muted-foreground">{row.status}</td>
                       <td className="px-3 py-3 text-[12px] text-muted-foreground">{row.detail}</td>
-                      <td className="px-3 py-3 text-right">
+                      <td className="px-4 py-4 text-right">
                         <Button variant="outline" size="sm" onClick={() => router.push(row.route)}>
                           {row.actionLabel}
                         </Button>
@@ -334,7 +439,7 @@ export default function DashboardPage() {
 
         <div className="space-y-4">
           <div className="surface-panel p-4">
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">Needs Attention</h3>
+            <h3 className="app-panel-title">Needs Attention</h3>
             <div className="mt-3 space-y-2">
               {attentionItems.map((item) => (
                 <button
@@ -354,7 +459,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="surface-panel p-4">
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">VM Source Health</h3>
+            <h3 className="app-panel-title">VM Source Health</h3>
             <div className="mt-3 space-y-2">
               <div className="muted-panel flex items-center justify-between gap-3 px-3 py-3 text-xs">
                 <span className="inline-flex items-center gap-2 text-muted-foreground">
