@@ -79,7 +79,7 @@
   --popover-foreground: 0 0% 18%;
 
   /* Primary: แดงโทนเย็น (ดูเป็นผู้ใหญ่ เหมาะกับ Enterprise) */
-  --primary: 350 65% 48%;
+  --primary: 2 78% 42%;
   --primary-foreground: 0 0% 100%;
 
   /* Secondary: เทาอ่อน */
@@ -91,11 +91,11 @@
   --muted-foreground: 0 0% 42%;
 
   /* Accent: แดงอ่อน */
-  --accent: 350 15% 91%;
+  --accent: 4 38% 89%;
   --accent-foreground: 0 0% 18%;
 
   /* Destructive: แดงเข้ม */
-  --destructive: 0 65% 48%;
+  --destructive: 2 80% 43%;
   --destructive-foreground: 0 0% 100%;
 
   /* Semantic Colors */
@@ -115,19 +115,19 @@
   /* Border & Input: เทา */
   --border: 45 8% 80%;
   --input: 45 8% 80%;
-  --ring: 350 65% 48%;
+  --ring: 2 78% 42%;
 
   --radius: 0.75rem;
 
   /* Sidebar */
   --sidebar-background: 45 8% 95%;
   --sidebar-foreground: 0 0% 28%;
-  --sidebar-primary: 350 65% 48%;
+  --sidebar-primary: 2 78% 42%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 350 12% 91%;
+  --sidebar-accent: 4 30% 90%;
   --sidebar-accent-foreground: 0 0% 20%;
   --sidebar-border: 45 8% 83%;
-  --sidebar-ring: 350 65% 48%;
+  --sidebar-ring: 2 78% 42%;
 }
 
 /* ============================================
@@ -147,23 +147,24 @@
   --popover-foreground: 0 0% 92%;
 
   /* Primary: แดงสดใส (แต่ไม่แสบตา) */
-  --primary: 350 65% 55%;
+  --primary: 2 82% 56%;
   --primary-foreground: 0 0% 100%;
 
   /* Secondary: เทาเข้ม */
   --secondary: 0 0% 16%;
   --secondary-foreground: 0 0% 90%;
 
-  /* Muted: เทาเข้ม */
+  /* Muted: เทาเข้ม - ปรับ contrast ให้สูงขึ้น */
   --muted: 0 0% 16%;
-  --muted-foreground: 0 0% 60%;
+  --muted-foreground: 0 0% 68%;
+  /* เพิ่มจาก 60% เป็น 68% สำหรับ WCAG AA */
 
   /* Accent: แดงเข้ม */
-  --accent: 350 30% 20%;
+  --accent: 3 38% 17%;
   --accent-foreground: 0 0% 90%;
 
   /* Destructive: แดง */
-  --destructive: 0 65% 50%;
+  --destructive: 2 82% 54%;
   --destructive-foreground: 0 0% 100%;
 
   /* Semantic Colors */
@@ -180,20 +181,24 @@
   --medium: 38 92% 55%;
   --low: 142 70% 42%;
 
-  /* Border & Input: เทา */
-  --border: 0 0% 22%;
-  --input: 0 0% 22%;
-  --ring: 350 65% 55%;
+  /* Border & Input: เทา - ปรับ contrast */
+  --border: 0 0% 26%;
+  /* เพิ่มจาก 22% */
+  --input: 0 0% 26%;
+  /* เพิ่มจาก 22% */
+  --ring: 2 82% 56%;
 
   /* Sidebar */
   --sidebar-background: 0 0% 10%;
-  --sidebar-foreground: 0 0% 75%;
-  --sidebar-primary: 350 65% 55%;
+  --sidebar-foreground: 0 0% 78%;
+  /* เพิ่มจาก 75% */
+  --sidebar-primary: 2 82% 56%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 350 25% 16%;
+  --sidebar-accent: 3 34% 15%;
   --sidebar-accent-foreground: 0 0% 90%;
-  --sidebar-border: 0 0% 20%;
-  --sidebar-ring: 350 65% 55%;
+  --sidebar-border: 0 0% 24%;
+  /* เพิ่มจาก 20% */
+  --sidebar-ring: 2 82% 56%;
 }
 
 @layer components {

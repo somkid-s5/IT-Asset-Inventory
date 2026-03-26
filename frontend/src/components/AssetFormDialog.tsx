@@ -13,6 +13,29 @@ import { toast } from 'sonner';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
+interface FormErrors {
+  name?: string;
+  assetId?: string;
+  rack?: string;
+  location?: string;
+  brandModel?: string;
+  sn?: string;
+  accessPoints?: Record<number, {
+    type?: string;
+    manageType?: string;
+    address?: string;
+    version?: string;
+    users?: Record<number, {
+      username?: string;
+      password?: string;
+    }>;
+  }>;
+  metadata?: Record<number, {
+    key?: string;
+    value?: string;
+  }>;
+}
+
 interface AccessUserFormValue {
   username: string;
   password: string;
@@ -136,6 +159,8 @@ export function AssetFormDialog({
   const [metadataPairs, setMetadataPairs] = useState<MetadataPair[]>([]);
   const [assetMode, setAssetMode] = useState<'single' | 'multi'>('single');
   const [nodeLabels, setNodeLabels] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!open) {
@@ -148,6 +173,8 @@ export function AssetFormDialog({
       setMetadataPairs([]);
       setAssetMode('single');
       setNodeLabels([]);
+      setFormErrors({});
+      setTouchedFields({});
       return;
     }
 
@@ -224,9 +251,9 @@ export function AssetFormDialog({
     setAccessPoints(
       groupedMap.size > 0
         ? Array.from(groupedMap.values()).map((item) => ({
-            ...item,
-            users: item.users.length > 0 ? item.users : [{ ...EMPTY_USER }],
-          }))
+          ...item,
+          users: item.users.length > 0 ? item.users : [{ ...EMPTY_USER }],
+        }))
         : [{ ...EMPTY_ACCESS_POINT }],
     );
 
@@ -244,9 +271,9 @@ export function AssetFormDialog({
     setMetadataPairs(
       assetToEdit.customMetadata
         ? Object.entries(assetToEdit.customMetadata).map(([key, value]) => ({
-            key,
-            value: String(value),
-          }))
+          key,
+          value: String(value),
+        }))
         : [],
     );
   }, [assetToEdit, open]);
@@ -273,11 +300,11 @@ export function AssetFormDialog({
       current.map((item, itemIndex) =>
         itemIndex === accessIndex
           ? {
-              ...item,
-              users: item.users.map((user, currentUserIndex) =>
-                currentUserIndex === userIndex ? { ...user, [field]: value } : user,
-              ),
-            }
+            ...item,
+            users: item.users.map((user, currentUserIndex) =>
+              currentUserIndex === userIndex ? { ...user, [field]: value } : user,
+            ),
+          }
           : item,
       ),
     );
@@ -289,8 +316,108 @@ export function AssetFormDialog({
     );
   };
 
+  const handleFieldBlur = (fieldName: string) => {
+    setTouchedFields((prev) => ({ ...prev, [fieldName]: true }));
+    validateField(fieldName);
+  };
+
+  const validateField = (fieldName: string) => {
+    setFormErrors((prev) => {
+      const newErrors = { ...prev };
+
+      if (fieldName === 'name') {
+        if (!formData.name.trim()) {
+          newErrors.name = 'Asset name is required';
+        } else if (formData.name.length < 3) {
+          newErrors.name = 'Asset name must be at least 3 characters';
+        } else {
+          delete newErrors.name;
+        }
+      }
+
+      if (fieldName === 'assetId') {
+        if (formData.assetId && !/^[A-Z0-9_-]+$/i.test(formData.assetId)) {
+          newErrors.assetId = 'Asset ID must be alphanumeric (letters, numbers, hyphens, underscores)';
+        } else {
+          delete newErrors.assetId;
+        }
+      }
+
+      if (fieldName === 'sn') {
+        if (formData.sn && formData.sn.length > 50) {
+          newErrors.sn = 'Serial number must be less than 50 characters';
+        } else {
+          delete newErrors.sn;
+        }
+      }
+
+      return newErrors;
+    });
+  };
+
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+
+    // Validate required fields
+    if (!formData.name.trim()) {
+      errors.name = 'Asset name is required';
+    } else if (formData.name.length < 3) {
+      errors.name = 'Asset name must be at least 3 characters';
+    }
+
+    // Validate Asset ID format
+    if (formData.assetId && !/^[A-Z0-9_-]+$/i.test(formData.assetId)) {
+      errors.assetId = 'Asset ID must be alphanumeric';
+    }
+
+    // Validate Serial Number length
+    if (formData.sn && formData.sn.length > 50) {
+      errors.sn = 'Serial number must be less than 50 characters';
+    }
+
+    // Validate IP addresses format
+    const ipErrors: Record<number, { address?: string }> = {};
+    accessPoints.forEach((point, index) => {
+      if (point.address.trim()) {
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipRegex.test(point.address.trim())) {
+          ipErrors[index] = { address: 'Invalid IP address format' };
+        } else {
+          // Validate each octet is 0-255
+          const octets = point.address.trim().split('.').map(Number);
+          if (octets.some((octet) => octet < 0 || octet > 255)) {
+            ipErrors[index] = { address: 'Each octet must be between 0 and 255' };
+          }
+        }
+      }
+    });
+
+    if (Object.keys(ipErrors).length > 0) {
+      errors.accessPoints = ipErrors as Record<number, { address?: string }>;
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+
+    // Validate all fields
+    setTouchedFields({
+      name: true,
+      assetId: true,
+      rack: true,
+      location: true,
+      brandModel: true,
+      sn: true,
+    });
+
+    if (!validateForm()) {
+      toast.error('Please fix the form errors before submitting');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -349,9 +476,9 @@ export function AssetFormDialog({
     } catch (error: unknown) {
       const message =
         typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+          error !== null &&
+          'response' in error &&
+          typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
           ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
           : 'Failed to save asset';
 
@@ -427,8 +554,13 @@ export function AssetFormDialog({
                     autoComplete="off"
                     value={formData.name}
                     onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+                    onBlur={() => handleFieldBlur('name')}
                     placeholder="Enter asset name"
+                    className={formErrors.name && touchedFields.name ? 'border-destructive focus-visible:ring-destructive' : undefined}
                   />
+                  {formErrors.name && touchedFields.name && (
+                    <p className="text-[11px] text-destructive">{formErrors.name}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Asset ID</Label>
@@ -436,8 +568,13 @@ export function AssetFormDialog({
                     autoComplete="off"
                     value={formData.assetId}
                     onChange={(event) => setFormData({ ...formData, assetId: event.target.value })}
+                    onBlur={() => handleFieldBlur('assetId')}
                     placeholder="Enter asset ID"
+                    className={formErrors.assetId && touchedFields.assetId ? 'border-destructive focus-visible:ring-destructive' : undefined}
                   />
+                  {formErrors.assetId && touchedFields.assetId && (
+                    <p className="text-[11px] text-destructive">{formErrors.assetId}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Type</Label>
@@ -469,8 +606,13 @@ export function AssetFormDialog({
                     autoComplete="off"
                     value={formData.sn}
                     onChange={(event) => setFormData({ ...formData, sn: event.target.value })}
+                    onBlur={() => handleFieldBlur('sn')}
                     placeholder="Enter serial number"
+                    className={formErrors.sn && touchedFields.sn ? 'border-destructive focus-visible:ring-destructive' : undefined}
                   />
+                  {formErrors.sn && touchedFields.sn && (
+                    <p className="text-[11px] text-destructive">{formErrors.sn}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -636,7 +778,11 @@ export function AssetFormDialog({
                         value={point.address}
                         onChange={(event) => updateAccessPoint(index, 'address', event.target.value)}
                         placeholder="Enter IP address"
+                        className={formErrors.accessPoints?.[index]?.address ? 'border-destructive focus-visible:ring-destructive' : undefined}
                       />
+                      {formErrors.accessPoints?.[index]?.address && (
+                        <p className="text-[11px] text-destructive">{formErrors.accessPoints[index].address}</p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label>Version / Firmware</Label>
@@ -699,12 +845,12 @@ export function AssetFormDialog({
                                 current.map((item, itemIndex) =>
                                   itemIndex === index
                                     ? {
-                                        ...item,
-                                        users:
-                                          item.users.length > 1
-                                            ? item.users.filter((_, currentUserIndex) => currentUserIndex !== userIndex)
-                                            : [{ ...EMPTY_USER }],
-                                      }
+                                      ...item,
+                                      users:
+                                        item.users.length > 1
+                                          ? item.users.filter((_, currentUserIndex) => currentUserIndex !== userIndex)
+                                          : [{ ...EMPTY_USER }],
+                                    }
                                     : item,
                                 ),
                               )

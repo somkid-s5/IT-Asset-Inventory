@@ -18,12 +18,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    // Lazy initialization: อ่าน localStorage แค่ครั้งเดียวตอน component mount
     if (typeof window === 'undefined') {
       return false;
     }
 
-    return window.localStorage.getItem('assetops.sidebar.collapsed') === 'true';
+    try {
+      return window.localStorage.getItem('assetops.sidebar.collapsed') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   const toggleSidebar = () => {

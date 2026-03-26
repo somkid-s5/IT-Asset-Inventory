@@ -4,13 +4,14 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2, Box } from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
 import { AssetFormDialog } from '@/components/LazyLoadedDialogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AssetsTableSkeleton } from '@/components/Skeletons';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -82,8 +83,6 @@ export default function AssetsPage() {
   const [assetPendingDelete, setAssetPendingDelete] = useState<Asset | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('assetId');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
   const deferredSearch = useDeferredValue(searchTerm);
 
   async function loadAssets() {
@@ -113,10 +112,6 @@ export default function AssetsPage() {
 
     return matchesSearch && (activeTab === 'ALL' || asset.type === activeTab);
   });
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [deferredSearch, activeTab, sortKey, sortDirection, pageSize]);
 
   const compareAssets = useCallback((left: Asset, right: Asset) => {
     const leftValue = (left[sortKey] ?? '').toString().toLowerCase();
@@ -152,9 +147,6 @@ export default function AssetsPage() {
 
     return sortAssetTree(baseAssets);
   }, [filteredAssets, deferredSearch, activeTab, sortAssetTree]);
-
-  const totalPages = Math.max(1, Math.ceil(topLevelAssets.length / pageSize));
-  const pagedAssets = topLevelAssets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const openCreateDialog = () => {
     setEditingAsset(undefined);
@@ -302,198 +294,197 @@ export default function AssetsPage() {
 
   return (
     <>
-      <div className="workspace-page">
-        <section className="workspace-hero">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <p className="workspace-subtle">Hardware Inventory</p>
-              <h2 className="workspace-heading mt-2">Assets</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{assets.length} total records across infrastructure hardware.</p>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="toolbar-input-wrap">
-                <Search className="toolbar-input-icon" />
-                <Input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search assets"
-                  className="pl-10"
-                />
+      {loading ? (
+        <AssetsTableSkeleton />
+      ) : (
+        <div className="workspace-page">
+          <section className="workspace-hero">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <p className="workspace-subtle">Hardware Inventory</p>
+                <h2 className="workspace-heading mt-2">Assets</h2>
+                <p className="mt-2 text-sm text-muted-foreground">{assets.length} total records across infrastructure hardware.</p>
               </div>
 
-              {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
-                <Button
-                  onClick={openCreateDialog}
-                  size="lg"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Asset
-                </Button>
-              )}
-            </div>
-          </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="toolbar-input-wrap">
+                  <Search className="toolbar-input-icon" />
+                  <Input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search assets"
+                    className="pl-10"
+                  />
+                </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => setActiveTab(tab.value)}
-                className={`filter-chip ${activeTab === tab.value
-                  ? 'filter-chip-active'
-                  : ''
-                  }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-            <div className="ml-auto text-[11px] text-muted-foreground">{topLevelAssets.length} shown</div>
-          </div>
-        </section>
-
-        <section className="table-shell">
-          <div className="overflow-x-auto">
-            <table className="table-frame min-w-[860px]">
-              <thead>
-                <tr className="table-head-row">
-                  <th className="px-3 py-3 font-medium">
-                    <button onClick={() => toggleSort('assetId')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Asset ID
-                      {renderSortIcon('assetId')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-3 font-medium">
-                    <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Asset Name
-                      {renderSortIcon('name')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-3 font-medium">
-                    <button onClick={() => toggleSort('type')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Type
-                      {renderSortIcon('type')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-3 font-medium">
-                    <button onClick={() => toggleSort('rack')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Rack
-                      {renderSortIcon('rack')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-3 font-medium">
-                    <button onClick={() => toggleSort('brandModel')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Brand / Model
-                      {renderSortIcon('brandModel')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-3 font-medium">
-                    <button onClick={() => toggleSort('sn')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      SN
-                      {renderSortIcon('sn')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
-                      <div className="flex flex-col items-center gap-2">
-                        <LoaderCircle className="h-4 w-4 animate-spin text-foreground" />
-                        <span className="text-sm">Loading assets...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : topLevelAssets.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                      No assets matched your filters.
-                    </td>
-                  </tr>
-                ) : (
-                  pagedAssets.map((asset) => renderAssetRow(asset))
+                {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+                  <Button
+                    onClick={openCreateDialog}
+                    size="lg"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Asset
+                  </Button>
                 )}
-              </tbody>
-            </table>
-          </div>
-
-          {!loading && topLevelAssets.length > 0 && (
-            <div className="flex flex-col gap-3 border-t border-border/70 px-4 py-3 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <span>Rows per page</span>
-                <select
-                  value={pageSize}
-                  onChange={(event) => setPageSize(Number(event.target.value))}
-                  className="h-9 rounded-2xl border border-border/70 bg-background/70 px-3 text-xs text-foreground outline-none"
-                >
-                  {[10, 20, 50].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-                <span>
-                  {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, topLevelAssets.length)} of {topLevelAssets.length}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((current) => Math.max(1, current - 1))}
-                  disabled={currentPage === 1}
-                  className="inline-flex h-9 items-center gap-1 rounded-2xl border border-border/70 bg-background/70 px-3 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  Previous
-                </button>
-                <span>
-                  Page {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage((current) => Math.min(totalPages, current + 1))}
-                  disabled={currentPage === totalPages}
-                  className="inline-flex h-9 items-center gap-1 rounded-2xl border border-border/70 bg-background/70 px-3 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
-                >
-                  Next
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
               </div>
             </div>
-          )}
-        </section>
 
-        <AssetFormDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          assetToEdit={editingAsset}
-          onSuccess={loadAssets}
-          availableParents={assets.map((asset) => ({ id: asset.id, name: asset.name, type: asset.type }))}
-        />
-      </div>
-
-      <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
-        <DialogContent className="max-w-md bg-card p-0">
-          <DialogHeader className="border-b border-border/70 px-5 py-4">
-            <DialogTitle className="text-base">Delete asset</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 px-5 py-5">
-            <p className="text-sm text-muted-foreground">
-              Delete <span className="font-medium text-foreground">{assetPendingDelete?.name}</span> and all linked access data?
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setAssetPendingDelete(null)} disabled={!!deletingId}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={() => void confirmDeleteAsset()} disabled={!!deletingId}>
-                {deletingId ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Delete
-              </Button>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setActiveTab(tab.value)}
+                  className={`filter-chip ${activeTab === tab.value
+                    ? 'filter-chip-active'
+                    : ''
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              <div className="ml-auto text-[11px] text-muted-foreground">{topLevelAssets.length} shown</div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </section>
+
+          <section className="table-shell">
+            <div className="max-h-[600px] overflow-auto">
+              <table className="table-frame min-w-[860px]">
+                <thead>
+                  <tr className="table-head-row">
+                    <th className="px-3 py-3 font-medium">
+                      <button onClick={() => toggleSort('assetId')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        Asset ID
+                        {renderSortIcon('assetId')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-3 font-medium">
+                      <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        Asset Name
+                        {renderSortIcon('name')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-3 font-medium">
+                      <button onClick={() => toggleSort('type')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        Type
+                        {renderSortIcon('type')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-3 font-medium">
+                      <button onClick={() => toggleSort('rack')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        Rack
+                        {renderSortIcon('rack')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-3 font-medium">
+                      <button onClick={() => toggleSort('brandModel')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        Brand / Model
+                        {renderSortIcon('brandModel')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-3 font-medium">
+                      <button onClick={() => toggleSort('sn')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        SN
+                        {renderSortIcon('sn')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2">
+                          <LoaderCircle className="h-4 w-4 animate-spin text-foreground" />
+                          <span className="text-sm">Loading assets...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : topLevelAssets.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12">
+                        <div className="flex flex-col items-center justify-center text-center">
+                          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-border/70 bg-muted/50">
+                            <Box className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                          {searchTerm || activeTab !== 'ALL' ? (
+                            <>
+                              <h3 className="text-base font-semibold text-foreground">No assets found</h3>
+                              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                                No assets matched your current filters. Try adjusting your search or filter criteria.
+                              </p>
+                              <Button
+                                variant="outline"
+                                className="mt-4"
+                                onClick={() => {
+                                  setSearchTerm('');
+                                  setActiveTab('ALL');
+                                }}
+                              >
+                                Clear Filters
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <h3 className="text-base font-semibold text-foreground">No assets yet</h3>
+                              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                                Get started by adding your first infrastructure asset to the inventory.
+                              </p>
+                              {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+                                <Button onClick={openCreateDialog} className="mt-4">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add Your First Asset
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : topLevelAssets.map((asset) => renderAssetRow(asset))}
+                </tbody>
+              </table>
+            </div>
+
+            {!loading && topLevelAssets.length > 0 && (
+              <div className="border-t border-border/70 px-4 py-3 text-[11px] text-muted-foreground">
+                Showing {topLevelAssets.length} of {filteredAssets.length} matching assets
+              </div>
+            )}
+          </section>
+
+          <AssetFormDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            assetToEdit={editingAsset}
+            onSuccess={loadAssets}
+            availableParents={assets.map((asset) => ({ id: asset.id, name: asset.name, type: asset.type }))}
+          />
+
+          <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
+            <DialogContent className="max-w-md bg-card p-0">
+              <DialogHeader className="border-b border-border/70 px-5 py-4">
+                <DialogTitle className="text-base">Delete asset</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 px-5 py-5">
+                <p className="text-sm text-muted-foreground">
+                  Delete <span className="font-medium text-foreground">{assetPendingDelete?.name}</span> and all linked access data?
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setAssetPendingDelete(null)} disabled={!!deletingId}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={() => void confirmDeleteAsset()} disabled={!!deletingId}>
+                    {deletingId ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
     </>
   );
 }
