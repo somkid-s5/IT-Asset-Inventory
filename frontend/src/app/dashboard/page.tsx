@@ -252,7 +252,7 @@ export default function DashboardPage() {
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 max-w-3xl">
               <div className="page-breadcrumb">
@@ -285,95 +285,40 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.75fr)]">
-            <div className="rounded-xl border border-border/80 bg-muted/35 p-3.5">
-              <div className="flex flex-col gap-3.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="workspace-subtle">Portfolio Health</p>
-                    <h3 className="mt-1.5 text-base font-semibold tracking-[-0.03em] text-foreground">Coverage and operational mix</h3>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-muted-foreground">Tracked records</div>
-                    <div className="mt-0.5 text-[1.35rem] font-semibold tracking-[-0.04em] text-foreground">
-                      {data.assets.total + data.vm.activeInventory + data.databases.total}
+          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-3">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+              <div>
+                <div className="flex h-2 overflow-hidden rounded-full bg-background">
+                  {healthSegments.map((segment) => (
+                    <div key={segment.id} className={segment.className} style={{ width: segment.width }} />
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  {healthSegments.map((segment) => (
+                    <div key={segment.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className={`h-2 w-2 rounded-full ${segment.className}`} />
+                      <span>{segment.label}</span>
+                      <span className="font-semibold text-foreground">{segment.value}</span>
                     </div>
-                  </div>
+                  ))}
                 </div>
+              </div>
 
-                <div>
-                  <div className="flex h-2.5 overflow-hidden rounded-full bg-background">
-                    {healthSegments.map((segment) => (
-                      <div key={segment.id} className={segment.className} style={{ width: segment.width }} />
-                    ))}
-                  </div>
-                  <div className="mt-2.5 grid gap-1.5 sm:grid-cols-3">
-                    {healthSegments.map((segment) => (
-                      <div key={segment.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <span className={`h-2 w-2 rounded-full ${segment.className}`} />
-                        <span>{segment.label}</span>
-                        <span className="font-semibold text-foreground">{segment.value}</span>
-                      </div>
-                    ))}
-                  </div>
+              <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                <div className="brand-chip">
+                  Active assets
+                  <span className="font-medium normal-case tracking-normal text-foreground">{data.assets.active}</span>
+                </div>
+                <div className="brand-chip">
+                  Ready sources
+                  <span className="font-medium normal-case tracking-normal text-foreground">{data.vm.readyToSyncSources}</span>
+                </div>
+                <div className="brand-chip">
+                  Orphaned
+                  <span className="font-medium normal-case tracking-normal text-foreground">{data.vm.orphaned}</span>
                 </div>
               </div>
             </div>
-
-            <div className="rounded-xl border border-border/80 bg-background/70 p-3.5">
-              <p className="workspace-subtle">Workspace Summary</p>
-              <div className="mt-3 space-y-2.5">
-                <div className="metric-pair">
-                  <Server className="mt-0.5 h-4 w-4 text-primary" />
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-foreground">{data.assets.active} assets in active service</div>
-                    <div className="app-panel-copy">Inactive inventory remains visible but separated from operational assets.</div>
-                  </div>
-                </div>
-                <div className="metric-pair">
-                  <Waypoints className="mt-0.5 h-4 w-4 text-primary" />
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-foreground">{data.vm.readyToSyncSources} VM sources ready to sync</div>
-                    <div className="app-panel-copy">Keep source sync fresh to reduce orphaned records and setup backlog.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="stats-grid sm:grid-cols-2 xl:grid-cols-4">
-          <div className="stat-tile">
-            <div className="stat-kicker">Assets</div>
-            <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
-              <Server className="h-4 w-4 text-primary" />
-              {data.assets.total}
-            </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">{data.assets.active} active</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Active VM</div>
-            <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
-              <Waypoints className="h-4 w-4 text-primary" />
-              {data.vm.activeInventory}
-            </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">{data.vm.pendingSetup} pending setup</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Databases</div>
-            <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
-              <Database className="h-4 w-4 text-primary" />
-              {data.databases.total}
-            </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">{data.databases.production} production</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Users</div>
-            <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
-              <Users className="h-4 w-4 text-primary" />
-              {data.users.total}
-            </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">{data.users.admins} admin accounts</div>
           </div>
         </div>
       </section>

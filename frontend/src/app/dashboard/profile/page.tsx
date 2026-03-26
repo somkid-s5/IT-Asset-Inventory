@@ -145,35 +145,36 @@ export default function ProfilePage() {
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <p className="workspace-subtle">My Account</p>
-            <h2 className="workspace-heading">Profile And Security</h2>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Review your current access level and change your own password without asking an admin.
-            </p>
-          </div>
-        </div>
-
-        <div className="stats-grid sm:grid-cols-3">
-            <div className="stat-tile">
-            <div className="stat-kicker">Avatar</div>
-            <div className="mt-2">
-              <UserAvatar
-                seed={avatarSeed}
-                imageUrl={avatarImage}
-                label={displayName || user?.displayName || 'Infra Pilot'}
-                className="h-14 w-14"
-              />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <div className="page-breadcrumb">
+                <span>Workspace</span>
+                <span className="page-breadcrumb-separator">/</span>
+                <span>My Account</span>
+              </div>
+              <p className="workspace-subtle mt-3">My Account</p>
+              <h2 className="workspace-heading">Profile And Security</h2>
+              <p className="max-w-2xl text-[13px] leading-6 text-muted-foreground">
+                Review your current access level and change your own password without asking an admin.
+              </p>
             </div>
           </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Username</div>
-            <div className="mt-2 text-base font-semibold text-foreground">@{user?.username ?? '--'}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-kicker">Role</div>
-            <div className="mt-2 text-base font-semibold text-foreground">{user?.role ?? '--'}</div>
+
+          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-2">
+                <UserAvatar
+                  seed={avatarSeed}
+                  imageUrl={avatarImage}
+                  label={displayName || user?.displayName || 'Infra Pilot'}
+                  className="h-8 w-8"
+                />
+                <span className="font-semibold text-foreground">{displayName || user?.displayName || 'Account'}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">Username <span className="font-semibold text-foreground">@{user?.username ?? '--'}</span></span>
+              <span className="inline-flex items-center gap-1.5">Role <span className="font-semibold text-foreground">{user?.role ?? '--'}</span></span>
+            </div>
           </div>
         </div>
       </section>

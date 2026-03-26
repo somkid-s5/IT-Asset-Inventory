@@ -4,7 +4,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
-import { ArrowDown, ArrowRight, ArrowUp, ChevronRight, ChevronsUpDown, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2, Box } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2, Box } from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
 import { AssetFormDialog } from '@/components/LazyLoadedDialogs';
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AssetsTableSkeleton } from '@/components/Skeletons';
+import { AppBreadcrumbs } from '@/components/AppBreadcrumbs';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -307,83 +308,51 @@ export default function AssetsPage() {
         <AssetsTableSkeleton />
       ) : (
         <div className="workspace-page">
-          <section className="workspace-hero">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
-                  <div className="page-breadcrumb">
-                    <span>Workspace</span>
-                    <span className="page-breadcrumb-separator">/</span>
-                    <span>Infrastructure</span>
-                    <span className="page-breadcrumb-separator">/</span>
-                    <span>Assets</span>
-                  </div>
-                  <p className="workspace-subtle mt-3">Hardware Inventory</p>
-                  <h2 className="workspace-heading mt-1.5">Assets</h2>
-                  <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground">
-                    Central register for physical infrastructure assets, nested hardware relationships, and operational identifiers.
-                  </p>
-                </div>
+          <section className="space-y-2">
+            <AppBreadcrumbs
+              items={[
+                { label: 'Workspace', href: '/dashboard' },
+                { label: 'Assets' },
+              ]}
+            />
+            <div>
+              <p className="workspace-subtle">Hardware Inventory</p>
+              <h2 className="workspace-heading mt-1">Assets</h2>
+            </div>
+          </section>
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <div className="toolbar-input-wrap">
-                    <Search className="toolbar-input-icon" />
-                    <Input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(event) => setSearchTerm(event.target.value)}
-                      placeholder="Search asset, model, serial, or IP"
-                      className="pl-10"
-                    />
-                  </div>
-
-                  {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
-                    <Button
-                      onClick={openCreateDialog}
-                      size="lg"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Asset
-                    </Button>
-                  )}
-                </div>
+          <section className="table-shell">
+            <div className="toolbar-strip">
+              <div>
+                <h3 className="app-panel-title">Asset Register</h3>
+                <p className="app-panel-copy">Structured inventory with hierarchy, rack placement, hardware model, and serial tracking.</p>
               </div>
 
-              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="stat-tile">
-                  <div className="stat-kicker">Total Assets</div>
-                  <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
-                    <Box className="h-4 w-4 text-primary" />
-                    {assets.length}
-                  </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">Across all registered infrastructure</div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="toolbar-input-wrap">
+                  <Search className="toolbar-input-icon" />
+                  <Input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search asset, model, serial, or IP"
+                    className="pl-10"
+                  />
                 </div>
-                <div className="stat-tile">
-                  <div className="stat-kicker">Servers</div>
-                  <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
-                    <Server className="h-4 w-4 text-primary" />
-                    {countsByTab.SERVER}
-                  </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">Compute and application hosts</div>
-                </div>
-                <div className="stat-tile">
-                  <div className="stat-kicker">Storage</div>
-                  <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
-                    <Database className="h-4 w-4 text-primary" />
-                    {countsByTab.STORAGE}
-                  </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">Arrays and storage-linked devices</div>
-                </div>
-                <div className="stat-tile">
-                  <div className="stat-kicker">Switches</div>
-                  <div className="mt-2 flex items-center gap-2 text-[1.2rem] font-semibold tracking-[-0.04em] text-foreground">
-                    <Shield className="h-4 w-4 text-primary" />
-                    {countsByTab.SWITCH}
-                  </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">Network switching footprint</div>
-                </div>
-              </div>
 
+                {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+                  <Button
+                    onClick={openCreateDialog}
+                    size="lg"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Asset
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="border-b border-border/80 px-4 py-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 {TABS.map((tab) => (
                   <button
@@ -404,22 +373,6 @@ export default function AssetsPage() {
                   Visible rows
                   <span className="font-semibold text-foreground">{topLevelAssets.length}</span>
                 </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="table-shell">
-            <div className="toolbar-strip">
-              <div>
-                <h3 className="app-panel-title">Asset Register</h3>
-                <p className="app-panel-copy">Structured inventory with hierarchy, rack placement, hardware model, and serial tracking.</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="brand-chip">Sorted by {sortKey}</div>
-                <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')}>
-                  Dashboard
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
               </div>
             </div>
 
