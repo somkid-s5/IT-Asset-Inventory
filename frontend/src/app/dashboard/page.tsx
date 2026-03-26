@@ -6,6 +6,7 @@ import { AlertTriangle, Database, LoaderCircle, RefreshCw, Server, ShieldCheck, 
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import api from '@/services/api';
+import { DashboardSkeleton } from '@/components/Skeletons';
 
 interface DashboardOverview {
   assets: {
@@ -69,9 +70,9 @@ export default function DashboardPage() {
     } catch (err: unknown) {
       const apiMessage =
         typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+          err !== null &&
+          'response' in err &&
+          typeof (err as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
           ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
           : null;
 
@@ -182,14 +183,7 @@ export default function DashboardPage() {
   }, [data]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[320px] items-center justify-center">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <LoaderCircle className="h-5 w-5 animate-spin text-foreground" />
-          <p className="text-sm">Loading workspace overview...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error || !data) {
@@ -304,19 +298,35 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {summaryRows.map((row) => (
-                  <tr key={row.id} className="table-row">
-                    <td className="px-3 py-3 text-[12px] font-medium text-foreground">{row.module}</td>
-                    <td className="px-3 py-3 font-mono text-[12px] text-foreground">{row.records}</td>
-                    <td className="px-3 py-3 text-[12px] text-muted-foreground">{row.status}</td>
-                    <td className="px-3 py-3 text-[12px] text-muted-foreground">{row.detail}</td>
-                    <td className="px-3 py-3 text-right">
-                      <Button variant="outline" size="sm" onClick={() => router.push(row.route)}>
-                        {row.actionLabel}
-                      </Button>
+                {summaryRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12">
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-border/70 bg-muted/50">
+                          <Database className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-base font-semibold text-foreground">No inventory data yet</h3>
+                        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                          Start by adding assets, VMs, or databases to see your inventory summary here.
+                        </p>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  summaryRows.map((row) => (
+                    <tr key={row.id} className="table-row">
+                      <td className="px-3 py-3 text-[12px] font-medium text-foreground">{row.module}</td>
+                      <td className="px-3 py-3 font-mono text-[12px] text-foreground">{row.records}</td>
+                      <td className="px-3 py-3 text-[12px] text-muted-foreground">{row.status}</td>
+                      <td className="px-3 py-3 text-[12px] text-muted-foreground">{row.detail}</td>
+                      <td className="px-3 py-3 text-right">
+                        <Button variant="outline" size="sm" onClick={() => router.push(row.route)}>
+                          {row.actionLabel}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
