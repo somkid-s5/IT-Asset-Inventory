@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePageHeader } from "@/contexts/PageHeaderContext";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -22,6 +23,7 @@ import {
 export default function DatabaseDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { setHeader } = usePageHeader();
   const [database, setDatabase] = useState<DatabaseInventoryDetail | null>(
     null,
   );
@@ -52,6 +54,25 @@ export default function DatabaseDetailPage() {
       void loadDatabase(params.id);
     }
   }, [loadDatabase, params.id]);
+
+  useEffect(() => {
+    if (!database) {
+      return;
+    }
+
+    setHeader({
+      title: database.name,
+      breadcrumbs: [
+        { label: "Workspace", href: "/dashboard" },
+        { label: "Databases", href: "/dashboard/db" },
+        { label: database.name },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [database, setHeader]);
 
   const databaseStats = useMemo(() => {
     if (!database) {

@@ -1,6 +1,7 @@
 'use client';
 
-import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { KeyRound, Shield } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { toast } from 'sonner';
@@ -35,6 +36,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export default function ProfilePage() {
+  const { setHeader } = usePageHeader();
   const { user, updateUser } = useAuth();
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [avatarSeed, setAvatarSeed] = useState(user?.avatarSeed ?? '');
@@ -142,42 +144,37 @@ export default function ProfilePage() {
     }
   };
 
+  useEffect(() => {
+    setHeader({
+      title: 'Profile',
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Profile' },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [setHeader]);
+
   return (
     <div className="workspace-page">
-      <section className="workspace-hero">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-2">
-              <div className="page-breadcrumb">
-                <span>Workspace</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>My Account</span>
-              </div>
-              <p className="workspace-subtle mt-3">My Account</p>
-              <h2 className="workspace-heading">Profile And Security</h2>
-              <p className="max-w-2xl text-[13px] leading-6 text-muted-foreground">
-                Review your current access level and change your own password without asking an admin.
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-2">
-                <UserAvatar
-                  seed={avatarSeed}
-                  imageUrl={avatarImage}
-                  label={displayName || user?.displayName || 'Infra Pilot'}
-                  className="h-8 w-8"
-                />
-                <span className="font-semibold text-foreground">{displayName || user?.displayName || 'Account'}</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5">Username <span className="font-semibold text-foreground">@{user?.username ?? '--'}</span></span>
-              <span className="inline-flex items-center gap-1.5">Role <span className="font-semibold text-foreground">{user?.role ?? '--'}</span></span>
-            </div>
-          </div>
+      <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-2">
+            <UserAvatar
+              seed={avatarSeed}
+              imageUrl={avatarImage}
+              label={displayName || user?.displayName || 'Infra Pilot'}
+              className="h-8 w-8"
+            />
+            <span className="font-semibold text-foreground">{displayName || user?.displayName || 'Account'}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">Username <span className="font-semibold text-foreground">@{user?.username ?? '--'}</span></span>
+          <span className="inline-flex items-center gap-1.5">Role <span className="font-semibold text-foreground">{user?.role ?? '--'}</span></span>
         </div>
-      </section>
+      </div>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <div className="surface-panel p-4">

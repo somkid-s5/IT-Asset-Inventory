@@ -2,6 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, Database, FolderTree, HardDrive, LoaderCircle, Pencil, Plus, Search, Server, Shield, Trash2, Box } from 'lucide-react';
@@ -12,7 +13,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AssetsTableSkeleton } from '@/components/Skeletons';
-import { AppBreadcrumbs } from '@/components/AppBreadcrumbs';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -38,11 +38,11 @@ interface Asset {
 type SortKey = 'assetId' | 'name' | 'type' | 'rack' | 'brandModel' | 'sn';
 type SortDirection = 'asc' | 'desc';
 
-const TABS: { label: string; value: 'ALL' | AssetType }[] = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Servers', value: 'SERVER' },
-  { label: 'Storage', value: 'STORAGE' },
-  { label: 'Switches', value: 'SWITCH' },
+const TABS: { label: string; value: 'ALL' | AssetType; icon: typeof Box; iconClassName: string }[] = [
+  { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
+  { label: 'Servers', value: 'SERVER', icon: Server, iconClassName: 'text-emerald-400' },
+  { label: 'Storage', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-400' },
+  { label: 'Switches', value: 'SWITCH', icon: Shield, iconClassName: 'text-amber-400' },
 ];
 
 const typeStyles: Record<AssetType, string> = {
@@ -71,6 +71,7 @@ function getAssetIcon(type: AssetType) {
 
 export default function AssetsPage() {
   const { user } = useAuth();
+  const { setHeader } = usePageHeader();
   const router = useRouter();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,20 @@ export default function AssetsPage() {
   useEffect(() => {
     void loadAssets();
   }, []);
+
+  useEffect(() => {
+    setHeader({
+      title: 'Assets',
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Assets' },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [setHeader]);
 
   const filteredAssets = assets.filter((asset) => {
     const query = deferredSearch.trim().toLowerCase();
@@ -308,24 +323,30 @@ export default function AssetsPage() {
         <AssetsTableSkeleton />
       ) : (
         <div className="workspace-page">
-          <section className="space-y-2">
-            <AppBreadcrumbs
-              items={[
-                { label: 'Workspace', href: '/dashboard' },
-                { label: 'Assets' },
-              ]}
-            />
-            <div>
-              <p className="workspace-subtle">Hardware Inventory</p>
-              <h2 className="workspace-heading mt-1">Assets</h2>
-            </div>
-          </section>
-
           <section className="table-shell">
             <div className="toolbar-strip">
-              <div>
-                <h3 className="app-panel-title">Asset Register</h3>
-                <p className="app-panel-copy">Structured inventory with hierarchy, rack placement, hardware model, and serial tracking.</p>
+              <div className="flex flex-1 flex-wrap items-center gap-1.5">
+                {TABS.map((tab) => (
+                  (() => {
+                    const Icon = tab.icon;
+                    return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveTab(tab.value)}
+                    className={`filter-chip ${activeTab === tab.value
+                      ? 'filter-chip-active'
+                      : ''
+                      }`}
+                  >
+                    <Icon className={`h-3.5 w-3.5 ${tab.iconClassName}`} />
+                    <span>{tab.label}</span>
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                      {countsByTab[tab.value]}
+                    </span>
+                  </button>
+                    );
+                  })()
+                ))}
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -352,71 +373,47 @@ export default function AssetsPage() {
               </div>
             </div>
 
-            <div className="border-b border-border/80 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.value}
-                    onClick={() => setActiveTab(tab.value)}
-                    className={`filter-chip ${activeTab === tab.value
-                      ? 'filter-chip-active'
-                      : ''
-                      }`}
-                  >
-                    <span>{tab.label}</span>
-                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
-                      {countsByTab[tab.value]}
-                    </span>
-                  </button>
-                ))}
-                <div className="ml-auto inline-flex items-center gap-2 rounded-full border border-border/80 bg-background px-3 py-1.5 text-[10px] text-muted-foreground">
-                  Visible rows
-                  <span className="font-semibold text-foreground">{topLevelAssets.length}</span>
-                </div>
-              </div>
-            </div>
-
             <div className="max-h-[600px] overflow-auto">
               <table className="table-frame min-w-[860px]">
                 <thead>
                   <tr className="table-head-row">
-                    <th className="px-3 py-3 font-medium">
+                    <th className="px-3 py-2.5 font-medium">
                       <button onClick={() => toggleSort('assetId')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                         Asset ID
                         {renderSortIcon('assetId')}
                       </button>
                     </th>
-                    <th className="px-3 py-3 font-medium">
+                    <th className="px-3 py-2.5 font-medium">
                       <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                         Asset Name
                         {renderSortIcon('name')}
                       </button>
                     </th>
-                    <th className="px-3 py-3 font-medium">
+                    <th className="px-3 py-2.5 font-medium">
                       <button onClick={() => toggleSort('type')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                         Type
                         {renderSortIcon('type')}
                       </button>
                     </th>
-                    <th className="px-3 py-3 font-medium">
+                    <th className="px-3 py-2.5 font-medium">
                       <button onClick={() => toggleSort('rack')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                         Rack
                         {renderSortIcon('rack')}
                       </button>
                     </th>
-                    <th className="px-3 py-3 font-medium">
+                    <th className="px-3 py-2.5 font-medium">
                       <button onClick={() => toggleSort('brandModel')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                         Brand / Model
                         {renderSortIcon('brandModel')}
                       </button>
                     </th>
-                    <th className="px-3 py-3 font-medium">
+                    <th className="px-3 py-2.5 font-medium">
                       <button onClick={() => toggleSort('sn')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                         SN
                         {renderSortIcon('sn')}
                       </button>
                     </th>
-                    <th className="px-3 py-3 font-medium text-right">Actions</th>
+                    <th className="px-3 py-2.5 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>

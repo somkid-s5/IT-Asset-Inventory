@@ -2,11 +2,13 @@
 
 import { useState, type ReactNode } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
+import { AppBreadcrumbs } from '@/components/AppBreadcrumbs';
 import { BrandMark } from '@/components/BrandMark';
 import { UserAvatar } from '@/components/UserAvatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, MonitorCog, Moon, PanelLeft, Sun } from 'lucide-react';
+import { PageHeaderProvider, usePageHeader } from '@/contexts/PageHeaderContext';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 
@@ -15,9 +17,18 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  return (
+    <PageHeaderProvider>
+      <AppLayoutFrame>{children}</AppLayoutFrame>
+    </PageHeaderProvider>
+  );
+}
+
+function AppLayoutFrame({ children }: AppLayoutProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const { header } = usePageHeader();
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     // Lazy initialization: อ่าน localStorage แค่ครั้งเดียวตอน component mount
     if (typeof window === 'undefined') {
@@ -42,29 +53,23 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="app-backdrop min-h-screen">
       <div className="flex min-h-screen w-full">
-        <AppSidebar collapsed={sidebarCollapsed} />
+        <AppSidebar collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
 
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-border/80 bg-background/88 px-4 py-3 backdrop-blur-xl sm:px-5 lg:px-7">
-            <div className="app-shell flex items-center justify-between gap-3">
+          <header className="sticky top-0 z-20 h-[76px] border-b border-border/80 bg-background/88 px-4 backdrop-blur-xl sm:px-5 lg:px-7">
+            <div className="app-shell flex h-full items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <button
-                  type="button"
-                  onClick={toggleSidebar}
-                  aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                  aria-expanded={!sidebarCollapsed}
-                  className="hidden rounded-xl border border-border/80 bg-card p-2.5 text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground lg:inline-flex"
-                  title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                >
-                  <PanelLeft className="h-4 w-4" />
-                </button>
                 <div className="lg:hidden">
                   <BrandMark compact />
                 </div>
-                <div className="hidden rounded-full border border-border/70 bg-card px-3 py-1.5 text-[11px] text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.3)] xl:inline-flex xl:items-center xl:gap-2">
-                  <MonitorCog className="h-3.5 w-3.5 text-primary" />
-                  Operational inventory workspace
-                </div>
+                {header ? (
+                  <div className="min-w-0">
+                    <div className="truncate text-[15px] font-semibold tracking-[-0.02em] text-foreground">{header.title}</div>
+                    <div className="mt-0.5">
+                      <AppBreadcrumbs items={header.breadcrumbs} />
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex items-center gap-2">
@@ -111,7 +116,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </header>
 
-          <main id="main-content" className="relative flex-1 px-4 pb-8 pt-5 sm:px-5 lg:px-7" tabIndex={-1}>
+          <main id="main-content" className="relative flex-1 px-4 pb-8 pt-4 sm:px-5 lg:px-7" tabIndex={-1}>
             <div className="app-shell">{children}</div>
           </main>
         </div>
