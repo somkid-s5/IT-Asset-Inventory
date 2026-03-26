@@ -40,12 +40,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="app-backdrop min-h-screen">
       <div className="flex min-h-screen w-full">
         <AppSidebar collapsed={sidebarCollapsed} />
 
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 py-3 sm:px-5 lg:px-6">
+          <header className="sticky top-0 z-20 border-b border-border/80 bg-background/88 px-4 py-3 backdrop-blur-xl sm:px-5 lg:px-7">
             <div className="app-shell flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <button
@@ -53,7 +53,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   onClick={toggleSidebar}
                   aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                   aria-expanded={!sidebarCollapsed}
-                  className="hidden rounded-lg border border-border bg-card p-2 text-muted-foreground shadow-sm transition-all hover:border-primary/30 hover:bg-accent hover:text-foreground lg:inline-flex"
+                  className="hidden rounded-xl border border-border/80 bg-card p-2.5 text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground lg:inline-flex"
                   title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                   <PanelLeft className="h-4 w-4" />
@@ -61,7 +61,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <div className="lg:hidden">
                   <BrandMark compact />
                 </div>
-                <div className="hidden rounded-full border border-border/70 bg-card/65 px-3 py-1.5 text-[11px] text-muted-foreground backdrop-blur xl:inline-flex xl:items-center xl:gap-2">
+                <div className="hidden rounded-full border border-border/70 bg-card px-3 py-1.5 text-[11px] text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.3)] xl:inline-flex xl:items-center xl:gap-2">
                   <MonitorCog className="h-3.5 w-3.5 text-primary" />
                   Operational inventory workspace
                 </div>
@@ -71,7 +71,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                  className="rounded-lg border border-border bg-card p-2 text-muted-foreground shadow-sm transition-all hover:border-primary/30 hover:bg-accent hover:text-foreground"
+                  className="rounded-xl border border-border/80 bg-card p-2.5 text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground"
                   title="Toggle theme"
                 >
                   {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -79,7 +79,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 text-left shadow-sm transition-all hover:border-primary/30 hover:bg-accent/50">
+                    <button className="flex items-center gap-2 rounded-2xl border border-border/80 bg-card px-2.5 py-1.5 text-left shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent/50">
                       <UserAvatar
                         seed={user?.avatarSeed}
                         imageUrl={user?.avatarImage}
@@ -92,7 +92,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 border-border bg-popover">
+                  <DropdownMenuContent align="end" className="w-56 rounded-2xl border-border/80 bg-popover">
                     <DropdownMenuLabel className="space-y-1">
                       <div className="text-sm font-medium text-foreground">{user?.displayName ?? 'Account'}</div>
                       <div className="text-[11px] text-muted-foreground">@{user?.username ?? 'user'} - {user?.role ?? 'USER'}</div>
@@ -111,7 +111,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </header>
 
-          <main id="main-content" className="relative flex-1 px-4 pb-6 pt-4 sm:px-5 lg:px-6" tabIndex={-1}>
+          <main id="main-content" className="relative flex-1 px-4 pb-8 pt-5 sm:px-5 lg:px-7" tabIndex={-1}>
             <div className="app-shell">{children}</div>
           </main>
         </div>

@@ -42,7 +42,7 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 6px);
   --font-sans: var(--font-open-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-open-sans), ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", monospace;
@@ -63,155 +63,95 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ============================================
-   LIGHT MODE - ขาวนวล (Warm Gray)
-   ============================================ */
 :root {
-  /* Background: ขาวนวลผสมเทา (มี warmth) */
-  --background: 45 8% 94%;
-  --foreground: 0 0% 18%;
-
-  /* Card: ขาวนวลผสมเทา เพื่อแยกจากพื้นหลัง */
-  --card: 45 10% 97%;
-  --card-foreground: 0 0% 18%;
-
-  --popover: 45 10% 97%;
-  --popover-foreground: 0 0% 18%;
-
-  /* Primary: แดงโทนเย็น (ดูเป็นผู้ใหญ่ เหมาะกับ Enterprise) */
-  --primary: 2 78% 42%;
+  --background: 210 20% 96%;
+  --foreground: 220 23% 17%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 23% 17%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 23% 17%;
+  --primary: 198 74% 45%;
   --primary-foreground: 0 0% 100%;
-
-  /* Secondary: เทาอ่อน */
-  --secondary: 45 8% 89%;
-  --secondary-foreground: 0 0% 22%;
-
-  /* Muted: เทา */
-  --muted: 45 8% 89%;
-  --muted-foreground: 0 0% 42%;
-
-  /* Accent: แดงอ่อน */
-  --accent: 4 38% 89%;
-  --accent-foreground: 0 0% 18%;
-
-  /* Destructive: แดงเข้ม */
-  --destructive: 2 80% 43%;
+  --secondary: 210 24% 93%;
+  --secondary-foreground: 220 18% 26%;
+  --muted: 210 22% 94%;
+  --muted-foreground: 220 10% 44%;
+  --accent: 204 100% 97%;
+  --accent-foreground: 220 23% 17%;
+  --destructive: 0 78% 55%;
   --destructive-foreground: 0 0% 100%;
-
-  /* Semantic Colors */
-  --warning: 38 85% 52%;
+  --warning: 35 94% 58%;
   --warning-foreground: 0 0% 100%;
-  --success: 142 65% 38%;
+  --success: 145 63% 42%;
   --success-foreground: 0 0% 100%;
-  --info: 210 75% 48%;
+  --info: 209 85% 53%;
   --info-foreground: 0 0% 100%;
-  --critical: 0 65% 48%;
-
-  /* Status Colors */
-  --high: 0 65% 48%;
-  --medium: 38 85% 52%;
-  --low: 142 65% 38%;
-
-  /* Border & Input: เทา */
-  --border: 45 8% 80%;
-  --input: 45 8% 80%;
-  --ring: 2 78% 42%;
-
-  --radius: 0.75rem;
-
-  /* Sidebar */
-  --sidebar-background: 45 8% 95%;
-  --sidebar-foreground: 0 0% 28%;
-  --sidebar-primary: 2 78% 42%;
+  --critical: 0 74% 54%;
+  --high: 0 74% 54%;
+  --medium: 35 94% 58%;
+  --low: 145 63% 42%;
+  --border: 214 24% 88%;
+  --input: 214 24% 88%;
+  --ring: 198 74% 45%;
+  --radius: 0.8rem;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 220 15% 30%;
+  --sidebar-primary: 198 74% 45%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 4 30% 90%;
-  --sidebar-accent-foreground: 0 0% 20%;
-  --sidebar-border: 45 8% 83%;
-  --sidebar-ring: 2 78% 42%;
+  --sidebar-accent: 204 100% 97%;
+  --sidebar-accent-foreground: 220 23% 17%;
+  --sidebar-border: 214 24% 90%;
+  --sidebar-ring: 198 74% 45%;
 }
 
-/* ============================================
-   DARK MODE - ปรับให้ contrast พอดี สบายตา
-   ============================================ */
 :root.dark,
 .dark {
-  /* Background: เทาเข้มอมดำ (ไม่ดำจัด) */
-  --background: 0 0% 8%;
+  --background: 220 18% 9%;
   --foreground: 0 0% 92%;
-
-  /* Card: เทาเข้ม เพื่อแยก layer */
-  --card: 0 0% 12%;
+  --card: 220 17% 12%;
   --card-foreground: 0 0% 92%;
-
-  --popover: 0 0% 12%;
+  --popover: 220 17% 12%;
   --popover-foreground: 0 0% 92%;
-
-  /* Primary: แดงสดใส (แต่ไม่แสบตา) */
-  --primary: 2 82% 56%;
+  --primary: 197 80% 58%;
   --primary-foreground: 0 0% 100%;
-
-  /* Secondary: เทาเข้ม */
-  --secondary: 0 0% 16%;
+  --secondary: 220 12% 16%;
   --secondary-foreground: 0 0% 90%;
-
-  /* Muted: เทาเข้ม - ปรับ contrast ให้สูงขึ้น */
-  --muted: 0 0% 16%;
-  --muted-foreground: 0 0% 68%;
-  /* เพิ่มจาก 60% เป็น 68% สำหรับ WCAG AA */
-
-  /* Accent: แดงเข้ม */
-  --accent: 3 38% 17%;
+  --muted: 220 12% 16%;
+  --muted-foreground: 220 9% 68%;
+  --accent: 203 36% 18%;
   --accent-foreground: 0 0% 90%;
-
-  /* Destructive: แดง */
-  --destructive: 2 82% 54%;
+  --destructive: 0 79% 58%;
   --destructive-foreground: 0 0% 100%;
-
-  /* Semantic Colors */
-  --warning: 38 92% 55%;
+  --warning: 35 94% 58%;
   --warning-foreground: 0 0% 10%;
-  --success: 142 70% 42%;
+  --success: 145 63% 46%;
   --success-foreground: 0 0% 10%;
-  --info: 210 80% 52%;
+  --info: 209 85% 58%;
   --info-foreground: 0 0% 10%;
-  --critical: 0 65% 50%;
-
-  /* Status Colors */
-  --high: 0 65% 50%;
-  --medium: 38 92% 55%;
-  --low: 142 70% 42%;
-
-  /* Border & Input: เทา - ปรับ contrast */
-  --border: 0 0% 26%;
-  /* เพิ่มจาก 22% */
-  --input: 0 0% 26%;
-  /* เพิ่มจาก 22% */
-  --ring: 2 82% 56%;
-
-  /* Sidebar */
-  --sidebar-background: 0 0% 10%;
-  --sidebar-foreground: 0 0% 78%;
-  /* เพิ่มจาก 75% */
-  --sidebar-primary: 2 82% 56%;
+  --critical: 0 74% 54%;
+  --high: 0 74% 54%;
+  --medium: 35 94% 58%;
+  --low: 145 63% 46%;
+  --border: 220 11% 24%;
+  --input: 220 11% 24%;
+  --ring: 197 80% 58%;
+  --sidebar-background: 220 16% 10%;
+  --sidebar-foreground: 220 10% 78%;
+  --sidebar-primary: 197 80% 58%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 3 34% 15%;
+  --sidebar-accent: 203 36% 18%;
   --sidebar-accent-foreground: 0 0% 90%;
-  --sidebar-border: 0 0% 24%;
-  /* เพิ่มจาก 20% */
-  --sidebar-ring: 2 82% 56%;
+  --sidebar-border: 220 12% 22%;
+  --sidebar-ring: 197 80% 58%;
 }
 
 @layer components {
-
-  /* ============================================
-     SURFACE STYLES - สม่ำเสมอทั้งแอป
-     ============================================ */
   .surface-panel {
-    @apply rounded-xl border border-border bg-card shadow-sm;
+    @apply rounded-xl border border-border/90 bg-card shadow-[0_14px_32px_-26px_rgba(15,23,42,0.16)];
   }
 
   .stat-card {
-    @apply rounded-xl border border-border bg-card shadow-sm;
+    @apply rounded-xl border border-border/90 bg-card shadow-[0_14px_32px_-26px_rgba(15,23,42,0.16)];
   }
 
   .app-shell {
@@ -219,100 +159,97 @@
   }
 
   .compact-input {
-    @apply h-9 rounded-lg text-sm;
+    @apply h-9 rounded-xl text-sm;
   }
 
-  /* Brand Grid Pattern - ลบ gradient */
   .brand-grid {
-    background-color: hsl(var(--background));
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, hsl(var(--primary)) 10%, transparent), transparent 28%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, color-mix(in oklab, hsl(var(--background)) 94%, white) 100%);
   }
 
-  /* Sidebar Background - ลบ gradient */
   .sidebar-blend {
-    background-color: hsl(var(--sidebar-background));
+    background:
+      linear-gradient(180deg, color-mix(in oklab, hsl(var(--sidebar-background)) 95%, white) 0%, hsl(var(--sidebar-background)) 100%);
   }
 
   .content-bridge {
-    background: transparent;
+    background:
+      radial-gradient(circle at top, color-mix(in oklab, hsl(var(--primary)) 7%, transparent), transparent 18%),
+      transparent;
   }
 
   .app-backdrop {
-    background-color: hsl(var(--background));
+    background:
+      linear-gradient(180deg, color-mix(in oklab, hsl(var(--background)) 97%, white) 0%, hsl(var(--background)) 100%);
   }
 
   .glass-card {
-    @apply rounded-2xl border border-border bg-card shadow-md;
+    @apply rounded-2xl border border-border/80 bg-card/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] backdrop-blur-xl;
   }
 
   .brand-chip {
-    @apply inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground;
+    @apply inline-flex items-center gap-2 rounded-full border border-border/80 bg-card px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground;
   }
 
-  /* ============================================
-     PAGE LAYOUTS
-     ============================================ */
   .workspace-page {
     @apply space-y-4 pb-6;
   }
 
   .workspace-hero {
-    @apply rounded-xl border border-border bg-card p-4 shadow-sm lg:p-6;
+    @apply rounded-2xl border border-border/90 bg-card px-4 py-4 shadow-[0_14px_32px_-28px_rgba(15,23,42,0.18)] lg:px-5 lg:py-4.5;
   }
 
   .workspace-heading {
-    @apply font-sans text-lg font-semibold text-foreground;
+    @apply font-sans text-[1.35rem] font-semibold tracking-[-0.03em] text-foreground;
   }
 
   .workspace-subtle {
-    @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
+    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
   }
 
-  /* ============================================
-     FORM ELEMENTS
-     ============================================ */
+  .page-breadcrumb {
+    @apply inline-flex items-center gap-2 text-[10px] text-muted-foreground;
+  }
+
+  .page-breadcrumb-separator {
+    @apply text-muted-foreground/60;
+  }
+
   .toolbar-input-wrap {
     @apply relative min-w-[280px];
   }
 
   .toolbar-input-icon {
-    @apply pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground;
+    @apply pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground;
   }
 
-  /* ============================================
-     FILTER CHIPS
-     ============================================ */
   .filter-chip {
-    @apply rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-accent hover:text-foreground;
+    @apply inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground;
   }
 
   .filter-chip-active {
-    @apply border-primary bg-primary text-primary-foreground shadow-sm;
+    @apply border-primary/20 bg-accent text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,hsl(var(--primary))_18%,transparent)];
   }
 
-  /* ============================================
-     STATS & METRICS
-     ============================================ */
   .stats-grid {
-    @apply mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4;
+    @apply mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4;
   }
 
   .stat-tile {
-    @apply rounded-lg border border-border bg-card px-4 py-3 shadow-sm;
+    @apply rounded-xl border border-border/90 bg-card px-3.5 py-3 shadow-[0_12px_24px_-24px_rgba(15,23,42,0.18)];
   }
 
   .stat-kicker {
-    @apply text-xs font-medium uppercase tracking-wide text-muted-foreground;
+    @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground;
   }
 
-  /* ============================================
-     TABLES
-     ============================================ */
   .table-shell {
-    @apply overflow-hidden rounded-xl border border-border bg-card shadow-sm;
+    @apply overflow-hidden rounded-2xl border border-border/90 bg-card shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)];
   }
 
   .table-section-header {
-    @apply flex items-center justify-between gap-3 border-b border-border bg-card/50 px-4 py-3;
+    @apply flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3;
   }
 
   .table-frame {
@@ -320,26 +257,55 @@
   }
 
   .table-head-row {
-    @apply border-b border-border bg-muted/30 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground;
+    @apply border-b border-border bg-muted/45 text-left text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground;
   }
 
   .table-row {
-    @apply border-b border-border transition-colors hover:bg-muted/40 last:border-b-0;
+    @apply border-b border-border/80 transition-colors hover:bg-accent/45 last:border-b-0;
   }
 
-  /* ============================================
-     MISC COMPONENTS
-     ============================================ */
   .metric-pair {
-    @apply flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3;
+    @apply flex items-start gap-3 rounded-xl border border-border bg-muted/35 px-3.5 py-3;
   }
 
   .muted-panel {
-    @apply rounded-lg border border-border bg-muted/30;
+    @apply rounded-xl border border-border/80 bg-muted/40;
   }
 
   .icon-chip {
-    @apply flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground;
+    @apply flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-card text-muted-foreground;
+  }
+
+  .toolbar-strip {
+    @apply flex flex-col gap-2.5 border-b border-border/80 bg-muted/25 px-4 py-3 lg:flex-row lg:items-center lg:justify-between;
+  }
+
+  .data-label {
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold;
+  }
+
+  .data-label-neutral {
+    @apply border-border bg-background text-muted-foreground;
+  }
+
+  .data-label-success {
+    @apply border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300;
+  }
+
+  .data-label-warning {
+    @apply border-amber-500/20 bg-amber-500/12 text-amber-700 dark:text-amber-300;
+  }
+
+  .data-label-danger {
+    @apply border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300;
+  }
+
+  .app-panel-title {
+    @apply text-sm font-semibold tracking-[-0.02em] text-foreground;
+  }
+
+  .app-panel-copy {
+    @apply mt-0.5 text-[11px] leading-5 text-muted-foreground;
   }
 }
 
@@ -354,7 +320,8 @@
 
   body {
     @apply min-h-screen font-sans text-sm text-foreground antialiased;
-    background-color: hsl(var(--background));
+    background:
+      linear-gradient(180deg, color-mix(in oklab, hsl(var(--background)) 98%, white) 0%, hsl(var(--background)) 100%);
   }
 
   ::selection {
@@ -363,6 +330,6 @@
 
   [data-slot="card"],
   [data-slot="dropdown-menu-content"] {
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 18px 40px -30px rgba(15, 23, 42, 0.2);
   }
 }
