@@ -9,10 +9,11 @@ interface NavLinkProps extends React.ComponentPropsWithoutRef<typeof Link> {
   className?: string;
   activeClassName?: string;
   end?: boolean;
+  active?: boolean;
 }
 
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
-  ({ className, activeClassName, end, href, children, ...props }, ref) => {
+  ({ className, activeClassName, end, href, active, children, ...props }, ref) => {
     const pathname = usePathname();
     // Default to false if pathname is null (e.g., during static render if not handled)
     const currentPath = pathname || "";
@@ -20,9 +21,9 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
     // Determine if the link is active based on `end` prop
     // If exact match is required (`end`), compare exactly.
     // Otherwise, check if the current pathname starts with the href.
-    const isActive = end
+    const isActive = active ?? (end
       ? currentPath === href
-      : currentPath.startsWith(href as string);
+      : currentPath.startsWith(href as string));
 
     return (
       <Link

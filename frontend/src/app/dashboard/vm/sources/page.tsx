@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
-  ArrowLeft,
   PlugZap,
   CheckCircle2,
   Clock3,
@@ -50,6 +50,7 @@ const SYNC_INTERVAL_OPTIONS = ['5 min', '15 min', '30 min', '1 hour', '6 hours']
 
 export default function VmSourcesPage() {
   const router = useRouter();
+  const { setHeader } = usePageHeader();
   const [sources, setSources] = useState<VmVCenterSource[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
@@ -61,9 +62,7 @@ export default function VmSourcesPage() {
   const [syncingSourceIds, setSyncingSourceIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastSuccessfulTestKey, setLastSuccessfulTestKey] = useState<string | null>(null);
-  const stats = {
-    lastSyncLabel: `${sources[0]?.lastSyncAt ?? '--'} from ${sources.length} sources`,
-  };
+  const syncMeta = `${sources[0]?.lastSyncAt ?? '--'} from ${sources.length} sources`;
 
   const getConnectionTestKey = (data: typeof DEFAULT_SOURCE_FORM) =>
     JSON.stringify({
@@ -88,6 +87,21 @@ export default function VmSourcesPage() {
   useEffect(() => {
     void loadSources();
   }, []);
+
+  useEffect(() => {
+    setHeader({
+      title: 'vCenter Sources',
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Compute' },
+        { label: 'vCenter Sources' },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [setHeader]);
 
   const resetForm = () => {
     setFormData(DEFAULT_SOURCE_FORM);
@@ -227,88 +241,40 @@ export default function VmSourcesPage() {
 
   return (
     <div className="workspace-page">
-      <section className="workspace-hero">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 space-y-2">
-              <div className="page-breadcrumb">
-                <span>Workspace</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>Compute</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>vCenter Sources</span>
-              </div>
-              <p className="workspace-subtle mt-3">Compute Sync Settings</p>
-              <h2 className="workspace-heading">vCenter Sources</h2>
-              <p className="max-w-3xl text-[13px] leading-6 text-muted-foreground">
-                Manage source connections, trigger discovery syncs, and review what enters the VM promotion queue before it becomes active inventory.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-start gap-2 lg:items-end">
-              <div className="inline-flex items-center gap-2 text-[11px] text-muted-foreground">
-                <Clock3 className="h-3.5 w-3.5" />
-                <span>Last synced: {stats.lastSyncLabel}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="gap-2"
-                  onClick={() => router.push('/dashboard/vm')}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Inventory
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="gap-2"
-                  onClick={openAddDialog}
-                  disabled={syncingAll}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add vCenter
-                </Button>
-                <Button size="lg" className="gap-2" onClick={handleSyncAll} disabled={syncingAll || loading}>
-                  <RefreshCw className={cn('h-4 w-4', syncingAll && 'animate-spin')} />
-                  {syncingAll ? 'Syncing Sources...' : 'Sync All Sources'}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">Connected <span className="font-semibold text-foreground">{sources.length}</span></span>
-              <span className="inline-flex items-center gap-1.5">Healthy <span className="font-semibold text-foreground">{sources.filter((source) => source.status === 'Healthy').length}</span></span>
-              <span className="inline-flex items-center gap-1.5">Attention <span className="font-semibold text-foreground">{sources.filter((source) => source.status !== 'Healthy').length}</span></span>
-            </div>
-          </div>
-
-          {syncingAll || syncingSourceIds.length > 0 ? (
-            <div className="inline-flex w-fit items-center gap-2 rounded-[12px] border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-[11px] font-medium text-sky-200">
-              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-              <span>
-                {syncingAll
-                  ? 'Syncing all connected vCenter sources. This may take a moment.'
-                  : `Syncing ${syncingSourceIds.length} source${syncingSourceIds.length === 1 ? '' : 's'}...`}
-              </span>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
       <section className="table-shell">
-        <div className="table-section-header">
-          <div>
-            <h3 className="app-panel-title">Source Control</h3>
-            <p className="app-panel-copy">
-              Track connection health, VM coverage, and trigger syncs without leaving the page.
-            </p>
+        <div className="toolbar-strip">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Clock3 className="h-3.5 w-3.5" />
+              <span>Synced {syncMeta}</span>
+            </div>
+            {syncingAll || syncingSourceIds.length > 0 ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-1 text-[10px] font-medium text-sky-200">
+                <LoaderCircle className="h-3 w-3 animate-spin" />
+                <span>
+                  {syncingAll
+                    ? 'Syncing all sources'
+                    : `Syncing ${syncingSourceIds.length} source${syncingSourceIds.length === 1 ? '' : 's'}`}
+                </span>
+              </div>
+            ) : null}
           </div>
-          <div className="text-[11px] text-muted-foreground">
-            {sources.length} connected source{sources.length === 1 ? '' : 's'}
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2"
+              onClick={openAddDialog}
+              disabled={syncingAll}
+            >
+              <Plus className="h-4 w-4" />
+              Add vCenter
+            </Button>
+            <Button size="lg" className="gap-2" onClick={handleSyncAll} disabled={syncingAll || loading}>
+              <RefreshCw className={cn('h-4 w-4', syncingAll && 'animate-spin')} />
+              {syncingAll ? 'Syncing Sources...' : 'Sync All Sources'}
+            </Button>
           </div>
         </div>
 

@@ -1,8 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
-import { KeyRound, LoaderCircle, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Eye, KeyRound, LoaderCircle, PencilLine, Plus, Search, Shield, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +16,8 @@ import { PASSWORD_POLICY_MESSAGE, isPasswordValid } from '@/lib/password-policy'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Role = 'ADMIN' | 'EDITOR' | 'VIEWER';
+type SortKey = 'displayName' | 'username' | 'role' | 'createdAt' | 'updatedAt';
+type SortDirection = 'asc' | 'desc';
 
 interface UserRecord {
   id: string;
@@ -28,6 +31,17 @@ interface UserRecord {
 }
 
 const roleOptions: Role[] = ['ADMIN', 'EDITOR', 'VIEWER'];
+const ROLE_TABS: Array<{
+  label: string;
+  value: 'ALL' | Role;
+  icon: typeof Users;
+  iconClassName: string;
+}> = [
+    { label: 'All', value: 'ALL', icon: Users, iconClassName: 'text-primary' },
+    { label: 'Admins', value: 'ADMIN', icon: Shield, iconClassName: 'text-emerald-400' },
+    { label: 'Editors', value: 'EDITOR', icon: PencilLine, iconClassName: 'text-sky-400' },
+    { label: 'Viewers', value: 'VIEWER', icon: Eye, iconClassName: 'text-amber-400' },
+  ];
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (
@@ -44,9 +58,14 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export default function UsersPage() {
   const router = useRouter();
+  const { setHeader } = usePageHeader();
   const { user } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeRole, setActiveRole] = useState<'ALL' | Role>('ALL');
+  const [sortKey, setSortKey] = useState<SortKey>('displayName');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [createOpen, setCreateOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [username, setUsername] = useState('');
@@ -84,14 +103,77 @@ export default function UsersPage() {
     void loadUsers();
   }, [router, user]);
 
-  const stats = useMemo(() => {
-    return {
-      total: users.length,
-      admins: users.filter((item) => item.role === 'ADMIN').length,
-      editors: users.filter((item) => item.role === 'EDITOR').length,
-      viewers: users.filter((item) => item.role === 'VIEWER').length,
+  useEffect(() => {
+    setHeader({
+      title: 'User Accounts',
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'User Accounts' },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
     };
-  }, [users]);
+  }, [setHeader]);
+
+  const roleCounts = useMemo<Record<'ALL' | Role, number>>(
+    () => ({
+      ALL: users.length,
+      ADMIN: users.filter((item) => item.role === 'ADMIN').length,
+      EDITOR: users.filter((item) => item.role === 'EDITOR').length,
+      VIEWER: users.filter((item) => item.role === 'VIEWER').length,
+    }),
+    [users],
+  );
+
+  const filteredUsers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return [...users]
+      .filter((item) => {
+        const matchesRole = activeRole === 'ALL' || item.role === activeRole;
+        const matchesSearch =
+          query.length === 0 ||
+          item.displayName.toLowerCase().includes(query) ||
+          item.username.toLowerCase().includes(query) ||
+          item.role.toLowerCase().includes(query);
+
+        return matchesRole && matchesSearch;
+      })
+      .sort((left, right) => {
+        const leftValue = String(left[sortKey] ?? '').toLowerCase();
+        const rightValue = String(right[sortKey] ?? '').toLowerCase();
+
+        if (leftValue < rightValue) {
+          return sortDirection === 'asc' ? -1 : 1;
+        }
+
+        if (leftValue > rightValue) {
+          return sortDirection === 'asc' ? 1 : -1;
+        }
+
+        return 0;
+      });
+  }, [activeRole, searchTerm, sortDirection, sortKey, users]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortKey(key);
+    setSortDirection('asc');
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/70" />;
+    }
+
+    return sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+  };
 
   const handleCreateUser = async (event: FormEvent) => {
     event.preventDefault();
@@ -193,64 +275,93 @@ export default function UsersPage() {
 
   return (
     <div className="workspace-page">
-      <section className="workspace-hero">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-2">
-              <div className="page-breadcrumb">
-                <span>Workspace</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>Access Control</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>Users</span>
-              </div>
-              <p className="workspace-subtle mt-3">Access Control</p>
-              <h2 className="workspace-heading">User Accounts</h2>
-              <p className="max-w-2xl text-[13px] leading-6 text-muted-foreground">
-                Create workspace accounts, assign roles, and keep at least one admin active in the system.
-              </p>
-            </div>
-            <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Create user
-            </Button>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">Total <span className="font-semibold text-foreground">{stats.total}</span></span>
-              <span className="inline-flex items-center gap-1.5">Admins <span className="font-semibold text-foreground">{stats.admins}</span></span>
-              <span className="inline-flex items-center gap-1.5">Editors <span className="font-semibold text-foreground">{stats.editors}</span></span>
-              <span className="inline-flex items-center gap-1.5">Viewers <span className="font-semibold text-foreground">{stats.viewers}</span></span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section>
         <div className="table-shell">
-          <div className="table-section-header">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="app-panel-title">Workspace Users</h3>
-                <p className="app-panel-copy">Manage who can view, edit, or administer the system.</p>
+          <div className="toolbar-strip">
+            <div className="flex flex-1 flex-wrap items-center gap-1.5">
+              {ROLE_TABS.map((tab) => {
+                const Icon = tab.icon;
+
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveRole(tab.value)}
+                    className={`filter-chip ${activeRole === tab.value ? 'filter-chip-active' : ''}`}
+                  >
+                    <Icon className={`h-3.5 w-3.5 ${tab.iconClassName}`} />
+                    <span>{tab.label}</span>
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                      {roleCounts[tab.value]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="toolbar-input-wrap">
+                <Search className="toolbar-input-icon" />
+                <Input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search user, username, or role"
+                  className="pl-10"
+                />
               </div>
+
+              <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Create User
+              </Button>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="table-frame min-w-[640px]">
+            <table className="table-frame min-w-[760px]">
               <thead>
                 <tr className="table-head-row">
-                  <th className="px-3 py-3 font-medium">User</th>
-                  <th className="px-3 py-3 font-medium">Role</th>
-                  <th className="px-3 py-3 font-medium">Created</th>
-                  <th className="px-3 py-3 font-medium">Updated</th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('displayName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Name
+                      {renderSortIcon('displayName')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('username')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Username
+                      {renderSortIcon('username')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('role')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Role
+                      {renderSortIcon('role')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('createdAt')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Created
+                      {renderSortIcon('createdAt')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <button onClick={() => toggleSort('updatedAt')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                      Updated
+                      {renderSortIcon('updatedAt')}
+                    </button>
+                  </th>
                   <th className="px-3 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((item) => {
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                      No users matched your filters.
+                    </td>
+                  </tr>
+                ) : filteredUsers.map((item) => {
                   const isCurrentUser = item.id === user?.id;
 
                   return (
@@ -258,15 +369,21 @@ export default function UsersPage() {
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2.5">
                           <UserAvatar seed={item.avatarSeed} imageUrl={item.avatarImage} label={item.displayName} className="h-8 w-8" />
-                          <div>
-                            <div className="text-[12px] font-medium text-foreground">{item.displayName}</div>
-                            <div className="text-[11px] text-muted-foreground">@{item.username}{isCurrentUser ? ' - Current account' : ''}</div>
-                          </div>
+                          <div className="text-[12px] font-medium text-foreground">{item.displayName}</div>
                         </div>
                       </td>
                       <td className="px-3 py-3">
+                        <div className="text-[11px] text-muted-foreground">
+                          @{item.username}
+                          {isCurrentUser ? ' - Current account' : ''}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
                         <Select value={item.role} onValueChange={(value) => void handleRoleChange(item.id, value as Role)} disabled={isCurrentUser}>
-                          <SelectTrigger className="h-9 w-[118px]">
+                          <SelectTrigger
+                            size="sm"
+                            className="h-6 min-h-0 w-[84px] rounded-md border-border/60 bg-background/40 px-2 py-0 text-[10px] shadow-none [&>svg]:size-3.5"
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

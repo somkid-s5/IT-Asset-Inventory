@@ -4,9 +4,13 @@ export const dynamic = 'force-dynamic';
 
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ChevronsUpDown,
   CheckCircle2,
   Clock3,
   Monitor,
@@ -26,6 +30,10 @@ import {
 import { getVmDiscoveries, getVmDiscovery, getVmInventory, getVmSources } from '@/services/vm';
 
 type InventoryView = 'PENDING' | 'ACTIVE' | 'ORPHANED';
+type PendingSortKey = 'name' | 'primaryIp' | 'sourceName' | 'host' | 'powerState' | 'lastSeen';
+type ActiveSortKey = 'systemName' | 'name' | 'primaryIp' | 'vcenterName' | 'host' | 'powerState';
+type OrphanedSortKey = 'displayName' | 'name' | 'primaryIp' | 'sourceName' | 'host' | 'lastSeen';
+type SortDirection = 'asc' | 'desc';
 type OrphanedVmRecord = {
   id: string;
   name: string;
@@ -41,24 +49,28 @@ const VIEW_COPY: Record<
   InventoryView,
   {
     title: string;
+    shortLabel: string;
     description: string;
     searchPlaceholder: string;
   }
 > = {
   PENDING: {
     title: 'Pending Setup',
+    shortLabel: 'Pending',
     description:
       'Newly discovered VMs that still need business context before entering the active inventory.',
     searchPlaceholder: 'Search VM, IP, or source...',
   },
   ACTIVE: {
     title: 'Active Inventory',
+    shortLabel: 'Active',
     description:
       'Production-ready VM records that are already promoted and managed inside AssetOps.',
     searchPlaceholder: 'Search VM, system name, owner, or source...',
   },
   ORPHANED: {
     title: 'Orphaned',
+    shortLabel: 'Orphaned',
     description:
       'Previously active VMs that are no longer returned by the latest source sync and are now kept as historical records.',
     searchPlaceholder: 'Search missing VM, source, or issue...',
@@ -78,6 +90,7 @@ function matchesQuery(
 
 export default function VmPage() {
   const router = useRouter();
+  const { setHeader } = usePageHeader();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState<InventoryView>('ACTIVE');
   const [discoveries, setDiscoveries] = useState<VmDiscoveryItem[]>([]);
@@ -88,6 +101,12 @@ export default function VmPage() {
   const [sourceCount, setSourceCount] = useState(0);
   const [lastSyncLabel, setLastSyncLabel] = useState('--');
   const [loading, setLoading] = useState(true);
+  const [pendingSortKey, setPendingSortKey] = useState<PendingSortKey>('name');
+  const [activeSortKey, setActiveSortKey] = useState<ActiveSortKey>('systemName');
+  const [orphanedSortKey, setOrphanedSortKey] = useState<OrphanedSortKey>('displayName');
+  const [pendingSortDirection, setPendingSortDirection] = useState<SortDirection>('asc');
+  const [activeSortDirection, setActiveSortDirection] = useState<SortDirection>('asc');
+  const [orphanedSortDirection, setOrphanedSortDirection] = useState<SortDirection>('asc');
   const normalizedQuery = searchTerm.trim().toLowerCase();
 
   const loadVmData = async () => {
@@ -113,6 +132,21 @@ export default function VmPage() {
     void loadVmData();
   }, []);
 
+  useEffect(() => {
+    setHeader({
+      title: 'Virtual Machines',
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Compute' },
+        { label: 'Virtual Machines' },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [setHeader]);
+
   const openPendingSetup = async (id: string) => {
     try {
       setOpeningPendingId(id);
@@ -124,6 +158,18 @@ export default function VmPage() {
     } finally {
       setOpeningPendingId(null);
     }
+  };
+
+  const compareValues = (leftValue: string, rightValue: string, direction: SortDirection) => {
+    if (leftValue < rightValue) {
+      return direction === 'asc' ? -1 : 1;
+    }
+
+    if (leftValue > rightValue) {
+      return direction === 'asc' ? 1 : -1;
+    }
+
+    return 0;
   };
 
   const pendingQueue = useMemo(
@@ -161,48 +207,66 @@ export default function VmPage() {
 
   const filteredPendingQueue = useMemo(
     () =>
-      pendingQueue.filter((vm) =>
-        matchesQuery(normalizedQuery, [
-          vm.name,
-          vm.systemName,
-          vm.primaryIp,
-          vm.sourceName,
-          vm.cluster,
-          vm.host,
-          vm.note,
-          vm.missingFields.join(' '),
-        ]),
-      ),
-    [normalizedQuery, pendingQueue],
+      pendingQueue
+        .filter((vm) =>
+          matchesQuery(normalizedQuery, [
+            vm.name,
+            vm.systemName,
+            vm.primaryIp,
+            vm.sourceName,
+            vm.cluster,
+            vm.host,
+            vm.note,
+            vm.missingFields.join(' '),
+          ]),
+        )
+        .sort((left, right) => {
+          const leftValue = String(left[pendingSortKey] ?? '').toLowerCase();
+          const rightValue = String(right[pendingSortKey] ?? '').toLowerCase();
+          return compareValues(leftValue, rightValue, pendingSortDirection);
+        }),
+    [normalizedQuery, pendingQueue, pendingSortDirection, pendingSortKey],
   );
 
   const filteredActiveInventory = useMemo(
     () =>
-      activeInventoryQueue.filter((vm) =>
-        matchesQuery(normalizedQuery, [
-          vm.name,
-          vm.primaryIp,
-          vm.vcenterName,
-          vm.guestOs,
-          vm.owner,
-          vm.description,
-        ]),
-      ),
-    [activeInventoryQueue, normalizedQuery],
+      activeInventoryQueue
+        .filter((vm) =>
+          matchesQuery(normalizedQuery, [
+            vm.name,
+            vm.primaryIp,
+            vm.vcenterName,
+            vm.guestOs,
+            vm.owner,
+            vm.description,
+          ]),
+        )
+        .sort((left, right) => {
+          const leftValue = String(left[activeSortKey] ?? '').toLowerCase();
+          const rightValue = String(right[activeSortKey] ?? '').toLowerCase();
+          return compareValues(leftValue, rightValue, activeSortDirection);
+        }),
+    [activeInventoryQueue, activeSortDirection, activeSortKey, normalizedQuery],
   );
 
   const filteredOrphanedQueue = useMemo(
     () =>
-      orphanedQueue.filter((vm) =>
-        matchesQuery(normalizedQuery, [
-          vm.name,
-          vm.displayName,
-          vm.primaryIp,
-          vm.sourceName,
-          vm.host,
-        ]),
-      ),
-    [normalizedQuery, orphanedQueue],
+      orphanedQueue
+        .filter((vm) =>
+          matchesQuery(normalizedQuery, [
+            vm.name,
+            vm.displayName,
+            vm.primaryIp,
+            vm.sourceName,
+            vm.host,
+          ]),
+        )
+        .sort((left, right) => {
+          const leftValue = String(left[orphanedSortKey] ?? '').toLowerCase();
+          const rightValue = String(right[orphanedSortKey] ?? '').toLowerCase();
+          return compareValues(leftValue, rightValue, orphanedSortDirection);
+        }),
+    [normalizedQuery, orphanedQueue, orphanedSortDirection, orphanedSortKey],
   );
 
   const inventoryStats = useMemo(
@@ -223,92 +287,82 @@ export default function VmPage() {
         ? filteredActiveInventory.length
         : filteredOrphanedQueue.length;
 
+  const togglePendingSort = (key: PendingSortKey) => {
+    if (pendingSortKey === key) {
+      setPendingSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setPendingSortKey(key);
+    setPendingSortDirection('asc');
+  };
+
+  const toggleActiveSort = (key: ActiveSortKey) => {
+    if (activeSortKey === key) {
+      setActiveSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setActiveSortKey(key);
+    setActiveSortDirection('asc');
+  };
+
+  const toggleOrphanedSort = (key: OrphanedSortKey) => {
+    if (orphanedSortKey === key) {
+      setOrphanedSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setOrphanedSortKey(key);
+    setOrphanedSortDirection('asc');
+  };
+
+  const renderSortIcon = (active: boolean, direction: SortDirection) => {
+    if (!active) {
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/70" />;
+    }
+
+    return direction === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+  };
+
   return (
     <div className="workspace-page">
-      <section className="workspace-hero">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-4 min-[1080px]:flex-row min-[1080px]:items-start min-[1080px]:justify-between">
-            <div className="min-w-0 space-y-2">
-              <div className="page-breadcrumb">
-                <span>Workspace</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>Compute</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>VM Inventory</span>
-              </div>
-              <p className="workspace-subtle mt-3">Virtual Machines</p>
-              <h2 className="workspace-heading">Compute Inventory</h2>
-              <p className="max-w-3xl text-[13px] leading-6 text-muted-foreground">
-                Manage discovered VMs, complete missing metadata, and keep active records aligned with vCenter sync results.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-start gap-2 min-[1080px]:items-end">
-              <div className="inline-flex items-center gap-2 text-[11px] text-muted-foreground">
-                <Clock3 className="h-3.5 w-3.5" />
-                <span>Last synced: {inventoryStats.lastSyncLabel}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 min-[1080px]:flex-nowrap">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="gap-2 whitespace-nowrap"
-                  onClick={() => router.push('/dashboard/vm/sources')}
-                >
-                  <Server className="h-4 w-4" />
-                  Manage vCenters
-                </Button>
-                <Button
-                  size="lg"
-                  className="gap-2 whitespace-nowrap"
-                  onClick={() => router.push('/dashboard/vm/sources')}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Sync Discoveries
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">Active <span className="font-semibold text-foreground">{inventoryStats.active}</span></span>
-              <span className="inline-flex items-center gap-1.5">Pending <span className="font-semibold text-foreground">{inventoryStats.pending}</span></span>
-              <span className="inline-flex items-center gap-1.5">Orphaned <span className="font-semibold text-foreground">{inventoryStats.orphaned}</span></span>
-              <span className="inline-flex items-center gap-1.5">Sources <span className="font-semibold text-foreground">{inventoryStats.sources}</span></span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="table-shell">
-        <div className="table-section-header flex-col items-stretch gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="toolbar-strip">
+          <div className="flex flex-1 flex-wrap items-center gap-1.5">
             {(
               [
                 {
                   key: 'ACTIVE',
-                  label: 'Active Inventory',
+                  label: VIEW_COPY.ACTIVE.shortLabel,
                   count: inventoryStats.active,
                   icon: CheckCircle2,
+                  iconClassName: 'text-emerald-400',
+                  iconWrapClassName: 'border-emerald-500/25 bg-emerald-500/10',
                 },
                 {
                   key: 'PENDING',
-                  label: 'Pending Setup',
+                  label: VIEW_COPY.PENDING.shortLabel,
                   count: inventoryStats.pending,
                   icon: Clock3,
+                  iconClassName: 'text-amber-400',
+                  iconWrapClassName: 'border-amber-500/25 bg-amber-500/10',
                 },
                 {
                   key: 'ORPHANED',
-                  label: 'Orphaned',
+                  label: VIEW_COPY.ORPHANED.shortLabel,
                   count: inventoryStats.orphaned,
                   icon: AlertTriangle,
+                  iconClassName: 'text-rose-400',
+                  iconWrapClassName: 'border-rose-500/25 bg-rose-500/10',
                 },
               ] satisfies Array<{
                 key: InventoryView;
                 label: string;
                 count: number;
                 icon: typeof Clock3;
+                iconClassName: string;
+                iconWrapClassName: string;
               }>
             ).map((tab) => {
               const Icon = tab.icon;
@@ -318,59 +372,39 @@ export default function VmPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveView(tab.key)}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-[12px] border px-3 py-2 text-sm font-medium transition-all',
-                    activeView === tab.key
-                      ? 'border-primary/35 bg-accent text-foreground'
-                      : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-background/55 hover:text-foreground',
-                  )}
+                  className={`filter-chip ${activeView === tab.key ? 'filter-chip-active' : ''}`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <span className={cn('inline-flex h-5 w-5 items-center justify-center rounded-full border', tab.iconWrapClassName)}>
+                    <Icon className={cn('h-3 w-3', tab.iconClassName)} />
+                  </span>
                   <span>{tab.label}</span>
-                  <span
-                    className={cn(
-                      'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                      tab.key === 'ACTIVE' &&
-                      'bg-emerald-500/15 text-emerald-300',
-                      tab.key === 'PENDING' &&
-                      'bg-amber-500/15 text-amber-300',
-                      tab.key === 'ORPHANED' &&
-                      'bg-rose-500/15 text-rose-300',
-                    )}
-                  >
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
                     {tab.count}
                   </span>
                 </button>
               );
             })}
-          </div>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <div className="toolbar-input-wrap min-w-0 lg:w-[240px]">
+                <Search className="toolbar-input-icon" />
+                <Input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder={VIEW_COPY[activeView].searchPlaceholder}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                variant="default"
+                size="default"
+                className="gap-2 whitespace-nowrap"
+                onClick={() => router.push('/dashboard/vm/sources')}
+              >
+                <Server className="h-4 w-4" />
+                Manage vCenters
+              </Button>
 
-          <div className="flex items-center gap-3">
-            <div className="toolbar-input-wrap min-w-0 lg:w-[320px]">
-              <Search className="toolbar-input-icon" />
-              <Input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder={VIEW_COPY[activeView].searchPlaceholder}
-                className="pl-10"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="border-b border-border/70 px-4 py-3">
-          <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">
-                {VIEW_COPY[activeView].title}
-              </h3>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {VIEW_COPY[activeView].description}
-              </p>
-            </div>
-            <div className="text-[11px] text-muted-foreground">
-              Showing {currentCount} record{currentCount === 1 ? '' : 's'}
             </div>
           </div>
         </div>
@@ -400,16 +434,28 @@ export default function VmPage() {
             items={filteredPendingQueue}
             openingId={openingPendingId}
             onOpenRecord={(id) => void openPendingSetup(id)}
+            sortKey={pendingSortKey}
+            sortDirection={pendingSortDirection}
+            onSort={togglePendingSort}
+            renderSortIcon={renderSortIcon}
           />
         ) : activeView === 'ACTIVE' ? (
           <ActiveInventoryTable
             items={filteredActiveInventory}
             onOpenRecord={(id) => router.push(`/dashboard/vm/${id}`)}
+            sortKey={activeSortKey}
+            sortDirection={activeSortDirection}
+            onSort={toggleActiveSort}
+            renderSortIcon={renderSortIcon}
           />
         ) : activeView === 'ORPHANED' ? (
           <OrphanedTable
             items={filteredOrphanedQueue}
             onOpenRecord={(route) => router.push(route)}
+            sortKey={orphanedSortKey}
+            sortDirection={orphanedSortDirection}
+            onSort={toggleOrphanedSort}
+            renderSortIcon={renderSortIcon}
           />
         ) : null}
       </section>
@@ -432,10 +478,18 @@ function PendingSetupTable({
   items,
   openingId,
   onOpenRecord,
+  sortKey,
+  sortDirection,
+  onSort,
+  renderSortIcon,
 }: {
   items: VmDiscoveryItem[];
   openingId: string | null;
   onOpenRecord: (id: string) => void;
+  sortKey: PendingSortKey;
+  sortDirection: SortDirection;
+  onSort: (key: PendingSortKey) => void;
+  renderSortIcon: (active: boolean, direction: SortDirection) => ReactNode;
 }) {
   const getPowerStateClassName = (powerState: VmDiscoveryItem['powerState']) => {
     if (powerState === 'RUNNING') {
@@ -463,12 +517,42 @@ function PendingSetupTable({
       <table className="table-frame">
         <thead>
           <tr className="table-head-row">
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Discovered VM Name</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">IP Address</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Source</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Host</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Power</th>
-            <th className="hidden px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground xl:table-cell">Last Seen</th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Discovered VM Name
+                {renderSortIcon(sortKey === 'name', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                IP Address
+                {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('sourceName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Source
+                {renderSortIcon(sortKey === 'sourceName', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Host
+                {renderSortIcon(sortKey === 'host', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('powerState')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Power
+                {renderSortIcon(sortKey === 'powerState', sortDirection)}
+              </button>
+            </th>
+            <th className="hidden px-4 py-3 font-semibold xl:table-cell">
+              <button onClick={() => onSort('lastSeen')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Last Seen
+                {renderSortIcon(sortKey === 'lastSeen', sortDirection)}
+              </button>
+            </th>
             <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Action</th>
           </tr>
         </thead>
@@ -520,9 +604,17 @@ function PendingSetupTable({
 function ActiveInventoryTable({
   items,
   onOpenRecord,
+  sortKey,
+  sortDirection,
+  onSort,
+  renderSortIcon,
 }: {
   items: VmInventoryItem[];
   onOpenRecord: (id: string) => void;
+  sortKey: ActiveSortKey;
+  sortDirection: SortDirection;
+  onSort: (key: ActiveSortKey) => void;
+  renderSortIcon: (active: boolean, direction: SortDirection) => ReactNode;
 }) {
   const getPowerStateClassName = (powerState: VmInventoryItem['powerState']) => {
     if (powerState === 'RUNNING') {
@@ -550,12 +642,42 @@ function ActiveInventoryTable({
       <table className="table-frame">
         <thead>
           <tr className="table-head-row">
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">System Name</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">VM Name</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">IP Address</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Source</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Host</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Power</th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('systemName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                System Name
+                {renderSortIcon(sortKey === 'systemName', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                VM Name
+                {renderSortIcon(sortKey === 'name', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                IP Address
+                {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('vcenterName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Source
+                {renderSortIcon(sortKey === 'vcenterName', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Host
+                {renderSortIcon(sortKey === 'host', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('powerState')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Power
+                {renderSortIcon(sortKey === 'powerState', sortDirection)}
+              </button>
+            </th>
             <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Action</th>
           </tr>
         </thead>
@@ -608,9 +730,17 @@ function ActiveInventoryTable({
 function OrphanedTable({
   items,
   onOpenRecord,
+  sortKey,
+  sortDirection,
+  onSort,
+  renderSortIcon,
 }: {
   items: OrphanedVmRecord[];
   onOpenRecord: (route: string) => void;
+  sortKey: OrphanedSortKey;
+  sortDirection: SortDirection;
+  onSort: (key: OrphanedSortKey) => void;
+  renderSortIcon: (active: boolean, direction: SortDirection) => ReactNode;
 }) {
   if (items.length === 0) {
     return (
@@ -626,12 +756,42 @@ function OrphanedTable({
       <table className="table-frame">
         <thead>
           <tr className="table-head-row">
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">System Name</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">VM Name</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">IP Address</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Source</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Host</th>
-            <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Last Seen</th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('displayName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                System Name
+                {renderSortIcon(sortKey === 'displayName', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                VM Name
+                {renderSortIcon(sortKey === 'name', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                IP Address
+                {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('sourceName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Source
+                {renderSortIcon(sortKey === 'sourceName', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Host
+                {renderSortIcon(sortKey === 'host', sortDirection)}
+              </button>
+            </th>
+            <th className="px-4 py-3 font-semibold">
+              <button onClick={() => onSort('lastSeen')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                Last Seen
+                {renderSortIcon(sortKey === 'lastSeen', sortDirection)}
+              </button>
+            </th>
             <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Action</th>
           </tr>
         </thead>

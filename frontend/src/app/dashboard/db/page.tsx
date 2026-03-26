@@ -3,21 +3,35 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
-import { ArrowDown, ArrowRight, ArrowUp, ChevronsUpDown, Database, LoaderCircle, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2, Database, FlaskConical, LoaderCircle, Pencil, Plus, Search, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DatabaseFormDialog } from '@/components/LazyLoadedDialogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ENVIRONMENT_FILTERS, type DatabaseEnvironment, type DatabaseInventoryDetail, type DatabaseInventoryItem } from '@/lib/database-inventory';
+import { type DatabaseEnvironment, type DatabaseInventoryDetail, type DatabaseInventoryItem } from '@/lib/database-inventory';
 import api from '@/services/api';
 import { toast } from 'sonner';
 
 type SortKey = 'name' | 'engine' | 'version' | 'environment' | 'host' | 'ipAddress';
 type SortDirection = 'asc' | 'desc';
 
+const ENVIRONMENT_TABS: Array<{
+  label: string;
+  value: 'ALL' | DatabaseEnvironment;
+  icon: typeof Box;
+  iconClassName: string;
+}> = [
+  { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
+  { label: 'Production', value: 'PROD', icon: ShieldCheck, iconClassName: 'text-emerald-400' },
+  { label: 'Test', value: 'TEST', icon: FlaskConical, iconClassName: 'text-amber-400' },
+  { label: 'Dev', value: 'DEV', icon: Code2, iconClassName: 'text-sky-400' },
+];
+
 export default function DbPage() {
   const router = useRouter();
+  const { setHeader } = usePageHeader();
   const [databases, setDatabases] = useState<DatabaseInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,6 +58,20 @@ export default function DbPage() {
   useEffect(() => {
     void loadDatabases();
   }, []);
+
+  useEffect(() => {
+    setHeader({
+      title: 'Databases',
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Databases' },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [setHeader]);
 
   const filteredDatabases = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -74,18 +102,15 @@ export default function DbPage() {
     });
   }, [activeEnvironment, databases, searchTerm, sortDirection, sortKey]);
 
-  const stats = useMemo(() => {
-    const totalAccounts = filteredDatabases.reduce((count, database) => count + database.accountsCount, 0);
-    const productionCount = filteredDatabases.filter((database) => database.environment === 'PROD').length;
-    const engineCount = new Set(filteredDatabases.map((database) => database.engine)).size;
-
-    return {
-      databases: filteredDatabases.length,
-      accounts: totalAccounts,
-      production: productionCount,
-      engines: engineCount,
-    };
-  }, [filteredDatabases]);
+  const countsByEnvironment = useMemo<Record<'ALL' | DatabaseEnvironment, number>>(
+    () => ({
+      ALL: databases.length,
+      PROD: databases.filter((database) => database.environment === 'PROD').length,
+      TEST: databases.filter((database) => database.environment === 'TEST').length,
+      DEV: databases.filter((database) => database.environment === 'DEV').length,
+    }),
+    [databases],
+  );
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -138,82 +163,47 @@ export default function DbPage() {
 
   return (
     <div className="workspace-page">
-      <section className="workspace-hero">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="page-breadcrumb">
-                <span>Workspace</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>Data Layer</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>Databases</span>
-              </div>
-              <p className="workspace-subtle mt-3">Data Layer</p>
-              <h2 className="workspace-heading mt-1.5">Database Inventory</h2>
-              <p className="mt-2 text-[13px] text-muted-foreground">Compact database overview. Open a record to inspect full connection and account details.</p>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="toolbar-input-wrap">
-                <Search className="toolbar-input-icon" />
-                <Input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search database, host, IP, or user"
-                  className="pl-10"
-                />
-              </div>
-
-              <Button size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Add Database
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {ENVIRONMENT_FILTERS.map((filter) => (
-              <button
-                key={filter.value}
-                onClick={() => setActiveEnvironment(filter.value)}
-                className={`filter-chip ${activeEnvironment === filter.value
-                  ? 'filter-chip-active'
-                  : ''
-                  }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-            <div className="ml-auto inline-flex items-center gap-2 rounded-full border border-border/80 bg-background px-3 py-1.5 text-[10px] text-muted-foreground">
-              Visible rows
-              <span className="font-semibold text-foreground">{filteredDatabases.length}</span>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">Databases <span className="font-semibold text-foreground">{stats.databases}</span></span>
-              <span className="inline-flex items-center gap-1.5">Accounts <span className="font-semibold text-foreground">{stats.accounts}</span></span>
-              <span className="inline-flex items-center gap-1.5">Production <span className="font-semibold text-foreground">{stats.production}</span></span>
-              <span className="inline-flex items-center gap-1.5">Engines <span className="font-semibold text-foreground">{stats.engines}</span></span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="table-shell">
         <div className="toolbar-strip">
-          <div>
-            <h3 className="app-panel-title">Database Register</h3>
-            <p className="app-panel-copy">Tracked engines, environments, hosts, and linked account coverage.</p>
+          <div className="flex flex-1 flex-wrap items-center gap-1.5">
+            {ENVIRONMENT_TABS.map((filter) => {
+              const Icon = filter.icon;
+
+              return (
+                <button
+                  key={filter.value}
+                  onClick={() => setActiveEnvironment(filter.value)}
+                  className={`filter-chip ${activeEnvironment === filter.value ? 'filter-chip-active' : ''}`}
+                >
+                  <Icon className={`h-3.5 w-3.5 ${filter.iconClassName}`} />
+                  <span>{filter.label}</span>
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                    {countsByEnvironment[filter.value]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-          <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')}>
-            Dashboard
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Button>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="toolbar-input-wrap">
+              <Search className="toolbar-input-icon" />
+              <Input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search database, engine, host, or IP"
+                className="pl-10"
+              />
+            </div>
+
+            <Button size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add Database
+            </Button>
+          </div>
         </div>
+
         <div className="overflow-x-auto">
           <table className="table-frame min-w-[900px]">
             <thead>
@@ -278,7 +268,7 @@ export default function DbPage() {
                 filteredDatabases.map((database) => (
                   <tr
                     key={database.id}
-                    className="table-row cursor-pointer"
+                    className="table-row group cursor-pointer"
                     onClick={() => router.push(`/dashboard/db/${database.id}`)}
                   >
                     <td className="px-2 py-2.5">

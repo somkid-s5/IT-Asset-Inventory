@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, ArrowRight, Database, RefreshCw, Server, ShieldCheck, Users, Waypoints } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,6 +59,7 @@ function formatSyncTime(value: string | null) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { setHeader } = usePageHeader();
   const [data, setData] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +89,20 @@ export default function DashboardPage() {
   useEffect(() => {
     void loadDashboard();
   }, []);
+
+  useEffect(() => {
+    setHeader({
+      title: 'Overview',
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Overview' },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [setHeader]);
 
   const summaryRows = useMemo(() => {
     if (!data) {
@@ -251,74 +267,40 @@ export default function DashboardPage() {
 
   return (
     <div className="workspace-page">
-      <section className="workspace-hero">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 max-w-3xl">
-              <div className="page-breadcrumb">
-                <span>Workspace</span>
-                <span className="page-breadcrumb-separator">/</span>
-                <span>Overview</span>
-              </div>
-              <p className="workspace-subtle mt-3">Operations Overview</p>
-              <h2 className="workspace-heading mt-1.5">Infrastructure Dashboard</h2>
-              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted-foreground">
-                Real-time summary of assets, VM inventory, databases, and user access across the live operational workspace.
-              </p>
+      <section className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-3">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div>
+            <div className="flex h-2 overflow-hidden rounded-full bg-background">
+              {healthSegments.map((segment) => (
+                <div key={segment.id} className={segment.className} style={{ width: segment.width }} />
+              ))}
             </div>
-
-            <div className="flex flex-col items-start gap-1.5 lg:items-end">
-              <div className="brand-chip">
-                Latest VM sync
-                <span className="font-medium normal-case tracking-normal text-foreground">{formatSyncTime(data.vm.latestSyncAt)}</span>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setLoading(true);
-                  void loadDashboard();
-                }}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh Dashboard
-              </Button>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+              {healthSegments.map((segment) => (
+                <div key={segment.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className={`h-2 w-2 rounded-full ${segment.className}`} />
+                  <span>{segment.label}</span>
+                  <span className="font-semibold text-foreground">{segment.value}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-3">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-              <div>
-                <div className="flex h-2 overflow-hidden rounded-full bg-background">
-                  {healthSegments.map((segment) => (
-                    <div key={segment.id} className={segment.className} style={{ width: segment.width }} />
-                  ))}
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                  {healthSegments.map((segment) => (
-                    <div key={segment.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className={`h-2 w-2 rounded-full ${segment.className}`} />
-                      <span>{segment.label}</span>
-                      <span className="font-semibold text-foreground">{segment.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                <div className="brand-chip">
-                  Active assets
-                  <span className="font-medium normal-case tracking-normal text-foreground">{data.assets.active}</span>
-                </div>
-                <div className="brand-chip">
-                  Ready sources
-                  <span className="font-medium normal-case tracking-normal text-foreground">{data.vm.readyToSyncSources}</span>
-                </div>
-                <div className="brand-chip">
-                  Orphaned
-                  <span className="font-medium normal-case tracking-normal text-foreground">{data.vm.orphaned}</span>
-                </div>
-              </div>
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            <div className="brand-chip">
+              Latest VM sync
+              <span className="font-medium normal-case tracking-normal text-foreground">{formatSyncTime(data.vm.latestSyncAt)}</span>
             </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLoading(true);
+                void loadDashboard();
+              }}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Dashboard
+            </Button>
           </div>
         </div>
       </section>

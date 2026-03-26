@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Copy, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,6 +59,7 @@ function TextSection({ title, content }: { title: string; content: ReactNode }) 
 export default function VmDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { setHeader } = usePageHeader();
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -84,6 +86,25 @@ export default function VmDetailPage() {
   useEffect(() => {
     void loadVm();
   }, [loadVm]);
+
+  useEffect(() => {
+    if (!vm) {
+      return;
+    }
+
+    setHeader({
+      title: vm.name,
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Virtual Machines', href: '/dashboard/vm' },
+        { label: vm.name },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [setHeader, vm]);
 
   const copyValue = async (value: string, label: string) => {
     try {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/services/api';
 import {
@@ -146,6 +147,7 @@ function getStatusPresentation(status?: AssetStatus | null) {
 export default function AssetDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { setHeader } = usePageHeader();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
@@ -167,6 +169,25 @@ export default function AssetDetailsPage() {
       void loadAsset(params.id);
     }
   }, [params.id, router]);
+
+  useEffect(() => {
+    if (!asset) {
+      return;
+    }
+
+    setHeader({
+      title: asset.name,
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Assets', href: '/dashboard/assets' },
+        { label: asset.name },
+      ],
+    });
+
+    return () => {
+      setHeader(null);
+    };
+  }, [asset, setHeader]);
 
   const accessRows = useMemo<AccessRow[]>(() => {
     if (!asset) {
