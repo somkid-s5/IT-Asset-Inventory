@@ -329,8 +329,8 @@ export default function VmSourcesPage() {
                         syncingAll || syncingSourceIds.includes(source.id)
                           ? 'border-sky-500/25 bg-sky-500/10 text-sky-200'
                           : source.status === 'Healthy'
-                          ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
-                          : 'border-amber-500/25 bg-amber-500/10 text-amber-300',
+                            ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                            : 'border-amber-500/25 bg-amber-500/10 text-amber-300',
                       )}
                     >
                       {syncingAll || syncingSourceIds.includes(source.id) ? 'Syncing...' : source.status}
@@ -393,7 +393,7 @@ export default function VmSourcesPage() {
           <div className="space-y-4 px-5 py-5">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Source Name</Label>
+                <Label required>Source Name</Label>
                 <Input
                   value={formData.name}
                   onChange={(event) =>
@@ -406,7 +406,7 @@ export default function VmSourcesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Endpoint</Label>
+                <Label required>Endpoint</Label>
                 <Input
                   value={formData.endpoint}
                   onChange={(event) =>
@@ -421,7 +421,7 @@ export default function VmSourcesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Sync Interval</Label>
+                <Label optional>Sync Interval</Label>
                 <Select
                   value={formData.syncInterval}
                   onValueChange={(value) =>
@@ -444,7 +444,7 @@ export default function VmSourcesPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Username</Label>
+                <Label required>Username</Label>
                 <Input
                   value={formData.username}
                   onChange={(event) =>
@@ -458,7 +458,7 @@ export default function VmSourcesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Password</Label>
+                <Label required>Password</Label>
                 <Input
                   type="password"
                   value={formData.password}
@@ -507,7 +507,7 @@ export default function VmSourcesPage() {
                 </div>
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label>Notes</Label>
+                <Label optional>Notes</Label>
                 <textarea
                   value={formData.notes}
                   onChange={(event) =>
@@ -533,20 +533,20 @@ export default function VmSourcesPage() {
               </Button>
 
               <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAddOpen(false);
-                  resetForm();
-                }}
-                disabled={saving || testingConnection}
-              >
-                Cancel
-              </Button>
-              <Button onClick={() => void handleSave()} disabled={saving || testingConnection || !isConnectionVerified}>
-                {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                {editingSourceId ? 'Save changes' : 'Save source'}
-              </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAddOpen(false);
+                    resetForm();
+                  }}
+                  disabled={saving || testingConnection}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={() => void handleSave()} disabled={saving || testingConnection || !isConnectionVerified}>
+                  {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+                  {editingSourceId ? 'Save changes' : 'Save source'}
+                </Button>
               </div>
             </div>
           </div>

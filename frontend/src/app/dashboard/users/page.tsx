@@ -457,7 +457,7 @@ export default function UsersPage() {
 
           <form onSubmit={handleCreateUser} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="create-display-name">Display name</Label>
+              <Label htmlFor="create-display-name" required>Display name</Label>
               <Input
                 id="create-display-name"
                 autoComplete="name"
@@ -468,7 +468,7 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="create-username">Username</Label>
+              <Label htmlFor="create-username" required>Username</Label>
               <Input
                 id="create-username"
                 autoComplete="username"
@@ -479,7 +479,7 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="create-password">Password</Label>
+              <Label htmlFor="create-password" required>Password</Label>
               <Input
                 id="create-password"
                 type="password"
@@ -491,7 +491,7 @@ export default function UsersPage() {
               <p className="text-[11px] text-muted-foreground">{PASSWORD_POLICY_MESSAGE}</p>
             </div>
             <div className="space-y-1.5">
-              <Label>Role</Label>
+              <Label required>Role</Label>
               <Select value={role} onValueChange={(value) => setRole(value as Role)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -530,7 +530,7 @@ export default function UsersPage() {
               <span className="text-[11px]">@{resetTarget?.username}</span>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="reset-password">New password</Label>
+              <Label htmlFor="reset-password" required>New password</Label>
               <Input
                 id="reset-password"
                 type="password"
@@ -542,7 +542,7 @@ export default function UsersPage() {
               <p className="text-[11px] text-muted-foreground">{PASSWORD_POLICY_MESSAGE}</p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="reset-password-confirm">Confirm new password</Label>
+              <Label htmlFor="reset-password-confirm" required>Confirm new password</Label>
               <Input
                 id="reset-password-confirm"
                 type="password"

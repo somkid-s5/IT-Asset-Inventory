@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Open_Sans, Orbitron } from 'next/font/google';
+import { IBM_Plex_Sans_Thai } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
@@ -9,25 +9,21 @@ import { ReactQueryProvider } from '@/components/ReactQueryProvider';
 
 export const dynamic = 'force-dynamic';
 
-const openSans = Open_Sans({
-  subsets: ['latin'],
-  variable: '--font-open-sans',
-});
-
-const orbitron = Orbitron({
-  subsets: ['latin'],
-  variable: '--font-orbitron',
+const ibmPlexSansThai = IBM_Plex_Sans_Thai({
+  subsets: ['thai'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-thai',
 });
 
 export const metadata: Metadata = {
-  title: 'AssetOps',
-  description: 'IT Asset Operations Platform',
+  title: 'ระบบจัดการสินทรัพย์ IT',
+  description: 'จัดการสินทรัพย์ IT ฐานข้อมูล และเครื่องเสมือนของคุณ',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${openSans.variable} ${orbitron.variable} font-sans antialiased selection:bg-primary/30`}>
+    <html lang="th" className="dark" suppressHydrationWarning>
+      <body className={`${ibmPlexSansThai.variable} font-sans antialiased selection:bg-primary/30`}>
         {/* Skip Link for Accessibility */}
         <a
           href="#main-content"

@@ -548,7 +548,7 @@ export function AssetFormDialog({
               <p className="workspace-subtle">Identity</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label>Asset Name / Hostname</Label>
+                  <Label required>Asset Name / Hostname</Label>
                   <Input
                     required
                     autoComplete="off"
@@ -563,7 +563,7 @@ export function AssetFormDialog({
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Asset ID</Label>
+                  <Label optional>Asset ID</Label>
                   <Input
                     autoComplete="off"
                     value={formData.assetId}
@@ -577,7 +577,7 @@ export function AssetFormDialog({
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Type</Label>
+                  <Label required>Type</Label>
                   <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as AssetType })}>
                     <SelectTrigger>
                       <SelectValue />
@@ -592,7 +592,7 @@ export function AssetFormDialog({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Brand / Model</Label>
+                  <Label optional>Brand / Model</Label>
                   <Input
                     autoComplete="off"
                     value={formData.brandModel}
@@ -601,7 +601,7 @@ export function AssetFormDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Serial Number</Label>
+                  <Label optional>Serial Number</Label>
                   <Input
                     autoComplete="off"
                     value={formData.sn}
@@ -621,7 +621,7 @@ export function AssetFormDialog({
               <p className="workspace-subtle">Placement</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Location</Label>
+                  <Label optional>Location</Label>
                   <Input
                     autoComplete="off"
                     value={formData.location}
@@ -630,7 +630,7 @@ export function AssetFormDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Rack</Label>
+                  <Label optional>Rack</Label>
                   <Input
                     autoComplete="off"
                     value={formData.rack}
@@ -723,7 +723,7 @@ export function AssetFormDialog({
                   <div className={`grid gap-3 ${assetMode === 'multi' ? 'md:grid-cols-2 xl:grid-cols-5' : 'md:grid-cols-2 xl:grid-cols-4'}`}>
                     {assetMode === 'multi' && (
                       <div className="space-y-1.5">
-                        <Label>Node</Label>
+                        <Label optional>Node</Label>
                         <Select value={point.nodeLabel || undefined} onValueChange={(value) => updateAccessPoint(index, 'nodeLabel', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a node" />
@@ -739,7 +739,7 @@ export function AssetFormDialog({
                       </div>
                     )}
                     <div className="space-y-1.5">
-                      <Label>Access Type</Label>
+                      <Label optional>Access Type</Label>
                       <Select value={point.type || undefined} onValueChange={(value) => updateAccessPoint(index, 'type', value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
@@ -754,7 +754,7 @@ export function AssetFormDialog({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Access Method</Label>
+                      <Label optional>Access Method</Label>
                       <Select
                         value={point.manageType || undefined}
                         onValueChange={(value) => updateAccessPoint(index, 'manageType', value)}
@@ -772,7 +772,7 @@ export function AssetFormDialog({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>IP Address</Label>
+                      <Label optional>IP Address</Label>
                       <Input
                         autoComplete="off"
                         value={point.address}
@@ -785,7 +785,7 @@ export function AssetFormDialog({
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Version / Firmware</Label>
+                      <Label optional>Version / Firmware</Label>
                       <Input
                         autoComplete="off"
                         value={point.version}

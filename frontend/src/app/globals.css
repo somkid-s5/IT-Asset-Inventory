@@ -43,8 +43,8 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 6px);
-  --font-sans: var(--font-open-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: var(--font-open-sans), ui-sans-serif, sans-serif;
+  --font-sans: var(--font-thai), "IBM Plex Sans Thai", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-thai), "IBM Plex Sans Thai", ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", monospace;
   --animate-slide-in: slide-in 0.22s ease-out;
 
@@ -64,7 +64,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: 220 16% 96%; /* #f1f5f9 - Deep enough to push white cards forward */
+  --background: 220 16% 96%;
+  /* #f1f5f9 - Deep enough to push white cards forward */
   --foreground: 220 23% 17%;
   --card: 0 0% 100%;
   --card-foreground: 220 23% 17%;
@@ -72,9 +73,11 @@
   --popover-foreground: 220 23% 17%;
   --primary: 220 23% 17%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 14% 92%; /* Distinguishable grey button */
+  --secondary: 220 14% 92%;
+  /* Distinguishable grey button */
   --secondary-foreground: 220 23% 17%;
-  --muted: 220 14% 92%; /* Distinguishable grey background for elements */
+  --muted: 220 14% 92%;
+  /* Distinguishable grey background for elements */
   --muted-foreground: 220 15% 40%;
   --accent: 220 14% 92%;
   --accent-foreground: 220 23% 17%;
@@ -90,11 +93,13 @@
   --high: 0 74% 54%;
   --medium: 35 94% 58%;
   --low: 145 63% 42%;
-  --border: 214 20% 82%; /* Strong border */
+  --border: 214 20% 82%;
+  /* Strong border */
   --input: 214 20% 82%;
   --ring: 220 23% 17%;
   --radius: 0.5rem;
-  --sidebar-background: 0 0% 100%; /* Pure white left sidebar */
+  --sidebar-background: 0 0% 100%;
+  /* Pure white left sidebar */
   --sidebar-foreground: 220 15% 40%;
   --sidebar-primary: 220 23% 17%;
   --sidebar-primary-foreground: 0 0% 100%;
@@ -229,7 +234,7 @@
   }
 
   .filter-chip-active {
-    @apply border-primary/20 bg-accent text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,hsl(var(--primary))_18%,transparent)];
+    @apply border-primary/20 bg-accent text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab, hsl(var(--primary))_18%, transparent)];
   }
 
   .stats-grid {
