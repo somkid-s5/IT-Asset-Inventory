@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { AlertTriangle, Database, RefreshCw, Server, ShieldCheck, Users, Monitor, ShieldAlert, Laptop, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import api from '@/services/api';
 import { DashboardSkeleton } from '@/components/Skeletons';
 
@@ -74,8 +76,8 @@ export default function DashboardPage() {
         typeof err === 'object' &&
           err !== null &&
           'response' in err &&
-          typeof (err as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          typeof (err as any).response?.data?.message === 'string'
+          ? (err as any).response?.data?.message
           : null;
 
       const message = apiMessage ?? 'Failed to load dashboard data from server.';
@@ -103,8 +105,6 @@ export default function DashboardPage() {
       setHeader(null);
     };
   }, [setHeader]);
-
-
 
   const attentionItems = useMemo(() => {
     if (!data) {
@@ -152,8 +152,6 @@ export default function DashboardPage() {
     return items;
   }, [data]);
 
-
-
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -161,25 +159,24 @@ export default function DashboardPage() {
   if (error || !data) {
     return (
       <div className="workspace-page">
-        <section className="workspace-hero">
-          <div className="flex items-start gap-3">
-            <div className="icon-chip border-destructive/20 bg-destructive/10 text-destructive">
-              <AlertTriangle className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="workspace-heading text-lg">Dashboard Unavailable</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{error || 'No data received from backend.'}</p>
-              <Button
-                onClick={() => {
-                  setLoading(true);
-                  void loadDashboard();
-                }}
-                className="mt-4"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Retry
-              </Button>
-            </div>
+        <section className="flex items-start gap-4 mt-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold tracking-tight">Dashboard Unavailable</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{error || 'No data received from backend.'}</p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLoading(true);
+                void loadDashboard();
+              }}
+              className="mt-4"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
           </div>
         </section>
       </div>
@@ -188,185 +185,184 @@ export default function DashboardPage() {
 
   return (
     <div className="workspace-page space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
-          <p className="text-sm text-muted-foreground mt-1">Summary of your IT infrastructure and operations.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Summary of your IT infrastructure and operations.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="brand-chip bg-muted/30">
-            Last Sync 
-            <span className="font-medium normal-case tracking-normal text-foreground">{formatSyncTime(data.vm.latestSyncAt)}</span>
-          </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="px-3 py-1 font-normal bg-card">
+            <span className="text-muted-foreground mr-1">Last Sync</span> 
+            <span className="font-medium text-foreground">{formatSyncTime(data.vm.latestSyncAt)}</span>
+          </Badge>
           <Button
             variant="outline"
             size="sm"
+            className="h-8"
             onClick={() => {
               setLoading(true);
               void loadDashboard();
             }}
           >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            <RefreshCw className="mr-2 h-3.5 w-3.5" />
             Refresh
           </Button>
         </div>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-tile cursor-pointer transition-colors hover:border-primary/30" onClick={() => router.push('/dashboard/assets')}>
-          <div className="flex items-center justify-between">
-            <span className="stat-kicker">Physical Assets</span>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/assets')}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Physical Assets</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold tracking-tight">{data.assets.total}</span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.assets.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="text-emerald-600 dark:text-emerald-400 font-medium">{data.assets.active} Active</span> · {data.assets.inactive} Inactive
             </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="stat-tile cursor-pointer transition-colors hover:border-primary/30" onClick={() => router.push('/dashboard/vm')}>
-          <div className="flex items-center justify-between">
-            <span className="stat-kicker">Virtual Machines</span>
+        <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/vm')}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Virtual Machines</CardTitle>
             <Monitor className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold tracking-tight">{data.vm.activeInventory}</span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.vm.activeInventory}</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="text-amber-600 dark:text-amber-500 font-medium">{data.vm.pendingSetup} Pending</span> · {data.vm.orphaned} Orphaned
             </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="stat-tile cursor-pointer transition-colors hover:border-primary/30" onClick={() => router.push('/dashboard/db')}>
-          <div className="flex items-center justify-between">
-            <span className="stat-kicker">Databases</span>
+        <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/db')}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Databases</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold tracking-tight">{data.databases.total}</span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.databases.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="text-blue-600 dark:text-blue-400 font-medium">{data.databases.production} Prod</span> · {data.databases.accounts} Accounts
             </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="stat-tile cursor-pointer transition-colors hover:border-primary/30" onClick={() => router.push('/dashboard/users')}>
-          <div className="flex items-center justify-between">
-            <span className="stat-kicker">Team Members</span>
+        <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/users')}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Team Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold tracking-tight">{data.users.total}</span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.users.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-medium">{data.users.admins} Admins</span> · Workspace Users
             </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Asset Breakdown Panel */}
-        <div className="surface-panel p-5 flex flex-col">
-          <div className="flex items-center gap-2 border-b border-border/60 pb-3 mb-4">
-            <div className="icon-chip h-7 w-7 rounded border-none bg-primary/10 text-primary">
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-row items-center gap-2 border-b border-border/60 pb-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-primary/10 text-primary">
               <Laptop className="h-3.5 w-3.5" />
             </div>
-            <h3 className="app-panel-title">Asset Breakdown</h3>
-          </div>
-          
-          <div className="flex-1 space-y-3">
-            {data.assets.breakdown.length > 0 ? (
-              data.assets.breakdown.map((b) => (
-                <div key={b.label} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-colors"></span>
-                    {b.label}
+            <CardTitle className="text-sm font-semibold">Asset Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 pt-4">
+            <div className="space-y-3">
+              {data.assets.breakdown.length > 0 ? (
+                data.assets.breakdown.map((b) => (
+                  <div key={b.label} className="group flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary/40 transition-colors group-hover:bg-primary"></span>
+                      {b.label}
+                    </div>
+                    <span className="text-sm font-medium">{b.count}</span>
                   </div>
-                  <span className="text-sm font-medium">{b.count}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground flex items-center justify-center h-full">No distribution data</p>
-            )}
-          </div>
-          
-          <div className="mt-5 pt-4 border-t border-border/60">
+                ))
+              ) : (
+                <p className="flex h-full items-center justify-center text-sm text-muted-foreground">No distribution data</p>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="border-t border-border/60 pt-4">
              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground" onClick={() => router.push('/dashboard/assets')}>
                 View Full Register
              </Button>
-          </div>
-        </div>
+          </CardFooter>
+        </Card>
 
         {/* VM Source Health Panel */}
-        <div className="surface-panel p-5 flex flex-col">
-          <div className="flex items-center gap-2 border-b border-border/60 pb-3 mb-4">
-            <div className="icon-chip h-7 w-7 rounded border-none bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-row items-center gap-2 border-b border-border/60 pb-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Activity className="h-3.5 w-3.5" />
             </div>
-            <h3 className="app-panel-title">Source Connection Health</h3>
-          </div>
-          
-          <div className="mt-1 space-y-2.5 flex-1">
-            <button className="muted-panel flex items-center justify-between w-full gap-3 px-3 py-2.5 text-xs transition-colors hover:border-emerald-500/30" onClick={() => router.push('/dashboard/vm/sources')}>
-              <span className="inline-flex items-center gap-2 text-muted-foreground">
+            <CardTitle className="text-sm font-semibold">Source Connection Health</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 pt-4 space-y-2.5">
+            <Button variant="outline" className="w-full justify-between h-auto py-2.5 px-3 font-normal" onClick={() => router.push('/dashboard/vm/sources')}>
+              <span className="inline-flex items-center gap-2 text-muted-foreground text-xs">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                 Healthy Connections
               </span>
-              <span className="font-semibold text-foreground">{data.vm.healthySources}</span>
-            </button>
-            <button className="muted-panel flex items-center justify-between w-full gap-3 px-3 py-2.5 text-xs transition-colors hover:border-red-500/30" onClick={() => router.push('/dashboard/vm/sources')}>
-              <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <span className="font-semibold text-foreground text-xs">{data.vm.healthySources}</span>
+            </Button>
+            <Button variant="outline" className="w-full justify-between h-auto py-2.5 px-3 font-normal border-destructive/20 hover:border-destructive/40" onClick={() => router.push('/dashboard/vm/sources')}>
+              <span className="inline-flex items-center gap-2 text-muted-foreground text-xs">
                 <AlertTriangle className={data.vm.connectionFailedSources > 0 ? "h-3.5 w-3.5 text-red-500" : "h-3.5 w-3.5 text-muted-foreground"} />
                 Connection Failed
               </span>
-              <span className="font-semibold text-foreground">{data.vm.connectionFailedSources}</span>
-            </button>
-            <button className="muted-panel flex items-center justify-between w-full gap-3 px-3 py-2.5 text-xs transition-colors hover:border-primary/30" onClick={() => router.push('/dashboard/vm/sources')}>
-              <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <span className="font-semibold text-foreground text-xs">{data.vm.connectionFailedSources}</span>
+            </Button>
+            <Button variant="outline" className="w-full justify-between h-auto py-2.5 px-3 font-normal" onClick={() => router.push('/dashboard/vm/sources')}>
+              <span className="inline-flex items-center gap-2 text-muted-foreground text-xs">
                 <RefreshCw className="h-3.5 w-3.5 text-blue-500" />
                 Ready to Sync
               </span>
-              <span className="font-semibold text-foreground">{data.vm.readyToSyncSources}</span>
-            </button>
-          </div>
-        </div>
+              <span className="font-semibold text-foreground text-xs">{data.vm.readyToSyncSources}</span>
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Needs Attention Panel */}
-        <div className="surface-panel p-5 flex flex-col">
-          <div className="flex items-center gap-2 border-b border-border/60 pb-3 mb-4">
-            <div className="icon-chip h-7 w-7 rounded border-none bg-amber-500/10 text-amber-600 dark:text-amber-500">
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-row items-center gap-2 border-b border-border/60 pb-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-amber-500/10 text-amber-600 dark:text-amber-500">
               <ShieldAlert className="h-3.5 w-3.5" />
             </div>
-            <h3 className="app-panel-title">Needs Attention</h3>
-          </div>
-          
-          <div className="mt-1 space-y-2.5 flex-1 overflow-y-auto">
+            <CardTitle className="text-sm font-semibold">Needs Attention</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-y-auto pt-4 space-y-2.5">
             {attentionItems.length > 0 && attentionItems[0].id === 'all-clear' ? (
                <div className="flex flex-col items-center justify-center py-6 text-center">
-                 <ShieldCheck className="h-8 w-8 text-emerald-500/60 mb-3" />
+                 <ShieldCheck className="mb-3 h-8 w-8 text-emerald-500/60" />
                  <p className="text-sm font-medium text-foreground">All Clear</p>
-                 <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">No urgent inventory issues require your attention.</p>
+                 <p className="mt-1 max-w-[200px] text-xs text-muted-foreground">No urgent inventory issues require your attention.</p>
                </div>
             ) : (
               attentionItems.map((item) => (
-                <button
+                <Button
                   key={item.id}
-                  type="button"
+                  variant="outline"
+                  className="flex w-full items-start justify-start h-auto gap-2.5 px-3 py-2.5 text-left font-normal"
                   onClick={() => router.push(item.route)}
-                  className="muted-panel flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:border-primary/30 hover:bg-muted/60"
                 >
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex flex-col items-start text-left">
                     <span className="block text-xs font-medium text-foreground">{item.title}</span>
-                    <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground line-clamp-2">{item.detail}</span>
+                    <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground whitespace-normal line-clamp-2">{item.detail}</span>
                   </span>
-                </button>
+                </Button>
               ))
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -8,6 +8,16 @@ import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2, Database, FlaskConical, LoaderCircle, Pencil, Plus, Search, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { DatabaseFormDialog } from '@/components/LazyLoadedDialogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { type DatabaseEnvironment, type DatabaseInventoryDetail, type DatabaseInventoryItem } from '@/lib/database-inventory';
@@ -124,10 +134,10 @@ export default function DbPage() {
 
   const renderSortIcon = (key: SortKey) => {
     if (sortKey !== key) {
-      return <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/70" />;
+      return <ChevronsUpDown className="ml-2 h-3.5 w-3.5 text-muted-foreground/70" />;
     }
 
-    return sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+    return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-3.5 w-3.5" /> : <ArrowDown className="ml-2 h-3.5 w-3.5" />;
   };
 
   const handleEdit = async (databaseId: string) => {
@@ -163,158 +173,182 @@ export default function DbPage() {
 
   return (
     <div className="workspace-page">
-      <section className="table-shell">
-        <div className="toolbar-strip">
-          <div className="flex flex-1 flex-wrap items-center gap-1.5">
-            {ENVIRONMENT_TABS.map((filter) => {
-              const Icon = filter.icon;
+      <Card className="rounded-xl border border-border bg-card shadow-sm shadow-black/[0.03] overflow-hidden">
+        <div className="border-b border-border/70 bg-card px-4 py-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-1 flex-wrap items-center gap-1.5">
+              {ENVIRONMENT_TABS.map((filter) => {
+                const Icon = filter.icon;
+                const isActive = activeEnvironment === filter.value;
 
-              return (
-                <button
-                  key={filter.value}
-                  onClick={() => setActiveEnvironment(filter.value)}
-                  className={`filter-chip ${activeEnvironment === filter.value ? 'filter-chip-active' : ''}`}
-                >
-                  <Icon className={`h-3.5 w-3.5 ${filter.iconClassName}`} />
-                  <span>{filter.label}</span>
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
-                    {countsByEnvironment[filter.value]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="toolbar-input-wrap">
-              <Search className="toolbar-input-icon" />
-              <Input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by database name, engine, host, or IP address"
-                className="pl-10"
-              />
+                return (
+                  <Button
+                    key={filter.value}
+                    variant={isActive ? "secondary" : "ghost"}
+                    size="sm"
+                    className={`h-8 gap-1.5 px-3 text-xs font-semibold ${isActive ? 'bg-secondary text-secondary-foreground shadow-sm' : 'text-muted-foreground hover:bg-accent'}`}
+                    onClick={() => setActiveEnvironment(filter.value)}
+                  >
+                    <Icon className={`h-3.5 w-3.5 ${filter.iconClassName}`} />
+                    <span>{filter.label}</span>
+                    <Badge variant="neutral" className="ml-1 h-5 px-1.5 font-mono text-[10px]">
+                      {countsByEnvironment[filter.value]}
+                    </Badge>
+                  </Button>
+                );
+              })}
             </div>
 
-            <Button size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add Database
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
+                <Input
+                  type="text"
+                  className="h-8 w-[240px] pl-9 text-xs transition-shadow focus-visible:ring-1 sm:w-[320px]"
+                  placeholder="Search by database name, engine, host, or IP..."
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
+              </div>
+
+              <Button size="sm" className="h-8 gap-1.5 px-3" onClick={() => setDialogOpen(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                Add Database
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="table-frame min-w-[900px]">
-            <thead>
-              <tr className="table-head-row">
-                <th className="px-2 py-2.5 font-medium">
-                  <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+        <div className="max-h-[600px] overflow-auto">
+          <Table className="min-w-[900px]">
+            <TableHeader className="bg-muted sticky top-0 z-10 shadow-[0_1px_0_hsl(var(--border))]">
+              <TableRow className="hover:bg-transparent border-none">
+                <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
+                  <Button variant="ghost" onClick={() => toggleSort('name')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
                     DB Name
                     {renderSortIcon('name')}
-                  </button>
-                </th>
-                <th className="px-2 py-2.5 font-medium">
-                  <button onClick={() => toggleSort('engine')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                  </Button>
+                </TableHead>
+                <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
+                  <Button variant="ghost" onClick={() => toggleSort('engine')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
                     Engine
                     {renderSortIcon('engine')}
-                  </button>
-                </th>
-                <th className="px-2 py-2.5 font-medium">
-                  <button onClick={() => toggleSort('version')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                  </Button>
+                </TableHead>
+                <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
+                  <Button variant="ghost" onClick={() => toggleSort('version')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
                     Version
                     {renderSortIcon('version')}
-                  </button>
-                </th>
-                <th className="px-2 py-2.5 font-medium">
-                  <button onClick={() => toggleSort('environment')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                  </Button>
+                </TableHead>
+                <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
+                  <Button variant="ghost" onClick={() => toggleSort('environment')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
                     Environment
                     {renderSortIcon('environment')}
-                  </button>
-                </th>
-                <th className="px-2 py-2.5 font-medium">
-                  <button onClick={() => toggleSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                  </Button>
+                </TableHead>
+                <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
+                  <Button variant="ghost" onClick={() => toggleSort('host')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
                     Host
                     {renderSortIcon('host')}
-                  </button>
-                </th>
-                <th className="px-2 py-2.5 font-medium">
-                  <button onClick={() => toggleSort('ipAddress')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                  </Button>
+                </TableHead>
+                <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
+                  <Button variant="ghost" onClick={() => toggleSort('ipAddress')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
                     IP
                     {renderSortIcon('ipAddress')}
-                  </button>
-                </th>
-                <th className="px-2 py-2.5 font-medium">Accounts</th>
-                <th className="px-2 py-2.5 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+                  </Button>
+                </TableHead>
+                <TableHead className="h-10 px-4 py-2 align-middle border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em]">
+                  Accounts
+                </TableHead>
+                <TableHead className="h-10 px-4 py-2 align-middle border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-right">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center gap-2">
+                <TableRow>
+                  <TableCell colSpan={8} className="h-24 text-center">
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <LoaderCircle className="h-4 w-4 animate-spin text-foreground" />
                       <span className="text-sm">Loading databases...</span>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : filteredDatabases.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                    No databases matched your filters.
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={8} className="h-[200px] text-center text-sm text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50 border border-border/70">
+                        <Database className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-foreground">No databases found</h3>
+                      <p className="mt-1 text-xs text-muted-foreground max-w-[250px]">
+                        {searchTerm ? 'Adjust your search filters.' : 'There are no databases in this environment.'}
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : (
                 filteredDatabases.map((database) => (
-                  <tr
+                  <TableRow
                     key={database.id}
-                    className="table-row group cursor-pointer"
+                    className="group cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/70"
                     onClick={() => router.push(`/dashboard/db/${database.id}`)}
                   >
-                    <td className="px-2 py-2.5">
-                      <div className="flex items-center gap-1.5">
+                    <TableCell className="p-3 align-middle">
+                      <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/70 bg-background/70 text-muted-foreground">
                           <Database className="h-3.5 w-3.5" />
                         </div>
-                        <div>
-                          <div className="text-[12px] text-foreground">{database.name}</div>
-                        </div>
+                        <div className="truncate text-[12px] font-medium text-foreground">{database.name}</div>
                       </div>
-                    </td>
-                    <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.engine}</td>
-                    <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.version || '--'}</td>
-                    <td className="px-2 py-2.5">
-                      <span className={`data-label ${database.environment === 'PROD' ? 'data-label-danger' : database.environment === 'UAT' ? 'data-label-warning' : 'data-label-neutral'}`}>
+                    </TableCell>
+                    <TableCell className="p-3 align-middle text-[11px] text-muted-foreground">{database.engine}</TableCell>
+                    <TableCell className="p-3 align-middle text-[11px] text-muted-foreground">{database.version || '--'}</TableCell>
+                    <TableCell className="p-3 align-middle">
+                      <Badge variant={database.environment === 'PROD' ? 'danger' : database.environment === 'UAT' ? 'warning' : 'neutral'} className="uppercase tracking-wider">
                         {database.environment}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.host}</td>
-                    <td className="px-2 py-2.5 font-mono text-[11px] text-muted-foreground">{database.ipAddress}</td>
-                    <td className="px-2 py-2.5 text-[11px] text-muted-foreground">{database.accountsCount}</td>
-                    <td className="px-2 py-2.5 text-right" onClick={(event) => event.stopPropagation()}>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="p-3 align-middle text-[11px] text-muted-foreground font-mono">{database.host}</TableCell>
+                    <TableCell className="p-3 align-middle font-mono text-[11px] text-muted-foreground">{database.ipAddress}</TableCell>
+                    <TableCell className="p-3 align-middle text-[11px] text-muted-foreground pl-6">{database.accountsCount}</TableCell>
+                    <TableCell className="p-3 align-middle text-right" onClick={(event) => event.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:bg-primary/10 hover:text-primary opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                           onClick={() => void handleEdit(database.id)}
-                          className="rounded-lg border border-border/70 bg-card px-1.5 py-1.5 text-muted-foreground opacity-100 transition-all hover:border-primary/20 hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
                         >
-                          {loadingEditId === database.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(database)}
+                          {loadingEditId === database.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                           disabled={deleteLoading && deleteTarget?.id === database.id}
-                          className="rounded-lg border border-border/70 bg-card px-1.5 py-1.5 text-muted-foreground opacity-100 transition-all hover:border-destructive/20 hover:text-destructive disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
+                          onClick={() => setDeleteTarget(database)}
                         >
-                          {deleteLoading && deleteTarget?.id === database.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                        </button>
+                          {deleteLoading && deleteTarget?.id === database.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-      </section>
+        {!loading && filteredDatabases.length > 0 && (
+          <div className="bg-card px-4 py-2.5 border-t border-border/70 text-[11px] font-medium text-muted-foreground">
+            Showing {filteredDatabases.length} databases
+          </div>
+        )}
+      </Card>
 
       <DatabaseFormDialog
         open={dialogOpen}
