@@ -133,12 +133,12 @@ function buildAccounts(vmToEdit?: VmInventoryDetail | null) {
 
   return vmToEdit.guestAccounts.length > 0
     ? vmToEdit.guestAccounts.map((account) => ({
-        username: account.username,
-        password: account.password,
-        accessMethod: account.accessMethod,
-        role: account.role,
-        note: account.note ?? '',
-      }))
+      username: account.username,
+      password: account.password,
+      accessMethod: account.accessMethod,
+      role: account.role,
+      note: account.note ?? '',
+    }))
     : [{ ...EMPTY_ACCOUNT }];
 }
 
@@ -162,12 +162,12 @@ export function VmFormDialog({
         ? buildAccounts(vmToEdit)
         : discoveryVm?.guestAccounts?.length
           ? discoveryVm.guestAccounts.map((account) => ({
-              username: account.username,
-              password: account.password,
-              accessMethod: account.accessMethod,
-              role: account.role,
-              note: account.note ?? '',
-            }))
+            username: account.username,
+            password: account.password,
+            accessMethod: account.accessMethod,
+            role: account.role,
+            note: account.note ?? '',
+          }))
           : [{ ...EMPTY_ACCOUNT }],
     );
   }, [vmToEdit, discoveryVm]);
@@ -324,7 +324,7 @@ export function VmFormDialog({
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-1.5">
-                <Label htmlFor="vm-system-name">System Name</Label>
+                <Label required>System Name</Label>
                 <Input
                   id="vm-system-name"
                   value={formData.systemName}
@@ -333,7 +333,7 @@ export function VmFormDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-env">Environment</Label>
+                <Label required>Environment</Label>
                 <Select
                   value={formData.environment}
                   onValueChange={(value) => setFormData((current) => ({ ...current, environment: value as typeof formData.environment }))}
@@ -351,7 +351,7 @@ export function VmFormDialog({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-service-role">Service Role</Label>
+                <Label required>Service Role</Label>
                 <Select
                   value={formData.serviceRole}
                   onValueChange={(value) => setFormData((current) => ({ ...current, serviceRole: value }))}
@@ -372,7 +372,7 @@ export function VmFormDialog({
                 </Select>
               </div>
               <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
-                <Label htmlFor="vm-description">Service Purpose</Label>
+                <Label optional>Service Purpose</Label>
                 <textarea
                   id="vm-description"
                   value={formData.description}
@@ -382,7 +382,7 @@ export function VmFormDialog({
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
-                <Label htmlFor="vm-notes">Notes</Label>
+                <Label optional>Notes</Label>
                 <textarea
                   id="vm-notes"
                   value={formData.notes}
@@ -392,7 +392,7 @@ export function VmFormDialog({
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="vm-tags">Tags</Label>
+                <Label optional>Tags</Label>
                 <Input
                   id="vm-tags"
                   value={formData.tags}
@@ -434,15 +434,15 @@ export function VmFormDialog({
 
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                     <div className="space-y-1.5">
-                      <Label>Username</Label>
+                      <Label required>Username</Label>
                       <Input value={account.username} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, username: event.target.value } : item)))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Password</Label>
+                      <Label required>Password</Label>
                       <Input type="password" value={account.password} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, password: event.target.value } : item)))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Access</Label>
+                      <Label optional>Access</Label>
                       <Select
                         value={account.accessMethod}
                         onValueChange={(value) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, accessMethod: value } : item)))}
@@ -458,11 +458,11 @@ export function VmFormDialog({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Role</Label>
+                      <Label optional>Role</Label>
                       <Input value={account.role} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, role: event.target.value } : item)))} placeholder="e.g. OS admin, service account" />
                     </div>
                     <div className="space-y-1.5 md:col-span-2 xl:col-span-1">
-                      <Label>Note</Label>
+                      <Label optional>Note</Label>
                       <Input value={account.note} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, note: event.target.value } : item)))} />
                     </div>
                   </div>

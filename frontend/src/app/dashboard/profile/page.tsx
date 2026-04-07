@@ -187,7 +187,7 @@ export default function ProfilePage() {
 
           <form onSubmit={handleProfileSubmit} className="mt-4 space-y-4 border-b border-border pb-4">
             <div className="space-y-1.5">
-              <Label htmlFor="displayName">Display name</Label>
+              <Label htmlFor="displayName" required>Display name</Label>
               <Input
                 id="displayName"
                 autoComplete="name"
@@ -198,7 +198,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Avatar</Label>
+              <Label optional>Avatar</Label>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
               <div className="muted-panel flex flex-wrap items-center gap-3 px-4 py-4">
                 <UserAvatar
@@ -243,7 +243,7 @@ export default function ProfilePage() {
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="currentPassword">Current password</Label>
+              <Label htmlFor="currentPassword" required>Current password</Label>
               <Input
                 id="currentPassword"
                 type="password"
@@ -255,7 +255,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="newPassword">New password</Label>
+              <Label htmlFor="newPassword" required>New password</Label>
               <Input
                 id="newPassword"
                 type="password"
@@ -268,7 +268,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Label htmlFor="confirmPassword" required>Confirm new password</Label>
               <Input
                 id="confirmPassword"
                 type="password"

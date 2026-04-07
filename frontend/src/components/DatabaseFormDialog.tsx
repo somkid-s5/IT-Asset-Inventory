@@ -93,12 +93,12 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
     setAccounts(
       databaseToEdit.accounts.length > 0
         ? databaseToEdit.accounts.map((account) => ({
-            username: account.username,
-            password: account.password,
-            role: account.role ?? '',
-            privileges: joinCommaSeparated(account.privileges),
-            note: account.note ?? '',
-          }))
+          username: account.username,
+          password: account.password,
+          role: account.role ?? '',
+          privileges: joinCommaSeparated(account.privileges),
+          note: account.note ?? '',
+        }))
         : [{ ...EMPTY_ACCOUNT }],
     );
   }, [databaseToEdit, open]);
@@ -152,9 +152,9 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
     } catch (error: unknown) {
       const message =
         typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+          error !== null &&
+          'response' in error &&
+          typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
           ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
           : 'Failed to save database';
 
@@ -180,7 +180,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
             <div className="grid gap-3 md:grid-cols-12">
               <div className="space-y-1.5 md:col-span-12">
-                <Label htmlFor="db-note">System / Purpose</Label>
+                <Label optional>System / Purpose</Label>
                 <Input
                   id="db-note"
                   className={COMPACT_INPUT_CLASS}
@@ -190,7 +190,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-5">
-                <Label htmlFor="db-name">DB Name</Label>
+                <Label required>DB Name</Label>
                 <Input
                   id="db-name"
                   className={COMPACT_INPUT_CLASS}
@@ -200,7 +200,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="db-engine">Engine</Label>
+                <Label required>Engine</Label>
                 <Select value={formData.engine || undefined} onValueChange={(value) => setFormData((current) => ({ ...current, engine: value }))}>
                   <SelectTrigger id="db-engine" size="sm" className={COMPACT_SELECT_TRIGGER_CLASS}>
                     <SelectValue placeholder="Select an engine" />
@@ -215,7 +215,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 </Select>
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="db-version">Version</Label>
+                <Label optional>Version</Label>
                 <Input
                   id="db-version"
                   className={COMPACT_INPUT_CLASS}
@@ -224,7 +224,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label htmlFor="db-environment">Environment</Label>
+                <Label required>Environment</Label>
                 <Select value={formData.environment || undefined} onValueChange={(value) => setFormData((current) => ({ ...current, environment: value }))}>
                   <SelectTrigger id="db-environment" size="sm" className={COMPACT_SELECT_TRIGGER_CLASS}>
                     <SelectValue placeholder="Select an environment" />
@@ -245,7 +245,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               </div>
 
               <div className="space-y-1.5 md:col-span-4">
-                <Label htmlFor="db-host">Host</Label>
+                <Label required>Host</Label>
                 <Input
                   id="db-host"
                   className={COMPACT_INPUT_CLASS}
@@ -255,17 +255,16 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label htmlFor="db-ip">IP Address</Label>
+                <Label optional>IP Address</Label>
                 <Input
                   id="db-ip"
                   className={COMPACT_INPUT_CLASS}
                   value={formData.ipAddress}
                   onChange={(event) => setFormData((current) => ({ ...current, ipAddress: event.target.value }))}
-                  required
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="db-port">Port</Label>
+                <Label optional>Port</Label>
                 <Input
                   id="db-port"
                   className={COMPACT_INPUT_CLASS}
@@ -275,7 +274,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label htmlFor="db-service-name">Service Name</Label>
+                <Label optional>Service Name</Label>
                 <Input
                   id="db-service-name"
                   className={COMPACT_INPUT_CLASS}
@@ -370,23 +369,23 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label>Username</Label>
+                      <Label required>Username</Label>
                       <Input className={COMPACT_INPUT_CLASS} value={account.username} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, username: event.target.value } : item))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Password</Label>
+                      <Label required>Password</Label>
                       <Input className={COMPACT_INPUT_CLASS} type="password" value={account.password} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, password: event.target.value } : item))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Role</Label>
+                      <Label optional>Role</Label>
                       <Input className={COMPACT_INPUT_CLASS} value={account.role} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, role: event.target.value } : item))} placeholder="e.g. DBA, Application, Reporting" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Privileges</Label>
+                      <Label optional>Privileges</Label>
                       <Input className={COMPACT_INPUT_CLASS} value={account.privileges} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, privileges: event.target.value } : item))} placeholder="e.g. SELECT, INSERT, UPDATE" />
                     </div>
                     <div className="space-y-1.5 md:col-span-2">
-                      <Label>Note</Label>
+                      <Label optional>Note</Label>
                       <Input className={COMPACT_INPUT_CLASS} value={account.note} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, note: event.target.value } : item))} />
                     </div>
                   </div>
