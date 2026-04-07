@@ -37,7 +37,7 @@ function getErrorMessage(error: unknown) {
 
 export default function LoginPage() {
   const router = useRouter()
-  const { user, isLoading: authLoading, login } = useAuth()
+  const { user, loading: authLoading, login } = useAuth()
   const [loading, setLoading] = useState(false)
 
   const {
