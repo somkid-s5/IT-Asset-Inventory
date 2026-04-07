@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @theme {
   --color-border: hsl(var(--border));
@@ -234,7 +232,7 @@
   }
 
   .filter-chip-active {
-    @apply border-primary/20 bg-accent text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab, hsl(var(--primary))_18%, transparent)];
+    @apply border-primary/20 bg-accent text-foreground;
   }
 
   .stats-grid {
