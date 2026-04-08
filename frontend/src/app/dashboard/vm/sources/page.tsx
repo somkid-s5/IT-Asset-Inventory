@@ -231,7 +231,7 @@ export default function VmSourcesPage() {
 
     try {
       await deleteVmSource(deleteTarget.id);
-      toast.success(`${deleteTarget.name} deleted`);
+      toast.success(`ลบ ${deleteTarget.name} สำเร็จ`);
       setDeleteTarget(null);
       await loadSources();
     } catch {
@@ -529,7 +529,7 @@ export default function VmSourcesPage() {
                 disabled={saving || testingConnection}
               >
                 {testingConnection ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                Test Connect
+                ทดสอบการเชื่อมต่อ
               </Button>
 
               <div className="flex gap-2">
