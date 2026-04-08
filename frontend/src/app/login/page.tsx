@@ -16,8 +16,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  username: z.string().min(1, "กรุณากรอกชื่อผู้ใช้"),
+  password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
@@ -32,7 +32,7 @@ function getErrorMessage(error: unknown) {
     return (error as { response?: { data?: { message?: string } } }).response?.data?.message as string
   }
 
-  return "Failed to sign in"
+  return "เข้าสู่ระบบไม่สำเร็จ"
 }
 
 export default function LoginPage() {
@@ -60,7 +60,7 @@ export default function LoginPage() {
     try {
       const response = await apiClient.post("/auth/login", data)
       login(response.data.user)
-      toast.success("Signed in successfully")
+      toast.success("เข้าสู่ระบบสำเร็จ")
     } catch (error: unknown) {
       toast.error(getErrorMessage(error))
     } finally {
@@ -71,7 +71,7 @@ export default function LoginPage() {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Loading...
+        กำลังโหลด...
       </div>
     )
   }
@@ -80,18 +80,19 @@ export default function LoginPage() {
     <>
       <div className="min-h-screen bg-background px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
-          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-primary p-8 text-white lg:flex">
+          {/* Left Panel - ใช้สีเข้มแน่นอน เพื่อให้อ่านออก */}
+          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-slate-900 p-8 text-white lg:flex">
             <div>
               <BrandMark tone="inverse" className="relative z-10" />
               <div className="relative z-10 mt-10">
-                <p className="brand-chip border-white/20 bg-white/10 text-white/80">
-                  Secure Operations
+                <p className="inline-flex items-center rounded-md border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/80">
+                  การดำเนินงานที่ปลอดภัย
                 </p>
-                <h1 className="mt-5 max-w-md font-sans text-3xl font-semibold leading-tight text-white">
-                  Keep asset control sharp and unified.
+                <h1 className="mt-5 max-w-md text-3xl font-semibold leading-tight text-white">
+                  ควบคุมสินทรัพย์ให้เป็นหนึ่งเดียว
                 </h1>
                 <p className="mt-4 max-w-sm text-sm leading-6 text-white/80">
-                  Sign in to manage infrastructure assets, access records, and operational inventory in one shared workspace.
+                  เข้าสู่ระบบเพื่อจัดการสินทรัพย์โครงสร้างพื้นฐาน บันทึกการเข้าถึง และสินค้าคงคลังในการดำเนินงานในพื้นที่ทำงานร่วมกัน
                 </p>
               </div>
             </div>
@@ -99,22 +100,22 @@ export default function LoginPage() {
             <div className="relative z-10 space-y-4">
               <div className="rounded-xl border border-white/20 bg-white/10 p-5">
                 <div className="text-xs font-medium uppercase tracking-wide text-white/70">
-                  Operations Workspace
+                  พื้นที่ทำงานการดำเนินงาน
                 </div>
                 <div className="mt-3 text-sm font-medium text-white">
-                  Assets, VM, and DB stay aligned in one internal system.
+                  สินทรัพย์ VM และฐานข้อมูลอยู่ในระบบภายในเดียว
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/20 bg-black/20 px-4 py-3">
+              <div className="rounded-xl border border-white/20 bg-white/5 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Sparkles className="h-4 w-4 text-white" />
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                      Live Inventory
+                      สินค้าคงคลังแบบเรียลไทม์
                     </div>
                     <div className="mt-1 text-sm text-white/80">
-                      A cleaner control layer for hardware, VM, and database records.
+                      ชั้นควบคุมที่สะอาดกว่าสำหรับฮาร์ดแวร์ VM และบันทึกฐานข้อมูล
                     </div>
                   </div>
                 </div>
@@ -122,6 +123,7 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* Right Panel - Login Form */}
           <div className="relative flex flex-1 items-center justify-center bg-background p-6 sm:p-8 lg:p-10">
             <div className="w-full max-w-md">
               <div className="lg:hidden">
@@ -129,22 +131,24 @@ export default function LoginPage() {
               </div>
 
               <div className="mt-6">
-                <p className="brand-chip">Sign In</p>
-                <h2 className="mt-5 font-sans text-2xl font-semibold text-foreground">
-                  Welcome back
+                <p className="inline-flex items-center rounded-md border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                  เข้าสู่ระบบ
+                </p>
+                <h2 className="mt-5 text-2xl font-semibold text-foreground">
+                  ยินดีต้อนรับกลับมา
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  Use your assigned account to continue into the asset workspace.
+                  ใช้บัญชีที่ได้รับมอบหมายเพื่อดำเนินการต่อในพื้นที่ทำงานสินทรัพย์
                 </p>
               </div>
 
               <form onSubmit={handleSubmit(handleLogin)} className="mt-8 space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="username" required>Username</Label>
+                  <Label htmlFor="username" required>ชื่อผู้ใช้</Label>
                   <Input
                     id="username"
                     autoComplete="username"
-                    placeholder="Username"
+                    placeholder="กรอกชื่อผู้ใช้"
                     disabled={loading}
                     {...register("username")}
                     aria-invalid={!!errors.username}
@@ -158,12 +162,12 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" required>Password</Label>
+                  <Label htmlFor="password" required>รหัสผ่าน</Label>
                   <Input
                     id="password"
                     type="password"
                     autoComplete="current-password"
-                    placeholder="Password"
+                    placeholder="กรอกรหัสผ่าน"
                     disabled={loading}
                     {...register("password")}
                     aria-invalid={!!errors.password}
@@ -177,7 +181,7 @@ export default function LoginPage() {
                 </div>
 
                 <Button type="submit" className="h-12 w-full" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign in"}
+                  {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
                   {!loading && <ArrowRight className="h-4 w-4" />}
                 </Button>
               </form>
@@ -186,7 +190,7 @@ export default function LoginPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/12 text-primary">
                   <LockKeyhole className="h-4 w-4" />
                 </div>
-                Secure access for internal inventory administration.
+                การเข้าถึงที่ปลอดภัยสำหรับการบริหารสินค้าคงคลังภายใน
               </div>
             </div>
           </div>

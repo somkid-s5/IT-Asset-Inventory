@@ -45,12 +45,12 @@ interface DashboardOverview {
 
 function formatSyncTime(value: string | null) {
   if (!value) {
-    return 'No sync yet';
+    return 'ยังไม่ได้ซิงค์';
   }
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return 'No sync yet';
+    return 'ยังไม่ได้ซิงค์';
   }
 
   return new Intl.DateTimeFormat('en-GB', {
@@ -80,9 +80,9 @@ export default function DashboardPage() {
           ? (err as any).response?.data?.message
           : null;
 
-      const message = apiMessage ?? 'Failed to load dashboard data from server.';
+      const message = apiMessage ?? 'ไม่สามารถโหลดข้อมูลแดชบอร์ดจากเซิร์ฟเวอร์ได้';
       setError(message);
-      toast.error('Failed to load dashboard data');
+      toast.error('ไม่สามารถโหลดข้อมูลแดชบอร์ดได้');
     } finally {
       setLoading(false);
     }
@@ -94,10 +94,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'Overview',
+      title: 'ภาพรวม',
       breadcrumbs: [
         { label: 'Workspace', href: '/dashboard' },
-        { label: 'Overview' },
+        { label: 'ภาพรวม' },
       ],
     });
 
@@ -116,8 +116,8 @@ export default function DashboardPage() {
     if (data.vm.pendingSetup > 0) {
       items.push({
         id: 'pending-vm',
-        title: `${data.vm.pendingSetup} VM waiting for setup`,
-        detail: 'Complete business context before these VMs move into active inventory.',
+        title: `${data.vm.pendingSetup} VM รอดำเนินการตั้งค่า`,
+        detail: 'ดำเนินการบริบททางธุรกิจก่อนที่ VM เหล่านี้จะย้ายไปยังสินทรัพย์ที่ใช้งานอยู่',
         route: '/dashboard/vm',
       });
     }
@@ -125,8 +125,8 @@ export default function DashboardPage() {
     if (data.vm.orphaned > 0) {
       items.push({
         id: 'orphaned-vm',
-        title: `${data.vm.orphaned} orphaned VM record`,
-        detail: 'Previously active VM records are no longer returned by the latest source sync.',
+        title: `${data.vm.orphaned} VM ถูกยกเลิก`,
+        detail: 'บันทึก VM ที่เคยใช้งานอยู่ไม่ถูกแสดงผลจากการซิงค์แหล่งข้อมูลล่าสุดอีกต่อไป',
         route: '/dashboard/vm',
       });
     }
@@ -134,8 +134,8 @@ export default function DashboardPage() {
     if (data.vm.connectionFailedSources > 0 || data.vm.readyToSyncSources > 0) {
       items.push({
         id: 'vm-sources',
-        title: `${data.vm.connectionFailedSources} source failed / ${data.vm.readyToSyncSources} waiting`,
-        detail: 'Review vCenter source health and sync schedule.',
+        title: `${data.vm.connectionFailedSources} แหล่งล้มเหลว / ${data.vm.readyToSyncSources} รออยู่`,
+        detail: 'ตรวจสอบสถานะแหล่ง vCenter และกำหนดการซิงค์',
         route: '/dashboard/vm/sources',
       });
     }
@@ -143,8 +143,8 @@ export default function DashboardPage() {
     if (items.length === 0) {
       items.push({
         id: 'all-clear',
-        title: 'No urgent inventory issues',
-        detail: 'Assets, VM inventory, and connected sources currently look stable.',
+        title: 'ไม่มีปัญหาสินค้าคงคลังเร่งด่วน',
+        detail: 'สินทรัพย์ คงคลัง VM และแหล่งเชื่อมต่อขณะนี้มีเสถียรภาพ',
         route: '/dashboard',
       });
     }
@@ -164,8 +164,8 @@ export default function DashboardPage() {
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-semibold tracking-tight">Dashboard Unavailable</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{error || 'No data received from backend.'}</p>
+            <h2 className="text-xl font-semibold tracking-tight">ไม่สามารถแสดงแดชบอร์ดได้</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{error || 'ไม่ได้รับข้อมูลจาก backend'}</p>
             <Button
               variant="outline"
               onClick={() => {
@@ -175,7 +175,7 @@ export default function DashboardPage() {
               className="mt-4"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
-              Retry
+              ลองใหม่
             </Button>
           </div>
         </section>
@@ -187,12 +187,12 @@ export default function DashboardPage() {
     <div className="workspace-page space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Summary of your IT infrastructure and operations.</p>
+          <h2 className="text-2xl font-semibold tracking-tight">ภาพรวม</h2>
+          <p className="mt-1 text-sm text-muted-foreground">สรุปโครงสร้างพื้นฐาน IT และการดำเนินงานของคุณ</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1 font-normal bg-card">
-            <span className="text-muted-foreground mr-1">Last Sync</span> 
+            <span className="text-muted-foreground mr-1">ซิงค์ล่าสุด</span>
             <span className="font-medium text-foreground">{formatSyncTime(data.vm.latestSyncAt)}</span>
           </Badge>
           <Button
@@ -205,7 +205,7 @@ export default function DashboardPage() {
             }}
           >
             <RefreshCw className="mr-2 h-3.5 w-3.5" />
-            Refresh
+            รีเฟรช
           </Button>
         </div>
       </div>
@@ -213,52 +213,52 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/assets')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Physical Assets</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">สินทรัพย์ทางกายภาพ</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.assets.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{data.assets.active} Active</span> · {data.assets.inactive} Inactive
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{data.assets.active} ใช้งาน</span> · {data.assets.inactive} ไม่ใช้งาน
             </p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/vm')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Virtual Machines</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">เครื่องเสมือน</CardTitle>
             <Monitor className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.vm.activeInventory}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-amber-600 dark:text-amber-500 font-medium">{data.vm.pendingSetup} Pending</span> · {data.vm.orphaned} Orphaned
+              <span className="text-amber-600 dark:text-amber-500 font-medium">{data.vm.pendingSetup} รอดำเนินการ</span> · {data.vm.orphaned} ถูกยกเลิก
             </p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/db')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Databases</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">ฐานข้อมูล</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.databases.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-blue-600 dark:text-blue-400 font-medium">{data.databases.production} Prod</span> · {data.databases.accounts} Accounts
+              <span className="text-blue-600 dark:text-blue-400 font-medium">{data.databases.production} ใช้งานจริง</span> · {data.databases.accounts} บัญชี
             </p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/users')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Team Members</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">สมาชิกในทีม</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.users.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="font-medium">{data.users.admins} Admins</span> · Workspace Users
+              <span className="font-medium">{data.users.admins} ผู้ดูแลระบบ</span> · ผู้ใช้ Workspace
             </p>
           </CardContent>
         </Card>
@@ -271,7 +271,7 @@ export default function DashboardPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded bg-primary/10 text-primary">
               <Laptop className="h-3.5 w-3.5" />
             </div>
-            <CardTitle className="text-sm font-semibold">Asset Breakdown</CardTitle>
+            <CardTitle className="text-sm font-semibold">รายละเอียดสินทรัพย์</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 pt-4">
             <div className="space-y-3">
@@ -286,14 +286,14 @@ export default function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <p className="flex h-full items-center justify-center text-sm text-muted-foreground">No distribution data</p>
+                <p className="flex h-full items-center justify-center text-sm text-muted-foreground">ไม่มีข้อมูลการกระจาย</p>
               )}
             </div>
           </CardContent>
           <CardFooter className="border-t border-border/60 pt-4">
-             <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground" onClick={() => router.push('/dashboard/assets')}>
-                View Full Register
-             </Button>
+            <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground" onClick={() => router.push('/dashboard/assets')}>
+              ดูสมุดทะเบียนทั้งหมด
+            </Button>
           </CardFooter>
         </Card>
 
@@ -303,27 +303,27 @@ export default function DashboardPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Activity className="h-3.5 w-3.5" />
             </div>
-            <CardTitle className="text-sm font-semibold">Source Connection Health</CardTitle>
+            <CardTitle className="text-sm font-semibold">สถานะการเชื่อมต่อแหล่งข้อมูล</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 pt-4 space-y-2.5">
             <Button variant="outline" className="w-full justify-between h-auto py-2.5 px-3 font-normal" onClick={() => router.push('/dashboard/vm/sources')}>
               <span className="inline-flex items-center gap-2 text-muted-foreground text-xs">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Healthy Connections
+                การเชื่อมต่อปกติ
               </span>
               <span className="font-semibold text-foreground text-xs">{data.vm.healthySources}</span>
             </Button>
             <Button variant="outline" className="w-full justify-between h-auto py-2.5 px-3 font-normal border-destructive/20 hover:border-destructive/40" onClick={() => router.push('/dashboard/vm/sources')}>
               <span className="inline-flex items-center gap-2 text-muted-foreground text-xs">
                 <AlertTriangle className={data.vm.connectionFailedSources > 0 ? "h-3.5 w-3.5 text-red-500" : "h-3.5 w-3.5 text-muted-foreground"} />
-                Connection Failed
+                การเชื่อมต่อล้มเหลว
               </span>
               <span className="font-semibold text-foreground text-xs">{data.vm.connectionFailedSources}</span>
             </Button>
             <Button variant="outline" className="w-full justify-between h-auto py-2.5 px-3 font-normal" onClick={() => router.push('/dashboard/vm/sources')}>
               <span className="inline-flex items-center gap-2 text-muted-foreground text-xs">
                 <RefreshCw className="h-3.5 w-3.5 text-blue-500" />
-                Ready to Sync
+                พร้อมซิงค์
               </span>
               <span className="font-semibold text-foreground text-xs">{data.vm.readyToSyncSources}</span>
             </Button>
@@ -336,15 +336,15 @@ export default function DashboardPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded bg-amber-500/10 text-amber-600 dark:text-amber-500">
               <ShieldAlert className="h-3.5 w-3.5" />
             </div>
-            <CardTitle className="text-sm font-semibold">Needs Attention</CardTitle>
+            <CardTitle className="text-sm font-semibold">ต้องการการตรวจสอบ</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto pt-4 space-y-2.5">
             {attentionItems.length > 0 && attentionItems[0].id === 'all-clear' ? (
-               <div className="flex flex-col items-center justify-center py-6 text-center">
-                 <ShieldCheck className="mb-3 h-8 w-8 text-emerald-500/60" />
-                 <p className="text-sm font-medium text-foreground">All Clear</p>
-                 <p className="mt-1 max-w-[200px] text-xs text-muted-foreground">No urgent inventory issues require your attention.</p>
-               </div>
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <ShieldCheck className="mb-3 h-8 w-8 text-emerald-500/60" />
+                <p className="text-sm font-medium text-foreground">ไม่มีปัญหา</p>
+                <p className="mt-1 max-w-[200px] text-xs text-muted-foreground">ไม่มีปัญหาสินค้าคงคลังเร่งด่วนที่ต้องการการตรวจสอบจากคุณ</p>
+              </div>
             ) : (
               attentionItems.map((item) => (
                 <Button

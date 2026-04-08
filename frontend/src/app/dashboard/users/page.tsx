@@ -37,10 +37,10 @@ const ROLE_TABS: Array<{
   icon: typeof Users;
   iconClassName: string;
 }> = [
-    { label: 'All', value: 'ALL', icon: Users, iconClassName: 'text-primary' },
-    { label: 'Admins', value: 'ADMIN', icon: Shield, iconClassName: 'text-emerald-400' },
-    { label: 'Editors', value: 'EDITOR', icon: PencilLine, iconClassName: 'text-sky-400' },
-    { label: 'Viewers', value: 'VIEWER', icon: Eye, iconClassName: 'text-amber-400' },
+    { label: 'ทั้งหมด', value: 'ALL', icon: Users, iconClassName: 'text-primary' },
+    { label: 'ผู้ดูแลระบบ', value: 'ADMIN', icon: Shield, iconClassName: 'text-emerald-400' },
+    { label: 'บรรณาธิการ', value: 'EDITOR', icon: PencilLine, iconClassName: 'text-sky-400' },
+    { label: 'ผู้ชม', value: 'VIEWER', icon: Eye, iconClassName: 'text-amber-400' },
   ];
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -84,7 +84,7 @@ export default function UsersPage() {
       const response = await api.get<UserRecord[]>('/users');
       setUsers(response.data);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to load users'));
+      toast.error(getErrorMessage(error, 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้'));
     } finally {
       setLoading(false);
     }
@@ -105,10 +105,10 @@ export default function UsersPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'User Accounts',
+      title: 'บัญชีผู้ใช้',
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'User Accounts' },
+        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
+        { label: 'บัญชีผู้ใช้' },
       ],
     });
 
@@ -187,7 +187,7 @@ export default function UsersPage() {
 
     try {
       await api.post('/users', { username, displayName, password, role });
-      toast.success('User created successfully');
+      toast.success('สร้างผู้ใช้สำเร็จ');
       setUsername('');
       setDisplayName('');
       setPassword('');
@@ -195,7 +195,7 @@ export default function UsersPage() {
       setCreateOpen(false);
       await loadUsers();
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to create user'));
+      toast.error(getErrorMessage(error, 'ไม่สามารถสร้างผู้ใช้ได้'));
     } finally {
       setSubmitting(false);
     }
@@ -205,9 +205,9 @@ export default function UsersPage() {
     try {
       await api.patch(`/users/${userId}/role`, { role: nextRole });
       setUsers((current) => current.map((item) => (item.id === userId ? { ...item, role: nextRole } : item)));
-      toast.success('Role updated');
+      toast.success('อัปเดตบทบาทสำเร็จ');
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to update role'));
+      toast.error(getErrorMessage(error, 'ไม่สามารถอัปเดตบทบาทได้'));
       await loadUsers();
     }
   };
@@ -223,9 +223,9 @@ export default function UsersPage() {
       await api.delete(`/users/${deleteTarget.id}`);
       setUsers((current) => current.filter((item) => item.id !== deleteTarget.id));
       setDeleteTarget(null);
-      toast.success('User removed');
+      toast.success('ลบผู้ใช้สำเร็จ');
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to delete user'));
+      toast.error(getErrorMessage(error, 'ไม่สามารถลบผู้ใช้ได้'));
     } finally {
       setDeleteSubmitting(false);
     }
@@ -239,7 +239,7 @@ export default function UsersPage() {
     }
 
     if (resetPassword !== resetPasswordConfirm) {
-      toast.error('Passwords do not match');
+      toast.error('รหัสผ่านไม่ตรงกัน');
       return;
     }
 
@@ -252,11 +252,11 @@ export default function UsersPage() {
 
     try {
       await api.patch(`/users/${resetTarget.id}/reset-password`, { password: resetPassword });
-      toast.success('Password reset successfully');
+      toast.success('รีเซ็ตรหัสผ่านสำเร็จ');
       setResetPassword('');
       setResetTarget(null);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to reset password'));
+      toast.error(getErrorMessage(error, 'ไม่สามารถรีเซ็ตรหัสผ่านได้'));
     } finally {
       setResetSubmitting(false);
     }
@@ -267,7 +267,7 @@ export default function UsersPage() {
       <div className="flex min-h-[320px] items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <LoaderCircle className="h-5 w-5 animate-spin text-foreground" />
-          <p className="text-sm">Loading users...</p>
+          <p className="text-sm">กำลังโหลดข้อมูลผู้ใช้...</p>
         </div>
       </div>
     );
@@ -305,14 +305,14 @@ export default function UsersPage() {
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search by name, username, or role"
+                  placeholder="ค้นหาตามชื่อ ชื่อผู้ใช้ หรือบทบาท"
                   className="pl-10"
                 />
               </div>
 
               <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
-                Create User
+                สร้างผู้ใช้
               </Button>
             </div>
           </div>
@@ -323,42 +323,42 @@ export default function UsersPage() {
                 <tr className="table-head-row">
                   <th className="px-3 py-2.5 font-medium">
                     <button onClick={() => toggleSort('displayName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Name
+                      ชื่อที่แสดง
                       {renderSortIcon('displayName')}
                     </button>
                   </th>
                   <th className="px-3 py-2.5 font-medium">
                     <button onClick={() => toggleSort('username')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Username
+                      ชื่อผู้ใช้
                       {renderSortIcon('username')}
                     </button>
                   </th>
                   <th className="px-3 py-2.5 font-medium">
                     <button onClick={() => toggleSort('role')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Role
+                      บทบาท
                       {renderSortIcon('role')}
                     </button>
                   </th>
                   <th className="px-3 py-2.5 font-medium">
                     <button onClick={() => toggleSort('createdAt')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Created
+                      สร้างเมื่อ
                       {renderSortIcon('createdAt')}
                     </button>
                   </th>
                   <th className="px-3 py-2.5 font-medium">
                     <button onClick={() => toggleSort('updatedAt')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                      Updated
+                      อัปเดตเมื่อ
                       {renderSortIcon('updatedAt')}
                     </button>
                   </th>
-                  <th className="px-3 py-2.5 font-medium text-right">Actions</th>
+                  <th className="px-3 py-2.5 font-medium text-right">การกระทำ</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                      No users matched your filters.
+                      ไม่มีผู้ใช้ที่ตรงกับตัวกรองของคุณ
                     </td>
                   </tr>
                 ) : filteredUsers.map((item) => {
@@ -375,7 +375,7 @@ export default function UsersPage() {
                       <td className="px-3 py-2.5">
                         <div className="text-[11px] text-muted-foreground">
                           @{item.username}
-                          {isCurrentUser ? ' - Current account' : ''}
+                          {isCurrentUser ? ' - บัญชีปัจจุบัน' : ''}
                         </div>
                       </td>
                       <td className="px-3 py-2">
@@ -452,34 +452,34 @@ export default function UsersPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create User</DialogTitle>
+            <DialogTitle>สร้างผู้ใช้</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleCreateUser} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="create-display-name" required>Display name</Label>
+              <Label htmlFor="create-display-name" required>ชื่อที่แสดง</Label>
               <Input
                 id="create-display-name"
                 autoComplete="name"
-                placeholder="Full name"
+                placeholder="ชื่อเต็ม"
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="create-username" required>Username</Label>
+              <Label htmlFor="create-username" required>ชื่อผู้ใช้</Label>
               <Input
                 id="create-username"
                 autoComplete="username"
-                placeholder="Username"
+                placeholder="ชื่อผู้ใช้"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="create-password" required>Password</Label>
+              <Label htmlFor="create-password" required>รหัสผ่าน</Label>
               <Input
                 id="create-password"
                 type="password"
@@ -491,7 +491,7 @@ export default function UsersPage() {
               <p className="text-[11px] text-muted-foreground">{PASSWORD_POLICY_MESSAGE}</p>
             </div>
             <div className="space-y-1.5">
-              <Label required>Role</Label>
+              <Label required>บทบาท</Label>
               <Select value={role} onValueChange={(value) => setRole(value as Role)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -508,10 +508,10 @@ export default function UsersPage() {
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={submitting}>
-                Cancel
+                ยกเลิก
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? 'Creating...' : 'Create user'}
+                {submitting ? 'กำลังสร้าง...' : 'สร้างผู้ใช้'}
               </Button>
             </div>
           </form>
@@ -521,16 +521,16 @@ export default function UsersPage() {
       <Dialog open={Boolean(resetTarget)} onOpenChange={(open) => !open && setResetTarget(null)}>
         <DialogContent className="bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Reset Password</DialogTitle>
+            <DialogTitle>รีเซ็ตรหัสผ่าน</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              Reset password for <span className="font-medium text-foreground">{resetTarget?.displayName}</span>{' '}
+              รีเซ็ตรหัสผ่านสำหรับ <span className="font-medium text-foreground">{resetTarget?.displayName}</span>{' '}
               <span className="text-[11px]">@{resetTarget?.username}</span>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="reset-password" required>New password</Label>
+              <Label htmlFor="reset-password" required>รหัสผ่านใหม่</Label>
               <Input
                 id="reset-password"
                 type="password"
@@ -542,7 +542,7 @@ export default function UsersPage() {
               <p className="text-[11px] text-muted-foreground">{PASSWORD_POLICY_MESSAGE}</p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="reset-password-confirm" required>Confirm new password</Label>
+              <Label htmlFor="reset-password-confirm" required>ยืนยันรหัสผ่านใหม่</Label>
               <Input
                 id="reset-password-confirm"
                 type="password"
@@ -554,10 +554,10 @@ export default function UsersPage() {
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setResetTarget(null)} disabled={resetSubmitting}>
-                Cancel
+                ยกเลิก
               </Button>
               <Button type="submit" disabled={resetSubmitting}>
-                {resetSubmitting ? 'Resetting...' : 'Reset password'}
+                {resetSubmitting ? 'กำลังรีเซ็ต...' : 'รีเซ็ตรหัสผ่าน'}
               </Button>
             </div>
           </form>
@@ -567,18 +567,18 @@ export default function UsersPage() {
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
+            <DialogTitle>ลบผู้ใช้</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              Delete <span className="font-medium text-foreground">{deleteTarget?.displayName}</span>{' '}
-              <span className="text-[11px]">@{deleteTarget?.username}</span> from this workspace?
+              ลบ <span className="font-medium text-foreground">{deleteTarget?.displayName}</span>{' '}
+              <span className="text-[11px]">@{deleteTarget?.username}</span> ออกจากพื้นที่ทำงานนี้?
             </div>
-            <p className="text-xs text-muted-foreground">This action removes the account from the system. The user will no longer be able to sign in.</p>
+            <p className="text-xs text-muted-foreground">การนี้ลบบัญชีออกจากระบบ ผู้ใช้จะไม่สามารถเข้าสู่ระบบได้อีกต่อไป</p>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleteSubmitting}>
-                Cancel
+                ยกเลิก
               </Button>
               <Button
                 type="button"
@@ -586,7 +586,7 @@ export default function UsersPage() {
                 onClick={() => void handleDeleteUser()}
                 disabled={deleteSubmitting}
               >
-                {deleteSubmitting ? 'Deleting...' : 'Delete user'}
+                {deleteSubmitting ? 'กำลังลบ...' : 'ลบผู้ใช้'}
               </Button>
             </div>
           </div>

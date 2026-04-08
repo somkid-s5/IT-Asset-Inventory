@@ -55,25 +55,25 @@ const VIEW_COPY: Record<
   }
 > = {
   PENDING: {
-    title: 'Pending Setup',
-    shortLabel: 'Pending',
+    title: 'รอดำเนินการตั้งค่า',
+    shortLabel: 'รอดำเนินการ',
     description:
-      'Newly discovered VMs that still need business context before entering the active inventory.',
-    searchPlaceholder: 'Search by VM name, IP address, or source...',
+      'เครื่องเสมือนที่ค้นพบใหม่ซึ่งยังต้องการข้อมูลทางธุรกิจก่อนเข้าสู่สินค้าคงคลังที่ใช้งานอยู่',
+    searchPlaceholder: 'ค้นหาด้วยชื่อ VM, ที่อยู่ IP, หรือแหล่งข้อมูล...',
   },
   ACTIVE: {
-    title: 'Active Inventory',
-    shortLabel: 'Active',
+    title: 'สินค้าคงคลังที่ใช้งาน',
+    shortLabel: 'ใช้งาน',
     description:
-      'Production-ready VM records that are already promoted and managed inside AssetOps.',
-    searchPlaceholder: 'Search by VM name, system name, owner, or source...',
+      'ระเบียนเครื่องเสมือนที่พร้อมใช้งานซึ่งได้รับการยกระดับและจัดการภายใน AssetOps แล้ว',
+    searchPlaceholder: 'ค้นหาด้วยชื่อ VM, ชื่อระบบ, เจ้าของ, หรือแหล่งข้อมูล...',
   },
   ORPHANED: {
-    title: 'Orphaned',
-    shortLabel: 'Orphaned',
+    title: 'ถูกยกเลิก',
+    shortLabel: 'ถูกยกเลิก',
     description:
-      'Previously active VMs that are no longer returned by the latest source sync and are now kept as historical records.',
-    searchPlaceholder: 'Search by VM name, source, or issue...',
+      'เครื่องเสมือนที่เคยใช้งานอยู่ซึ่งไม่ปรากฏในการซิงค์แหล่งข้อมูลล่าสุดและถูกเก็บเป็นบันทึกประวัติศาสตร์',
+    searchPlaceholder: 'ค้นหาด้วยชื่อ VM, แหล่งข้อมูล, หรือปัญหา...',
   },
 };
 
@@ -122,7 +122,7 @@ export default function VmPage() {
       setSourceCount(sources.length);
       setLastSyncLabel(`${sources[0]?.lastSyncAt ?? '--'} from ${sources.length} sources`);
     } catch {
-      toast.error('Failed to load VM inventory');
+      toast.error('ไม่สามารถโหลดสินค้าคงคลัง VM ได้');
     } finally {
       setLoading(false);
     }
@@ -134,11 +134,11 @@ export default function VmPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'Virtual Machines',
+      title: 'เครื่องเสมือน',
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'Compute' },
-        { label: 'Virtual Machines' },
+        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
+        { label: 'คอมพิวต์' },
+        { label: 'เครื่องเสมือน' },
       ],
     });
 
@@ -154,7 +154,7 @@ export default function VmPage() {
       setSelectedDiscovery(discovery);
       setPendingDialogOpen(true);
     } catch {
-      toast.error('Failed to open VM setup');
+      toast.error('ไม่สามารถเปิดการตั้งค่า VM ได้');
     } finally {
       setOpeningPendingId(null);
     }
@@ -402,7 +402,7 @@ export default function VmPage() {
                 onClick={() => router.push('/dashboard/vm/sources')}
               >
                 <Server className="h-4 w-4" />
-                Manage vCenters
+                จัดการ vCenters
               </Button>
 
             </div>
@@ -411,13 +411,13 @@ export default function VmPage() {
 
         {loading ? (
           <EmptyState
-            title="Loading VM records"
-            description="Fetching sources, discovery queue, and active inventory."
+            title="กำลังโหลดระเบียน VM"
+            description="กำลังดึงข้อมูลแหล่งข้อมูล แถวการค้นพบ และสินค้าคงคลังที่ใช้งานอยู่"
           />
         ) : sourceCount === 0 ? (
           <EmptyState
-            title="No vCenter sources connected"
-            description="Add at least one vCenter source before discovery and active inventory records can appear here."
+            title="ไม่ได้เชื่อมต่อแหล่งข้อมูล vCenter"
+            description="เพิ่มแหล่งข้อมูล vCenter อย่างน้อยหนึ่งแหล่งก่อนที่ระเบียนการค้นพบและสินค้าคงคลังที่ใช้งานจะปรากฏที่นี่"
             action={(
               <Button
                 size="sm"
@@ -425,7 +425,7 @@ export default function VmPage() {
                 onClick={() => router.push('/dashboard/vm/sources')}
               >
                 <Server className="h-4 w-4" />
-                Add vCenter Source
+                เพิ่มแหล่งข้อมูล vCenter
               </Button>
             )}
           />
@@ -506,8 +506,8 @@ function PendingSetupTable({
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No pending setup records"
-        description="Everything discovered is either already promoted or waiting in another state."
+        title="ไม่มีระเบียนรอดำเนินการ"
+        description="ทุกสิ่งที่ค้นพบถูกยกระดับแล้วหรือกำลังรออยู่ในสถานะอื่น"
       />
     );
   }
@@ -519,41 +519,41 @@ function PendingSetupTable({
           <tr className="table-head-row">
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Discovered VM Name
+                ชื่อ VM ที่ค้นพบ
                 {renderSortIcon(sortKey === 'name', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                IP Address
+                ที่อยู่ IP
                 {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('sourceName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Source
+                แหล่งข้อมูล
                 {renderSortIcon(sortKey === 'sourceName', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Host
+                โฮสต์
                 {renderSortIcon(sortKey === 'host', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('powerState')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Power
+                สถานะพลังงาน
                 {renderSortIcon(sortKey === 'powerState', sortDirection)}
               </button>
             </th>
             <th className="hidden px-3 py-2.5 font-semibold xl:table-cell">
               <button onClick={() => onSort('lastSeen')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Last Seen
+                พบเห็นล่าสุด
                 {renderSortIcon(sortKey === 'lastSeen', sortDirection)}
               </button>
             </th>
-            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Action</th>
+            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">จัดการ</th>
           </tr>
         </thead>
         <tbody>
@@ -590,7 +590,7 @@ function PendingSetupTable({
               <td className="px-3 py-2.5 text-right">
                 <Button size="sm" className="h-7 gap-1 px-2 text-xs whitespace-nowrap" onClick={() => onOpenRecord(vm.id)} disabled={openingId === vm.id}>
                   {openingId === vm.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : null}
-                  {openingId === vm.id ? 'Opening' : 'Setup'}
+                  {openingId === vm.id ? 'กำลังเปิด' : 'ตั้งค่า'}
                 </Button>
               </td>
             </tr>
@@ -631,8 +631,8 @@ function ActiveInventoryTable({
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No active inventory matches"
-        description="Try a different search term to find an existing VM record."
+        title="ไม่พบสินค้าคงคลังที่ใช้งาน"
+        description="ลองค้นหาด้วยคำอื่นเพื่อหาบันทึก VM ที่มีอยู่"
       />
     );
   }
@@ -644,41 +644,41 @@ function ActiveInventoryTable({
           <tr className="table-head-row">
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('systemName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                System Name
+                ชื่อระบบ
                 {renderSortIcon(sortKey === 'systemName', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                VM Name
+                ชื่อ VM
                 {renderSortIcon(sortKey === 'name', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                IP Address
+                ที่อยู่ IP
                 {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('vcenterName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Source
+                แหล่งข้อมูล
                 {renderSortIcon(sortKey === 'vcenterName', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Host
+                โฮสต์
                 {renderSortIcon(sortKey === 'host', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('powerState')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Power
+                สถานะพลังงาน
                 {renderSortIcon(sortKey === 'powerState', sortDirection)}
               </button>
             </th>
-            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Action</th>
+            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">จัดการ</th>
           </tr>
         </thead>
         <tbody>
@@ -716,7 +716,7 @@ function ActiveInventoryTable({
               </td>
               <td className="px-3 py-2.5 text-right">
                 <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs whitespace-nowrap" onClick={() => onOpenRecord(vm.id)}>
-                  Details
+                  รายละเอียด
                 </Button>
               </td>
             </tr>
@@ -745,8 +745,8 @@ function OrphanedTable({
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No orphaned VMs"
-        description="No previously active VM is currently missing from the connected source."
+        title="ไม่มี VM ที่ถูกยกเลิก"
+        description="ไม่มี VM ที่ใช้งานอยู่ก่อนหน้านี้หายไปจากแหล่งข้อมูลที่เชื่อมต่อ"
       />
     );
   }
@@ -758,41 +758,41 @@ function OrphanedTable({
           <tr className="table-head-row">
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('displayName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                System Name
+                ชื่อระบบ
                 {renderSortIcon(sortKey === 'displayName', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                VM Name
+                ชื่อ VM
                 {renderSortIcon(sortKey === 'name', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                IP Address
+                ที่อยู่ IP
                 {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('sourceName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Source
+                แหล่งข้อมูล
                 {renderSortIcon(sortKey === 'sourceName', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Host
+                โฮสต์
                 {renderSortIcon(sortKey === 'host', sortDirection)}
               </button>
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('lastSeen')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                Last Seen
+                พบเห็นล่าสุด
                 {renderSortIcon(sortKey === 'lastSeen', sortDirection)}
               </button>
             </th>
-            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Action</th>
+            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">จัดการ</th>
           </tr>
         </thead>
         <tbody>
@@ -826,7 +826,7 @@ function OrphanedTable({
                   className="h-7 px-2 text-xs whitespace-nowrap"
                   onClick={() => onOpenRecord(vm.route)}
                 >
-                  Details
+                  รายละเอียด
                 </Button>
               </td>
             </tr>

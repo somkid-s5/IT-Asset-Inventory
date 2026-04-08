@@ -78,7 +78,7 @@ export default function VmSourcesPage() {
       setLoading(true);
       setSources(await getVmSources());
     } catch {
-      toast.error('Failed to load vCenter sources');
+      toast.error('ไม่สามารถโหลดแหล่งข้อมูล vCenter ได้');
     } finally {
       setLoading(false);
     }
@@ -90,11 +90,11 @@ export default function VmSourcesPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'vCenter Sources',
+      title: 'แหล่งข้อมูล vCenter',
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'Compute' },
-        { label: 'vCenter Sources' },
+        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
+        { label: 'คอมพิวต์' },
+        { label: 'แหล่งข้อมูล vCenter' },
       ],
     });
 
@@ -130,7 +130,7 @@ export default function VmSourcesPage() {
 
   const handleSave = async () => {
     if (lastSuccessfulTestKey !== getConnectionTestKey(formData)) {
-      toast.error('Please run Test Connect successfully before saving');
+      toast.error('กรุณาทดสอบการเชื่อมต่อให้สำเร็จก่อนบันทึก');
       return;
     }
 
@@ -138,16 +138,16 @@ export default function VmSourcesPage() {
     try {
       if (editingSourceId) {
         await updateVmSource(editingSourceId, formData);
-        toast.success('vCenter source updated');
+        toast.success('แหล่งข้อมูล vCenter อัปเดตแล้ว');
       } else {
         await createVmSource(formData);
-        toast.success('vCenter source saved');
+        toast.success('แหล่งข้อมูล vCenter ถูกบันทึกแล้ว');
       }
       setAddOpen(false);
       resetForm();
       await loadSources();
     } catch {
-      toast.error('Failed to save vCenter source');
+      toast.error('ไม่สามารถบันทึกแหล่งข้อมูล vCenter ได้');
     } finally {
       setSaving(false);
     }
@@ -155,7 +155,7 @@ export default function VmSourcesPage() {
 
   const handleTestConnection = async () => {
     if (!formData.endpoint.trim()) {
-      toast.error('Enter an endpoint before testing');
+      toast.error('กรุณากรอก endpoint ก่อนทดสอบ');
       return;
     }
 
@@ -180,7 +180,7 @@ export default function VmSourcesPage() {
       }
     } catch {
       setLastSuccessfulTestKey(null);
-      toast.error('Failed to test vCenter connection');
+      toast.error('ไม่สามารถทดสอบการเชื่อมต่อ vCenter ได้');
     } finally {
       setTestingConnection(false);
     }
@@ -197,7 +197,7 @@ export default function VmSourcesPage() {
       }
       await loadSources();
     } catch {
-      toast.error('Failed to sync vCenter sources');
+      toast.error('ไม่สามารถซิงค์แหล่งข้อมูล vCenter ได้');
     } finally {
       setSyncingAll(false);
     }
@@ -218,7 +218,7 @@ export default function VmSourcesPage() {
       }
       await loadSources();
     } catch {
-      toast.error(`Failed to sync ${source.name}`);
+      toast.error(`ไม่สามารถซิงค์ ${source.name} ได้`);
     } finally {
       setSyncingSourceIds((current) => current.filter((id) => id !== source.id));
     }
@@ -235,7 +235,7 @@ export default function VmSourcesPage() {
       setDeleteTarget(null);
       await loadSources();
     } catch {
-      toast.error('Failed to delete vCenter source');
+      toast.error('ไม่สามารถลบแหล่งข้อมูล vCenter ได้');
     }
   };
 
@@ -246,15 +246,15 @@ export default function VmSourcesPage() {
           <div className="flex flex-1 flex-wrap items-center gap-2">
             <div className="inline-flex items-center gap-2 text-[11px] text-muted-foreground">
               <Clock3 className="h-3.5 w-3.5" />
-              <span>Synced {syncMeta}</span>
+              <span>ซิงค์แล้ว {syncMeta}</span>
             </div>
             {syncingAll || syncingSourceIds.length > 0 ? (
               <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-1 text-[10px] font-medium text-sky-200">
                 <LoaderCircle className="h-3 w-3 animate-spin" />
                 <span>
                   {syncingAll
-                    ? 'Syncing all sources'
-                    : `Syncing ${syncingSourceIds.length} source${syncingSourceIds.length === 1 ? '' : 's'}`}
+                    ? 'กำลังซิงค์ทั้งหมด'
+                    : `กำลังซิงค์ ${syncingSourceIds.length} แหล่งข้อมูล${syncingSourceIds.length === 1 ? '' : ''}`}
                 </span>
               </div>
             ) : null}
@@ -269,11 +269,11 @@ export default function VmSourcesPage() {
               disabled={syncingAll}
             >
               <Plus className="h-4 w-4" />
-              Add vCenter
+              เพิ่ม vCenter
             </Button>
             <Button size="lg" className="gap-2" onClick={handleSyncAll} disabled={syncingAll || loading}>
               <RefreshCw className={cn('h-4 w-4', syncingAll && 'animate-spin')} />
-              {syncingAll ? 'Syncing Sources...' : 'Sync All Sources'}
+              {syncingAll ? 'กำลังซิงค์แหล่งข้อมูล...' : 'ซิงค์ทั้งหมด'}
             </Button>
           </div>
         </div>
@@ -282,13 +282,13 @@ export default function VmSourcesPage() {
           <table className="table-frame min-w-[980px]">
             <thead>
               <tr className="table-head-row">
-                <th className="px-3 py-2.5 font-medium">Source Name</th>
+                <th className="px-3 py-2.5 font-medium">ชื่อแหล่งข้อมูล</th>
                 <th className="px-3 py-2.5 font-medium">Endpoint</th>
-                <th className="px-3 py-2.5 font-medium">Discovered VMs</th>
-                <th className="px-3 py-2.5 font-medium">Sync Interval</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
-                <th className="px-3 py-2.5 font-medium">Last Sync</th>
-                <th className="px-3 py-2.5 text-right font-medium">Action</th>
+                <th className="px-3 py-2.5 font-medium">VM ที่ค้นพบ</th>
+                <th className="px-3 py-2.5 font-medium">รอบการซิงค์</th>
+                <th className="px-3 py-2.5 font-medium">สถานะ</th>
+                <th className="px-3 py-2.5 font-medium">ซิงค์ล่าสุด</th>
+                <th className="px-3 py-2.5 text-right font-medium">จัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -297,7 +297,7 @@ export default function VmSourcesPage() {
                   <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
                       <LoaderCircle className="h-4 w-4 animate-spin" />
-                      Loading sources...
+                      กำลังโหลดแหล่งข้อมูล...
                     </div>
                   </td>
                 </tr>
@@ -320,7 +320,7 @@ export default function VmSourcesPage() {
                     {source.vmCount}
                   </td>
                   <td className="px-3 py-2.5 text-[12px] text-muted-foreground">
-                    Every {source.syncInterval}
+                    ทุกๆ {source.syncInterval}
                   </td>
                   <td className="px-3 py-2.5">
                     <span
@@ -333,7 +333,7 @@ export default function VmSourcesPage() {
                             : 'border-amber-500/25 bg-amber-500/10 text-amber-300',
                       )}
                     >
-                      {syncingAll || syncingSourceIds.includes(source.id) ? 'Syncing...' : source.status}
+                      {syncingAll || syncingSourceIds.includes(source.id) ? 'กำลังซิงค์...' : source.status}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-[12px] text-muted-foreground">
@@ -387,13 +387,13 @@ export default function VmSourcesPage() {
         <DialogContent className="max-w-2xl bg-card p-0">
           <DialogHeader className="border-b border-border/70 px-5 py-4">
             <DialogTitle>
-              {editingSourceId ? 'Edit vCenter Source' : 'Add vCenter Source'}
+              {editingSourceId ? 'แก้ไขแหล่งข้อมูล vCenter' : 'เพิ่มแหล่งข้อมูล vCenter'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 px-5 py-5">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label required>Source Name</Label>
+                <Label required>ชื่อแหล่งข้อมูล</Label>
                 <Input
                   value={formData.name}
                   onChange={(event) =>
@@ -402,7 +402,7 @@ export default function VmSourcesPage() {
                       name: event.target.value,
                     }))
                   }
-                  placeholder="Source name"
+                  placeholder="ชื่อแหล่งข้อมูล"
                 />
               </div>
               <div className="space-y-1.5">
@@ -417,11 +417,11 @@ export default function VmSourcesPage() {
                       };
                     })
                   }
-                  placeholder="Endpoint or hostname"
+                  placeholder="Endpoint หรือชื่อโฮสต์"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label optional>Sync Interval</Label>
+                <Label optional>รอบการซิงค์</Label>
                 <Select
                   value={formData.syncInterval}
                   onValueChange={(value) =>
@@ -432,7 +432,7 @@ export default function VmSourcesPage() {
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select an interval" />
+                    <SelectValue placeholder="เลือกรอบเวลา" />
                   </SelectTrigger>
                   <SelectContent>
                     {SYNC_INTERVAL_OPTIONS.map((option) => (
@@ -444,7 +444,7 @@ export default function VmSourcesPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label required>Username</Label>
+                <Label required>ชื่อผู้ใช้</Label>
                 <Input
                   value={formData.username}
                   onChange={(event) =>
@@ -458,7 +458,7 @@ export default function VmSourcesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label required>Password</Label>
+                <Label required>รหัสผ่าน</Label>
                 <Input
                   type="password"
                   value={formData.password}
@@ -488,26 +488,26 @@ export default function VmSourcesPage() {
                       <AlertTriangle className="h-4 w-4" />
                     )}
                     <span className="font-medium">
-                      {isConnectionVerified ? 'Connection verified' : 'Retest required'}
+                      {isConnectionVerified ? 'ยืนยันการเชื่อมต่อแล้ว' : 'ต้องทดสอบใหม่'}
                     </span>
                   </div>
                   <p className="mt-1 text-[12px] opacity-90">
                     {isConnectionVerified
-                      ? 'This endpoint and credential set passed Test Connect. The source is ready to save.'
-                      : 'Run Test Connect with the current endpoint and credentials before saving this source.'}
+                      ? 'Endpoint และข้อมูลการเชื่อมต่อนี้ผ่านการทดสอบแล้ว แหล่งข้อมูลพร้อมบันทึก'
+                      : 'ทดสอบการเชื่อมต่อด้วย endpoint และข้อมูลประจำตัวปัจจุบันก่อนบันทึกแหล่งข้อมูลนี้'}
                   </p>
                   <div className="mt-3 flex items-center gap-2 text-[11px] font-medium opacity-90">
                     <PlugZap className="h-3.5 w-3.5" />
                     <span>
                       {isConnectionVerified
-                        ? 'Save is enabled for the current connection values.'
-                        : 'Changing endpoint, username, or password will keep Save disabled until retested.'}
+                        ? 'เปิดใช้งานการบันทึกสำหรับค่าการเชื่อมต่อปัจจุบัน'
+                        : 'การเปลี่ยน endpoint, ชื่อผู้ใช้ หรือรหัสผ่านจะยังคงเปิดใช้งานการบันทึกไม่ได้จนกว่าจะทดสอบใหม่'}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label optional>Notes</Label>
+                <Label optional>หมายเหตุ</Label>
                 <textarea
                   value={formData.notes}
                   onChange={(event) =>
@@ -517,7 +517,7 @@ export default function VmSourcesPage() {
                     }))
                   }
                   className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-4 py-3 text-sm text-foreground outline-none transition focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35"
-                  placeholder="Notes about this source"
+                  placeholder="หมายเหตุเกี่ยวกับแหล่งข้อมูลนี้"
                 />
               </div>
             </div>
@@ -541,11 +541,11 @@ export default function VmSourcesPage() {
                   }}
                   disabled={saving || testingConnection}
                 >
-                  Cancel
+                  ยกเลิก
                 </Button>
                 <Button onClick={() => void handleSave()} disabled={saving || testingConnection || !isConnectionVerified}>
                   {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                  {editingSourceId ? 'Save changes' : 'Save source'}
+                  {editingSourceId ? 'บันทึกการแก้ไข' : 'บันทึกแหล่งข้อมูล'}
                 </Button>
               </div>
             </div>
@@ -563,9 +563,9 @@ export default function VmSourcesPage() {
       >
         <DialogContent className="max-w-md bg-card p-0">
           <DialogHeader className="border-b border-border/70 px-5 py-4">
-            <DialogTitle>Delete vCenter Source</DialogTitle>
+            <DialogTitle>ลบแหล่งข้อมูล vCenter</DialogTitle>
             <DialogDescription>
-              Remove this source and its discovery records from the VM intake flow.
+              ลบแหล่งข้อมูลนี้และบันทึกการค้นพบจากกระบวนการรับ VM
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 px-5 py-5">
@@ -583,10 +583,10 @@ export default function VmSourcesPage() {
                 variant="outline"
                 onClick={() => setDeleteTarget(null)}
               >
-                Cancel
+                ยกเลิก
               </Button>
               <Button variant="destructive" onClick={handleDeleteSource}>
-                Delete source
+                ลบแหล่งข้อมูล
               </Button>
             </div>
           </div>
