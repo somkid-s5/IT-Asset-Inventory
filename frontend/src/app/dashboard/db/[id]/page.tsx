@@ -40,7 +40,7 @@ export default function DatabaseDetailPage() {
         );
         setDatabase(response.data);
       } catch {
-        toast.error("Failed to load database details");
+        toast.error("ไม่สามารถโหลดรายละเอียดฐานข้อมูลได้");
         router.push("/dashboard/db");
       } finally {
         setLoading(false);
@@ -63,8 +63,8 @@ export default function DatabaseDetailPage() {
     setHeader({
       title: database.name,
       breadcrumbs: [
-        { label: "Workspace", href: "/dashboard" },
-        { label: "Databases", href: "/dashboard/db" },
+        { label: "พื้นที่ทำงาน", href: "/dashboard" },
+        { label: "ฐานข้อมูล", href: "/dashboard/db" },
         { label: database.name },
       ],
     });
@@ -89,7 +89,7 @@ export default function DatabaseDetailPage() {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-muted-foreground">
         <LoaderCircle className="mb-3 h-6 w-6 animate-spin text-foreground" />
-        <p className="text-sm">Loading database details...</p>
+        <p className="text-sm">กำลังโหลดรายละเอียดฐานข้อมูล...</p>
       </div>
     );
   }
@@ -102,10 +102,10 @@ export default function DatabaseDetailPage() {
           className="inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Database Inventory
+          กลับไปหน้าฐานข้อมูล
         </button>
         <div className="surface-panel p-4 text-sm text-muted-foreground">
-          Database record not found.
+          ไม่พบข้อมูลฐานข้อมูล
         </div>
       </div>
     );
@@ -114,9 +114,9 @@ export default function DatabaseDetailPage() {
   const copyValue = async (value: string, label: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(`${label} copied`);
+      toast.success(`คัดลอก ${label} แล้ว`);
     } catch {
-      toast.error(`Failed to copy ${label.toLowerCase()}`);
+      toast.error(`ไม่สามารถคัดลอก ${label.toLowerCase()} ได้`);
     }
   };
 
@@ -126,33 +126,33 @@ export default function DatabaseDetailPage() {
 
   const properties = [
     {
-      label: "Database Name",
+      label: "ชื่อฐานข้อมูล",
       value: database.name || "--",
       icon: <Database className="h-4 w-4" />,
     },
     {
-      label: "Engine",
+      label: "เอ็นจิ้น",
       value: database.engine || "--",
       icon: <Database className="h-4 w-4" />,
     },
     {
-      label: "Version",
+      label: "เวอร์ชัน",
       value: database.version || "--",
       icon: <Database className="h-4 w-4" />,
     },
     {
-      label: "Environment",
+      label: "สภาพแวดล้อม",
       value: database.environment || "--",
       icon: <Database className="h-4 w-4" />,
     },
     {
-      label: "Host IP",
+      label: "โฮสต์ IP",
       value: hostValue || "--",
       note: database.host || "--",
       icon: <Server className="h-4 w-4" />,
     },
     {
-      label: "Service Name",
+      label: "ชื่อบริการ",
       value: database.serviceName || "--",
       icon: <Server className="h-4 w-4" />,
     },
@@ -219,11 +219,11 @@ export default function DatabaseDetailPage() {
       <section className="workspace-hero">
         <div className="flex flex-col gap-4">
           <div className="page-breadcrumb">
-            <span>Workspace</span>
+            <span>พื้นที่ทำงาน</span>
             <span className="page-breadcrumb-separator">/</span>
-            <span>Data Layer</span>
+            <span>ชั้นข้อมูล</span>
             <span className="page-breadcrumb-separator">/</span>
-            <span>Databases</span>
+            <span>ฐานข้อมูล</span>
             <span className="page-breadcrumb-separator">/</span>
             <span>{database.name}</span>
           </div>
@@ -238,7 +238,7 @@ export default function DatabaseDetailPage() {
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="truncate font-display text-xl font-semibold uppercase tracking-[0.06em] text-foreground">
-                      {database.note || "Database System"}
+                      {database.note || "ระบบฐานข้อมูล"}
                     </h1>
                     <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs text-muted-foreground">
                       {database.environment}
@@ -249,15 +249,15 @@ export default function DatabaseDetailPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-              <div className="brand-chip">Accounts <span className="font-medium normal-case tracking-normal text-foreground">{databaseStats.accounts}</span></div>
-              <div className="brand-chip">App IPs <span className="font-medium normal-case tracking-normal text-foreground">{databaseStats.appIps}</span></div>
-              <div className="brand-chip">Service <span className="font-medium normal-case tracking-normal text-foreground">{database.serviceName || "--"}</span></div>
+              <div className="brand-chip">บัญชี <span className="font-medium normal-case tracking-normal text-foreground">{databaseStats.accounts}</span></div>
+              <div className="brand-chip">IP แอป <span className="font-medium normal-case tracking-normal text-foreground">{databaseStats.appIps}</span></div>
+              <div className="brand-chip">บริการ <span className="font-medium normal-case tracking-normal text-foreground">{database.serviceName || "--"}</span></div>
             </div>
           </div>
 
           <div className="border-t border-border pt-3">
             <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
-              Database Details
+              รายละเอียดฐานข้อมูล
             </h2>
           </div>
 
@@ -292,7 +292,7 @@ export default function DatabaseDetailPage() {
 
             <div className="space-y-2 pt-2 lg:pt-0">
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Related Application IPs
+                IP แอปพลิเคชันที่เกี่ยวข้อง
               </div>
               <div className="space-y-2">
                 {database.linkedApps.length > 0 ? (
@@ -309,13 +309,13 @@ export default function DatabaseDetailPage() {
                         </div>
                         <div className="min-w-0 space-y-0.5">
                           <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                            Application IP
+                            IP แอปพลิเคชัน
                           </div>
                           <div className="font-mono text-sm font-semibold text-foreground">
                             {linkedApp.ipAddress || "--"}
                           </div>
                           <div className="text-[11px] text-muted-foreground">
-                            {linkedApp.description || "No description"}
+                            {linkedApp.description || "ไม่มีคำอธิบาย"}
                           </div>
                         </div>
                       </div>
@@ -323,7 +323,7 @@ export default function DatabaseDetailPage() {
                   })
                 ) : (
                   <span className="text-sm text-muted-foreground">
-                    No application IPs recorded.
+                    ไม่มีข้อมูล IP แอปพลิเคชัน
                   </span>
                 )}
               </div>
@@ -337,7 +337,7 @@ export default function DatabaseDetailPage() {
           <div className="mb-3 flex items-center gap-2">
             <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
             <h3 className="text-sm font-semibold tracking-tight text-foreground">
-              Database Accounts
+              บัญชีฐานข้อมูล
             </h3>
           </div>
 
@@ -346,11 +346,11 @@ export default function DatabaseDetailPage() {
               <table className="table-frame min-w-[900px]">
                 <thead>
                   <tr className="table-head-row">
-                    <th className="px-3 py-2.5 font-medium">Username</th>
-                    <th className="px-3 py-2.5 font-medium">Password</th>
-                    <th className="px-3 py-2.5 font-medium">Role</th>
-                    <th className="px-3 py-2.5 font-medium">Privileges</th>
-                    <th className="px-3 py-2.5 font-medium">Note</th>
+                    <th className="px-3 py-2.5 font-medium">ชื่อผู้ใช้</th>
+                    <th className="px-3 py-2.5 font-medium">รหัสผ่าน</th>
+                    <th className="px-3 py-2.5 font-medium">บทบาท</th>
+                    <th className="px-3 py-2.5 font-medium">สิทธิ์</th>
+                    <th className="px-3 py-2.5 font-medium">หมายเหตุ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -368,7 +368,7 @@ export default function DatabaseDetailPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                void copyValue(account.username, "Username")
+                                void copyValue(account.username, "ชื่อผู้ใช้")
                               }
                               className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                             >
@@ -400,7 +400,7 @@ export default function DatabaseDetailPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                void copyValue(account.password, "Password")
+                                void copyValue(account.password, "รหัสผ่าน")
                               }
                               className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                             >

@@ -134,13 +134,13 @@ function extractMethods(...values: Array<string | null | undefined>) {
 function getStatusPresentation(status?: AssetStatus | null) {
   switch (status) {
     case 'INACTIVE':
-      return { label: 'Inactive', className: 'border-border bg-muted text-muted-foreground' };
+      return { label: 'ไม่ใช้งาน', className: 'border-border bg-muted text-muted-foreground' };
     case 'MAINTENANCE':
-      return { label: 'Maintenance', className: 'border-warning/30 bg-warning/10 text-warning' };
+      return { label: 'บำรุงรักษา', className: 'border-warning/30 bg-warning/10 text-warning' };
     case 'RETIRED':
-      return { label: 'Retired', className: 'border-destructive/30 bg-destructive/10 text-destructive' };
+      return { label: 'เลิกใช้งาน', className: 'border-destructive/30 bg-destructive/10 text-destructive' };
     default:
-      return { label: 'Online', className: 'border-success/30 bg-success/10 text-success' };
+      return { label: 'ออนไลน์', className: 'border-success/30 bg-success/10 text-success' };
   }
 }
 
@@ -158,7 +158,7 @@ export default function AssetDetailsPage() {
         const response = await api.get<Asset>(`/assets/${id}`);
         setAsset(response.data);
       } catch {
-        toast.error('Failed to load asset details');
+        toast.error('ไม่สามารถโหลดรายละเอียดสินทรัพย์ได้');
         router.push('/dashboard/assets');
       } finally {
         setLoading(false);
@@ -178,8 +178,8 @@ export default function AssetDetailsPage() {
     setHeader({
       title: asset.name,
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'Assets', href: '/dashboard/assets' },
+        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
+        { label: 'สินทรัพย์', href: '/dashboard/assets' },
         { label: asset.name },
       ],
     });
@@ -269,7 +269,7 @@ export default function AssetDetailsPage() {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-zinc-500">
         <LoaderCircle className="mb-3 h-6 w-6 animate-spin text-zinc-200" />
-        <p className="text-sm">Loading asset details...</p>
+        <p className="text-sm">กำลังโหลดรายละเอียดสินทรัพย์...</p>
       </div>
     );
   }
@@ -280,11 +280,11 @@ export default function AssetDetailsPage() {
 
   const status = getStatusPresentation(asset.status);
   const properties = [
-    { label: 'Type', value: asset.type, icon: <Boxes className="h-4 w-4" /> },
-    { label: 'Location', value: asset.location || '--', icon: <MapPin className="h-4 w-4" /> },
-    { label: 'Rack', value: asset.rack || '--', icon: <Waypoints className="h-4 w-4" /> },
-    { label: 'Serial Num.', value: asset.sn || '--', icon: <Hash className="h-4 w-4" /> },
-    { label: 'Updated', value: formatExactDateTime(asset.updatedAt), icon: <CalendarClock className="h-4 w-4" /> },
+    { label: 'ประเภท', value: asset.type, icon: <Boxes className="h-4 w-4" /> },
+    { label: 'สถานที่', value: asset.location || '--', icon: <MapPin className="h-4 w-4" /> },
+    { label: 'แร็ค', value: asset.rack || '--', icon: <Waypoints className="h-4 w-4" /> },
+    { label: 'หมายเลขซีเรียล', value: asset.sn || '--', icon: <Hash className="h-4 w-4" /> },
+    { label: 'อัปเดตเมื่อ', value: formatExactDateTime(asset.updatedAt), icon: <CalendarClock className="h-4 w-4" /> },
   ];
 
   return (
@@ -294,17 +294,17 @@ export default function AssetDetailsPage() {
         className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Inventory
+        กลับไปหน้าสินทรัพย์
       </button>
 
       <section className="workspace-hero">
         <div className="flex flex-col gap-4">
           <div className="page-breadcrumb">
-            <span>Workspace</span>
+            <span>พื้นที่ทำงาน</span>
             <span className="page-breadcrumb-separator">/</span>
-            <span>Infrastructure</span>
+            <span>โครงสร้างพื้นฐาน</span>
             <span className="page-breadcrumb-separator">/</span>
-            <span>Assets</span>
+            <span>สินทรัพย์</span>
             <span className="page-breadcrumb-separator">/</span>
             <span>{asset.name}</span>
           </div>
@@ -332,20 +332,20 @@ export default function AssetDetailsPage() {
                     )}
                   </div>
 
-                  <p className="text-[12px] text-muted-foreground">{asset.brandModel || 'Unknown platform'}</p>
+                  <p className="text-[12px] text-muted-foreground">{asset.brandModel || 'ไม่ระบุแพลตฟอร์ม'}</p>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-              <div className="brand-chip">Interfaces <span className="font-medium normal-case tracking-normal text-foreground">{accessRows.length}</span></div>
-              <div className="brand-chip">IPs <span className="font-medium normal-case tracking-normal text-foreground">{asset.ipAllocations?.length ?? 0}</span></div>
-              <div className="brand-chip">Credentials <span className="font-medium normal-case tracking-normal text-foreground">{asset.credentials?.length ?? 0}</span></div>
+              <div className="brand-chip">อินเทอร์เฟซ <span className="font-medium normal-case tracking-normal text-foreground">{accessRows.length}</span></div>
+              <div className="brand-chip">IP <span className="font-medium normal-case tracking-normal text-foreground">{asset.ipAllocations?.length ?? 0}</span></div>
+              <div className="brand-chip">ข้อมูลเข้าสู่ระบบ <span className="font-medium normal-case tracking-normal text-foreground">{asset.credentials?.length ?? 0}</span></div>
             </div>
           </div>
 
           <div className="border-t border-border pt-3">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">Asset Details</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">รายละเอียดสินทรัพย์</h2>
           </div>
 
           <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -369,17 +369,17 @@ export default function AssetDetailsPage() {
               <div className="icon-chip h-8 w-8 p-0 text-foreground">
                 <Shield className="h-3.5 w-3.5" />
               </div>
-              <h2 className="text-base font-semibold tracking-[-0.03em] text-foreground">Access Interfaces</h2>
+              <h2 className="text-base font-semibold tracking-[-0.03em] text-foreground">อินเทอร์เฟซการเข้าถึง</h2>
             </div>
 
             <div className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-              {accessRows.length} Interfaces
+              {accessRows.length} อินเทอร์เฟซ
             </div>
           </div>
 
           <div className="table-shell">
             {accessRows.length === 0 ? (
-              <div className="px-4 py-10 text-center text-sm text-muted-foreground">No IP addresses or credentials for this asset.</div>
+              <div className="px-4 py-10 text-center text-sm text-muted-foreground">ไม่มีที่อยู่ IP หรือข้อมูลเข้าสู่ระบบสำหรับสินทรัพย์นี้</div>
             ) : (
               <div className="divide-y divide-border">
                 {groupedNodes.map((node) => (
@@ -391,22 +391,22 @@ export default function AssetDetailsPage() {
                     )}
 
                     <div className="hidden grid-cols-[1.1fr_1fr_0.75fr_1.55fr] gap-3 border-b border-border/70 bg-background/45 px-4 py-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground md:grid">
-                      <div>Interface Type</div>
-                      <div>IP Address</div>
-                      <div>Access Via</div>
-                      <div>Accounts</div>
+                      <div>ประเภทอินเทอร์เฟซ</div>
+                      <div>ที่อยู่ IP</div>
+                      <div>เข้าถึงผ่าน</div>
+                      <div>บัญชี</div>
                     </div>
 
                     {node.rows.map((row) => (
                       <div key={row.key} className="grid gap-3 px-4 py-3 transition-colors hover:bg-accent/60 md:grid-cols-[1.1fr_1fr_0.75fr_1.55fr]">
                         <div className="space-y-1.5">
-                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Interface Type</div>
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">ประเภทอินเทอร์เฟซ</div>
                           <div className="text-sm font-semibold text-foreground">{row.label}</div>
                           <div className="text-xs text-muted-foreground">{row.version || '--'}</div>
                         </div>
 
                         <div className="space-y-1.5">
-                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">IP Address</div>
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">ที่อยู่ IP</div>
                           {row.addresses.length > 0 ? (
                             <div className="space-y-1.5">
                               {row.addresses.map((address) => (
@@ -414,7 +414,7 @@ export default function AssetDetailsPage() {
                                   key={address}
                                   onClick={() => {
                                     void navigator.clipboard.writeText(address);
-                                    toast.success('IP copied');
+                                    toast.success('คัดลอก IP แล้ว');
                                   }}
                                   className="flex items-center gap-1.5 font-mono text-sm text-foreground transition-colors hover:text-foreground/80"
                                 >
@@ -430,7 +430,7 @@ export default function AssetDetailsPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Access Via</div>
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">เข้าถึงผ่าน</div>
                           <div className="flex flex-wrap gap-2">
                             {(row.methods.length > 0 ? row.methods : ['DIRECT']).map((method) => (
                               <span
@@ -444,7 +444,7 @@ export default function AssetDetailsPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">Accounts</div>
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:hidden">บัญชี</div>
                           {row.credentials.length > 0 ? (
                             row.credentials.map((credential) => {
                               const visible = revealed.has(credential.id);
@@ -476,7 +476,7 @@ export default function AssetDetailsPage() {
                                   <button
                                     onClick={() => {
                                       void navigator.clipboard.writeText(credential.password || '');
-                                      toast.success('Password copied');
+                                      toast.success('คัดลอกรหัสผ่านแล้ว');
                                     }}
                                     className="rounded-xl border border-border/70 bg-card/70 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
                                   >
@@ -502,7 +502,7 @@ export default function AssetDetailsPage() {
           <div className="surface-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <FolderTree className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">Hierarchy</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">ลำดับชั้น</h3>
             </div>
 
             <div className="space-y-2">
@@ -515,7 +515,7 @@ export default function AssetDetailsPage() {
                     {getAssetIcon(asset.parent.type, 'h-4 w-4')}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Parent</div>
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">ต้นทาง</div>
                     <div className="truncate text-sm font-semibold text-foreground">{asset.parent.name}</div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -532,7 +532,7 @@ export default function AssetDetailsPage() {
                     {getAssetIcon(child.type, 'h-4 w-4')}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Child</div>
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">ปลายทาง</div>
                     <div className="truncate text-sm font-semibold text-foreground">{child.name}</div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />

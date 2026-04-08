@@ -95,8 +95,8 @@ export default function VmDetailPage() {
     setHeader({
       title: vm.name,
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'Virtual Machines', href: '/dashboard/vm' },
+        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
+        { label: 'เครื่องเสมือน', href: '/dashboard/vm' },
         { label: vm.name },
       ],
     });
@@ -109,14 +109,14 @@ export default function VmDetailPage() {
   const copyValue = async (value: string, label: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(`${label} copied`);
+      toast.success(`คัดลอก ${label} แล้ว`);
     } catch {
-      toast.error(`Failed to copy ${label.toLowerCase()}`);
+      toast.error(`ไม่สามารถคัดลอก ${label.toLowerCase()} ได้`);
     }
   };
 
   if (loading) {
-    return <div className="surface-panel p-4 text-sm text-muted-foreground">Loading VM details...</div>;
+    return <div className="surface-panel p-4 text-sm text-muted-foreground">กำลังโหลดรายละเอียด VM...</div>;
   }
 
   if (!vm) {
@@ -127,9 +127,9 @@ export default function VmDetailPage() {
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to VM Inventory
+          กลับไปหน้า VM
         </button>
-        <div className="surface-panel p-4 text-sm text-muted-foreground">VM record not found.</div>
+        <div className="surface-panel p-4 text-sm text-muted-foreground">ไม่พบข้อมูล VM</div>
       </div>
     );
   }
@@ -160,12 +160,12 @@ export default function VmDetailPage() {
 
   const lifecycleMessage =
     vm.lifecycleState === 'DRAFT'
-      ? 'Draft record created from vCenter discovery. Review the manual context before approving.'
+      ? 'บันทึกฉบับร่างที่สร้างจากการค้นพบ vCenter ตรวจสอบบริบทด้วยตนเองก่อนอนุมัติ'
       : vm.lifecycleState === 'DELETED_IN_VCENTER'
-        ? 'This VM no longer exists in vCenter. Keep the record archived or remove it after review.'
-        : 'This VM is active and in sync with the connected source.';
+        ? 'VM นี้ไม่มีอยู่ใน vCenter อีกต่อไป เก็บถาวรหรือลบบันทึกหลังตรวจสอบ'
+        : 'VM นี้ใช้งานอยู่และซิงค์กับแหล่งข้อมูลที่เชื่อมต่อ';
   const storageValue =
-    vm.disks && vm.disks.length > 0 ? `${vm.storageGb} GB total (${vm.disks.length} disk${vm.disks.length > 1 ? 's' : ''})` : `${vm.storageGb} GB`;
+    vm.disks && vm.disks.length > 0 ? `รวม ${vm.storageGb} GB (${vm.disks.length} ดิสก์)` : `${vm.storageGb} GB`;
   const storageMeta =
     vm.disks && vm.disks.length > 0 ? (
       <div className="space-y-1">
@@ -176,7 +176,7 @@ export default function VmDetailPage() {
         ))}
       </div>
     ) : (
-      'Total provisioned capacity'
+      'ความจุที่จัดสรรทั้งหมด'
     );
   const identityAndPlacementDetails: DetailListItem[] = [
     {
@@ -188,26 +188,26 @@ export default function VmDetailPage() {
       value: vm.moid,
     },
     {
-      label: 'Primary IP',
+      label: 'IP หลัก',
       value: vm.primaryIp,
     },
     {
-      label: 'Power',
+      label: 'พลังงาน',
       value: vm.powerState,
       meta: vm.lastSyncAt === '--' ? undefined : vm.lastSyncAt,
     },
     {
-      label: 'Host',
+      label: 'โฮสต์',
       value: vm.host,
     },
     {
-      label: 'Cluster',
+      label: 'คลัสเตอร์',
       value: vm.cluster,
     },
   ];
   const infrastructureDetails: DetailListItem[] = [
     {
-      label: 'Guest OS',
+      label: 'ระบบปฏิบัติการ',
       value: vm.guestOs,
     },
     {
@@ -215,34 +215,34 @@ export default function VmDetailPage() {
       value: `${vm.cpuCores} vCPU`,
     },
     {
-      label: 'Memory',
+      label: 'หน่วยความจำ',
       value: `${vm.memoryGb} GB`,
     },
     {
-      label: 'Storage',
+      label: 'พื้นที่จัดเก็บ',
       value: storageValue,
       meta: storageMeta,
     },
     {
-      label: 'Network',
+      label: 'เครือข่าย',
       value: vm.networkLabel,
     },
   ];
   const assetOpsDetails: DetailListItem[] = [
     {
-      label: 'System Name',
+      label: 'ชื่อระบบ',
       value: vm.systemName,
     },
     {
-      label: 'Environment',
+      label: 'สภาพแวดล้อม',
       value: vm.environment,
     },
     {
-      label: 'Service Role',
+      label: 'บทบาทบริการ',
       value: vm.serviceRole,
     },
     {
-      label: 'Tags',
+      label: 'แท็ก',
       value:
         vm.tags.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -265,7 +265,7 @@ export default function VmDetailPage() {
         className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to VM Inventory
+        กลับไปหน้า VM
       </button>
 
       {vm.lifecycleState !== 'ACTIVE' || vm.syncState !== 'Synced' ? (
@@ -273,7 +273,7 @@ export default function VmDetailPage() {
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-4 w-4 text-amber-300" />
             <div>
-              <div className="font-semibold">Lifecycle attention needed</div>
+              <div className="font-semibold">ต้องการการตรวจสอบวงจรการใช้งาน</div>
               <p className="mt-1 text-[12px] text-muted-foreground">{lifecycleMessage}</p>
             </div>
           </div>
@@ -283,11 +283,11 @@ export default function VmDetailPage() {
       <section className="workspace-hero">
         <div className="flex flex-col gap-6">
           <div className="page-breadcrumb">
-            <span>Workspace</span>
+            <span>พื้นที่ทำงาน</span>
             <span className="page-breadcrumb-separator">/</span>
-            <span>Compute</span>
+            <span>คอมพิวต์</span>
             <span className="page-breadcrumb-separator">/</span>
-            <span>VM Inventory</span>
+            <span>VM</span>
             <span className="page-breadcrumb-separator">/</span>
             <span>{vm.name}</span>
           </div>
@@ -315,10 +315,10 @@ export default function VmDetailPage() {
 
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                Edit VM
+                แก้ไข VM
               </Button>
               <Button variant="destructive" size="sm" onClick={() => setArchiveOpen(true)}>
-                Archive
+                เก็บถาวร
               </Button>
             </div>
           </div>
@@ -329,16 +329,16 @@ export default function VmDetailPage() {
       <section className="space-y-4">
         <section className="surface-panel p-4">
           <div className="border-b border-border/70 pb-3">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">VM Details</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">รายละเอียด VM</h2>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <DetailListSection title="Identity & Placement" items={identityAndPlacementDetails} />
-            <DetailListSection title="Infrastructure" items={infrastructureDetails} />
-            <DetailListSection title="AssetOps Context" items={assetOpsDetails} />
+            <DetailListSection title="ข้อมูลประจำตัวและตำแหน่ง" items={identityAndPlacementDetails} />
+            <DetailListSection title="โครงสร้างพื้นฐาน" items={infrastructureDetails} />
+            <DetailListSection title="บริบท AssetOps" items={assetOpsDetails} />
             <div className="space-y-4">
-              <TextSection title="Service Purpose" content={vm.description || '--'} />
-              <TextSection title="Notes" content={vm.notes || '--'} />
+              <TextSection title="วัตถุประสงค์บริการ" content={vm.description || '--'} />
+              <TextSection title="หมายเหตุ" content={vm.notes || '--'} />
             </div>
           </div>
         </section>
@@ -346,7 +346,7 @@ export default function VmDetailPage() {
         <section className="surface-panel p-4">
           <div className="mb-3 flex items-center gap-2">
             <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-            <h3 className="text-sm font-semibold text-foreground">Guest OS Accounts</h3>
+            <h3 className="text-sm font-semibold text-foreground">บัญชีระบบปฏิบัติการ</h3>
           </div>
 
           <div className="table-shell">
@@ -354,11 +354,11 @@ export default function VmDetailPage() {
               <table className="table-frame min-w-[880px]">
                 <thead>
                   <tr className="table-head-row">
-                    <th className="px-3 py-2.5 font-medium">Username</th>
-                    <th className="px-3 py-2.5 font-medium">Password</th>
-                    <th className="px-3 py-2.5 font-medium">Access</th>
-                    <th className="px-3 py-2.5 font-medium">Role</th>
-                    <th className="px-3 py-2.5 font-medium">Note</th>
+                    <th className="px-3 py-2.5 font-medium">ชื่อผู้ใช้</th>
+                    <th className="px-3 py-2.5 font-medium">รหัสผ่าน</th>
+                    <th className="px-3 py-2.5 font-medium">การเข้าถึง</th>
+                    <th className="px-3 py-2.5 font-medium">บทบาท</th>
+                    <th className="px-3 py-2.5 font-medium">หมายเหตุ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -373,7 +373,7 @@ export default function VmDetailPage() {
                             <span className="font-mono text-[12px] font-semibold text-foreground">{account.username}</span>
                             <button
                               type="button"
-                              onClick={() => void copyValue(account.username, 'Username')}
+                              onClick={() => void copyValue(account.username, 'ชื่อผู้ใช้')}
                               className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                             >
                               <Copy className="h-3.5 w-3.5" />
@@ -394,7 +394,7 @@ export default function VmDetailPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => void copyValue(account.password, 'Password')}
+                              onClick={() => void copyValue(account.password, 'รหัสผ่าน')}
                               className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                             >
                               <Copy className="h-3.5 w-3.5" />
@@ -433,15 +433,15 @@ export default function VmDetailPage() {
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <DialogContent className="max-w-md bg-card p-0">
           <DialogHeader className="border-b border-border/70 px-5 py-4">
-            <DialogTitle className="text-base">Archive VM</DialogTitle>
+            <DialogTitle className="text-base">เก็บถาวร VM</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 px-5 py-5">
             <p className="text-sm text-muted-foreground">
-              Archive <span className="font-medium text-foreground">{vm.name}</span> and keep the history in AssetOps?
+              เก็บถาวร <span className="font-medium text-foreground">{vm.name}</span> และเก็บประวัติไว้ใน AssetOps?
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setArchiveOpen(false)}>
-                Cancel
+                ยกเลิก
               </Button>
               <Button
                 variant="destructive"
@@ -449,14 +449,14 @@ export default function VmDetailPage() {
                   try {
                     await archiveVmInventory(vm.id);
                     setArchiveOpen(false);
-                    toast.success('VM archived');
+                    toast.success('เก็บถาวร VM สำเร็จ');
                     router.push('/dashboard/vm');
                   } catch {
-                    toast.error('Failed to archive VM');
+                    toast.error('ไม่สามารถเก็บถาวร VM ได้');
                   }
                 }}
               >
-                Archive
+                เก็บถาวร
               </Button>
             </div>
           </div>
