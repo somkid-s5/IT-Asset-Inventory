@@ -33,11 +33,11 @@ const ENVIRONMENT_TABS: Array<{
   icon: typeof Box;
   iconClassName: string;
 }> = [
-  { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
-  { label: 'Production', value: 'PROD', icon: ShieldCheck, iconClassName: 'text-emerald-400' },
-  { label: 'Test', value: 'TEST', icon: FlaskConical, iconClassName: 'text-amber-400' },
-  { label: 'Dev', value: 'DEV', icon: Code2, iconClassName: 'text-sky-400' },
-];
+    { label: 'ทั้งหมด', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
+    { label: 'Production', value: 'PROD', icon: ShieldCheck, iconClassName: 'text-emerald-400' },
+    { label: 'ทดสอบ', value: 'TEST', icon: FlaskConical, iconClassName: 'text-amber-400' },
+    { label: 'พัฒนา', value: 'DEV', icon: Code2, iconClassName: 'text-sky-400' },
+  ];
 
 export default function DbPage() {
   const router = useRouter();
@@ -59,7 +59,7 @@ export default function DbPage() {
       const response = await api.get<DatabaseInventoryItem[]>('/databases');
       setDatabases(response.data);
     } catch {
-      toast.error('Failed to load databases');
+      toast.error('ไม่สามารถโหลดฐานข้อมูลได้');
     } finally {
       setLoading(false);
     }
@@ -71,10 +71,10 @@ export default function DbPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'Databases',
+      title: 'ฐานข้อมูล',
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'Databases' },
+        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
+        { label: 'ฐานข้อมูล' },
       ],
     });
 
@@ -147,7 +147,7 @@ export default function DbPage() {
       setDatabaseToEdit(response.data);
       setDialogOpen(true);
     } catch {
-      toast.error('Failed to load database details');
+      toast.error('ไม่สามารถโหลดรายละเอียดฐานข้อมูลได้');
     } finally {
       setLoadingEditId(null);
     }
@@ -161,11 +161,11 @@ export default function DbPage() {
     setDeleteLoading(true);
     try {
       await api.delete(`/databases/${deleteTarget.id}`);
-      toast.success('Database deleted');
+      toast.success('ฐานข้อมูลถูกลบแล้ว');
       setDeleteTarget(null);
       await loadDatabases();
     } catch {
-      toast.error('Failed to delete database');
+      toast.error('ไม่สามารถลบฐานข้อมูลได้');
     } finally {
       setDeleteLoading(false);
     }
@@ -205,7 +205,7 @@ export default function DbPage() {
                 <Input
                   type="text"
                   className="h-8 w-[240px] pl-9 text-xs transition-shadow focus-visible:ring-1 sm:w-[320px]"
-                  placeholder="Search by database name, engine, host, or IP..."
+                  placeholder="ค้นหาด้วยชื่อฐานข้อมูล, เอ็นจิ้น, โฮสต์, หรือ IP..."
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
@@ -213,7 +213,7 @@ export default function DbPage() {
 
               <Button size="sm" className="h-8 gap-1.5 px-3" onClick={() => setDialogOpen(true)}>
                 <Plus className="h-3.5 w-3.5" />
-                Add Database
+                เพิ่มฐานข้อมูล
               </Button>
             </div>
           </div>
@@ -225,31 +225,31 @@ export default function DbPage() {
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
                   <Button variant="ghost" onClick={() => toggleSort('name')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
-                    DB Name
+                    ชื่อฐานข้อมูล
                     {renderSortIcon('name')}
                   </Button>
                 </TableHead>
                 <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
                   <Button variant="ghost" onClick={() => toggleSort('engine')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
-                    Engine
+                    เอ็นจิ้น
                     {renderSortIcon('engine')}
                   </Button>
                 </TableHead>
                 <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
                   <Button variant="ghost" onClick={() => toggleSort('version')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
-                    Version
+                    เวอร์ชัน
                     {renderSortIcon('version')}
                   </Button>
                 </TableHead>
                 <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
                   <Button variant="ghost" onClick={() => toggleSort('environment')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
-                    Environment
+                    สภาพแวดล้อม
                     {renderSortIcon('environment')}
                   </Button>
                 </TableHead>
                 <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
                   <Button variant="ghost" onClick={() => toggleSort('host')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
-                    Host
+                    โฮสต์
                     {renderSortIcon('host')}
                   </Button>
                 </TableHead>
@@ -260,10 +260,10 @@ export default function DbPage() {
                   </Button>
                 </TableHead>
                 <TableHead className="h-10 px-4 py-2 align-middle border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em]">
-                  Accounts
+                  บัญชี
                 </TableHead>
                 <TableHead className="h-10 px-4 py-2 align-middle border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-right">
-                  Actions
+                  จัดการ
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -273,7 +273,7 @@ export default function DbPage() {
                   <TableCell colSpan={8} className="h-24 text-center">
                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <LoaderCircle className="h-4 w-4 animate-spin text-foreground" />
-                      <span className="text-sm">Loading databases...</span>
+                      <span className="text-sm">กำลังโหลดฐานข้อมูล...</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -284,9 +284,9 @@ export default function DbPage() {
                       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50 border border-border/70">
                         <Database className="h-6 w-6 text-muted-foreground" />
                       </div>
-                      <h3 className="text-sm font-semibold text-foreground">No databases found</h3>
+                      <h3 className="text-sm font-semibold text-foreground">ไม่พบฐานข้อมูล</h3>
                       <p className="mt-1 text-xs text-muted-foreground max-w-[250px]">
-                        {searchTerm ? 'Adjust your search filters.' : 'There are no databases in this environment.'}
+                        {searchTerm ? 'ปรับการค้นหาของคุณ' : 'ไม่มีฐานข้อมูลในสภาพแวดล้อมนี้'}
                       </p>
                     </div>
                   </TableCell>
@@ -345,7 +345,7 @@ export default function DbPage() {
         </div>
         {!loading && filteredDatabases.length > 0 && (
           <div className="bg-card px-4 py-2.5 border-t border-border/70 text-[11px] font-medium text-muted-foreground">
-            Showing {filteredDatabases.length} databases
+            แสดงฐานข้อมูล {filteredDatabases.length} รายการ
           </div>
         )}
       </Card>
@@ -365,19 +365,19 @@ export default function DbPage() {
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-md bg-card p-0">
           <DialogHeader className="border-b border-border/70 px-5 py-4">
-            <DialogTitle className="text-base">Delete database</DialogTitle>
+            <DialogTitle className="text-base">ลบฐานข้อมูล</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 px-5 py-5">
             <p className="text-sm text-muted-foreground">
-              Delete <span className="font-medium text-foreground">{deleteTarget?.name}</span> and all linked accounts?
+              ลบ <span className="font-medium text-foreground">{deleteTarget?.name}</span> และบัญชีที่เชื่อมโยงทั้งหมด?
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>
-                Cancel
+                ยกเลิก
               </Button>
               <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteLoading}>
                 {deleteLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                Delete
+                ลบ
               </Button>
             </div>
           </div>

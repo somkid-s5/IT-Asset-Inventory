@@ -54,10 +54,10 @@ interface Asset {
 }
 
 const TABS: { label: string; value: 'ALL' | AssetType; icon: typeof Box; iconClassName: string }[] = [
-  { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
-  { label: 'Servers', value: 'SERVER', icon: Server, iconClassName: 'text-emerald-400' },
-  { label: 'Storage', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-400' },
-  { label: 'Switches', value: 'SWITCH', icon: Shield, iconClassName: 'text-amber-400' },
+  { label: 'ทั้งหมด', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
+  { label: 'เซิร์ฟเวอร์', value: 'SERVER', icon: Server, iconClassName: 'text-emerald-400' },
+  { label: 'พื้นที่จัดเก็บ', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-400' },
+  { label: 'สวิตช์', value: 'SWITCH', icon: Shield, iconClassName: 'text-amber-400' },
 ];
 
 const typeBadgeVariants: Record<AssetType, "success" | "neutral" | "warning" | "danger" | "default"> = {
@@ -92,14 +92,14 @@ export default function AssetsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'ALL' | AssetType>('ALL');
-  
+
   // Dialog functionality state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | undefined>();
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [assetPendingDelete, setAssetPendingDelete] = useState<Asset | null>(null);
-  
+
   // Tanstack Table States
   const [sorting, setSorting] = useState<SortingState>([{ id: 'assetId', desc: false }]);
   const [expanded, setExpanded] = useState({});
@@ -110,7 +110,7 @@ export default function AssetsPage() {
       const response = await api.get<Asset[]>('/assets');
       setAssets(response.data);
     } catch {
-      toast.error('Failed to load assets');
+      toast.error('ไม่สามารถโหลดสินทรัพย์ได้');
     } finally {
       setLoading(false);
     }
@@ -122,10 +122,10 @@ export default function AssetsPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'Assets',
+      title: 'สินทรัพย์',
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'Assets' },
+        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
+        { label: 'สินทรัพย์' },
       ],
     });
     return () => {
@@ -175,7 +175,7 @@ export default function AssetsPage() {
       setEditingAsset(response.data);
       setDialogOpen(true);
     } catch {
-      toast.error('Failed to load asset details for editing');
+      toast.error('ไม่สามารถโหลดรายละเอียดสินทรัพย์เพื่อแก้ไขได้');
     } finally {
       setLoadingEditId(null);
     }
@@ -187,7 +187,7 @@ export default function AssetsPage() {
     setDeletingId(assetPendingDelete.id);
     try {
       await api.delete(`/assets/${assetPendingDelete.id}`);
-      toast.success('Asset deleted');
+      toast.success('ลบสินทรัพย์สำเร็จ');
       setAssetPendingDelete(null);
       await loadAssets();
     } catch (error: unknown) {
@@ -197,7 +197,7 @@ export default function AssetsPage() {
           'response' in error &&
           typeof (error as any).response?.data?.message === 'string'
           ? (error as any).response?.data?.message
-          : 'Failed to delete asset';
+          : 'ไม่สามารถลบสินทรัพย์ได้';
 
       toast.error(message);
     } finally {
@@ -210,7 +210,7 @@ export default function AssetsPage() {
       accessorKey: 'assetId',
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting()} className="-ml-3 h-8 data-[state=open]:bg-accent">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">Asset ID</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">รหัสสินทรัพย์</span>
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-3.5 w-3.5" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-3.5 w-3.5" /> : <ChevronsUpDown className="ml-2 h-3.5 w-3.5 text-muted-foreground/70" />}
         </Button>
       ),
@@ -240,7 +240,7 @@ export default function AssetsPage() {
       accessorKey: 'name',
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting()} className="-ml-3 h-8 data-[state=open]:bg-accent">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">Asset Name</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">ชื่อสินทรัพย์</span>
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-3.5 w-3.5" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-3.5 w-3.5" /> : <ChevronsUpDown className="ml-2 h-3.5 w-3.5 text-muted-foreground/70" />}
         </Button>
       ),
@@ -257,21 +257,31 @@ export default function AssetsPage() {
       accessorKey: 'type',
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting()} className="-ml-3 h-8 data-[state=open]:bg-accent">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">Type</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">ประเภท</span>
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-3.5 w-3.5" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-3.5 w-3.5" /> : <ChevronsUpDown className="ml-2 h-3.5 w-3.5 text-muted-foreground/70" />}
         </Button>
       ),
-      cell: ({ row, getValue }) => (
-        <Badge variant={typeBadgeVariants[getValue() as AssetType]} className="uppercase tracking-wider">
-          {getValue() as string}
-        </Badge>
-      )
+      cell: ({ row, getValue }) => {
+        const type = getValue() as AssetType;
+        const typeLabels: Record<AssetType, string> = {
+          SERVER: 'เซิร์ฟเวอร์',
+          STORAGE: 'พื้นที่จัดเก็บ',
+          SWITCH: 'สวิตช์',
+          SP: 'ตัวประมวลผลบริการ',
+          NETWORK: 'เครือข่าย',
+        };
+        return (
+          <Badge variant={typeBadgeVariants[type]} className="uppercase tracking-wider">
+            {typeLabels[type]}
+          </Badge>
+        );
+      }
     },
     {
       accessorKey: 'rack',
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting()} className="-ml-3 h-8 data-[state=open]:bg-accent">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">Rack</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">แร็ค</span>
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-3.5 w-3.5" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-3.5 w-3.5" /> : <ChevronsUpDown className="ml-2 h-3.5 w-3.5 text-muted-foreground/70" />}
         </Button>
       ),
@@ -281,7 +291,7 @@ export default function AssetsPage() {
       accessorKey: 'brandModel',
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting()} className="-ml-3 h-8 data-[state=open]:bg-accent">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">Brand / Model</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">ยี่ห้อ / รุ่น</span>
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-3.5 w-3.5" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-3.5 w-3.5" /> : <ChevronsUpDown className="ml-2 h-3.5 w-3.5 text-muted-foreground/70" />}
         </Button>
       ),
@@ -291,7 +301,7 @@ export default function AssetsPage() {
       accessorKey: 'sn',
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting()} className="-ml-3 h-8 data-[state=open]:bg-accent">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">SN</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em]">หมายเลขซีเรียล</span>
           {column.getIsSorted() === 'asc' ? <ArrowUp className="ml-2 h-3.5 w-3.5" /> : column.getIsSorted() === 'desc' ? <ArrowDown className="ml-2 h-3.5 w-3.5" /> : <ChevronsUpDown className="ml-2 h-3.5 w-3.5 text-muted-foreground/70" />}
         </Button>
       ),
@@ -299,7 +309,7 @@ export default function AssetsPage() {
     },
     {
       id: 'actions',
-      header: () => <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-right">Actions</div>,
+      header: () => <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-right">จัดการ</div>,
       cell: ({ row }) => {
         const asset = row.original;
         return (user?.role === 'ADMIN' || user?.role === 'EDITOR') ? (
@@ -379,7 +389,7 @@ export default function AssetsPage() {
                     <Input
                       type="text"
                       className="h-8 w-[240px] pl-9 text-xs transition-shadow focus-visible:ring-1 sm:w-[320px]"
-                      placeholder="Search assets..."
+                      placeholder="ค้นหาสินทรัพย์..."
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
                     />
@@ -387,7 +397,7 @@ export default function AssetsPage() {
                   {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
                     <Button onClick={openCreateDialog} size="sm" className="h-8 gap-1.5 px-3">
                       <Plus className="h-3.5 w-3.5" />
-                      Add Asset
+                      เพิ่มสินทรัพย์
                     </Button>
                   )}
                 </div>
@@ -413,7 +423,7 @@ export default function AssetsPage() {
                       <TableCell colSpan={7} className="h-24 text-center">
                         <div className="flex items-center justify-center gap-2 text-muted-foreground">
                           <LoaderCircle className="h-4 w-4 animate-spin" />
-                          <span className="text-sm">Loading assets...</span>
+                          <span className="text-sm">กำลังโหลดสินทรัพย์...</span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -424,9 +434,9 @@ export default function AssetsPage() {
                           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50 border border-border/70">
                             <Box className="h-6 w-6 text-muted-foreground" />
                           </div>
-                          <h3 className="text-sm font-semibold text-foreground">No assets found</h3>
+                          <h3 className="text-sm font-semibold text-foreground">ไม่พบสินทรัพย์</h3>
                           <p className="mt-1 text-xs text-muted-foreground max-w-[250px]">
-                            {searchTerm ? 'Adjust your search filters.' : 'Get started by adding an asset.'}
+                            {searchTerm ? 'ปรับเปลี่ยนตัวกรองการค้นหาของคุณ' : 'เริ่มต้นโดยการเพิ่มสินทรัพย์'}
                           </p>
                         </div>
                       </TableCell>
@@ -452,7 +462,7 @@ export default function AssetsPage() {
 
             {!loading && topLevelAssets.length > 0 && (
               <div className="bg-card px-4 py-2.5 border-t border-border/70 text-[11px] font-medium text-muted-foreground">
-                Showing {table.getPrePaginationRowModel().rows.length} of {filteredAssets.length} assets
+                แสดง {table.getPrePaginationRowModel().rows.length} จาก {filteredAssets.length} สินทรัพย์
               </div>
             )}
           </section>
@@ -468,19 +478,19 @@ export default function AssetsPage() {
           <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
             <DialogContent className="max-w-md bg-card p-0">
               <DialogHeader className="border-b border-border/70 px-5 py-4">
-                <DialogTitle className="text-base">Delete asset</DialogTitle>
+                <DialogTitle className="text-base">ลบสินทรัพย์</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 px-5 py-5">
                 <p className="text-sm text-muted-foreground">
-                  Delete <span className="font-medium text-foreground">{assetPendingDelete?.name}</span> and all linked access data?
+                  ต้องการลบ <span className="font-medium text-foreground">{assetPendingDelete?.name}</span> และข้อมูลการเข้าถึงที่เชื่อมโยงทั้งหมดหรือไม่?
                 </p>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setAssetPendingDelete(null)} disabled={!!deletingId}>
-                    Cancel
+                    ยกเลิก
                   </Button>
                   <Button variant="destructive" onClick={() => void confirmDeleteAsset()} disabled={!!deletingId}>
                     {deletingId ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Delete
+                    ลบ
                   </Button>
                 </div>
               </div>
