@@ -7,91 +7,60 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
 import {
-  AlertTriangle,
-  ArrowDown,
-  ArrowUp,
-  ChevronsUpDown,
-  CheckCircle2,
-  Clock3,
-  Monitor,
-  RefreshCw,
-  Search,
-  Server,
+  AlertTriangle, ArrowDown, ArrowUp, ChevronsUpDown, 
+  CheckCircle2, Clock3, Monitor, RefreshCw, Search, Server, 
+  ChevronLeft, ChevronRight, Columns, Download, ShieldAlert
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { VmFormDialog } from '@/components/LazyLoadedDialogs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import {
-  type VmDiscoveryItem,
-  type VmInventoryItem,
-} from '@/lib/vm-inventory';
+import { type VmDiscoveryItem, type VmInventoryItem } from '@/lib/vm-inventory';
 import { getVmDiscoveries, getVmDiscovery, getVmInventory, getVmSources } from '@/services/vm';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import { 
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, 
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  flexRender, getCoreRowModel, getSortedRowModel,
+  getPaginationRowModel, getFilteredRowModel, useReactTable,
+  ColumnDef, SortingState, ColumnFiltersState, VisibilityState,
+} from '@tanstack/react-table';
+import { motion } from 'framer-motion';
 
 type InventoryView = 'PENDING' | 'ACTIVE' | 'ORPHANED';
-type PendingSortKey = 'name' | 'primaryIp' | 'sourceName' | 'host' | 'powerState' | 'lastSeen';
-type ActiveSortKey = 'systemName' | 'name' | 'primaryIp' | 'vcenterName' | 'host' | 'powerState';
-type OrphanedSortKey = 'displayName' | 'name' | 'primaryIp' | 'sourceName' | 'host' | 'lastSeen';
-type SortDirection = 'asc' | 'desc';
-type OrphanedVmRecord = {
-  id: string;
-  name: string;
-  displayName?: string | null;
-  sourceName: string;
-  host: string;
-  primaryIp: string;
-  lastSeen: string;
-  route: string;
-};
 
-const VIEW_COPY: Record<
-  InventoryView,
-  {
-    title: string;
-    shortLabel: string;
-    description: string;
-    searchPlaceholder: string;
-  }
-> = {
+const VIEW_COPY: Record<InventoryView, { title: string; shortLabel: string; description: string; searchPlaceholder: string; }> = {
   PENDING: {
     title: 'รอดำเนินการตั้งค่า',
     shortLabel: 'รอดำเนินการ',
-    description:
-      'เครื่องเสมือนที่ค้นพบใหม่ซึ่งยังต้องการข้อมูลทางธุรกิจก่อนเข้าสู่สินค้าคงคลังที่ใช้งานอยู่',
+    description: 'เครื่องเสมือนที่ค้นพบใหม่ซึ่งยังต้องการข้อมูลทางธุรกิจก่อนเข้าสู่สินค้าคงคลังที่ใช้งานอยู่',
     searchPlaceholder: 'ค้นหาด้วยชื่อ VM, ที่อยู่ IP, หรือแหล่งข้อมูล...',
   },
   ACTIVE: {
     title: 'สินค้าคงคลังที่ใช้งาน',
     shortLabel: 'ใช้งาน',
-    description:
-      'ระเบียนเครื่องเสมือนที่พร้อมใช้งานซึ่งได้รับการยกระดับและจัดการภายใน AssetOps แล้ว',
+    description: 'ระเบียนเครื่องเสมือนที่พร้อมใช้งานซึ่งได้รับการยกระดับและจัดการภายใน AssetOps แล้ว',
     searchPlaceholder: 'ค้นหาด้วยชื่อ VM, ชื่อระบบ, เจ้าของ, หรือแหล่งข้อมูล...',
   },
   ORPHANED: {
     title: 'ถูกยกเลิก',
     shortLabel: 'ถูกยกเลิก',
-    description:
-      'เครื่องเสมือนที่เคยใช้งานอยู่ซึ่งไม่ปรากฏในการซิงค์แหล่งข้อมูลล่าสุดและถูกเก็บเป็นบันทึกประวัติศาสตร์',
+    description: 'เครื่องเสมือนที่เคยใช้งานอยู่ซึ่งไม่ปรากฏในการซิงค์แหล่งข้อมูลล่าสุดและถูกเก็บเป็นบันทึกประวัติศาสตร์',
     searchPlaceholder: 'ค้นหาด้วยชื่อ VM, แหล่งข้อมูล, หรือปัญหา...',
   },
 };
 
-function matchesQuery(
-  query: string,
-  fields: Array<string | null | undefined>,
-) {
-  if (query.length === 0) {
-    return true;
-  }
-
-  return fields.some((field) => field?.toLowerCase().includes(query));
-}
-
 export default function VmPage() {
   const router = useRouter();
   const { setHeader } = usePageHeader();
-  const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState<InventoryView>('ACTIVE');
   const [discoveries, setDiscoveries] = useState<VmDiscoveryItem[]>([]);
   const [inventory, setInventory] = useState<VmInventoryItem[]>([]);
@@ -101,13 +70,6 @@ export default function VmPage() {
   const [sourceCount, setSourceCount] = useState(0);
   const [lastSyncLabel, setLastSyncLabel] = useState('--');
   const [loading, setLoading] = useState(true);
-  const [pendingSortKey, setPendingSortKey] = useState<PendingSortKey>('name');
-  const [activeSortKey, setActiveSortKey] = useState<ActiveSortKey>('systemName');
-  const [orphanedSortKey, setOrphanedSortKey] = useState<OrphanedSortKey>('displayName');
-  const [pendingSortDirection, setPendingSortDirection] = useState<SortDirection>('asc');
-  const [activeSortDirection, setActiveSortDirection] = useState<SortDirection>('asc');
-  const [orphanedSortDirection, setOrphanedSortDirection] = useState<SortDirection>('asc');
-  const normalizedQuery = searchTerm.trim().toLowerCase();
 
   const loadVmData = async () => {
     try {
@@ -122,15 +84,13 @@ export default function VmPage() {
       setSourceCount(sources.length);
       setLastSyncLabel(`${sources[0]?.lastSyncAt ?? '--'} from ${sources.length} sources`);
     } catch {
-      toast.error('ไม่สามารถโหลดสินค้าคงคลัง VM ได้');
+      toast.error('ไม่สามารถโหลดข้อมูล VM ได้');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    void loadVmData();
-  }, []);
+  useEffect(() => { void loadVmData(); }, []);
 
   useEffect(() => {
     setHeader({
@@ -141,10 +101,7 @@ export default function VmPage() {
         { label: 'เครื่องเสมือน' },
       ],
     });
-
-    return () => {
-      setHeader(null);
-    };
+    return () => setHeader(null);
   }, [setHeader]);
 
   const openPendingSetup = async (id: string) => {
@@ -160,700 +117,351 @@ export default function VmPage() {
     }
   };
 
-  const compareValues = (leftValue: string, rightValue: string, direction: SortDirection) => {
-    if (leftValue < rightValue) {
-      return direction === 'asc' ? -1 : 1;
-    }
+  const pendingQueue = useMemo(() => discoveries.filter(vm => vm.state !== 'DRIFTED'), [discoveries]);
+  const activeQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ACTIVE' && vm.syncState !== 'Missing from source'), [inventory]);
+  const orphanedQueue = useMemo(() => inventory.filter(vm => vm.syncState === 'Missing from source' || vm.lifecycleState === 'DELETED_IN_VCENTER'), [inventory]);
 
-    if (leftValue > rightValue) {
-      return direction === 'asc' ? 1 : -1;
-    }
-
-    return 0;
-  };
-
-  const pendingQueue = useMemo(
-    () => discoveries.filter((vm) => vm.state !== 'DRIFTED'),
-    [discoveries],
-  );
-  const activeInventoryQueue = useMemo(
-    () =>
-      inventory.filter(
-        (vm) =>
-          vm.lifecycleState === 'ACTIVE' && vm.syncState !== 'Missing from source',
-      ),
-    [inventory],
-  );
-  const orphanedQueue = useMemo<OrphanedVmRecord[]>(
-    () =>
-      inventory
-        .filter(
-          (vm) =>
-            vm.syncState === 'Missing from source' ||
-            vm.lifecycleState === 'DELETED_IN_VCENTER',
-        )
-        .map((vm) => ({
-          id: vm.id,
-          name: vm.name,
-          displayName: vm.systemName,
-          sourceName: vm.vcenterName,
-          host: vm.host,
-          primaryIp: vm.primaryIp,
-          lastSeen: vm.lastSyncAt,
-          route: `/dashboard/vm/${vm.id}`,
-        })),
-    [inventory],
-  );
-
-  const filteredPendingQueue = useMemo(
-    () =>
-      pendingQueue
-        .filter((vm) =>
-          matchesQuery(normalizedQuery, [
-            vm.name,
-            vm.systemName,
-            vm.primaryIp,
-            vm.sourceName,
-            vm.cluster,
-            vm.host,
-            vm.note,
-            vm.missingFields.join(' '),
-          ]),
-        )
-        .sort((left, right) => {
-          const leftValue = String(left[pendingSortKey] ?? '').toLowerCase();
-          const rightValue = String(right[pendingSortKey] ?? '').toLowerCase();
-          return compareValues(leftValue, rightValue, pendingSortDirection);
-        }),
-    [normalizedQuery, pendingQueue, pendingSortDirection, pendingSortKey],
-  );
-
-  const filteredActiveInventory = useMemo(
-    () =>
-      activeInventoryQueue
-        .filter((vm) =>
-          matchesQuery(normalizedQuery, [
-            vm.name,
-            vm.primaryIp,
-            vm.vcenterName,
-            vm.guestOs,
-            vm.owner,
-            vm.description,
-          ]),
-        )
-        .sort((left, right) => {
-          const leftValue = String(left[activeSortKey] ?? '').toLowerCase();
-          const rightValue = String(right[activeSortKey] ?? '').toLowerCase();
-          return compareValues(leftValue, rightValue, activeSortDirection);
-        }),
-    [activeInventoryQueue, activeSortDirection, activeSortKey, normalizedQuery],
-  );
-
-  const filteredOrphanedQueue = useMemo(
-    () =>
-      orphanedQueue
-        .filter((vm) =>
-          matchesQuery(normalizedQuery, [
-            vm.name,
-            vm.displayName,
-            vm.primaryIp,
-            vm.sourceName,
-            vm.host,
-          ]),
-        )
-        .sort((left, right) => {
-          const leftValue = String(left[orphanedSortKey] ?? '').toLowerCase();
-          const rightValue = String(right[orphanedSortKey] ?? '').toLowerCase();
-          return compareValues(leftValue, rightValue, orphanedSortDirection);
-        }),
-    [normalizedQuery, orphanedQueue, orphanedSortDirection, orphanedSortKey],
-  );
-
-  const inventoryStats = useMemo(
-    () => ({
-      active: activeInventoryQueue.length,
-      pending: pendingQueue.length,
-      orphaned: orphanedQueue.length,
-      sources: sourceCount,
-      lastSyncLabel,
-    }),
-    [activeInventoryQueue.length, orphanedQueue.length, pendingQueue.length, sourceCount, lastSyncLabel],
-  );
-
-  const currentCount =
-    activeView === 'PENDING'
-      ? filteredPendingQueue.length
-      : activeView === 'ACTIVE'
-        ? filteredActiveInventory.length
-        : filteredOrphanedQueue.length;
-
-  const togglePendingSort = (key: PendingSortKey) => {
-    if (pendingSortKey === key) {
-      setPendingSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    setPendingSortKey(key);
-    setPendingSortDirection('asc');
-  };
-
-  const toggleActiveSort = (key: ActiveSortKey) => {
-    if (activeSortKey === key) {
-      setActiveSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    setActiveSortKey(key);
-    setActiveSortDirection('asc');
-  };
-
-  const toggleOrphanedSort = (key: OrphanedSortKey) => {
-    if (orphanedSortKey === key) {
-      setOrphanedSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    setOrphanedSortKey(key);
-    setOrphanedSortDirection('asc');
-  };
-
-  const renderSortIcon = (active: boolean, direction: SortDirection) => {
-    if (!active) {
-      return <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/70" />;
-    }
-
-    return direction === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
-  };
+  const stats = useMemo(() => ({
+    ACTIVE: activeQueue.length,
+    PENDING: pendingQueue.length,
+    ORPHANED: orphanedQueue.length,
+  }), [activeQueue.length, pendingQueue.length, orphanedQueue.length]);
 
   return (
-    <div className="workspace-page">
-      <section className="table-shell">
-        <div className="toolbar-strip">
-          <div className="flex flex-1 flex-wrap items-center gap-1.5">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="workspace-page p-6 space-y-6"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">เครื่องเสมือน (VM)</h1>
+          <p className="text-muted-foreground mt-1 text-sm">จัดการ Lifecycle และสถานะของ Virtual Machines ทั้งหมด</p>
+        </div>
+        <div className="flex items-center gap-2">
+           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={() => router.push('/dashboard/vm/sources')}>
+             <Server className="h-4 w-4 mr-2" />
+             จัดการ vCenters
+           </Button>
+        </div>
+      </div>
+
+      <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
+        <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit">
             {(
               [
-                {
-                  key: 'ACTIVE',
-                  label: VIEW_COPY.ACTIVE.shortLabel,
-                  count: inventoryStats.active,
-                  icon: CheckCircle2,
-                  iconClassName: 'text-emerald-400',
-                  iconWrapClassName: 'border-emerald-500/25 bg-emerald-500/10',
-                },
-                {
-                  key: 'PENDING',
-                  label: VIEW_COPY.PENDING.shortLabel,
-                  count: inventoryStats.pending,
-                  icon: Clock3,
-                  iconClassName: 'text-amber-400',
-                  iconWrapClassName: 'border-amber-500/25 bg-amber-500/10',
-                },
-                {
-                  key: 'ORPHANED',
-                  label: VIEW_COPY.ORPHANED.shortLabel,
-                  count: inventoryStats.orphaned,
-                  icon: AlertTriangle,
-                  iconClassName: 'text-rose-400',
-                  iconWrapClassName: 'border-rose-500/25 bg-rose-500/10',
-                },
-              ] satisfies Array<{
-                key: InventoryView;
-                label: string;
-                count: number;
-                icon: typeof Clock3;
-                iconClassName: string;
-                iconWrapClassName: string;
-              }>
-            ).map((tab) => {
-              const Icon = tab.icon;
-
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveView(tab.key)}
-                  className={`filter-chip ${activeView === tab.key ? 'filter-chip-active' : ''}`}
-                >
-                  <span className={cn('inline-flex h-5 w-5 items-center justify-center rounded-full border', tab.iconWrapClassName)}>
-                    <Icon className={cn('h-3 w-3', tab.iconClassName)} />
-                  </span>
-                  <span>{tab.label}</span>
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <div className="toolbar-input-wrap min-w-0 lg:w-[240px]">
-                <Search className="toolbar-input-icon" />
-                <Input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={VIEW_COPY[activeView].searchPlaceholder}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant="default"
-                size="default"
-                className="gap-2 whitespace-nowrap"
-                onClick={() => router.push('/dashboard/vm/sources')}
+                { key: 'ACTIVE', label: VIEW_COPY.ACTIVE.shortLabel, icon: CheckCircle2, iconClassName: 'text-emerald-500' },
+                { key: 'PENDING', label: VIEW_COPY.PENDING.shortLabel, icon: Clock3, iconClassName: 'text-amber-500' },
+                { key: 'ORPHANED', label: VIEW_COPY.ORPHANED.shortLabel, icon: AlertTriangle, iconClassName: 'text-rose-500' },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveView(tab.key)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+                  activeView === tab.key 
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/50" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/50"
+                )}
               >
-                <Server className="h-4 w-4" />
-                จัดการ vCenters
-              </Button>
-
-            </div>
+                <tab.icon className={cn("h-3.5 w-3.5", activeView === tab.key ? tab.iconClassName : "text-muted-foreground/50")} />
+                {tab.label}
+                <Badge variant="neutral" className="ml-1 h-4 px-1 font-mono text-[9px] bg-muted/50">
+                  {stats[tab.key]}
+                </Badge>
+              </button>
+            ))}
           </div>
         </div>
 
         {loading ? (
-          <EmptyState
-            title="กำลังโหลดระเบียน VM"
-            description="กำลังดึงข้อมูลแหล่งข้อมูล แถวการค้นพบ และสินค้าคงคลังที่ใช้งานอยู่"
-          />
-        ) : sourceCount === 0 ? (
-          <EmptyState
-            title="ไม่ได้เชื่อมต่อแหล่งข้อมูล vCenter"
-            description="เพิ่มแหล่งข้อมูล vCenter อย่างน้อยหนึ่งแหล่งก่อนที่ระเบียนการค้นพบและสินค้าคงคลังที่ใช้งานจะปรากฏที่นี่"
-            action={(
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={() => router.push('/dashboard/vm/sources')}
-              >
-                <Server className="h-4 w-4" />
-                เพิ่มแหล่งข้อมูล vCenter
-              </Button>
-            )}
-          />
+           <div className="p-10 flex flex-col items-center justify-center text-muted-foreground">
+             <RefreshCw className="h-6 w-6 animate-spin mb-4" />
+             <p>กำลังโหลดข้อมูล...</p>
+           </div>
         ) : activeView === 'PENDING' ? (
-          <PendingSetupTable
-            items={filteredPendingQueue}
-            openingId={openingPendingId}
-            onOpenRecord={(id) => void openPendingSetup(id)}
-            sortKey={pendingSortKey}
-            sortDirection={pendingSortDirection}
-            onSort={togglePendingSort}
-            renderSortIcon={renderSortIcon}
-          />
+          <PendingTable data={pendingQueue} onOpen={openPendingSetup} openingId={openingPendingId} />
         ) : activeView === 'ACTIVE' ? (
-          <ActiveInventoryTable
-            items={filteredActiveInventory}
-            onOpenRecord={(id) => router.push(`/dashboard/vm/${id}`)}
-            sortKey={activeSortKey}
-            sortDirection={activeSortDirection}
-            onSort={toggleActiveSort}
-            renderSortIcon={renderSortIcon}
-          />
-        ) : activeView === 'ORPHANED' ? (
-          <OrphanedTable
-            items={filteredOrphanedQueue}
-            onOpenRecord={(route) => router.push(route)}
-            sortKey={orphanedSortKey}
-            sortDirection={orphanedSortDirection}
-            onSort={toggleOrphanedSort}
-            renderSortIcon={renderSortIcon}
-          />
-        ) : null}
-      </section>
+          <ActiveTable data={activeQueue} onOpen={(id) => router.push(`/dashboard/vm/${id}`)} />
+        ) : (
+          <OrphanedTable data={orphanedQueue} onOpen={(id) => router.push(`/dashboard/vm/${id}`)} />
+        )}
+      </Card>
 
       <VmFormDialog
         open={pendingDialogOpen}
         onOpenChange={setPendingDialogOpen}
         discoveryVm={selectedDiscovery}
         submitMode="promote"
-        onPromoted={(inventoryDetail) => {
-          router.push(`/dashboard/vm/${inventoryDetail.id}`);
-        }}
+        onPromoted={(inventoryDetail) => router.push(`/dashboard/vm/${inventoryDetail.id}`)}
         onSuccess={() => void loadVmData()}
       />
-    </div>
+    </motion.div>
   );
 }
 
-function PendingSetupTable({
-  items,
-  openingId,
-  onOpenRecord,
-  sortKey,
-  sortDirection,
-  onSort,
-  renderSortIcon,
-}: {
-  items: VmDiscoveryItem[];
-  openingId: string | null;
-  onOpenRecord: (id: string) => void;
-  sortKey: PendingSortKey;
-  sortDirection: SortDirection;
-  onSort: (key: PendingSortKey) => void;
-  renderSortIcon: (active: boolean, direction: SortDirection) => ReactNode;
-}) {
-  const getPowerStateClassName = (powerState: VmDiscoveryItem['powerState']) => {
-    if (powerState === 'RUNNING') {
-      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
-    }
+// -------------------------------------------------------------
+// Reusable Shared Table Components & Hooks
+// -------------------------------------------------------------
 
-    if (powerState === 'SUSPENDED') {
-      return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
-    }
-
-    return 'border-border bg-background text-muted-foreground';
-  };
-
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="ไม่มีระเบียนรอดำเนินการ"
-        description="ทุกสิ่งที่ค้นพบถูกยกระดับแล้วหรือกำลังรออยู่ในสถานะอื่น"
-      />
-    );
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="table-frame">
-        <thead>
-          <tr className="table-head-row">
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ชื่อ VM ที่ค้นพบ
-                {renderSortIcon(sortKey === 'name', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ที่อยู่ IP
-                {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('sourceName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                แหล่งข้อมูล
-                {renderSortIcon(sortKey === 'sourceName', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                โฮสต์
-                {renderSortIcon(sortKey === 'host', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('powerState')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                สถานะการทำงาน
-                {renderSortIcon(sortKey === 'powerState', sortDirection)}
-              </button>
-            </th>
-            <th className="hidden px-3 py-2.5 font-semibold xl:table-cell">
-              <button onClick={() => onSort('lastSeen')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ตรวจพบล่าสุด
-                {renderSortIcon(sortKey === 'lastSeen', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">จัดการ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((vm) => (
-            <tr key={vm.id} className="table-row transition-colors hover:bg-accent/30">
-              <td className="px-3 py-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/55 text-emerald-300">
-                    <Monitor className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0 truncate text-[12px] text-foreground">
-                    {vm.name}
-                  </div>
-                </div>
-              </td>
-              <td className="px-3 py-2.5 font-mono text-[12px] text-foreground">{vm.primaryIp}</td>
-              <td className="px-3 py-2.5 text-[12px] text-foreground">
-                <div className="line-clamp-2 break-words">{vm.sourceName}</div>
-              </td>
-              <td className="px-3 py-2.5 text-[12px] text-muted-foreground">
-                <div className="line-clamp-2 break-words">{vm.host}</div>
-              </td>
-              <td className="px-3 py-2.5">
-                <span
-                  className={cn(
-                    'inline-flex rounded-md border px-2 py-0.5 text-[10px] font-medium',
-                    getPowerStateClassName(vm.powerState),
-                  )}
-                >
-                  {vm.powerState}
-                </span>
-              </td>
-              <td className="hidden px-3 py-2.5 text-[12px] text-muted-foreground whitespace-nowrap xl:table-cell">{vm.lastSeen}</td>
-              <td className="px-3 py-2.5 text-right">
-                <Button size="sm" className="h-7 gap-1 px-2 text-xs whitespace-nowrap" onClick={() => onOpenRecord(vm.id)} disabled={openingId === vm.id}>
-                  {openingId === vm.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : null}
-                  {openingId === vm.id ? 'กำลังเปิด' : 'ตั้งค่า'}
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+function getPowerStateBadge(state: string) {
+  if (state === 'RUNNING') return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 uppercase">Running</Badge>;
+  if (state === 'SUSPENDED') return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 uppercase">Suspended</Badge>;
+  return <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 uppercase">{state || 'Unknown'}</Badge>;
 }
 
-function ActiveInventoryTable({
-  items,
-  onOpenRecord,
-  sortKey,
-  sortDirection,
-  onSort,
-  renderSortIcon,
-}: {
-  items: VmInventoryItem[];
-  onOpenRecord: (id: string) => void;
-  sortKey: ActiveSortKey;
-  sortDirection: SortDirection;
-  onSort: (key: ActiveSortKey) => void;
-  renderSortIcon: (active: boolean, direction: SortDirection) => ReactNode;
-}) {
-  const getPowerStateClassName = (powerState: VmInventoryItem['powerState']) => {
-    if (powerState === 'RUNNING') {
-      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
-    }
-
-    if (powerState === 'SUSPENDED') {
-      return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
-    }
-
-    return 'border-border bg-background text-muted-foreground';
-  };
-
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="ไม่พบสินค้าคงคลังที่ใช้งาน"
-        description="ลองค้นหาด้วยคำอื่นเพื่อหาบันทึก VM ที่มีอยู่"
-      />
-    );
-  }
-
+function GlobalTableToolbar({ table, searchPlaceholder }: { table: any, searchPlaceholder: string }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="table-frame">
-        <thead>
-          <tr className="table-head-row">
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('systemName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ชื่อระบบ
-                {renderSortIcon(sortKey === 'systemName', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ชื่อ VM
-                {renderSortIcon(sortKey === 'name', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ที่อยู่ IP
-                {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('vcenterName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                แหล่งข้อมูล
-                {renderSortIcon(sortKey === 'vcenterName', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                โฮสต์
-                {renderSortIcon(sortKey === 'host', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('powerState')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                สถานะพลังงาน
-                {renderSortIcon(sortKey === 'powerState', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">จัดการ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((vm) => (
-            <tr key={vm.id} className="table-row transition-colors hover:bg-accent/30">
-              <td className="px-3 py-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/10 text-emerald-300">
-                    <Monitor className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0 truncate text-[12px] text-foreground">
-                    {vm.systemName}
-                  </div>
-                </div>
-              </td>
-              <td className="px-3 py-2.5 text-[12px] text-foreground">
-                <div className="line-clamp-2 break-words">{vm.name}</div>
-              </td>
-              <td className="px-3 py-2.5 font-mono text-[12px] text-foreground">{vm.primaryIp}</td>
-              <td className="px-3 py-2.5 text-[12px] text-foreground">
-                <div className="line-clamp-2 break-words">{vm.vcenterName}</div>
-              </td>
-              <td className="px-3 py-2.5 text-[12px] text-muted-foreground">
-                <div className="line-clamp-2 break-words">{vm.host}</div>
-              </td>
-              <td className="px-3 py-2.5">
-                <span
-                  className={cn(
-                    'inline-flex rounded-md border px-2 py-0.5 text-[10px] font-medium',
-                    getPowerStateClassName(vm.powerState),
-                  )}
-                >
-                  {vm.powerState}
-                </span>
-              </td>
-              <td className="px-3 py-2.5 text-right">
-                <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs whitespace-nowrap" onClick={() => onOpenRecord(vm.id)}>
-                  รายละเอียด
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function OrphanedTable({
-  items,
-  onOpenRecord,
-  sortKey,
-  sortDirection,
-  onSort,
-  renderSortIcon,
-}: {
-  items: OrphanedVmRecord[];
-  onOpenRecord: (route: string) => void;
-  sortKey: OrphanedSortKey;
-  sortDirection: SortDirection;
-  onSort: (key: OrphanedSortKey) => void;
-  renderSortIcon: (active: boolean, direction: SortDirection) => ReactNode;
-}) {
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="ไม่มี VM ที่ถูกยกเลิก"
-        description="ไม่มี VM ที่ใช้งานอยู่ก่อนหน้านี้หายไปจากแหล่งข้อมูลที่เชื่อมต่อ"
-      />
-    );
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="table-frame">
-        <thead>
-          <tr className="table-head-row">
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('displayName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ชื่อระบบ
-                {renderSortIcon(sortKey === 'displayName', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('name')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ชื่อ VM
-                {renderSortIcon(sortKey === 'name', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('primaryIp')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                ที่อยู่ IP
-                {renderSortIcon(sortKey === 'primaryIp', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('sourceName')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                แหล่งข้อมูล
-                {renderSortIcon(sortKey === 'sourceName', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('host')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                โฮสต์
-                {renderSortIcon(sortKey === 'host', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 font-semibold">
-              <button onClick={() => onSort('lastSeen')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                พบเห็นล่าสุด
-                {renderSortIcon(sortKey === 'lastSeen', sortDirection)}
-              </button>
-            </th>
-            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">จัดการ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((vm) => (
-            <tr key={vm.id} className="table-row transition-colors hover:bg-accent/30">
-              <td className="px-3 py-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-rose-500/25 bg-rose-500/10 text-rose-300">
-                    <Monitor className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0 truncate text-[12px] text-foreground line-through decoration-foreground/35">
-                    {vm.displayName || vm.name}
-                  </div>
-                </div>
-              </td>
-              <td className="px-3 py-2.5 text-[12px] text-foreground">
-                <div className="line-clamp-2 break-words">{vm.name}</div>
-              </td>
-              <td className="px-3 py-2.5 font-mono text-[12px] text-foreground">{vm.primaryIp}</td>
-              <td className="px-3 py-2.5 text-[12px] text-foreground">
-                <div className="line-clamp-2 break-words">{vm.sourceName}</div>
-              </td>
-              <td className="px-3 py-2.5 text-[12px] text-muted-foreground">
-                <div className="line-clamp-2 break-words">{vm.host}</div>
-              </td>
-              <td className="px-3 py-2.5 text-[12px] text-muted-foreground whitespace-nowrap">{vm.lastSeen}</td>
-              <td className="px-3 py-2.5 text-right">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 px-2 text-xs whitespace-nowrap"
-                  onClick={() => onOpenRecord(vm.route)}
-                >
-                  รายละเอียด
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function EmptyState({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border/70 bg-background/55 text-muted-foreground">
-        <Monitor className="h-4.5 w-4.5" />
+    <div className="p-4 border-b border-border/50 bg-background/20 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <Input
+            placeholder={searchPlaceholder}
+            value={(table.getState().globalFilter as string) ?? ''}
+            onChange={(e) => table.setGlobalFilter(e.target.value)}
+            className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
+          />
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-9 w-9 bg-card">
+              <Columns className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 rounded-xl">
+            <DropdownMenuLabel>แสดงคอลัมน์</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {table.getAllColumns().filter((c: any) => c.getCanHide()).map((column: any) => (
+              <DropdownMenuCheckboxItem
+                key={column.id}
+                className="capitalize cursor-pointer"
+                checked={column.getIsVisible()}
+                onCheckedChange={(val) => column.toggleVisibility(!!val)}
+              >
+                {column.id}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <div className="text-sm font-semibold text-foreground">{title}</div>
-      <div className="max-w-md text-sm text-muted-foreground">{description}</div>
-      {action ? <div className="pt-2">{action}</div> : null}
     </div>
+  );
+}
+
+function GlobalTablePagination({ table }: { table: any }) {
+  return (
+    <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
+      <div className="flex-1 text-xs text-muted-foreground">
+        เลือกแล้ว {table.getFilteredSelectedRowModel().rows.length} จาก {table.getFilteredRowModel().rows.length} รายการ
+      </div>
+      <div className="flex items-center gap-6 lg:gap-8">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-medium">แถวต่อหน้า</p>
+          <select
+            value={table.getState().pagination.pageSize}
+            onChange={e => table.setPageSize(Number(e.target.value))}
+            className="h-8 w-16 rounded-md border border-border bg-card text-xs focus:ring-1 focus:ring-primary outline-none"
+          >
+            {[10, 20, 30, 40, 50].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex w-[100px] items-center justify-center text-xs font-medium">
+          หน้า {table.getState().pagination.pageIndex + 1} จาก {table.getPageCount() || 1}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// PENDING TABLE
+// -------------------------------------------------------------
+function PendingTable({ data, onOpen, openingId }: { data: VmDiscoveryItem[], onOpen: (id: string) => void, openingId: string | null }) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  
+  const columns = useMemo<ColumnDef<VmDiscoveryItem>[]>(() => [
+    {
+      accessorKey: 'name',
+      header: "ชื่อ VM ที่ค้นพบ",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-emerald-500">
+            <Monitor className="h-4 w-4" />
+          </div>
+          <span className="font-semibold text-foreground">{row.original.name}</span>
+        </div>
+      )
+    },
+    { accessorKey: 'primaryIp', header: "ที่อยู่ IP", cell: ({ getValue }) => <span className="font-mono text-xs opacity-70">{getValue() as string}</span> },
+    { accessorKey: 'sourceName', header: "แหล่งข้อมูล", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
+    { accessorKey: 'host', header: "โฮสต์", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
+    { accessorKey: 'powerState', header: "สถานะการทำงาน", cell: ({ getValue }) => getPowerStateBadge(getValue() as string) },
+    {
+      id: 'actions',
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button size="sm" variant="secondary" className="h-8 shadow-none" onClick={() => onOpen(row.original.id)} disabled={openingId === row.original.id}>
+            {openingId === row.original.id ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+            ตั้งค่า
+          </Button>
+        </div>
+      )
+    }
+  ], [openingId, onOpen]);
+
+  const table = useReactTable({
+    data, columns, state: { sorting, globalFilter },
+    onSortingChange: setSorting, onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  return (
+    <>
+      <GlobalTableToolbar table={table} searchPlaceholder="ค้นหา VM ที่รอตั้งค่า..." />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-muted/30"><TableRow className="border-border/50 hover:bg-transparent">{table.getHeaderGroups()[0].headers.map(h => <TableHead key={h.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow></TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length ? table.getRowModel().rows.map(row => (
+              <TableRow key={row.id} className="border-border/40 hover:bg-muted/30 transition-colors"><TableCell colSpan={6} className="p-0"><div className="flex w-full items-center"><div className="flex-1 flex">{row.getVisibleCells().map(cell => <div key={cell.id} className={cn("py-3 px-4 flex items-center", cell.column.id === 'actions' ? 'ml-auto justify-end' : 'flex-1')}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>)}</div></div></TableCell></TableRow>
+            )) : <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">ไม่มีระเบียนรอดำเนินการ</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </div>
+      <GlobalTablePagination table={table} />
+    </>
+  );
+}
+
+// -------------------------------------------------------------
+// ACTIVE TABLE
+// -------------------------------------------------------------
+function ActiveTable({ data, onOpen }: { data: VmInventoryItem[], onOpen: (id: string) => void }) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  
+  const columns = useMemo<ColumnDef<VmInventoryItem>[]>(() => [
+    {
+      accessorKey: 'systemName',
+      header: "ชื่อระบบ",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onOpen(row.original.id)}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-500">
+            <Monitor className="h-4 w-4" />
+          </div>
+          <span className="font-semibold text-foreground hover:text-primary transition-colors">{row.original.systemName}</span>
+        </div>
+      )
+    },
+    { accessorKey: 'name', header: "ชื่อ VM", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
+    { accessorKey: 'primaryIp', header: "ที่อยู่ IP", cell: ({ getValue }) => <span className="font-mono text-xs opacity-70">{getValue() as string}</span> },
+    { accessorKey: 'vcenterName', header: "แหล่งข้อมูล", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
+    { accessorKey: 'powerState', header: "สถานะพลังงาน", cell: ({ getValue }) => getPowerStateBadge(getValue() as string) },
+    {
+      id: 'actions',
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button size="sm" variant="ghost" className="h-8" onClick={() => onOpen(row.original.id)}>รายละเอียด</Button>
+        </div>
+      )
+    }
+  ], [onOpen]);
+
+  const table = useReactTable({
+    data, columns, state: { sorting, globalFilter },
+    onSortingChange: setSorting, onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  return (
+    <>
+      <GlobalTableToolbar table={table} searchPlaceholder="ค้นหา VM ที่ใช้งาน..." />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-muted/30"><TableRow className="border-border/50 hover:bg-transparent">{table.getHeaderGroups()[0].headers.map(h => <TableHead key={h.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow></TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length ? table.getRowModel().rows.map(row => (
+              <TableRow key={row.id} className="border-border/40 hover:bg-muted/30 transition-colors"><TableCell colSpan={6} className="p-0"><div className="flex w-full items-center"><div className="flex-1 flex">{row.getVisibleCells().map(cell => <div key={cell.id} className={cn("py-3 px-4 flex items-center", cell.column.id === 'actions' ? 'ml-auto justify-end' : 'flex-1')}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>)}</div></div></TableCell></TableRow>
+            )) : <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">ไม่พบสินค้าคงคลังที่ใช้งาน</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </div>
+      <GlobalTablePagination table={table} />
+    </>
+  );
+}
+
+// -------------------------------------------------------------
+// ORPHANED TABLE
+// -------------------------------------------------------------
+function OrphanedTable({ data, onOpen }: { data: any[], onOpen: (id: string) => void }) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'displayName',
+      header: "ชื่อระบบ",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onOpen(row.original.id)}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-500">
+            <ShieldAlert className="h-4 w-4" />
+          </div>
+          <span className="font-semibold text-foreground line-through opacity-60 hover:opacity-100 transition-opacity">{row.original.displayName || row.original.name}</span>
+        </div>
+      )
+    },
+    { accessorKey: 'name', header: "ชื่อ VM", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
+    { accessorKey: 'primaryIp', header: "ที่อยู่ IP", cell: ({ getValue }) => <span className="font-mono text-xs opacity-70">{getValue() as string}</span> },
+    { accessorKey: 'sourceName', header: "แหล่งข้อมูล", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
+    { accessorKey: 'lastSeen', header: "พบเห็นล่าสุด", cell: ({ getValue }) => <span className="text-xs text-muted-foreground whitespace-nowrap">{getValue() as string}</span> },
+    {
+      id: 'actions',
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button size="sm" variant="ghost" className="h-8 text-rose-500" onClick={() => onOpen(row.original.id)}>ตรวจสอบ</Button>
+        </div>
+      )
+    }
+  ], [onOpen]);
+
+  const table = useReactTable({
+    data, columns, state: { sorting, globalFilter },
+    onSortingChange: setSorting, onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  return (
+    <>
+      <GlobalTableToolbar table={table} searchPlaceholder="ค้นหา VM ที่ถูกยกเลิก..." />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-muted/30"><TableRow className="border-border/50 hover:bg-transparent">{table.getHeaderGroups()[0].headers.map(h => <TableHead key={h.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow></TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length ? table.getRowModel().rows.map(row => (
+              <TableRow key={row.id} className="border-border/40 hover:bg-rose-500/5 transition-colors"><TableCell colSpan={6} className="p-0"><div className="flex w-full items-center"><div className="flex-1 flex">{row.getVisibleCells().map(cell => <div key={cell.id} className={cn("py-3 px-4 flex items-center", cell.column.id === 'actions' ? 'ml-auto justify-end' : 'flex-1')}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>)}</div></div></TableCell></TableRow>
+            )) : <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">ไม่มี VM ที่ถูกยกเลิก</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </div>
+      <GlobalTablePagination table={table} />
+    </>
   );
 }

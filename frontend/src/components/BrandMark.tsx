@@ -1,6 +1,5 @@
 "use client"
 
-import { Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface BrandMarkProps {
@@ -14,21 +13,29 @@ export function BrandMark({ compact = false, tone = "default", className }: Bran
   const subtitleClass = tone === "inverse" ? "text-white/70" : "text-muted-foreground"
 
   return (
-    <div className={cn("flex items-center gap-3", compact && "gap-0", className)}>
-      <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-primary/30 bg-primary text-primary-foreground shadow-sm">
-        <div className="absolute inset-[1px] rounded-md bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.2),transparent_55%)]" />
-        <Shield className="relative h-4 w-4" />
+    <div className={cn("flex items-center gap-3.5", compact && "gap-0", className)}>
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary shadow-lg shadow-primary/20">
+        <svg 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          className="relative z-10 h-5.5 w-5.5 text-primary-foreground" 
+          stroke="currentColor" 
+          strokeWidth="2.5" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        >
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
       </div>
 
-      <div className={cn("min-w-0", compact && "hidden")}>
-        <p className={cn("font-sans text-base font-semibold tracking-tight", titleClass)}>
-          AssetOps
+      <div className={cn("min-w-0 leading-tight", compact && "hidden")}>
+        <p className={cn("font-display text-[17px] font-bold tracking-tight", titleClass)}>
+          Asset<span className="text-primary">Ops</span>
         </p>
-        {!compact && (
-          <p className={cn("text-[10px] font-medium uppercase tracking-[0.08em]", subtitleClass)}>
-            ระบบจัดการสินทรัพย์ไอที
-          </p>
-        )}
+        <p className={cn("text-[9px] font-bold uppercase tracking-[0.2em] opacity-80", subtitleClass)}>
+          Infrastructure
+        </p>
       </div>
     </div>
   )
