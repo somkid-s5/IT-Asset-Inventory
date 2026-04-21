@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Prompt } from 'next/font/google';
+import { Prompt, Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
@@ -11,8 +11,13 @@ export const dynamic = 'force-dynamic';
 
 const prompt = Prompt({
   subsets: ['thai', 'latin'],
-  weight: ['200', '300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-prompt',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
@@ -23,7 +28,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="th" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className={`${prompt.variable} font-sans antialiased selection:bg-primary/30`}>
+      <body className={`${inter.variable} ${prompt.variable} font-sans antialiased selection:bg-primary/30`}>
         {/* Skip Link for Accessibility */}
         <a
           href="#main-content"
