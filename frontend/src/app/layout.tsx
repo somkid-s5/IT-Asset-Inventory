@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { IBM_Plex_Sans_Thai } from 'next/font/google';
+import { Prompt } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
@@ -9,21 +9,21 @@ import { ReactQueryProvider } from '@/components/ReactQueryProvider';
 
 export const dynamic = 'force-dynamic';
 
-const ibmPlexSansThai = IBM_Plex_Sans_Thai({
-  subsets: ['thai'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-thai',
+const prompt = Prompt({
+  subsets: ['thai', 'latin'],
+  weight: ['200', '300', '400', '500', '600', '700'],
+  variable: '--font-prompt',
 });
 
 export const metadata: Metadata = {
-  title: 'ระบบจัดการสินทรัพย์ IT',
-  description: 'จัดการสินทรัพย์ IT ฐานข้อมูล และเครื่องเสมือนของคุณ',
+  title: 'AssetOps | ระบบจัดการสินทรัพย์ไอที',
+  description: 'ระบบศูนย์กลางสำหรับการจัดการสินทรัพย์ไอที ฐานข้อมูล และเครื่องเสมือนอย่างมีประสิทธิภาพ',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="th" className="dark" suppressHydrationWarning>
-      <body className={`${ibmPlexSansThai.variable} font-sans antialiased selection:bg-primary/30`}>
+    <html lang="th" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
+      <body className={`${prompt.variable} font-sans antialiased selection:bg-primary/30`}>
         {/* Skip Link for Accessibility */}
         <a
           href="#main-content"

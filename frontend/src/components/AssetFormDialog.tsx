@@ -538,24 +538,24 @@ export function AssetFormDialog({
             <span className="icon-chip h-8 w-8 p-0 text-muted-foreground">
               <HardDrive className="h-4 w-4" />
             </span>
-            <span>{assetToEdit ? 'Edit Asset' : 'Create New Asset'}</span>
+            <span>{assetToEdit ? 'แก้ไขข้อมูลสินทรัพย์' : 'เพิ่มสินทรัพย์ใหม่'}</span>
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5 px-5 py-5">
           <section className="grid gap-4 md:grid-cols-2">
             <div className="muted-panel p-4">
-              <p className="workspace-subtle">Identity</p>
+              <p className="workspace-subtle">ข้อมูลอัตลักษณ์</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label required>Asset Name / Hostname</Label>
+                  <Label required>ชื่อสินทรัพย์ / โฮสต์เนม</Label>
                   <Input
                     required
                     autoComplete="off"
                     value={formData.name}
                     onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                     onBlur={() => handleFieldBlur('name')}
-                    placeholder="Asset name or hostname"
+                    placeholder="ระบุชื่อสินทรัพย์หรือชื่อโฮสต์"
                     className={formErrors.name && touchedFields.name ? 'border-destructive focus-visible:ring-destructive' : undefined}
                   />
                   {formErrors.name && touchedFields.name && (
@@ -563,13 +563,13 @@ export function AssetFormDialog({
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label optional>Asset ID</Label>
+                  <Label optional>รหัสสินทรัพย์</Label>
                   <Input
                     autoComplete="off"
                     value={formData.assetId}
                     onChange={(event) => setFormData({ ...formData, assetId: event.target.value })}
                     onBlur={() => handleFieldBlur('assetId')}
-                    placeholder="Asset ID"
+                    placeholder="รหัสอ้างอิง"
                     className={formErrors.assetId && touchedFields.assetId ? 'border-destructive focus-visible:ring-destructive' : undefined}
                   />
                   {formErrors.assetId && touchedFields.assetId && (
@@ -577,7 +577,7 @@ export function AssetFormDialog({
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label required>Type</Label>
+                  <Label required>ประเภท</Label>
                   <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as AssetType })}>
                     <SelectTrigger>
                       <SelectValue />
@@ -592,22 +592,22 @@ export function AssetFormDialog({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label optional>Brand / Model</Label>
+                  <Label optional>ยี่ห้อ / รุ่น</Label>
                   <Input
                     autoComplete="off"
                     value={formData.brandModel}
                     onChange={(event) => setFormData({ ...formData, brandModel: event.target.value })}
-                    placeholder="Brand or model"
+                    placeholder="เช่น Dell PowerEdge R740"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label optional>Serial Number</Label>
+                  <Label optional>หมายเลขซีเรียล</Label>
                   <Input
                     autoComplete="off"
                     value={formData.sn}
                     onChange={(event) => setFormData({ ...formData, sn: event.target.value })}
                     onBlur={() => handleFieldBlur('sn')}
-                    placeholder="Serial number"
+                    placeholder="S/N Number"
                     className={formErrors.sn && touchedFields.sn ? 'border-destructive focus-visible:ring-destructive' : undefined}
                   />
                   {formErrors.sn && touchedFields.sn && (
@@ -618,24 +618,24 @@ export function AssetFormDialog({
             </div>
 
             <div className="muted-panel p-4">
-              <p className="workspace-subtle">Placement</p>
+              <p className="workspace-subtle">ตำแหน่งที่ตั้ง</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label optional>Location</Label>
+                  <Label optional>สถานที่</Label>
                   <Input
                     autoComplete="off"
                     value={formData.location}
                     onChange={(event) => setFormData({ ...formData, location: event.target.value })}
-                    placeholder="Location"
+                    placeholder="เช่น Data Center 1"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label optional>Rack</Label>
+                  <Label optional>ตู้แร็ค</Label>
                   <Input
                     autoComplete="off"
                     value={formData.rack}
                     onChange={(event) => setFormData({ ...formData, rack: event.target.value })}
-                    placeholder="Rack"
+                    placeholder="เช่น Rack A1"
                   />
                 </div>
               </div>
@@ -645,8 +645,8 @@ export function AssetFormDialog({
           <section className="muted-panel p-4">
             <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
               <div>
-                <p className="workspace-subtle">Access Points</p>
-                <p className="mt-1 text-xs text-muted-foreground">One row per context, with multiple users inside the same row.</p>
+                <p className="workspace-subtle">ช่องทางการเข้าถึง</p>
+                <p className="mt-1 text-xs text-muted-foreground">กำหนด IP และบัญชีผู้ใช้งานสำหรับแต่ละส่วนประกอบ</p>
               </div>
               <div className="flex items-center gap-2">
                 <Select value={assetMode} onValueChange={(value) => setAssetMode(value as 'single' | 'multi')}>
@@ -654,19 +654,19 @@ export function AssetFormDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="single">Single Asset</SelectItem>
-                    <SelectItem value="multi">Multi-node Asset</SelectItem>
+                    <SelectItem value="single">สินทรัพย์เดี่ยว</SelectItem>
+                    <SelectItem value="multi">สินทรัพย์หลายโหนด</SelectItem>
                   </SelectContent>
                 </Select>
                 {assetMode === 'multi' && (
                   <Button type="button" variant="outline" size="sm" onClick={addNodeLabel}>
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    Add Node
+                    เพิ่มโหนด
                   </Button>
                 )}
                 <Button type="button" size="sm" onClick={() => setAccessPoints((current) => [...current, { ...EMPTY_ACCESS_POINT, nodeLabel: assetMode === 'multi' ? nodeLabels[0] || 'Node A' : '' }])}>
                   <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  Add Row
+                  เพิ่มแถว
                 </Button>
               </div>
             </div>
@@ -705,7 +705,7 @@ export function AssetFormDialog({
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <Shield className="h-4 w-4 text-muted-foreground" />
-                      Access row {index + 1}
+                      รายการที่ {index + 1}
                     </div>
                     {accessPoints.length > 1 && (
                       <Button
@@ -870,8 +870,8 @@ export function AssetFormDialog({
           <section className="muted-panel p-4">
             <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
               <div>
-                <p className="workspace-subtle">Extra Specs</p>
-                <p className="mt-1 text-xs text-muted-foreground">Optional metadata like RAM, CPU, or warranty.</p>
+                <p className="workspace-subtle">คุณสมบัติเพิ่มเติม</p>
+                <p className="mt-1 text-xs text-muted-foreground">ข้อมูลเสริม เช่น RAM, CPU, หรือรายละเอียดการรับประกัน</p>
               </div>
               <Button
                 type="button"
@@ -921,18 +921,18 @@ export function AssetFormDialog({
 
           <div className="flex flex-col-reverse gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Cancel
+              ยกเลิก
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
                   <Database className="mr-2 h-4 w-4 animate-pulse" />
-                  Saving...
+                  กำลังบันทึก...
                 </>
               ) : assetToEdit ? (
-                'Save Asset Changes'
+                'บันทึกการแก้ไข'
               ) : (
-                'Create Asset'
+                'สร้างสินทรัพย์'
               )}
             </Button>
           </div>

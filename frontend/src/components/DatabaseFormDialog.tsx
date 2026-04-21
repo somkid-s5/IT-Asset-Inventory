@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import api from '@/services/api';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -168,29 +168,32 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] overflow-y-auto bg-card sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{databaseToEdit ? 'Edit Database' : 'Create Database'}</DialogTitle>
+          <DialogTitle>{databaseToEdit ? 'แก้ไขข้อมูลฐานข้อมูล' : 'เพิ่มฐานข้อมูลใหม่'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            กรอกข้อมูลรายละเอียดของฐานข้อมูล รวมถึงชื่อ ประเภท สภาพแวดล้อม และการเชื่อมต่อต่างๆ
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-4">
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-foreground">Database Identity</h3>
-              <p className="text-[11px] text-muted-foreground">Start with the values people use to identify this database in daily work.</p>
+              <h3 className="text-sm font-semibold text-foreground">ข้อมูลหลักของฐานข้อมูล</h3>
+              <p className="text-[11px] text-muted-foreground">ระบุข้อมูลพื้นฐานเพื่อใช้ระบุตัวตนของฐานข้อมูลในระบบ</p>
             </div>
 
             <div className="grid gap-3 md:grid-cols-12">
               <div className="space-y-1.5 md:col-span-12">
-                <Label optional>System / Purpose</Label>
+                <Label optional>ระบบที่เกี่ยวข้อง / วัตถุประสงค์</Label>
                 <Input
                   id="db-note"
                   className={COMPACT_INPUT_CLASS}
                   value={formData.note}
                   onChange={(event) => setFormData((current) => ({ ...current, note: event.target.value }))}
-                  placeholder="e.g. Asset registry, reporting system, core API"
+                  placeholder="เช่น ระบบลงทะเบียนสินทรัพย์, ระบบรายงาน, Core API"
                 />
               </div>
               <div className="space-y-1.5 md:col-span-5">
-                <Label required>DB Name</Label>
+                <Label required>ชื่อฐานข้อมูล</Label>
                 <Input
                   id="db-name"
                   className={COMPACT_INPUT_CLASS}
@@ -200,10 +203,10 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label required>Engine</Label>
+                <Label required>ประเภท</Label>
                 <Select value={formData.engine || undefined} onValueChange={(value) => setFormData((current) => ({ ...current, engine: value }))}>
                   <SelectTrigger id="db-engine" size="sm" className={COMPACT_SELECT_TRIGGER_CLASS}>
-                    <SelectValue placeholder="Select an engine" />
+                    <SelectValue placeholder="เลือกประเภท" />
                   </SelectTrigger>
                   <SelectContent>
                     {DATABASE_ENGINE_OPTIONS.map((engine) => (
@@ -215,7 +218,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 </Select>
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label optional>Version</Label>
+                <Label optional>เวอร์ชัน</Label>
                 <Input
                   id="db-version"
                   className={COMPACT_INPUT_CLASS}
@@ -224,10 +227,10 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label required>Environment</Label>
+                <Label required>สภาพแวดล้อม</Label>
                 <Select value={formData.environment || undefined} onValueChange={(value) => setFormData((current) => ({ ...current, environment: value }))}>
                   <SelectTrigger id="db-environment" size="sm" className={COMPACT_SELECT_TRIGGER_CLASS}>
-                    <SelectValue placeholder="Select an environment" />
+                    <SelectValue placeholder="เลือกสภาพแวดล้อม" />
                   </SelectTrigger>
                   <SelectContent>
                     {DATABASE_ENVIRONMENT_OPTIONS.map((environment) => (
@@ -240,12 +243,12 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               </div>
 
               <div className="space-y-1 md:col-span-12 pt-1">
-                <h3 className="text-sm font-semibold text-foreground">Connection</h3>
-                <p className="text-[11px] text-muted-foreground">Keep the connection values together so the form reads in the same order as a connection string.</p>
+                <h3 className="text-sm font-semibold text-foreground">การเชื่อมต่อ</h3>
+                <p className="text-[11px] text-muted-foreground">ข้อมูลพารามิเตอร์ที่ใช้สำหรับการเชื่อมต่อฐานข้อมูล</p>
               </div>
 
               <div className="space-y-1.5 md:col-span-4">
-                <Label required>Host</Label>
+                <Label required>ชื่อโฮสต์ (Host)</Label>
                 <Input
                   id="db-host"
                   className={COMPACT_INPUT_CLASS}
@@ -255,7 +258,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label optional>IP Address</Label>
+                <Label optional>เลข IP Address</Label>
                 <Input
                   id="db-ip"
                   className={COMPACT_INPUT_CLASS}
@@ -264,37 +267,37 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label optional>Port</Label>
+                <Label optional>พอร์ต (Port)</Label>
                 <Input
                   id="db-port"
                   className={COMPACT_INPUT_CLASS}
                   value={formData.port}
                   onChange={(event) => setFormData((current) => ({ ...current, port: event.target.value }))}
-                  placeholder="e.g. 1521"
+                  placeholder="เช่น 1521"
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label optional>Service Name</Label>
+                <Label optional>ชื่อบริการ (Service Name)</Label>
                 <Input
                   id="db-service-name"
                   className={COMPACT_INPUT_CLASS}
                   value={formData.serviceName}
                   onChange={(event) => setFormData((current) => ({ ...current, serviceName: event.target.value }))}
-                  placeholder="e.g. ORCLPROD"
+                  placeholder="เช่น ORCLPROD"
                 />
               </div>
 
               <div className="space-y-1 md:col-span-12 pt-1">
-                <h3 className="text-sm font-semibold text-foreground">Related Application IPs</h3>
-                <p className="text-[11px] text-muted-foreground">Add the application server IP and a short note explaining what that connection is for.</p>
+                <h3 className="text-sm font-semibold text-foreground">แอปพลิเคชันที่เรียกใช้</h3>
+                <p className="text-[11px] text-muted-foreground">รายการ IP ของเซิร์ฟเวอร์แอปพลิเคชันที่มีการเชื่อมต่อกับฐานข้อมูลนี้</p>
               </div>
 
               <div className="space-y-3 md:col-span-12">
                 <div className="flex items-center justify-between">
-                  <Label>Application Connections</Label>
+                  <Label>การเชื่อมต่อจากแอปพลิเคชัน</Label>
                   <Button type="button" variant="outline" size="sm" onClick={() => setLinkedApps((current) => [...current, { ...EMPTY_LINKED_APP }])}>
                     <Plus className="h-3.5 w-3.5" />
-                    Add IP
+                    เพิ่ม IP
                   </Button>
                 </div>
 
@@ -309,7 +312,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                             current.map((item, itemIndex) => itemIndex === index ? { ...item, ipAddress: event.target.value } : item),
                           )
                         }
-                        placeholder="e.g. 10.10.20.15"
+                        placeholder="เช่น 10.10.20.15"
                       />
                       <Input
                         className={COMPACT_INPUT_CLASS}
@@ -319,7 +322,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                             current.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item),
                           )
                         }
-                        placeholder="e.g. AssetOps API, reporting service"
+                        placeholder="เช่น AssetOps API, ระบบรายงาน"
                       />
                       <Button
                         type="button"
@@ -341,12 +344,12 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
           <div className="muted-panel space-y-3 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Database Accounts</h3>
-                <p className="text-[11px] text-muted-foreground">Set username, password, role, and privileges for each account.</p>
+                <h3 className="text-sm font-semibold text-foreground">บัญชีผู้ใช้งานฐานข้อมูล</h3>
+                <p className="text-[11px] text-muted-foreground">กำหนดชื่อผู้ใช้, รหัสผ่าน, และสิทธิ์การใช้งานสำหรับแต่ละบัญชี</p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => setAccounts((current) => [...current, { ...EMPTY_ACCOUNT }])}>
                 <Plus className="h-3.5 w-3.5" />
-                Add Account
+                เพิ่มบัญชี
               </Button>
             </div>
 
@@ -354,7 +357,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               {accounts.map((account, index) => (
                 <div key={`account-${index}`} className="rounded-[24px] border border-border/70 bg-background/62 p-3">
                   <div className="mb-3 flex items-center justify-between">
-                    <div className="text-xs font-medium text-foreground">Account {index + 1}</div>
+                    <div className="text-xs font-medium text-foreground">บัญชีที่ {index + 1}</div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -369,23 +372,23 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label required>Username</Label>
+                      <Label required>ชื่อผู้ใช้งาน</Label>
                       <Input className={COMPACT_INPUT_CLASS} value={account.username} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, username: event.target.value } : item))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label required>Password</Label>
+                      <Label required>รหัสผ่าน</Label>
                       <Input className={COMPACT_INPUT_CLASS} type="password" value={account.password} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, password: event.target.value } : item))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>Role</Label>
-                      <Input className={COMPACT_INPUT_CLASS} value={account.role} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, role: event.target.value } : item))} placeholder="e.g. DBA, Application, Reporting" />
+                      <Label optional>บทบาท</Label>
+                      <Input className={COMPACT_INPUT_CLASS} value={account.role} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, role: event.target.value } : item))} placeholder="เช่น DBA, Application, Reporting" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>Privileges</Label>
-                      <Input className={COMPACT_INPUT_CLASS} value={account.privileges} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, privileges: event.target.value } : item))} placeholder="e.g. SELECT, INSERT, UPDATE" />
+                      <Label optional>สิทธิ์การใช้งาน (Privileges)</Label>
+                      <Input className={COMPACT_INPUT_CLASS} value={account.privileges} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, privileges: event.target.value } : item))} placeholder="เช่น SELECT, INSERT, UPDATE" />
                     </div>
                     <div className="space-y-1.5 md:col-span-2">
-                      <Label optional>Note</Label>
+                      <Label optional>หมายเหตุ</Label>
                       <Input className={COMPACT_INPUT_CLASS} value={account.note} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, note: event.target.value } : item))} />
                     </div>
                   </div>
@@ -396,10 +399,10 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Cancel
+              ยกเลิก
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : databaseToEdit ? 'Save changes' : 'Create database'}
+              {loading ? 'กำลังบันทึก...' : databaseToEdit ? 'บันทึกการแก้ไข' : 'สร้างฐานข้อมูล'}
             </Button>
           </div>
         </form>

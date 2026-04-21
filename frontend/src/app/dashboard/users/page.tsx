@@ -105,10 +105,10 @@ export default function UsersPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'บัญชีผู้ใช้',
+      title: 'ผู้ใช้งานระบบ',
       breadcrumbs: [
         { label: 'พื้นที่ทำงาน', href: '/dashboard' },
-        { label: 'บัญชีผู้ใช้' },
+        { label: 'ผู้ใช้งานระบบ' },
       ],
     });
 
@@ -311,9 +311,10 @@ export default function UsersPage() {
               </div>
 
               <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4" />
-                สร้างผู้ใช้
-              </Button>
+                <Plus className="h-3.5 w-3.5" />
+                เพิ่มผู้ใช้งาน
+                </Button>
+
             </div>
           </div>
 
@@ -396,7 +397,7 @@ export default function UsersPage() {
                         </Select>
                       </td>
                       <td className="px-3 py-2.5 text-[12px] text-muted-foreground">
-                        {new Date(item.createdAt).toLocaleString('en-GB', {
+                        {new Date(item.createdAt).toLocaleString('th-TH', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric',
@@ -405,7 +406,7 @@ export default function UsersPage() {
                         })}
                       </td>
                       <td className="px-3 py-2.5 text-[12px] text-muted-foreground">
-                        {new Date(item.updatedAt).toLocaleString('en-GB', {
+                        {new Date(item.updatedAt).toLocaleString('th-TH', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric',

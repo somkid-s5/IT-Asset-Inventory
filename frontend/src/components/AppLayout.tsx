@@ -8,6 +8,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageHeaderProvider, usePageHeader } from '@/contexts/PageHeaderContext';
+import { cn } from '@/lib/utils';
 import { LogOut, Moon, Sun } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -72,12 +73,12 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                 ) : null}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className={cn('flex items-center gap-2')}>
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                  aria-label={`เปลี่ยนเป็นโหมด${theme === 'dark' ? 'สว่าง' : 'มืด'}`}
                   className="rounded-xl border border-border/80 bg-card p-2.5 text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground"
-                  title="Toggle theme"
+                  title="เปลี่ยนโหมดสี"
                 >
                   {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </button>
@@ -88,27 +89,27 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                       <UserAvatar
                         seed={user?.avatarSeed}
                         imageUrl={user?.avatarImage}
-                        label={user?.displayName ?? 'Infra Pilot'}
+                        label={user?.displayName ?? 'ผู้ดูแลระบบ'}
                         className="h-8 w-8 border-border/70"
                       />
                       <div className="hidden min-w-0 sm:block">
-                        <div className="truncate text-[12px] font-semibold leading-4 text-foreground">{user?.displayName ?? 'Account'}</div>
+                        <div className="truncate text-[12px] font-semibold leading-4 text-foreground">{user?.displayName ?? 'ผู้ใช้งาน'}</div>
                         <div className="truncate pt-0.5 text-[11px] leading-4 text-muted-foreground">@{user?.username ?? 'user'}</div>
                       </div>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 rounded-2xl border-border/80 bg-popover">
                     <DropdownMenuLabel className="space-y-1">
-                      <div className="text-sm font-medium text-foreground">{user?.displayName ?? 'Account'}</div>
-                      <div className="text-[11px] text-muted-foreground">@{user?.username ?? 'user'} - {user?.role ?? 'USER'}</div>
+                      <div className="text-sm font-medium text-foreground">{user?.displayName ?? 'ผู้ใช้งาน'}</div>
+                      <div className="text-[11px] text-muted-foreground">@{user?.username ?? 'user'} - {user?.role === 'ADMIN' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป'}</div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="cursor-pointer">
-                      My Account
+                      บัญชีของฉัน
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                    <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
                       <LogOut className="h-4 w-4" />
-                      Sign out
+                      ออกจากระบบ
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

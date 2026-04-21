@@ -12,21 +12,21 @@ export default function NotFound() {
         <h1 className="font-display text-4xl font-semibold uppercase tracking-[0.08em] text-foreground">
           404
         </h1>
-        <h2 className="mt-3 text-xl font-medium text-foreground">Page Not Found</h2>
+        <h2 className="mt-3 text-xl font-medium text-foreground">ไม่พบหน้าดังกล่าว</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
+          หน้าเว็บที่คุณกำลังพยายามเข้าถึงไม่มีอยู่ในระบบ หรืออาจถูกย้ายไปยังตำแหน่งอื่นแล้ว
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-3">
           <Link href="/login">
             <Button variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Login
+              กลับสู่หน้าล็อกอิน
             </Button>
           </Link>
           <Link href="/dashboard">
             <Button>
-              Go to Dashboard
+              กลับสู่หน้าหลัก
             </Button>
           </Link>
         </div>
