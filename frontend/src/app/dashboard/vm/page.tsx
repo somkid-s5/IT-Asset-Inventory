@@ -134,7 +134,7 @@ export default function VmPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'เครื่องเสมือน',
+      title: 'เครื่องเสมือน (VM)',
       breadcrumbs: [
         { label: 'พื้นที่ทำงาน', href: '/dashboard' },
         { label: 'คอมพิวต์' },
@@ -543,13 +543,13 @@ function PendingSetupTable({
             </th>
             <th className="px-3 py-2.5 font-semibold">
               <button onClick={() => onSort('powerState')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                สถานะพลังงาน
+                สถานะการทำงาน
                 {renderSortIcon(sortKey === 'powerState', sortDirection)}
               </button>
             </th>
             <th className="hidden px-3 py-2.5 font-semibold xl:table-cell">
               <button onClick={() => onSort('lastSeen')} className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-                พบเห็นล่าสุด
+                ตรวจพบล่าสุด
                 {renderSortIcon(sortKey === 'lastSeen', sortDirection)}
               </button>
             </th>

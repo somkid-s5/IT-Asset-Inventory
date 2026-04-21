@@ -282,9 +282,9 @@ export default function VmSourcesPage() {
           <table className="table-frame min-w-[980px]">
             <thead>
               <tr className="table-head-row">
-                <th className="px-3 py-2.5 font-medium">ชื่อแหล่งข้อมูล</th>
+                <th className="px-3 py-2.5 font-medium">ชื่อแหล่งข้อมูล vCenter</th>
                 <th className="px-3 py-2.5 font-medium">Endpoint</th>
-                <th className="px-3 py-2.5 font-medium">VM ที่ค้นพบ</th>
+                <th className="px-3 py-2.5 font-medium">จำนวน VM</th>
                 <th className="px-3 py-2.5 font-medium">รอบการซิงค์</th>
                 <th className="px-3 py-2.5 font-medium">สถานะ</th>
                 <th className="px-3 py-2.5 font-medium">ซิงค์ล่าสุด</th>

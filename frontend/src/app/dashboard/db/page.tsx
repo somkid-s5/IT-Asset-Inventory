@@ -204,11 +204,12 @@ export default function DbPage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
                 <Input
                   type="text"
-                  className="h-8 w-[240px] pl-9 text-xs transition-shadow focus-visible:ring-1 sm:w-[320px]"
-                  placeholder="ค้นหาด้วยชื่อฐานข้อมูล, เอ็นจิ้น, โฮสต์, หรือ IP..."
+                  className="h-8 w-[240px] pl-9 text-xs transition-shadow focus-visible:ring-1 sm:w-[360px]"
+                  placeholder="ค้นหาชื่อฐานข้อมูล, ประเภท, โฮสต์ หรือ IP..."
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
+
               </div>
 
               <Button size="sm" className="h-8 gap-1.5 px-3" onClick={() => setDialogOpen(true)}>
@@ -231,7 +232,7 @@ export default function DbPage() {
                 </TableHead>
                 <TableHead className="h-10 px-4 py-2 align-middle border-b border-border">
                   <Button variant="ghost" onClick={() => toggleSort('engine')} className="-ml-3 h-8 data-[state=open]:bg-accent text-[11px] font-semibold uppercase tracking-[0.06em]">
-                    เอ็นจิ้น
+                    ประเภทฐานข้อมูล
                     {renderSortIcon('engine')}
                   </Button>
                 </TableHead>
@@ -345,7 +346,7 @@ export default function DbPage() {
         </div>
         {!loading && filteredDatabases.length > 0 && (
           <div className="bg-card px-4 py-2.5 border-t border-border/70 text-[11px] font-medium text-muted-foreground">
-            แสดงฐานข้อมูล {filteredDatabases.length} รายการ
+            แสดงรายการฐานข้อมูลทั้งหมด {filteredDatabases.length} รายการ
           </div>
         )}
       </Card>
@@ -386,3 +387,4 @@ export default function DbPage() {
     </div>
   );
 }
+

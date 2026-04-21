@@ -94,10 +94,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'ภาพรวม',
+      title: 'ภาพรวมระบบ',
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'ภาพรวม' },
+        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
+        { label: 'ภาพรวมระบบ' },
       ],
     });
 
@@ -105,6 +105,7 @@ export default function DashboardPage() {
       setHeader(null);
     };
   }, [setHeader]);
+
 
   const attentionItems = useMemo(() => {
     if (!data) {
@@ -187,12 +188,12 @@ export default function DashboardPage() {
     <div className="workspace-page space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">ภาพรวม</h2>
-          <p className="mt-1 text-sm text-muted-foreground">สรุปโครงสร้างพื้นฐาน IT และการดำเนินงานของคุณ</p>
+          <h2 className="text-2xl font-semibold tracking-tight">ภาพรวมระบบ</h2>
+          <p className="mt-1 text-sm text-muted-foreground">สรุปสถานะโครงสร้างพื้นฐานไอทีและภาพรวมการดำเนินงาน</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1 font-normal bg-card">
-            <span className="text-muted-foreground mr-1">ซิงค์ล่าสุด</span>
+            <span className="text-muted-foreground mr-1">อัปเดตล่าสุด</span>
             <span className="font-medium text-foreground">{formatSyncTime(data.vm.latestSyncAt)}</span>
           </Badge>
           <Button
@@ -205,7 +206,7 @@ export default function DashboardPage() {
             }}
           >
             <RefreshCw className="mr-2 h-3.5 w-3.5" />
-            รีเฟรช
+            รีเฟรชข้อมูล
           </Button>
         </div>
       </div>
@@ -213,26 +214,26 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/assets')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">สินทรัพย์ทางกายภาพ</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">สินทรัพย์ฮาร์ดแวร์</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.assets.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{data.assets.active} ใช้งาน</span> · {data.assets.inactive} ไม่ใช้งาน
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{data.assets.active} ใช้งาน</span> · {data.assets.inactive} ปิดการใช้งาน
             </p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/vm')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">เครื่องเสมือน</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">เครื่องเสมือน (VM)</CardTitle>
             <Monitor className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.vm.activeInventory}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-amber-600 dark:text-amber-500 font-medium">{data.vm.pendingSetup} รอดำเนินการ</span> · {data.vm.orphaned} ถูกยกเลิก
+              <span className="text-amber-600 dark:text-amber-500 font-medium">{data.vm.pendingSetup} รอดำเนินการ</span> · {data.vm.orphaned} ยกเลิกแล้ว
             </p>
           </CardContent>
         </Card>
@@ -252,13 +253,13 @@ export default function DashboardPage() {
 
         <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => router.push('/dashboard/users')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">สมาชิกในทีม</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">บัญชีผู้ใช้งาน</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.users.total}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="font-medium">{data.users.admins} ผู้ดูแลระบบ</span> · ผู้ใช้ Workspace
+              <span className="font-medium">{data.users.admins} ผู้ดูแลระบบ</span> · สมาชิกทีมงาน
             </p>
           </CardContent>
         </Card>
@@ -271,7 +272,7 @@ export default function DashboardPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded bg-primary/10 text-primary">
               <Laptop className="h-3.5 w-3.5" />
             </div>
-            <CardTitle className="text-sm font-semibold">รายละเอียดสินทรัพย์</CardTitle>
+            <CardTitle className="text-sm font-semibold">สัดส่วนสินทรัพย์</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 pt-4">
             <div className="space-y-3">
@@ -286,13 +287,13 @@ export default function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <p className="flex h-full items-center justify-center text-sm text-muted-foreground">ไม่มีข้อมูลการกระจาย</p>
+                <p className="flex h-full items-center justify-center text-sm text-muted-foreground">ไม่มีข้อมูลรายการ</p>
               )}
             </div>
           </CardContent>
           <CardFooter className="border-t border-border/60 pt-4">
             <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground" onClick={() => router.push('/dashboard/assets')}>
-              ดูสมุดทะเบียนทั้งหมด
+              ดูรายการสินทรัพย์ทั้งหมด
             </Button>
           </CardFooter>
         </Card>

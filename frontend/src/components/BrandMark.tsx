@@ -21,12 +21,12 @@ export function BrandMark({ compact = false, tone = "default", className }: Bran
       </div>
 
       <div className={cn("min-w-0", compact && "hidden")}>
-        <p className={cn("font-sans text-base font-semibold tracking-wide", titleClass)}>
+        <p className={cn("font-sans text-base font-semibold tracking-tight", titleClass)}>
           AssetOps
         </p>
         {!compact && (
-          <p className={cn("text-xs uppercase tracking-wide", subtitleClass)}>
-            IT Asset Inventory
+          <p className={cn("text-[10px] font-medium uppercase tracking-[0.08em]", subtitleClass)}>
+            ระบบจัดการสินทรัพย์ไอที
           </p>
         )}
       </div>

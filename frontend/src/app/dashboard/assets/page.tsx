@@ -56,7 +56,7 @@ interface Asset {
 const TABS: { label: string; value: 'ALL' | AssetType; icon: typeof Box; iconClassName: string }[] = [
   { label: 'ทั้งหมด', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
   { label: 'เซิร์ฟเวอร์', value: 'SERVER', icon: Server, iconClassName: 'text-emerald-400' },
-  { label: 'พื้นที่จัดเก็บ', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-400' },
+  { label: 'ระบบจัดเก็บข้อมูล', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-400' },
   { label: 'สวิตช์', value: 'SWITCH', icon: Shield, iconClassName: 'text-amber-400' },
 ];
 
@@ -122,16 +122,17 @@ export default function AssetsPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'สินทรัพย์',
+      title: 'รายการสินทรัพย์',
       breadcrumbs: [
         { label: 'พื้นที่ทำงาน', href: '/dashboard' },
-        { label: 'สินทรัพย์' },
+        { label: 'รายการสินทรัพย์' },
       ],
     });
     return () => {
       setHeader(null);
     };
   }, [setHeader]);
+
 
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
@@ -462,7 +463,7 @@ export default function AssetsPage() {
 
             {!loading && topLevelAssets.length > 0 && (
               <div className="bg-card px-4 py-2.5 border-t border-border/70 text-[11px] font-medium text-muted-foreground">
-                แสดง {table.getPrePaginationRowModel().rows.length} จาก {filteredAssets.length} สินทรัพย์
+                แสดง {table.getPrePaginationRowModel().rows.length} จากทั้งหมด {filteredAssets.length} รายการ
               </div>
             )}
           </section>

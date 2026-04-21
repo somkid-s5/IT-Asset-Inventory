@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { NavLink } from '@/components/NavLink';
+import { BrandMark } from '@/components/BrandMark';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -14,14 +15,14 @@ type NavItem = {
 };
 
 const primaryNavItems: NavItem[] = [
-  { title: 'Overview', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Assets', url: '/dashboard/assets', icon: Server },
-  { title: 'Databases', url: '/dashboard/db', icon: Database },
+  { title: 'ภาพรวมระบบ', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'รายการสินทรัพย์', url: '/dashboard/assets', icon: Server },
+  { title: 'ฐานข้อมูล', url: '/dashboard/db', icon: Database },
 ];
 
 const computeNavItems: NavItem[] = [
-  { title: 'Virtual Machines', url: '/dashboard/vm', icon: Monitor },
-  { title: 'vCenter Sources', url: '/dashboard/vm/sources', icon: Workflow },
+  { title: 'เครื่องเสมือน (VM)', url: '/dashboard/vm', icon: Monitor },
+  { title: 'แหล่งข้อมูล vCenter', url: '/dashboard/vm/sources', icon: Workflow },
 ];
 
 interface AppSidebarProps {
@@ -33,7 +34,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
   const { user } = useAuth();
   const pathname = usePathname();
   const currentPath = pathname || '/';
-  const accountNavItems = user?.role === 'ADMIN' ? [{ title: 'User Accounts', url: '/dashboard/users', icon: Users }] : [];
+  const accountNavItems = user?.role === 'ADMIN' ? [{ title: 'ผู้ใช้งานระบบ', url: '/dashboard/users', icon: Users }] : [];
   const inComputeSection = currentPath === '/dashboard/vm' || currentPath.startsWith('/dashboard/vm/');
   const [computeOpen, setComputeOpen] = useState(inComputeSection);
 
@@ -98,29 +99,19 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
           <button
             type="button"
             onClick={onToggleCollapsed}
-            aria-label="Expand sidebar"
+            aria-label="ขยายเมนู"
             className="rounded-xl border border-border/80 bg-card p-2 text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground"
           >
             <PanelLeft className="h-4 w-4 rotate-180" />
           </button>
         ) : (
           <div className="flex w-full items-center justify-between gap-2.5">
-            <div className="flex items-center gap-3">
-              <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-[#EE0000]/20 bg-[#EE0000] text-white shadow-[0_18px_35px_-24px_rgba(238,0,0,0.5)]"
-                aria-label="AssetOps logo">
-                <div className="absolute inset-[1px] rounded-[7px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.25),transparent_55%)]" />
-                <Shield className="relative h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-sans text-[15px] font-semibold tracking-[-0.03em] text-foreground">AssetOps</p>
-                <p className="mt-0.5 whitespace-nowrap text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Inventory Control</p>
-              </div>
-            </div>
+            <BrandMark />
 
             <button
               type="button"
               onClick={onToggleCollapsed}
-              aria-label="Collapse sidebar"
+              aria-label="พับเมนู"
               className="rounded-xl border border-border/80 bg-card p-2 text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground"
             >
               <PanelLeft className="h-4 w-4" />
@@ -129,15 +120,15 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         )}
       </div>
 
-      <nav className={cn('flex-1 py-5', collapsed ? 'px-2' : 'px-3.5')} role="navigation" aria-label="Main navigation menu">
+      <nav className={cn('flex-1 py-5', collapsed ? 'px-2' : 'px-3.5')} role="navigation" aria-label="เมนูหลัก">
         <div className={cn('mb-3 px-2')}>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Workspace</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">พื้นที่ทำงาน</p>
         </div>
         <div className="space-y-1.5" role="menubar">
           {primaryNavItems.map((item) => renderNavItem(item))}
         </div>
 
-        <div className={cn(collapsed ? 'mt-2' : 'mt-4')} role="group" aria-label="Compute navigation">
+        <div className={cn(collapsed ? 'mt-2' : 'mt-4')} role="group" aria-label="การประมวลผล">
           <button
             type="button"
             onClick={() => setComputeOpen((current) => !current)}
@@ -161,7 +152,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
             </div>
             {!collapsed ? (
               <>
-                <span className="min-w-0 flex-1 truncate text-left text-[13px] font-medium">Compute</span>
+                <span className="min-w-0 flex-1 truncate text-left text-[13px] font-medium">ระบบประมวลผล</span>
                 <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', computeOpen && 'rotate-180')} />
               </>
             ) : null}

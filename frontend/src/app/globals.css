@@ -41,9 +41,12 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 6px);
-  --font-sans: var(--font-thai), "IBM Plex Sans Thai", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: var(--font-thai), "IBM Plex Sans Thai", ui-sans-serif, sans-serif;
+  
+  /* บังคับใช้ Prompt ทั่วกระดาน */
+  --font-sans: var(--font-prompt), "Prompt", "Kanit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-prompt), "Prompt", "Kanit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", monospace;
+  
   --animate-slide-in: slide-in 0.22s ease-out;
 
   @keyframes slide-in {
@@ -51,7 +54,6 @@
       opacity: 0;
       transform: translateY(8px);
     }
-
     to {
       opacity: 1;
       transform: translateY(0);
@@ -63,7 +65,6 @@
 
 :root {
   --background: 220 16% 96%;
-  /* #f1f5f9 - Deep enough to push white cards forward */
   --foreground: 220 23% 17%;
   --card: 0 0% 100%;
   --card-foreground: 220 23% 17%;
@@ -72,10 +73,8 @@
   --primary: 220 23% 17%;
   --primary-foreground: 0 0% 100%;
   --secondary: 220 14% 92%;
-  /* Distinguishable grey button */
   --secondary-foreground: 220 23% 17%;
   --muted: 220 14% 92%;
-  /* Distinguishable grey background for elements */
   --muted-foreground: 220 15% 40%;
   --accent: 220 14% 92%;
   --accent-foreground: 220 23% 17%;
@@ -92,12 +91,10 @@
   --medium: 35 94% 58%;
   --low: 145 63% 42%;
   --border: 214 20% 82%;
-  /* Strong border */
   --input: 214 20% 82%;
   --ring: 220 23% 17%;
   --radius: 0.5rem;
   --sidebar-background: 0 0% 100%;
-  /* Pure white left sidebar */
   --sidebar-foreground: 220 15% 40%;
   --sidebar-primary: 220 23% 17%;
   --sidebar-primary-foreground: 0 0% 100%;
@@ -149,188 +146,22 @@
 }
 
 @layer components {
-  .surface-panel {
-    @apply rounded-lg border border-border bg-card shadow-sm;
-  }
+  .surface-panel { @apply rounded-lg border border-border bg-card shadow-sm; }
+  .stat-card { @apply rounded-lg border border-border bg-card shadow-sm; }
+  .app-shell { @apply mx-auto w-full max-w-7xl; }
+  .compact-input { @apply h-9 rounded-md text-sm; }
 
-  .stat-card {
-    @apply rounded-lg border border-border bg-card shadow-sm;
-  }
-
-  .app-shell {
-    @apply mx-auto w-full max-w-7xl;
-  }
-
-  .compact-input {
-    @apply h-9 rounded-md text-sm;
-  }
-
-  .brand-grid {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, hsl(var(--primary)) 10%, transparent), transparent 28%),
-      linear-gradient(180deg, hsl(var(--background)) 0%, color-mix(in oklab, hsl(var(--background)) 94%, white) 100%);
-  }
-
-  .sidebar-blend {
-    background:
-      linear-gradient(180deg, color-mix(in oklab, hsl(var(--sidebar-background)) 95%, white) 0%, hsl(var(--sidebar-background)) 100%);
-  }
-
-  .content-bridge {
-    background:
-      radial-gradient(circle at top, color-mix(in oklab, hsl(var(--primary)) 7%, transparent), transparent 18%),
-      transparent;
-  }
-
-  .app-backdrop {
-    background:
-      linear-gradient(180deg, color-mix(in oklab, hsl(var(--background)) 97%, white) 0%, hsl(var(--background)) 100%);
-  }
-
-  .glass-card {
-    @apply rounded-lg border border-border bg-card/95 shadow-sm backdrop-blur-xl;
-  }
-
-  .brand-chip {
-    @apply inline-flex items-center gap-2 rounded-md border border-border/80 bg-card px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground;
-  }
-
-  .workspace-page {
-    @apply space-y-4 pb-6;
-  }
-
-  .workspace-hero {
-    @apply rounded-lg border border-border bg-card px-4 py-4 shadow-sm lg:px-5 lg:py-4.5;
-  }
-
-  .workspace-heading {
+  .workspace-page { @apply space-y-4 pb-6; }
+  .workspace-hero { @apply rounded-lg border border-border bg-card px-4 py-4 shadow-sm lg:px-5 lg:py-4.5; }
+  
+  /* จุดตาย: บังคับ Heading ให้ใช้ Prompt */
+  .workspace-heading { 
     @apply font-sans text-[1.35rem] font-semibold tracking-[-0.03em] text-foreground;
+    font-family: var(--font-prompt), "Prompt", sans-serif !important;
   }
 
-  .workspace-subtle {
-    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
-  }
-
-  .page-breadcrumb {
-    @apply inline-flex items-center gap-2 text-[10px] text-muted-foreground;
-  }
-
-  .page-breadcrumb-separator {
-    @apply text-muted-foreground/60;
-  }
-
-  .toolbar-input-wrap {
-    @apply relative min-w-[280px];
-  }
-
-  .toolbar-input-icon {
-    @apply pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground;
-  }
-
-  .filter-chip {
-    @apply inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground;
-  }
-
-  .filter-chip-active {
-    @apply border-primary/20 bg-accent text-foreground;
-  }
-
-  .stats-grid {
-    @apply mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4;
-  }
-
-  .stat-tile {
-    @apply rounded-lg border border-border bg-card px-4 py-3.5 shadow-sm;
-  }
-
-  .stat-kicker {
-    @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground;
-  }
-
-  .table-shell {
-    @apply overflow-hidden rounded-lg border border-border bg-card shadow-sm;
-  }
-
-  .table-section-header {
-    @apply flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3;
-  }
-
-  .table-frame {
-    @apply w-full border-collapse;
-  }
-
-  .table-frame thead th {
-    @apply px-3 py-2 align-middle;
-  }
-
-  .table-frame thead th button {
-    @apply inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-inherit transition-colors hover:text-foreground;
-  }
-
-  .table-frame tbody td {
-    @apply px-3 py-2.5 align-middle text-[12px] leading-4.5 text-foreground;
-  }
-
-  .table-frame tbody td.text-muted-foreground,
-  .table-frame tbody [class*="text-muted-foreground"] {
-    @apply text-[12px] font-normal leading-4.5;
-  }
-
-  .table-frame tbody [class*="font-mono"] {
-    @apply text-[11px];
-  }
-
-  .table-head-row {
-    @apply border-b border-border bg-muted text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-foreground/80;
-  }
-
-  .table-row {
-    @apply border-b border-border/80 transition-colors hover:bg-accent/45 last:border-b-0;
-  }
-
-  .metric-pair {
-    @apply flex items-start gap-3 rounded-lg border border-border bg-muted/35 px-3.5 py-3;
-  }
-
-  .muted-panel {
-    @apply rounded-lg border border-border/80 bg-muted/40;
-  }
-
-  .icon-chip {
-    @apply flex h-9 w-9 items-center justify-center rounded-md border border-border/80 bg-card text-muted-foreground;
-  }
-
-  .toolbar-strip {
-    @apply flex flex-col gap-2.5 border-b border-border/80 bg-muted/25 px-4 py-3 lg:flex-row lg:items-center lg:justify-between;
-  }
-
-  .data-label {
-    @apply inline-flex items-center rounded-md border px-2.5 py-0.5 text-[10px] font-semibold;
-  }
-
-  .data-label-neutral {
-    @apply border-border bg-background text-muted-foreground;
-  }
-
-  .data-label-success {
-    @apply border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300;
-  }
-
-  .data-label-warning {
-    @apply border-amber-500/20 bg-amber-500/12 text-amber-700 dark:text-amber-300;
-  }
-
-  .data-label-danger {
-    @apply border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300;
-  }
-
-  .app-panel-title {
-    @apply text-sm font-semibold tracking-[-0.02em] text-foreground;
-  }
-
-  .app-panel-copy {
-    @apply mt-0.5 text-[11px] leading-5 text-muted-foreground;
-  }
+  .table-shell { @apply overflow-hidden rounded-lg border border-border bg-card shadow-sm; }
+  .table-frame tbody td { @apply px-3 py-2.5 align-middle text-[12px] leading-4.5 text-foreground; }
 }
 
 @layer base {
@@ -340,18 +171,16 @@
 
   html {
     @apply scroll-smooth;
+    font-family: var(--font-prompt), "Prompt", sans-serif !important;
   }
 
   body {
     @apply min-h-screen font-sans text-sm text-foreground antialiased bg-background;
+    font-family: var(--font-prompt), "Prompt", sans-serif !important;
   }
 
-  ::selection {
-    background: color-mix(in oklab, hsl(var(--primary)) 25%, transparent);
-  }
-
-  [data-slot="card"],
-  [data-slot="dropdown-menu-content"] {
-    box-shadow: 0 18px 40px -30px rgba(15, 23, 42, 0.2);
+  /* บังคับหัวข้อทั้งหมด */
+  h1, h2, h3, h4, h5, h6, button, input, optgroup, select, textarea {
+    font-family: var(--font-prompt), "Prompt", sans-serif !important;
   }
 }

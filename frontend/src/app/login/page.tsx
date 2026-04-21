@@ -80,46 +80,54 @@ export default function LoginPage() {
     <>
       <div className="min-h-screen bg-background px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
-          {/* Left Panel - ใช้สีเข้มแน่นอน เพื่อให้อ่านออก */}
-          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-slate-900 p-8 text-white lg:flex">
+          {/* Left Panel - ใช้สี Slate 900 คงที่เพื่อให้ข้อความขาวอ่านออกชัดเจนและดูพรีเมียม */}
+          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-[#0f172a] p-8 text-white lg:flex">
             <div>
               <BrandMark tone="inverse" className="relative z-10" />
               <div className="relative z-10 mt-10">
-                <p className="inline-flex items-center rounded-md border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/80">
-                  การดำเนินงานที่ปลอดภัย
+                <p className="inline-flex items-center rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
+                  ระบบความปลอดภัยระดับมาตรฐาน
                 </p>
                 <h1 className="mt-5 max-w-md text-3xl font-semibold leading-tight text-white">
-                  ควบคุมสินทรัพย์ให้เป็นหนึ่งเดียว
+                  ศูนย์กลางการจัดการ<br />สินทรัพย์ไอทีอย่างมีประสิทธิภาพ
                 </h1>
-                <p className="mt-4 max-w-sm text-sm leading-6 text-white/80">
-                  เข้าสู่ระบบเพื่อจัดการสินทรัพย์โครงสร้างพื้นฐาน บันทึกการเข้าถึง และสินค้าคงคลังในการดำเนินงานในพื้นที่ทำงานร่วมกัน
+                <p className="mt-4 max-w-sm text-sm leading-6 text-white/60">
+                  บริหารจัดการโครงสร้างพื้นฐาน บันทึกการเข้าถึง และตรวจสอบคลังสินทรัพย์ภายในองค์กรได้ในที่เดียว
                 </p>
               </div>
             </div>
 
             <div className="relative z-10 space-y-4">
-              <div className="rounded-xl border border-white/20 bg-white/10 p-5">
-                <div className="text-xs font-medium uppercase tracking-wide text-white/70">
-                  พื้นที่ทำงานการดำเนินงาน
+              <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+                <div className="text-xs font-medium uppercase tracking-wide text-white/50">
+                  ระบบบริหารจัดการคลังสินค้า
                 </div>
-                <div className="mt-3 text-sm font-medium text-white">
-                  สินทรัพย์ VM และฐานข้อมูลอยู่ในระบบภายในเดียว
+                <div className="mt-3 text-sm font-medium text-white/90">
+                  รวบรวมข้อมูลสินทรัพย์ VM และฐานข้อมูลไว้บนระบบเดียว
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/20 bg-white/5 px-4 py-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <Sparkles className="h-4 w-4 text-white" />
+                  <Sparkles className="h-4 w-4 text-white/70" />
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                      สินค้าคงคลังแบบเรียลไทม์
+                    <div className="text-xs font-semibold uppercase tracking-wide text-white/50">
+                      ข้อมูลอัปเดตแบบเรียลไทม์
                     </div>
-                    <div className="mt-1 text-sm text-white/80">
-                      ชั้นควบคุมที่สะอาดกว่าสำหรับฮาร์ดแวร์ VM และบันทึกฐานข้อมูล
+                    <div className="mt-1 text-sm text-white/70">
+                      ควบคุมและตรวจสอบสถานะฮาร์ดแวร์และซอฟต์แวร์ได้อย่างแม่นยำ
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Decorative element */}
+            <div className="absolute inset-0 z-0 opacity-20" 
+              style={{ 
+                backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', 
+                backgroundSize: '24px 24px' 
+              }}>
             </div>
           </div>
 
@@ -132,23 +140,23 @@ export default function LoginPage() {
 
               <div className="mt-6">
                 <p className="inline-flex items-center rounded-md border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                  เข้าสู่ระบบ
+                  การเข้าถึงระบบ
                 </p>
                 <h2 className="mt-5 text-2xl font-semibold text-foreground">
-                  ยินดีต้อนรับกลับมา
+                  ยินดีต้อนรับเข้าสู่ระบบ
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  ใช้บัญชีที่ได้รับมอบหมายเพื่อดำเนินการต่อในพื้นที่ทำงานสินทรัพย์
+                  กรุณาเข้าสู่ระบบด้วยบัญชีของคุณเพื่อจัดการคลังสินทรัพย์ไอที
                 </p>
               </div>
 
               <form onSubmit={handleSubmit(handleLogin)} className="mt-8 space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="username" required>ชื่อผู้ใช้</Label>
+                  <Label htmlFor="username" required>ชื่อผู้ใช้งาน</Label>
                   <Input
                     id="username"
                     autoComplete="username"
-                    placeholder="กรอกชื่อผู้ใช้"
+                    placeholder="ระบุชื่อผู้ใช้งาน"
                     disabled={loading}
                     {...register("username")}
                     aria-invalid={!!errors.username}
@@ -167,7 +175,7 @@ export default function LoginPage() {
                     id="password"
                     type="password"
                     autoComplete="current-password"
-                    placeholder="กรอกรหัสผ่าน"
+                    placeholder="ระบุรหัสผ่าน"
                     disabled={loading}
                     {...register("password")}
                     aria-invalid={!!errors.password}
@@ -180,17 +188,17 @@ export default function LoginPage() {
                   )}
                 </div>
 
-                <Button type="submit" className="h-12 w-full" disabled={loading}>
+                <Button type="submit" className="h-12 w-full text-[15px] font-medium" disabled={loading}>
                   {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
-                  {!loading && <ArrowRight className="h-4 w-4" />}
+                  {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
               </form>
 
-              <div className="mt-6 flex items-center gap-3 rounded-[24px] border border-border/70 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+              <div className="mt-6 flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/40 px-4 py-3 text-[13px] text-muted-foreground">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <LockKeyhole className="h-4 w-4" />
                 </div>
-                การเข้าถึงที่ปลอดภัยสำหรับการบริหารสินค้าคงคลังภายใน
+                ระบบมีการป้องกันการเข้าถึงและรักษาความปลอดภัยของข้อมูลภายใน
               </div>
             </div>
           </div>

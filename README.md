@@ -1,150 +1,91 @@
-# AssetOps
+# AssetOps (InfraPilot)
 
-AssetOps is an internal infrastructure inventory web app for managing assets, access records, database inventory, and user accounts in one place.
+**AssetOps** เป็นระบบบริหารจัดการทรัพยากรไอที (IT Asset Inventory) ระดับองค์กรที่ออกแบบมาเพื่อรวบรวมข้อมูลโครงสร้างพื้นฐานทั้งหมดไว้ในที่เดียว ไม่ว่าจะเป็นอุปกรณ์ฮาร์ดแวร์, ฐานข้อมูล, เครื่องเสมือน (VMs), และข้อมูลการเข้าถึง (Credentials) ที่มีการเข้ารหัสอย่างปลอดภัย
 
-## Current Scope
+---
 
-- Assets inventory with grouped access points and multi-node support
-- Database inventory with real CRUD
-- Database accounts with encrypted passwords, roles, and privileges
-- Username-based authentication
-- Admin user management
-- Profile management with avatar upload or generated avatar
+## ✨ ฟีเจอร์หลัก (Core Features)
 
-## Stack
+### 🖥️ การจัดการสินทรัพย์ (Asset Management)
+*   **Asset Hierarchy:** รองรับการจัดเก็บข้อมูลแบบโครงสร้างต้นไม้ (Parent-Child) เช่น Server ภายในตู้ Rack
+*   **Multi-Node Support:** จัดการ IP หลายชุด (Management, IPMI, VIP) ภายใต้ Asset เดียวกัน
+*   **Patch & Lifecycle:** ติดตามเวอร์ชันปัจจุบัน, วันหมดอายุ (EOL), และประวัติการ Patch
+*   **Flexible Metadata:** รองรับการเก็บข้อมูลเพิ่มเติมในรูปแบบ JSON
 
-### Frontend
+### 🗄️ คลังฐานข้อมูล (Database Inventory)
+*   **Engine Tracking:** รองรับ SQL Server, Oracle, PostgreSQL, MySQL และอื่นๆ
+*   **Account Management:** จัดเก็บชื่อผู้ใช้และรหัสผ่านที่เข้ารหัส (Encrypted) พร้อมระบุสิทธิ์ (Privileges)
+*   **Environment Aware:** แยกข้อมูลตามสถานะ PROD, UAT, TEST หรือ DEV
 
-- Next.js 16
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
+### ☁️ การจัดการเครื่องเสมือน (VM Management)
+*   **vCenter Integration:** เชื่อมต่อและดึงข้อมูลโดยตรงจาก vCenter (Discovery Mode)
+*   **Lifecycle State:** ติดตามสถานะตั้งแต่ Draft, Active ไปจนถึง Archived หรือ Deleted
+*   **Sync & Drift Detection:** ตรวจสอบความแตกต่างของข้อมูลระหว่างระบบจริงกับฐานข้อมูล Inventory
 
-### Backend
+### 🔐 ความปลอดภัยและการตรวจสอบ (Security & Audit)
+*   **Role-Based Access Control (RBAC):** กำหนดสิทธิ์ผู้ใช้เป็น Admin, Editor หรือ Viewer
+*   **Credential Encryption:** รหัสผ่านทั้งหมดถูกเข้ารหัสด้วย AES-256 ก่อนลงฐานข้อมูล
+*   **Audit Logging:** บันทึกทุกกิจกรรมสำคัญ เช่น การดูรหัสผ่าน, การ Login หรือการแก้ไขข้อมูล
 
-- NestJS
-- Prisma
-- PostgreSQL
-- JWT authentication
+---
 
-## Main Modules
-
-### Assets
-
-- Track physical infrastructure assets
-- Store multiple access points under one asset
-- Support single assets and multi-node assets
-- Show compact list view and dense detail view
-
-### Database
-
-- Store DB name, engine, environment, host, IP, port, owner, and notes
-- Manage multiple database accounts per database
-- Track account username, password, role, privileges, and notes
-- Create, edit, delete, list, and inspect database records through real API endpoints
-
-### Users
-
-- Username + display name based accounts
-- Admin can create users, change roles, reset passwords, and delete users
-- Users can update profile, avatar, and password
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+
-- PostgreSQL
-- npm
-
-### Backend setup
-
-```bash
-cd backend
-npm install
-```
-
-Create `backend/.env`:
-
-```env
-DATABASE_URL="postgresql://assetops:ChangeMe%23Postgres2026!@localhost:5432/assetops_db?schema=public"
-JWT_SECRET="ChangeMe-JWT-Secret-2026-Long-Random-Value"
-CREDENTIAL_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-DEFAULT_ADMIN_PASSWORD="ChangeMe#Admin2026!"
-DEFAULT_EDITOR_PASSWORD="ChangeMe#Editor2026!"
-PORT=3001
-```
-
-Apply schema and generate Prisma client:
-
-```bash
-npx prisma migrate deploy
-npx prisma generate
-```
-
-Optional seed:
-
-```bash
-npx prisma db seed
-```
-
-Start backend:
-
-```bash
-npm run start:dev
-```
-
-### Frontend setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend runs at [http://localhost:3000](http://localhost:3000)  
-Backend API runs at [http://localhost:3001/api](http://localhost:3001/api)
-
-## Default Access
-
-Seeded default account:
-
-- Username: `admin`
-- Password: `ChangeMe#Admin2026!`
-
-Change the seeded default passwords in `backend/.env` before using the app outside local setup.
-
-Self-register is disabled. New users are created by an admin from the Users page.
-
-## Useful Commands
-
-### Backend
-
-```bash
-npm run start:dev
-npm run build
-npx prisma migrate deploy
-npx prisma generate
-```
+## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
 
 ### Frontend
+*   **Next.js 16** (App Router)
+*   **React 19**
+*   **Tailwind CSS v4** (Modern CSS Engine)
+*   **Shadcn UI** & **Lucide React**
+*   **TanStack Query v5** (Data Fetching)
 
-```bash
-npm run dev
-npm run build
-```
+### Backend
+*   **NestJS 11** (Enterprise Node.js Framework)
+*   **Prisma ORM** (Type-safe Database Access)
+*   **PostgreSQL 15**
+*   **Passport.js & JWT** (Authentication)
 
-## Project Structure
+---
 
-- `backend/` NestJS API, Prisma schema, migrations, seeds
-- `frontend/` Next.js app and UI components
-- `backend/scripts/` import and maintenance scripts
+## 🚀 การเริ่มต้นใช้งาน (Getting Started)
 
-## Notes
+### การติดตั้งสำหรับนักพัฒนา (Development)
+1.  **Clone Repository:**
+    ```bash
+    git clone <URL_REPO>
+    cd IT-Asset-Inventory
+    ```
+2.  **Setup Backend:**
+    ```bash
+    cd backend && npm install
+    cp .env.example .env # ตั้งค่า DATABASE_URL และ SECRET ต่างๆ
+    npx prisma migrate dev
+    npm run start:dev
+    ```
+3.  **Setup Frontend:**
+    ```bash
+    cd ../frontend && npm install
+    npm run dev
+    ```
 
-- Passwords for asset/database credentials are encrypted on the backend before storage
-- If Prisma generate fails on Windows with an `EPERM` file lock, stop the running backend process and run `npx prisma generate` again
+### การติดตั้งสำหรับใช้งานจริง (Production)
+เรามีคู่มือฉบับละเอียดสำหรับการติดตั้งผ่าน **Docker** และการตั้งค่า **Nginx Reverse Proxy** สามารถดูได้ที่:
+👉 **[คู่มือการติดตั้ง Production (DEPLOYMENT_GUIDE.md)](./DEPLOYMENT_GUIDE.md)**
 
-## License
+---
 
-UNLICENSED
+## 🔑 บัญชีผู้ใช้เริ่มต้น (Default Access)
+หลังจากการรัน `npx prisma db seed`:
+*   **Username:** `admin`
+*   **Password:** `ChangeMe#Admin2026!` *(กรุณาเปลี่ยนทันทีหลังเข้าใช้งาน)*
+
+---
+
+## 📂 โครงสร้างโปรเจกต์
+*   `backend/`: ซอร์สโค้ด NestJS, Prisma Schema และ Migrations
+*   `frontend/`: ซอร์สโค้ด Next.js และ UI Components (Tailwind v4)
+*   `ui_cape/`: ภาพสกรีนช็อตตัวอย่างการใช้งานระบบ
+
+---
+
+## 📄 ใบอนุญาต (License)
+UNLICENSED (ลิขสิทธิ์เฉพาะภายในองค์กร)
