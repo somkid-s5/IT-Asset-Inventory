@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
 import { 
@@ -14,6 +15,7 @@ import {
 import { toast } from 'sonner';
 import React from 'react';
 import { AssetFormDialog } from '@/components/LazyLoadedDialogs';
+import { EmptyState } from '@/components/EmptyState';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +52,7 @@ import {
   VisibilityState,
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -66,17 +69,21 @@ interface Asset {
   type: AssetType;
   ipAllocations?: AssetIpAllocation[];
   rack?: string | null;
+  location?: string | null;
+  status?: string | null;
   brandModel?: string | null;
   sn?: string | null;
   parentId?: string | null;
   children?: Asset[];
+  credentials?: { username: string; type: string }[];
+  customMetadata?: Record<string, string>;
 }
 
 const TABS: { label: string; value: 'ALL' | AssetType; icon: typeof Box; iconClassName: string }[] = [
-  { label: 'ทั้งหมด', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
-  { label: 'เซิร์ฟเวอร์', value: 'SERVER', icon: Server, iconClassName: 'text-emerald-500' },
-  { label: 'พื้นที่เก็บข้อมูล', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-500' },
-  { label: 'สวิตช์', value: 'SWITCH', icon: Shield, iconClassName: 'text-amber-500' },
+  { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
+  { label: 'Servers', value: 'SERVER', icon: Server, iconClassName: 'text-emerald-500' },
+  { label: 'Storage', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-500' },
+  { label: 'Switches', value: 'SWITCH', icon: Shield, iconClassName: 'text-amber-500' },
 ];
 
 function getAssetIcon(type: AssetType) {
@@ -92,10 +99,17 @@ function getAssetIcon(type: AssetType) {
 
 export default function AssetsPage() {
   const { user } = useAuth();
+  const { setHeader } = usePageHeader();
   const router = useRouter();
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ALL' | AssetType>('ALL');
+
+  const { data: assets = [], isLoading, refetch } = useQuery({
+    queryKey: ['assets'],
+    queryFn: async () => {
+      const response = await api.get<Asset[]>('/assets');
+      return response.data;
+    },
+  });
 
   // Dialog functionality state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,21 +125,16 @@ export default function AssetsPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [expanded, setExpanded] = useState({});
 
-  async function loadAssets() {
-    try {
-      setLoading(true);
-      const response = await api.get<Asset[]>('/assets');
-      setAssets(response.data);
-    } catch {
-      toast.error('ไม่สามารถโหลดสินทรัพย์ได้');
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    void loadAssets();
-  }, []);
+    setHeader({
+      title: 'Assets',
+      breadcrumbs: [
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Assets' },
+      ],
+    });
+    return () => setHeader(null);
+  }, [setHeader]);
 
   const filteredData = useMemo(() => {
     if (activeTab === 'ALL') return assets;
@@ -133,31 +142,10 @@ export default function AssetsPage() {
   }, [assets, activeTab]);
 
   const columns = useMemo<ColumnDef<Asset>[]>(() => [
-    {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="เลือกทั้งหมด"
-          className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="เลือกแถว"
-          className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
+
     {
       accessorKey: 'assetId',
-      header: ({ column }) => <SortableHeader column={column} title="รหัสสินทรัพย์" />,
+      header: ({ column }) => <SortableHeader column={column} title="Asset ID" />,
       cell: ({ row, getValue }) => (
         <div className="flex items-center gap-2" style={{ paddingLeft: `${row.depth * 1}rem` }}>
           {row.getCanExpand() ? (
@@ -176,7 +164,7 @@ export default function AssetsPage() {
     },
     {
       accessorKey: 'name',
-      header: ({ column }) => <SortableHeader column={column} title="ชื่อสินทรัพย์" />,
+      header: ({ column }) => <SortableHeader column={column} title="Asset Name" />,
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground">
@@ -188,7 +176,7 @@ export default function AssetsPage() {
     },
     {
       accessorKey: 'type',
-      header: "ประเภท",
+      header: "Type",
       cell: ({ getValue }) => {
         const type = getValue() as AssetType;
         const labels: Record<AssetType, string> = { SERVER: 'Server', STORAGE: 'Storage', SWITCH: 'Switch', SP: 'SP', NETWORK: 'Network' };
@@ -227,14 +215,14 @@ export default function AssetsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40 rounded-xl">
                 <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(`/dashboard/assets/${asset.id}`)}>
-                  ดูรายละเอียด
+                  View Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                    className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
                    onClick={() => setAssetPendingDelete(asset)}
                 >
-                  ลบสินทรัพย์
+                  Delete Asset
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -277,36 +265,102 @@ export default function AssetsPage() {
     setDeletingId(assetPendingDelete.id);
     try {
       await api.delete(`/assets/${assetPendingDelete.id}`);
-      toast.success('ลบสินทรัพย์สำเร็จ');
+      toast.success('Asset deleted successfully');
       setAssetPendingDelete(null);
-      void loadAssets();
+      void refetch();
     } finally {
       setDeletingId(null);
     }
   };
 
-  if (loading && assets.length === 0) return <AssetsTableSkeleton />;
+  const handleExport = () => {
+    const exportData = filteredData.map(asset => {
+      const ips = asset.ipAllocations?.map(ip => ip.address).join('; ') || '';
+      const credentials = asset.credentials?.map(c => c.username).join('; ') || '';
+      const customMetadata = asset.customMetadata 
+        ? Object.entries(asset.customMetadata).map(([k,v]) => `${k}:${v}`).join('; ') 
+        : '';
+
+      return {
+        AssetID: asset.assetId || '',
+        Name: asset.name,
+        Type: asset.type,
+        Location: asset.location || '',
+        Rack: asset.rack || '',
+        BrandModel: asset.brandModel || '',
+        SerialNumber: asset.sn || '',
+        Status: asset.status || '',
+        IPs: ips,
+        Credentials: credentials,
+        CustomMetadata: customMetadata,
+      };
+    });
+
+    if (exportData.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    const headers = Object.keys(exportData[0]).join(',');
+    const csvRows = exportData.map(row => 
+      Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    
+    const BOM = "\uFEFF";
+    const csvString = BOM + [headers, ...csvRows].join('\n');
+    const blob = new Blob([csvString], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    const fileName = `Assets_Export_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.csv`;
+    
+    link.href = url;
+    link.setAttribute('download', fileName);
+    link.download = fileName; // Set both attribute and property
+    
+    document.body.appendChild(link);
+    
+    // Use a more standard event dispatching
+    const event = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    });
+    link.dispatchEvent(event);
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 200);
+
+    toast.success('Exported all items in current view');
+  };
+
+  if (isLoading && assets.length === 0) return <AssetsTableSkeleton />;
 
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="workspace-page p-6 space-y-6"
+      className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">รายการสินทรัพย์</h1>
-          <p className="text-muted-foreground mt-1 text-sm">จัดการอุปกรณ์ฮาร์ดแวร์และโครงสร้างพื้นฐานทั้งหมด</p>
+          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <HardDrive className="h-3.5 w-3.5" />
+            Hardware & Infrastructure Inventory
+          </h2>
+          <p className="text-xs text-muted-foreground/60">Manage your physical and network assets</p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card">
+           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
              <Download className="h-4 w-4 mr-2" />
              Export
            </Button>
            {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
             <Button onClick={() => { setEditingAsset(undefined); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
               <Plus className="h-4 w-4 mr-2" />
-              เพิ่มสินทรัพย์
+              Add Asset
             </Button>
           )}
         </div>
@@ -337,7 +391,7 @@ export default function AssetsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
               <Input
-                placeholder="ค้นหาตามชื่อ, IP, SN..."
+                placeholder="Search by name, IP, SN..."
                 value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
                 onChange={(e) => table.getColumn('name')?.setFilterValue(e.target.value)}
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
@@ -351,7 +405,7 @@ export default function AssetsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                <DropdownMenuLabel>แสดงคอลัมน์</DropdownMenuLabel>
+                <DropdownMenuLabel>Show Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {table.getAllColumns().filter(c => c.getCanHide()).map(column => (
                   <DropdownMenuCheckboxItem
@@ -360,7 +414,7 @@ export default function AssetsPage() {
                     checked={column.getIsVisible()}
                     onCheckedChange={(val) => column.toggleVisibility(!!val)}
                   >
-                    {column.id === 'assetId' ? 'รหัสสินทรัพย์' : column.id}
+                    {column.id === 'assetId' ? 'Asset ID' : column.id}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
@@ -398,10 +452,21 @@ export default function AssetsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center gap-2">
-                       <Box className="h-8 w-8 opacity-20" />
-                       <p>ไม่พบรายการที่ค้นหา</p>
+                  <TableCell colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
+                    <div className="flex items-center justify-center h-full">
+                      <EmptyState
+                        icon={HardDrive}
+                        title="No assets found"
+                        description={assets.length === 0 
+                          ? "You haven't added any infrastructure assets yet. Start by adding your first server or switch."
+                          : "No assets match your current search or filter criteria."
+                        }
+                        action={assets.length === 0 ? {
+                          label: "Add Your First Asset",
+                          onClick: () => { setEditingAsset(undefined); setDialogOpen(true); }
+                        } : undefined}
+                        className="w-full max-w-md border-none bg-transparent"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -413,11 +478,11 @@ export default function AssetsPage() {
         {/* Pagination Footer */}
         <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
           <div className="flex-1 text-xs text-muted-foreground">
-            เลือกแล้ว {table.getFilteredSelectedRowModel().rows.length} จาก {table.getFilteredRowModel().rows.length} รายการ
+            Total {table.getFilteredRowModel().rows.length} items
           </div>
           <div className="flex items-center gap-6 lg:gap-8">
             <div className="flex items-center gap-2">
-              <p className="text-xs font-medium">แถวต่อหน้า</p>
+              <p className="text-xs font-medium">Rows per page</p>
               <select
                 value={table.getState().pagination.pageSize}
                 onChange={e => table.setPageSize(Number(e.target.value))}
@@ -429,7 +494,7 @@ export default function AssetsPage() {
               </select>
             </div>
             <div className="flex w-[100px] items-center justify-center text-xs font-medium">
-              หน้า {table.getState().pagination.pageIndex + 1} จาก {table.getPageCount()}
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
             </div>
             <div className="flex items-center gap-1">
               <Button
@@ -458,7 +523,7 @@ export default function AssetsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         assetToEdit={editingAsset}
-        onSuccess={loadAssets}
+        onSuccess={() => void refetch()}
         availableParents={assets.map(a => ({ id: a.id, name: a.name, type: a.type }))}
       />
 
@@ -468,20 +533,20 @@ export default function AssetsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
                <AlertTriangle className="h-5 w-5" />
-               ยืนยันการลบ
+               Confirm Delete
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              คุณกำลังจะลบสินทรัพย์ <span className="font-bold text-foreground">{assetPendingDelete?.name}</span>
-              <br />การดำเนินการนี้ไม่สามารถย้อนกลับได้ และข้อมูลที่เกี่ยวข้องจะถูกลบทิ้งถาวร
+              You are about to delete asset <span className="font-bold text-foreground">{assetPendingDelete?.name}</span>
+              <br />This action cannot be undone and all related data will be permanently removed.
             </p>
           </div>
           <div className="flex justify-end gap-3">
-             <Button variant="ghost" onClick={() => setAssetPendingDelete(null)}>ยกเลิก</Button>
+             <Button variant="ghost" onClick={() => setAssetPendingDelete(null)}>Cancel</Button>
              <Button variant="destructive" onClick={confirmDeleteAsset} disabled={!!deletingId}>
                {deletingId ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-               ยืนยันการลบ
+               Confirm Delete
              </Button>
           </div>
         </DialogContent>

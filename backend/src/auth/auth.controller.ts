@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req, Res, UseGuards, Headers, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -11,9 +11,27 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 @Controller('api/auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
+    
+    @Get('me')
+    @UseGuards(JwtAuthGuard)
+    async me(@Req() req: Request & { user: { id: string } }) {
+        return this.authService.me(req.user.id);
+    }
 
     @Post('register')
-    async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+    async register(
+        @Body() registerDto: RegisterDto, 
+        @Res({ passthrough: true }) res: Response,
+        @Headers('x-registration-key') registrationKey?: string,
+    ) {
+        const userCount = await this.authService.getUserCount();
+        const secret = process.env.REGISTRATION_SECRET;
+
+        // Only enforce secret if at least one user exists and secret is configured
+        if (userCount > 0 && secret && registrationKey !== secret) {
+            throw new UnauthorizedException('Registration is restricted. Valid registration key required.');
+        }
+
         const result = await this.authService.register(registerDto);
         this.setAuthCookie(res, result.access_token);
         return { user: result.user };

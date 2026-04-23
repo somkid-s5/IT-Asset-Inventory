@@ -6,6 +6,7 @@ export declare class AuthService {
     private prisma;
     private jwtService;
     constructor(prisma: PrismaService, jwtService: JwtService);
+    getUserCount(): Promise<number>;
     register(registerDto: RegisterDto): Promise<{
         access_token: string;
         user: {
@@ -19,6 +20,16 @@ export declare class AuthService {
     }>;
     login(loginDto: LoginDto): Promise<{
         access_token: string;
+        user: {
+            id: string;
+            username: string;
+            displayName: string;
+            avatarSeed: string;
+            avatarImage: string | null;
+            role: import(".prisma/client").$Enums.Role;
+        };
+    }>;
+    me(userId: string): Promise<{
         user: {
             id: string;
             username: string;

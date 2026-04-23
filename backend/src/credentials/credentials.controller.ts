@@ -25,7 +25,7 @@ export class CredentialsController {
     // Only Admin/Editor can view actual passwords. Viewer can only list them.
     @Roles('ADMIN', 'EDITOR')
     @Get(':id/reveal')
-    revealPassword(@Param('id') id: string, @Request() req: any) {
+    revealPassword(@Param('id') id: string, @Request() req: { user: { id: string } }) {
         return this.credentialsService.revealPassword(id, req.user.id);
     }
 

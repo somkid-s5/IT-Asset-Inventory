@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useSyncExternalStore, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/services/api';
 
@@ -104,6 +104,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const hydrated = useSyncExternalStore(subscribe, getClientHydratedSnapshot, getServerHydratedSnapshot);
     const loading = !hydrated;
     const router = useRouter();
+
+    useEffect(() => {
+        const verifyAuth = async () => {
+            try {
+                const response = await api.get('/auth/me');
+                if (response.data.user) {
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
+                    emitAuthChange();
+                }
+            } catch (error) {
+                // If verification fails, clear local state
+                if (localStorage.getItem('user')) {
+                    localStorage.removeItem('user');
+                    emitAuthChange();
+                }
+            }
+        };
+        
+        verifyAuth();
+    }, []);
 
     const login = (userData: User) => {
         // Token is stored in HttpOnly cookie on backend

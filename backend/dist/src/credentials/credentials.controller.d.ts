@@ -25,7 +25,11 @@ export declare class CredentialsController {
         updatedAt: Date;
         lastChangedDate: Date | null;
     }[]>;
-    revealPassword(id: string, req: any): Promise<{
+    revealPassword(id: string, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         password: string;
     }>;
     update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{

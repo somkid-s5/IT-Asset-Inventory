@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand Colors - Indigo Modern SaaS Palette */
+  /* Brand Colors - High-end Indigo Palette */
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -22,59 +22,40 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
   
-  /* Semantic Colors */
-  --color-success: hsl(142 71% 45%);
-  --color-warning: hsl(38 92% 50%);
-  --color-info: hsl(199 89% 48%);
-  --color-critical: hsl(0 84% 60%);
-
-  /* Sidebar Design */
-  --color-sidebar: hsl(var(--sidebar-background));
-  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
-  --color-sidebar-primary: hsl(var(--sidebar-primary));
-  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
-  --color-sidebar-accent: hsl(var(--sidebar-accent));
-  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
-  --color-sidebar-border: hsl(var(--sidebar-border));
-  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-critical: hsl(var(--critical));
+  --color-high: hsl(var(--high));
+  --color-medium: hsl(var(--medium));
+  --color-low: hsl(var(--low));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
   
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 6px);
   
-  /* Typography - Enterprise Standard */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-prompt), var(--font-inter), sans-serif;
-  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+  /* Typography - Clean & Loopless */
+  --font-sans: var(--font-inter), "Prompt", sans-serif;
+  --font-display: var(--font-prompt), sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
   
   --animate-slide-in: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-fade-in: fade-in 0.4s ease-out;
-
   @keyframes slide-in {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
   }
 }
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* High-end Neutral Scale with Blue Tint */
   --background: 210 40% 98%;
   --foreground: 222 47% 11%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
-  
-  /* Primary: Indigo 600 */
   --primary: 239 84% 67%;
   --primary-foreground: 210 40% 98%;
-  
   --secondary: 210 40% 96%;
   --secondary-foreground: 222 47% 11%;
   --muted: 210 40% 96%;
@@ -83,12 +64,17 @@
   --accent-foreground: 222 47% 11%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 210 40% 98%;
+  --critical: 0 84% 60%;
+  --high: 22 90% 55%;
+  --medium: 45 90% 50%;
+  --low: 215 25% 60%;
+  --success: 142 70% 45%;
+  --warning: 45 90% 50%;
   --border: 214 32% 91%;
   --input: 214 32% 91%;
   --ring: 239 84% 67%;
   --radius: 0.75rem;
   
-  /* Sidebar Light */
   --sidebar-background: 210 40% 99%;
   --sidebar-foreground: 215 25% 27%;
   --sidebar-primary: 239 84% 67%;
@@ -99,31 +85,33 @@
   --sidebar-ring: 239 84% 67%;
 }
 
-:root.dark,
-.dark {
-  /* Deep Slate/Indigo Dark Theme */
+:root.dark, .dark {
   --background: 222 47% 6%;
   --foreground: 210 40% 98%;
   --card: 222 47% 9%;
   --card-foreground: 210 40% 98%;
   --popover: 222 47% 9%;
   --popover-foreground: 210 40% 98%;
-  
-  /* Primary: Indigo 500 */
   --primary: 239 84% 67%;
   --primary-foreground: 222 47% 6%;
-  
   --secondary: 222 47% 12%;
   --secondary-foreground: 210 40% 98%;
   --muted: 222 47% 12%;
   --muted-foreground: 215 20% 65%;
   --accent: 222 47% 12%;
   --accent-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --critical: 0 84% 65%;
+  --high: 22 90% 60%;
+  --medium: 45 90% 55%;
+  --low: 215 25% 70%;
+  --success: 142 70% 55%;
+  --warning: 45 90% 55%;
   --border: 222 47% 15%;
   --input: 222 47% 15%;
   --ring: 239 84% 67%;
   
-  /* Sidebar Dark */
   --sidebar-background: 222 47% 4%;
   --sidebar-foreground: 215 20% 75%;
   --sidebar-primary: 239 84% 67%;
@@ -136,52 +124,66 @@
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground font-sans text-[14px] leading-relaxed; }
+  body { 
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-inter), "Prompt", sans-serif !important;
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+  }
   
-  /* Heading Hierarchy using Prompt */
-  h1, h2, h3 { @apply font-display font-semibold tracking-tight; }
-  h1 { @apply text-3xl; }
-  h2 { @apply text-2xl; }
-  h3 { @apply text-xl; }
-  
-  /* Improved Monospace for data */
-  .font-mono { @apply font-mono text-[13px] tracking-tight; }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold tracking-tight;
+    font-family: var(--font-prompt), sans-serif !important;
+  }
 }
 
 @layer components {
-  /* Visual Depth & Glassmorphism */
-  .glass-card {
-    @apply rounded-xl border border-border/50 bg-card/80 shadow-sm backdrop-blur-md;
+  /* ─── Layout Shells ─── */
+  .workspace-page { @apply space-y-5 pb-6; }
+  .app-shell { @apply mx-auto w-full max-w-7xl; }
+
+  /* ─── Hero Section (Detail Pages) ─── */
+  .workspace-hero {
+    @apply rounded-2xl border border-border/60 bg-card p-5 shadow-sm;
   }
-  
+
+  /* ─── Surface Panels ─── */
+  .surface-panel {
+    @apply rounded-2xl border border-border/60 bg-card shadow-sm;
+  }
+
+  /* ─── Sidebar ─── */
   .sidebar-gradient {
-    background: linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, color-mix(in oklab, hsl(var(--sidebar-background)) 90%, black) 100%);
+    background: linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, color-mix(in oklab, hsl(var(--sidebar-background)) 92%, black) 100%);
   }
-
   .active-nav-item {
-    @apply relative bg-primary/10 text-primary font-medium;
-  }
-  
-  .active-nav-item::before {
-    content: "";
-    @apply absolute left-0 top-1/4 h-1/2 w-1 rounded-r-full bg-primary;
+    @apply bg-primary/10 text-primary font-semibold shadow-[inset_0_0_0_1px_rgba(99,102,241,0.1)];
   }
 
-  /* Table Polish */
-  .table-shell {
-    @apply overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all;
-  }
-  
-  .table-row-hover {
-    @apply hover:bg-muted/50 transition-colors cursor-pointer;
+  /* ─── Glass Card ─── */
+  .glass-card {
+    @apply rounded-2xl border border-border/50 bg-card/70 shadow-xl backdrop-blur-xl transition-all hover:shadow-2xl hover:bg-card/90;
   }
 
-  /* Stat Card Refresh */
-  .stat-card-new {
-    @apply relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all;
+  /* ─── Dot Pattern (Login) ─── */
+  .dot-pattern {
+    background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0);
+    background-size: 24px 24px;
   }
-  
-  .stat-card-accent {
-    @apply absolute left-0 top-0 h-full w-1;
+
+  /* ─── Table Styles ─── */
+  .table-shell { @apply overflow-hidden rounded-xl border border-border/60 bg-card; }
+  .table-frame { @apply w-full text-left text-sm; }
+  .table-frame thead { @apply bg-muted/50; }
+  .table-frame thead th {
+    @apply px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+  .table-frame tbody td {
+    @apply px-4 py-3 text-sm text-foreground;
+  }
+  .table-frame tbody tr {
+    @apply border-t border-border/50 transition-colors hover:bg-muted/30;
+  }
+  .table-head-row {
+    @apply border-b border-border/60;
   }
 }

@@ -29,7 +29,7 @@ function Label({
       {children}
       {required && <span className="text-destructive">*</span>}
       {optional && (
-        <span className="text-[10px] font-normal lowercase tracking-normal text-muted-foreground">
+        <span className="text-[11px] font-normal lowercase tracking-normal text-muted-foreground">
           (optional)
         </span>
       )}

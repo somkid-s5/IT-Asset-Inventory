@@ -10,8 +10,8 @@
 ### 🏗️ โครงสร้างระบบ (Architecture)
 *   **Frontend:** Next.js (Port 3000 -> Nginx `/`)
 *   **Backend:** NestJS (Port 3001 -> Nginx `/api`)
-*   **Database:** PostgreSQL 15 (Port 5432)
-*   **DB Management:** pgAdmin 4 (Port 5050)
+*   **Database:** PostgreSQL 15 (Internal - Port 5432)
+*   **DB Management:** pgAdmin 4 (Internal - Port 5050)
 *   **Reverse Proxy:** Nginx (Port 80)
 
 ---
@@ -36,7 +36,7 @@ sudo apt install -y curl git vim ufw fail2ban
 ```bash
 sudo ufw allow ssh
 sudo ufw allow http
-sudo ufw allow 5050  # สำหรับ pgAdmin (ถ้าต้องการใช้)
+# หมายเหตุ: Port 5432 และ 5050 ไม่จำเป็นต้องเปิดแล้วเนื่องจากเข้าถึงผ่าน Docker Network/Nginx
 sudo ufw enable
 ```
 
@@ -75,6 +75,7 @@ nano .env
 *   `JWT_SECRET`: (สุ่มข้อความยาวๆ สำหรับระบบ Login)
 *   `CREDENTIAL_ENCRYPTION_KEY`: (ข้อความ 64 ตัวอักษร Hex สำหรับเข้ารหัสรหัสผ่าน)
 *   `NEXT_PUBLIC_API_URL`: **ระบุ IP ของ Server** เช่น http://192.168.1.50/api
+*   `FRONTEND_URL`: **ระบุ IP ของ Server** เช่น http://192.168.1.50
 
 ---
 
@@ -87,7 +88,8 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ### 6.2 การตั้งค่าโครงสร้างฐานข้อมูล (ครั้งแรก)
 ```bash
-# สร้างตารางในฐานข้อมูล
+# หมายเหตุ: ระบบได้ตั้งค่าให้รัน prisma migrate deploy อัตโนมัติเมื่อ Start Backend Container แล้ว
+# แต่หากต้องการรันด้วยตนเองหรือเพื่อตรวจสอบ:
 docker exec -it infrapilot_backend npx prisma migrate deploy
 
 # สร้างข้อมูลเริ่มต้น (User Admin และระบบพื้นฐาน)
@@ -147,7 +149,7 @@ sudo systemctl restart nginx
 
 ### 🔴 การเข้าใช้งานสำหรับทีม
 *   **หน้าเว็บหลัก:** `http://<SERVER_IP>`
-*   **จัดการฐานข้อมูล:** `http://<SERVER_IP>:5050` (Login ด้วยค่าใน `.env`)
+*   **จัดการฐานข้อมูล:** เข้าผ่าน VPN หรือ SSH Tunnel ไปยัง Port 5050 (เนื่องจากถูกปิดพอร์ตสาธารณะเพื่อความปลอดภัย)
 
 ### 🟢 การอัปเดตเวอร์ชันใหม่
 เมื่อมีการปรับปรุงโค้ด:
@@ -167,7 +169,30 @@ sudo tail -f /var/log/nginx/error.log
 
 ---
 
-## 9. ข้อมูลบัญชีเริ่มต้น (Default Credentials)
+## 9. การสำรองข้อมูล (Database Backup)
+
+เพื่อป้องกันข้อมูลสูญหาย ควรตั้งค่าการสำรองข้อมูลเป็นประจำ
+
+### 9.1 การรัน Backup ด้วยตนเอง
+```bash
+chmod +x scripts/backup-db.sh
+./scripts/backup-db.sh
+```
+ไฟล์สำรองข้อมูลจะถูกเก็บไว้ที่โฟลเดอร์ `./backups`
+
+### 9.2 การตั้งค่า Automatic Backup (Cronjob)
+แนะนำให้ตั้งค่าสำรองข้อมูลทุกวันเวลา 03:00 น.
+```bash
+# เปิด crontab
+crontab -e
+
+# เพิ่มบรรทัดนี้ลงไป (ปรับ Path ให้ถูกต้องตามที่ติดตั้งจริง)
+0 3 * * * /path/to/it-inventory/scripts/backup-db.sh >> /path/to/it-inventory/backups/backup.log 2>&1
+```
+
+---
+
+## 10. ข้อมูลบัญชีเริ่มต้น (Default Credentials)
 *ดูข้อมูลนี้ได้จากไฟล์ `backend/prisma/seed.ts`*
 *   **Email:** `admin@example.com` (หรือตามที่คุณระบุใน Seed)
 *   **Password:** ตามที่ระบุในไฟล์ `seed.ts` หรือ `.env`

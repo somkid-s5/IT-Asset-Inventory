@@ -1,6 +1,4 @@
-'use client';
-
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { AppBreadcrumbs } from '@/components/AppBreadcrumbs';
 import { BrandMark } from '@/components/BrandMark';
@@ -10,8 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PageHeaderProvider, usePageHeader } from '@/contexts/PageHeaderContext';
 import { cn } from '@/lib/utils';
 import { LogOut, Moon, Sun } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -27,21 +26,27 @@ export function AppLayout({ children }: AppLayoutProps) {
 
 function AppLayoutFrame({ children }: AppLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
   const { header } = usePageHeader();
+  const [isNavigating, setIsNavigating] = useState(false);
+  
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    // Lazy initialization: อ่าน localStorage แค่ครั้งเดียวตอน component mount
-    if (typeof window === 'undefined') {
-      return false;
-    }
-
+    if (typeof window === 'undefined') return false;
     try {
       return window.localStorage.getItem('assetops.sidebar.collapsed') === 'true';
     } catch {
       return false;
     }
   });
+
+  // Handle fake progress bar on navigation
+  useEffect(() => {
+    setIsNavigating(true);
+    const timer = setTimeout(() => setIsNavigating(false), 300);
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   const toggleSidebar = () => {
     setSidebarCollapsed((current) => {
@@ -53,63 +58,100 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
 
   return (
     <div className="app-backdrop min-h-screen">
+      {/* Navigation Progress Bar */}
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div 
+            initial={{ width: "0%", opacity: 1 }}
+            animate={{ width: "100%", opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-0 left-0 z-[60] h-1 bg-primary"
+          />
+        )}
+      </AnimatePresence>
+
       <div className="flex min-h-screen w-full">
         <AppSidebar collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
 
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 h-[76px] border-b border-border bg-card px-4 sm:px-5 lg:px-7 shadow-sm shadow-black/[0.03]">
-            <div className="app-shell flex h-full items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
+          <header className="sticky top-0 z-20 h-[84px] border-b border-border/60 bg-card/80 backdrop-blur-xl px-4 sm:px-6 lg:px-8 shadow-sm">
+            <div className="app-shell flex h-full items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-4">
                 <div className="lg:hidden">
                   <BrandMark compact />
                 </div>
-                {header ? (
-                  <div className="min-w-0">
-                    <div className="truncate text-[15px] font-semibold tracking-[-0.02em] text-foreground">{header.title}</div>
-                    <div className="mt-0.5">
-                      <AppBreadcrumbs items={header.breadcrumbs} />
-                    </div>
-                  </div>
-                ) : null}
+                
+                <AnimatePresence mode="wait">
+                  {header ? (
+                    <motion.div 
+                      key={header.title}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 12 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      className="min-w-0"
+                    >
+                      <h1 className="truncate text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                        {header.title}
+                      </h1>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
               </div>
 
-              <div className={cn('flex items-center gap-2')}>
+              <div className="flex shrink-0 items-center gap-3 sm:gap-4">
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  aria-label={`เปลี่ยนเป็นโหมด${theme === 'dark' ? 'สว่าง' : 'มืด'}`}
-                  className="rounded-xl border border-border/80 bg-card p-2.5 text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent hover:text-foreground"
-                  title="เปลี่ยนโหมดสี"
+                  className="group relative flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background transition-all hover:border-primary/30 hover:bg-muted"
+                  title="Toggle theme"
                 >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  <div className="relative h-5 w-5 transition-transform duration-500 group-hover:rotate-45">
+                    {theme === 'dark' ? (
+                      <Sun className="h-5 w-5 text-amber-400" />
+                    ) : (
+                      <Moon className="h-5 w-5 text-primary" />
+                    )}
+                  </div>
                 </button>
+
+                <div className="h-8 w-px bg-border/60" />
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 rounded-2xl border border-border/80 bg-card px-2.5 py-1.5 text-left shadow-[0_14px_30px_-24px_rgba(15,23,42,0.35)] transition-all hover:border-primary/25 hover:bg-accent/50">
-                      <UserAvatar
-                        seed={user?.avatarSeed}
-                        imageUrl={user?.avatarImage}
-                        label={user?.displayName ?? 'ผู้ดูแลระบบ'}
-                        className="h-8 w-8 border-border/70"
-                      />
-                      <div className="hidden min-w-0 sm:block">
-                        <div className="truncate text-[12px] font-semibold leading-4 text-foreground">{user?.displayName ?? 'ผู้ใช้งาน'}</div>
-                        <div className="truncate pt-0.5 text-[11px] leading-4 text-muted-foreground">@{user?.username ?? 'user'}</div>
+                    <button className="group flex items-center gap-3 rounded-xl border border-transparent p-1 px-2 transition-all hover:bg-muted/50">
+                      <div className="relative">
+                        <UserAvatar
+                          seed={user?.avatarSeed}
+                          imageUrl={user?.avatarImage}
+                          label={user?.displayName ?? 'Admin'}
+                          className="h-9 w-9 border-2 border-border/50 ring-0 transition-all group-hover:border-primary/40 group-hover:shadow-md"
+                        />
+                        <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
+                      </div>
+                      <div className="hidden min-w-0 text-left sm:block">
+                        <div className="truncate text-sm font-bold leading-none text-foreground">{user?.displayName ?? 'User'}</div>
+                        <div className="mt-1 truncate text-[11px] font-medium leading-none text-muted-foreground/70 uppercase tracking-wider">
+                          {user?.role ?? 'Role'}
+                        </div>
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 rounded-2xl border-border/80 bg-popover">
-                    <DropdownMenuLabel className="space-y-1">
-                      <div className="text-sm font-medium text-foreground">{user?.displayName ?? 'ผู้ใช้งาน'}</div>
-                      <div className="text-[11px] text-muted-foreground">@{user?.username ?? 'user'} - {user?.role === 'ADMIN' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป'}</div>
+                  <DropdownMenuContent align="end" className="w-60 rounded-2xl border-border/80 p-2 shadow-2xl">
+                    <DropdownMenuLabel className="px-3 py-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-bold text-foreground">{user?.displayName}</span>
+                        <span className="text-xs text-muted-foreground">@{user?.username}</span>
+                      </div>
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="cursor-pointer">
-                      บัญชีของฉัน
+                    <DropdownMenuSeparator className="opacity-50" />
+                    <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="rounded-lg py-2.5 cursor-pointer">
+                      My Profile
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
-                      <LogOut className="h-4 w-4" />
-                      ออกจากระบบ
+                    <DropdownMenuSeparator className="opacity-50" />
+                    <DropdownMenuItem onClick={logout} className="rounded-lg py-2.5 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Log Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -118,7 +160,18 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
           </header>
 
           <main id="main-content" className="relative flex-1 px-4 pb-8 pt-4 sm:px-5 lg:px-7" tabIndex={-1}>
-            <div className="app-shell">{children}</div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="app-shell"
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </div>

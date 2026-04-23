@@ -159,6 +159,7 @@ __decorate([
 ], CreateAssetDto.prototype, "sn", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], CreateAssetDto.prototype, "customMetadata", void 0);
 __decorate([

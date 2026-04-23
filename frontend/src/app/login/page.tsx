@@ -9,15 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
-import { Toaster } from "sonner"
 import apiClient from "@/lib/api"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 
 const loginSchema = z.object({
-  username: z.string().min(1, "กรุณากรอกชื่อผู้ใช้"),
-  password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
@@ -32,7 +31,7 @@ function getErrorMessage(error: unknown) {
     return (error as { response?: { data?: { message?: string } } }).response?.data?.message as string
   }
 
-  return "เข้าสู่ระบบไม่สำเร็จ"
+  return "Login failed"
 }
 
 export default function LoginPage() {
@@ -60,7 +59,7 @@ export default function LoginPage() {
     try {
       const response = await apiClient.post("/auth/login", data)
       login(response.data.user)
-      toast.success("เข้าสู่ระบบสำเร็จ")
+      toast.success("Signed in successfully")
     } catch (error: unknown) {
       toast.error(getErrorMessage(error))
     } finally {
@@ -71,7 +70,7 @@ export default function LoginPage() {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        กำลังโหลด...
+        Loading...
       </div>
     )
   }
@@ -80,19 +79,19 @@ export default function LoginPage() {
     <>
       <div className="min-h-screen bg-background px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
-          {/* Left Panel - ใช้สี Slate 900 คงที่เพื่อให้ข้อความขาวอ่านออกชัดเจนและดูพรีเมียม */}
+          {/* Left Panel */}
           <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-[#0f172a] p-8 text-white lg:flex">
             <div>
               <BrandMark tone="inverse" className="relative z-10" />
               <div className="relative z-10 mt-10">
                 <p className="inline-flex items-center rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
-                  ระบบความปลอดภัยระดับมาตรฐาน
+                  Standard Security Protocol
                 </p>
                 <h1 className="mt-5 max-w-md text-3xl font-semibold leading-tight text-white">
-                  ศูนย์กลางการจัดการ<br />สินทรัพย์ไอทีอย่างมีประสิทธิภาพ
+                  Enterprise IT Asset<br />Management Hub
                 </h1>
                 <p className="mt-4 max-w-sm text-sm leading-6 text-white/60">
-                  บริหารจัดการโครงสร้างพื้นฐาน บันทึกการเข้าถึง และตรวจสอบคลังสินทรัพย์ภายในองค์กรได้ในที่เดียว
+                  Manage infrastructure, audit access, and track organizational inventory in a single unified platform.
                 </p>
               </div>
             </div>
@@ -100,10 +99,10 @@ export default function LoginPage() {
             <div className="relative z-10 space-y-4">
               <div className="rounded-xl border border-white/10 bg-white/5 p-5">
                 <div className="text-xs font-medium uppercase tracking-wide text-white/50">
-                  ระบบบริหารจัดการคลังสินค้า
+                  Infrastructure Management
                 </div>
                 <div className="mt-3 text-sm font-medium text-white/90">
-                  รวบรวมข้อมูลสินทรัพย์ VM และฐานข้อมูลไว้บนระบบเดียว
+                  Centralized repository for hardware, VMs, and databases.
                 </div>
               </div>
 
@@ -112,10 +111,10 @@ export default function LoginPage() {
                   <Sparkles className="h-4 w-4 text-white/70" />
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-wide text-white/50">
-                      ข้อมูลอัปเดตแบบเรียลไทม์
+                      Real-time Discovery
                     </div>
                     <div className="mt-1 text-sm text-white/70">
-                      ควบคุมและตรวจสอบสถานะฮาร์ดแวร์และซอฟต์แวร์ได้อย่างแม่นยำ
+                      Automated sync and status monitoring for all resources.
                     </div>
                   </div>
                 </div>
@@ -123,13 +122,9 @@ export default function LoginPage() {
             </div>
 
             {/* Decorative element */}
-            <div className="absolute inset-0 z-0 opacity-20" 
-              style={{ 
-                backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', 
-                backgroundSize: '24px 24px' 
-              }}>
-            </div>
+            <div className="absolute inset-0 dot-pattern opacity-10"></div>
           </div>
+
 
           {/* Right Panel - Login Form */}
           <div className="relative flex flex-1 items-center justify-center bg-background p-6 sm:p-8 lg:p-10">
@@ -140,23 +135,23 @@ export default function LoginPage() {
 
               <div className="mt-6">
                 <p className="inline-flex items-center rounded-md border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                  การเข้าถึงระบบ
+                  System Access
                 </p>
                 <h2 className="mt-5 text-2xl font-semibold text-foreground">
-                  ยินดีต้อนรับเข้าสู่ระบบ
+                  Welcome back
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  กรุณาเข้าสู่ระบบด้วยบัญชีของคุณเพื่อจัดการคลังสินทรัพย์ไอที
+                  Please sign in with your account to manage IT inventory.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit(handleLogin)} className="mt-8 space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="username" required>ชื่อผู้ใช้งาน</Label>
+                  <Label htmlFor="username" required>Username</Label>
                   <Input
                     id="username"
                     autoComplete="username"
-                    placeholder="ระบุชื่อผู้ใช้งาน"
+                    placeholder="Enter your username"
                     disabled={loading}
                     {...register("username")}
                     aria-invalid={!!errors.username}
@@ -170,12 +165,12 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" required>รหัสผ่าน</Label>
+                  <Label htmlFor="password" required>Password</Label>
                   <Input
                     id="password"
                     type="password"
                     autoComplete="current-password"
-                    placeholder="ระบุรหัสผ่าน"
+                    placeholder="Enter your password"
                     disabled={loading}
                     {...register("password")}
                     aria-invalid={!!errors.password}
@@ -189,7 +184,7 @@ export default function LoginPage() {
                 </div>
 
                 <Button type="submit" className="h-12 w-full text-[15px] font-medium" disabled={loading}>
-                  {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+                  {loading ? "Signing in..." : "Sign In"}
                   {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
               </form>
@@ -198,13 +193,12 @@ export default function LoginPage() {
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <LockKeyhole className="h-4 w-4" />
                 </div>
-                ระบบมีการป้องกันการเข้าถึงและรักษาความปลอดภัยของข้อมูลภายใน
+                Secure environment for internal data management.
               </div>
             </div>
           </div>
         </div>
       </div>
-      <Toaster richColors position="top-right" />
     </>
   )
 }

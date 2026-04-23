@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
 const core_1 = require("@nestjs/core");
 const app_controller_1 = require("./app.controller");
@@ -20,12 +21,14 @@ const dashboard_module_1 = require("./dashboard/dashboard.module");
 const users_module_1 = require("./users/users.module");
 const databases_module_1 = require("./databases/databases.module");
 const vm_module_1 = require("./vm/vm.module");
+const audit_logs_module_1 = require("./audit-logs/audit-logs.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            config_1.ConfigModule.forRoot({ isGlobal: true }),
             throttler_1.ThrottlerModule.forRoot([{
                     ttl: 60000,
                     limit: 15,
@@ -37,7 +40,8 @@ exports.AppModule = AppModule = __decorate([
             dashboard_module_1.DashboardModule,
             users_module_1.UsersModule,
             databases_module_1.DatabasesModule,
-            vm_module_1.VmModule
+            vm_module_1.VmModule,
+            audit_logs_module_1.AuditLogsModule
         ],
         controllers: [app_controller_1.AppController],
         providers: [

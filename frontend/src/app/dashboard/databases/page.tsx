@@ -45,6 +45,7 @@ import {
   VisibilityState,
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { type DatabaseEnvironment, type DatabaseInventoryDetail, type DatabaseInventoryItem } from '@/lib/database-inventory';
 import api from '@/services/api';
 import { toast } from 'sonner';
@@ -56,19 +57,25 @@ const ENVIRONMENT_TABS: Array<{
   icon: typeof Box;
   iconClassName: string;
 }> = [
-    { label: 'ทั้งหมด', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
+    { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
     { label: 'Production', value: 'PROD', icon: ShieldCheck, iconClassName: 'text-emerald-500' },
-    { label: 'ทดสอบ', value: 'TEST', icon: FlaskConical, iconClassName: 'text-amber-500' },
-    { label: 'พัฒนา', value: 'DEV', icon: Code2, iconClassName: 'text-sky-500' },
+    { label: 'Testing', value: 'TEST', icon: FlaskConical, iconClassName: 'text-amber-500' },
+    { label: 'Development', value: 'DEV', icon: Code2, iconClassName: 'text-sky-500' },
   ];
 
 export default function DbPage() {
   const router = useRouter();
   const { setHeader } = usePageHeader();
-  const [databases, setDatabases] = useState<DatabaseInventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeEnvironment, setActiveEnvironment] = useState<'ALL' | DatabaseEnvironment>('ALL');
   
+  const { data: databases = [], isLoading, refetch } = useQuery({
+    queryKey: ['databases'],
+    queryFn: async () => {
+      const response = await api.get<DatabaseInventoryItem[]>('/databases');
+      return response.data;
+    },
+  });
+
   // Dialogs
   const [dialogOpen, setDialogOpen] = useState(false);
   const [databaseToEdit, setDatabaseToEdit] = useState<DatabaseInventoryDetail | null>(null);
@@ -82,28 +89,12 @@ export default function DbPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  async function loadDatabases() {
-    try {
-      setLoading(true);
-      const response = await api.get<DatabaseInventoryItem[]>('/databases');
-      setDatabases(response.data);
-    } catch {
-      toast.error('ไม่สามารถโหลดฐานข้อมูลได้');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadDatabases();
-  }, []);
-
   useEffect(() => {
     setHeader({
-      title: 'ฐานข้อมูล',
+      title: 'Databases',
       breadcrumbs: [
-        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
-        { label: 'ฐานข้อมูล' },
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Databases' },
       ],
     });
     return () => setHeader(null);
@@ -122,31 +113,10 @@ export default function DbPage() {
   }), [databases]);
 
   const columns = useMemo<ColumnDef<DatabaseInventoryItem>[]>(() => [
-    {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="เลือกทั้งหมด"
-          className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="เลือกแถว"
-          className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
+
     {
       accessorKey: 'name',
-      header: ({ column }) => <SortableHeader column={column} title="ชื่อฐานข้อมูล" />,
+      header: ({ column }) => <SortableHeader column={column} title="Database Name" />,
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground">
@@ -158,17 +128,17 @@ export default function DbPage() {
     },
     {
       accessorKey: 'engine',
-      header: ({ column }) => <SortableHeader column={column} title="ประเภท" />,
+      header: ({ column }) => <SortableHeader column={column} title="Type" />,
       cell: ({ getValue }) => <span className="text-[12px] font-medium text-muted-foreground">{getValue() as string}</span>
     },
     {
       accessorKey: 'version',
-      header: "เวอร์ชัน",
+      header: "Version",
       cell: ({ getValue }) => <span className="text-[12px] text-muted-foreground">{(getValue() as string) || '--'}</span>
     },
     {
       accessorKey: 'environment',
-      header: "สภาพแวดล้อม",
+      header: "Environment",
       cell: ({ getValue }) => {
         const env = getValue() as DatabaseEnvironment;
         const variants: any = { PROD: 'danger', UAT: 'warning', TEST: 'warning', DEV: 'neutral' };
@@ -177,7 +147,7 @@ export default function DbPage() {
     },
     {
       accessorKey: 'host',
-      header: ({ column }) => <SortableHeader column={column} title="โฮสต์" />,
+      header: ({ column }) => <SortableHeader column={column} title="Host" />,
       cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
     },
     {
@@ -187,7 +157,7 @@ export default function DbPage() {
     },
     {
       accessorKey: 'accountsCount',
-      header: "บัญชี",
+      header: "Accounts",
       cell: ({ getValue }) => <span className="text-[12px] font-semibold pl-2">{getValue() as number}</span>
     },
     {
@@ -211,15 +181,15 @@ export default function DbPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(`/dashboard/db/${db.id}`)}>
-                  ดูรายละเอียด
+                <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(`/dashboard/databases/${db.id}`)}>
+                  View Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                    className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
                    onClick={() => setDeleteTarget(db)}
                 >
-                  ลบฐานข้อมูล
+                  Delete Database
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -259,33 +229,95 @@ export default function DbPage() {
     setDeleteLoading(true);
     try {
       await api.delete(`/databases/${deleteTarget.id}`);
-      toast.success('ลบฐานข้อมูลเรียบร้อยแล้ว');
+      toast.success('Database deleted successfully');
       setDeleteTarget(null);
-      void loadDatabases();
+      void refetch();
     } finally {
       setDeleteLoading(false);
     }
+  };
+
+  const handleExport = () => {
+    const exportData = filteredData.map(db => ({
+      Name: db.name,
+      Engine: db.engine,
+      Version: db.version || '',
+      Environment: db.environment || '',
+      Host: db.host || '',
+      IP: db.ipAddress || '',
+      Port: db.port || '',
+      ServiceName: db.serviceName || '',
+      Owner: db.owner || '',
+      BackupPolicy: db.backupPolicy || '',
+      Replication: db.replication || '',
+      LinkedApps: (db.linkedApps || []).join('; '),
+      MaintenanceWindow: db.maintenanceWindow || '',
+      Status: db.status || '',
+      Notes: db.note || '',
+      Accounts: db.accountsCount,
+    }));
+
+    if (exportData.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    const headers = Object.keys(exportData[0]).join(',');
+    const csvRows = exportData.map(row => 
+      Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    
+    const BOM = "\uFEFF";
+    const csvString = BOM + [headers, ...csvRows].join('\n');
+    const blob = new Blob([csvString], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    const fileName = `Databases_Export_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.csv`;
+    
+    link.href = url;
+    link.setAttribute('download', fileName);
+    link.download = fileName;
+    
+    document.body.appendChild(link);
+    
+    const event = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    });
+    link.dispatchEvent(event);
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 200);
+
+    toast.success('Exported all items in current view');
   };
 
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="workspace-page p-6 space-y-6"
+      className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">ระบบฐานข้อมูล</h1>
-          <p className="text-muted-foreground mt-1 text-sm">จัดการเชื่อมต่อและบัญชีผู้ใช้งานสำหรับฐานข้อมูลทั้งหมด</p>
+          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Database className="h-3.5 w-3.5" />
+            Relational Database Inventory
+          </h2>
+          <p className="text-xs text-muted-foreground/60">Monitor and manage all database instances</p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card">
+           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
              <Download className="h-4 w-4 mr-2" />
              Export
            </Button>
            <Button onClick={() => { setDatabaseToEdit(null); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
              <Plus className="h-4 w-4 mr-2" />
-             เพิ่มฐานข้อมูล
+             Add Database
            </Button>
         </div>
       </div>
@@ -317,7 +349,7 @@ export default function DbPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
               <Input
-                placeholder="ค้นหาชื่อ, โฮสต์, IP..."
+                placeholder="Search name, host, IP..."
                 value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
                 onChange={(e) => table.getColumn('name')?.setFilterValue(e.target.value)}
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
@@ -331,7 +363,7 @@ export default function DbPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                <DropdownMenuLabel>แสดงคอลัมน์</DropdownMenuLabel>
+                <DropdownMenuLabel>Show Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {table.getAllColumns().filter(c => c.getCanHide()).map(column => (
                   <DropdownMenuCheckboxItem
@@ -340,7 +372,7 @@ export default function DbPage() {
                     checked={column.getIsVisible()}
                     onCheckedChange={(val) => column.toggleVisibility(!!val)}
                   >
-                    {column.id === 'name' ? 'ชื่อฐานข้อมูล' : column.id}
+                    {column.id === 'name' ? 'Database Name' : column.id}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
@@ -362,12 +394,12 @@ export default function DbPage() {
               ))}
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <LoaderCircle className="h-5 w-5 animate-spin" />
-                      <span className="text-sm">กำลังโหลด...</span>
+                      <span className="text-sm">Loading...</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -376,7 +408,7 @@ export default function DbPage() {
                   <TableRow 
                     key={row.id} 
                     className="group border-border/40 hover:bg-muted/30 transition-colors cursor-pointer data-[state=selected]:bg-muted"
-                    onClick={() => router.push(`/dashboard/db/${row.original.id}`)}
+                    onClick={() => router.push(`/dashboard/databases/${row.original.id}`)}
                   >
                     {row.getVisibleCells().map(cell => (
                       <TableCell key={cell.id} className="py-3 px-4">
@@ -388,7 +420,7 @@ export default function DbPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                     ไม่มีข้อมูลฐานข้อมูล
+                     No database records found
                   </TableCell>
                 </TableRow>
               )}
@@ -398,11 +430,11 @@ export default function DbPage() {
 
         <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
           <div className="flex-1 text-xs text-muted-foreground">
-            เลือกแล้ว {table.getFilteredSelectedRowModel().rows.length} จาก {table.getFilteredRowModel().rows.length} รายการ
+            Total {table.getFilteredRowModel().rows.length} items
           </div>
           <div className="flex items-center gap-6 lg:gap-8">
             <div className="flex items-center gap-2">
-              <p className="text-xs font-medium">แถวต่อหน้า</p>
+              <p className="text-xs font-medium">Rows per page</p>
               <select
                 value={table.getState().pagination.pageSize}
                 onChange={e => table.setPageSize(Number(e.target.value))}
@@ -414,7 +446,7 @@ export default function DbPage() {
               </select>
             </div>
             <div className="flex w-[100px] items-center justify-center text-xs font-medium">
-              หน้า {table.getState().pagination.pageIndex + 1} จาก {table.getPageCount() || 1}
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
             </div>
             <div className="flex items-center gap-1">
               <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
@@ -432,22 +464,22 @@ export default function DbPage() {
         open={dialogOpen}
         onOpenChange={(open) => { setDialogOpen(open); if (!open) setDatabaseToEdit(null); }}
         databaseToEdit={databaseToEdit}
-        onSuccess={loadDatabases}
+        onSuccess={() => void refetch()}
       />
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-destructive">ลบฐานข้อมูล</DialogTitle>
+            <DialogTitle className="text-destructive">Delete Database</DialogTitle>
           </DialogHeader>
           <div className="py-4 text-sm text-muted-foreground">
-            ลบฐานข้อมูล <span className="font-bold text-foreground">{deleteTarget?.name}</span> และบัญชีที่เชื่อมโยงทั้งหมดหรือไม่?
+            Are you sure you want to delete database <span className="font-bold text-foreground">{deleteTarget?.name}</span> and all associated accounts?
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>ยกเลิก</Button>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleteLoading}>
               {deleteLoading ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : null}
-              ยืนยันการลบ
+              Confirm Delete
             </Button>
           </div>
         </DialogContent>

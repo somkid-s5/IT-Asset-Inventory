@@ -224,7 +224,7 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Source</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Source</div>
                   <div className="text-sm font-semibold text-foreground">{draft.sourceName}</div>
                   <div className="text-[11px] text-muted-foreground">Connected vCenter source</div>
                 </div>
@@ -234,7 +234,7 @@ export default function VmSourceDetailPage() {
                   <CircleOff className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">MoID</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">MoID</div>
                   <div className="text-sm font-semibold text-foreground">{draft.moid}</div>
                   <div className="text-[11px] text-muted-foreground">Unique VM identity</div>
                 </div>
@@ -244,7 +244,7 @@ export default function VmSourceDetailPage() {
                   <Monitor className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Runtime</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Runtime</div>
                   <div className="text-sm font-semibold text-foreground">{draft.powerState}</div>
                   <div className="text-[11px] text-muted-foreground">{draft.lastSeen}</div>
                 </div>
@@ -254,7 +254,7 @@ export default function VmSourceDetailPage() {
                   <Monitor className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Guest OS</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Guest OS</div>
                   <div className="text-sm font-semibold text-foreground">{draft.guestOs}</div>
                   <div className="text-[11px] text-muted-foreground">{draft.primaryIp}</div>
                 </div>
@@ -264,7 +264,7 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">CPU / Memory</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">CPU / Memory</div>
                   <div className="text-sm font-semibold text-foreground">{draft.cpuCores} vCPU / {draft.memoryGb} GB</div>
                   <div className="text-[11px] text-muted-foreground">Read-only from source sync</div>
                 </div>
@@ -274,7 +274,7 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Storage / Network</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Storage / Network</div>
                   <div className="text-sm font-semibold text-foreground">{draft.storageGb} GB</div>
                   <div className="text-[11px] text-muted-foreground">{draft.networkLabel}</div>
                 </div>
@@ -284,7 +284,7 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Host</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Host</div>
                   <div className="text-sm font-semibold text-foreground">{draft.host}</div>
                   <div className="text-[11px] text-muted-foreground">{getPlacementResolutionCopy(draft.hostResolution, 'host')}</div>
                 </div>
@@ -294,7 +294,7 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Cluster</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Cluster</div>
                   <div className="text-sm font-semibold text-foreground">{draft.cluster}</div>
                   <div className="text-[11px] text-muted-foreground">{getPlacementResolutionCopy(draft.clusterResolution, 'cluster')}</div>
                 </div>
@@ -303,11 +303,11 @@ export default function VmSourceDetailPage() {
 
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
               <div className="muted-panel px-4 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Missing Fields</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Missing Fields</div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {draft.missingFields.length > 0 ? (
                     draft.missingFields.map((field) => (
-                      <span key={field} className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-foreground">
+                      <span key={field} className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground">
                         {field}
                       </span>
                     ))
@@ -317,11 +317,11 @@ export default function VmSourceDetailPage() {
                 </div>
               </div>
               <div className="muted-panel px-4 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tags</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tags</div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {draft.tags.length > 0 ? (
                     draft.tags.map((tag) => (
-                      <span key={tag} className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                      <span key={tag} className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground">
                         {tag}
                       </span>
                     ))
@@ -345,7 +345,7 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">System Name</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">System Name</div>
                   <div className="text-sm font-semibold text-foreground">{draft.systemName || '--'}</div>
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Owner</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Owner</div>
                   <div className="text-sm font-semibold text-foreground">{draft.suggestedOwner || '--'}</div>
                 </div>
               </div>
@@ -363,7 +363,7 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Environment</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Environment</div>
                   <div className="text-sm font-semibold text-foreground">{draft.suggestedEnvironment || '--'}</div>
                 </div>
               </div>
@@ -372,7 +372,7 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Service Role</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Service Role</div>
                   <div className="text-sm font-semibold text-foreground">{draft.suggestedServiceRole || '--'}</div>
                 </div>
               </div>
@@ -381,7 +381,7 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Criticality</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Criticality</div>
                   <div className="text-sm font-semibold text-foreground">{suggestedCriticalityLabel}</div>
                 </div>
               </div>
@@ -389,7 +389,7 @@ export default function VmSourceDetailPage() {
 
             <div className="mt-3 muted-panel px-4 py-3">
               <div className="flex items-center justify-between gap-2">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Discovery Note</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Discovery Note</div>
                 <button
                   type="button"
                   onClick={() => setRevealedNotes((current) => !current)}
@@ -423,11 +423,11 @@ export default function VmSourceDetailPage() {
             </div>
             <div className="mt-3 space-y-3">
               <div className="muted-panel px-3 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Completeness</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Completeness</div>
                 <div className="mt-2 text-sm font-semibold text-foreground">{draft.completeness}%</div>
               </div>
               <div className="muted-panel px-3 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Guest Accounts</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Guest Accounts</div>
                 <div className="mt-2 text-sm font-semibold text-foreground">{draft.guestAccountsCount}</div>
               </div>
             </div>

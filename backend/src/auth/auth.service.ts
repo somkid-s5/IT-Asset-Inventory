@@ -13,6 +13,10 @@ export class AuthService {
         private prisma: PrismaService,
         private jwtService: JwtService,
     ) { }
+    
+    async getUserCount() {
+        return this.prisma.user.count();
+    }
 
     async register(registerDto: RegisterDto) {
         const { username, displayName, password } = registerDto;
@@ -89,6 +93,27 @@ export class AuthService {
 
         return {
             access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
+                role: user.role,
+            },
+        };
+    }
+
+    async me(userId: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        return {
             user: {
                 id: user.id,
                 username: user.username,
