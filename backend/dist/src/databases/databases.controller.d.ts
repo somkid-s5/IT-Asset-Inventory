@@ -133,9 +133,9 @@ export declare class DatabasesController {
         owner: string | null;
         createdByUserId: string;
         version: string | null;
+        host: string;
         note: string | null;
         engine: string;
-        host: string;
         port: string | null;
         serviceName: string | null;
         backupPolicy: string | null;

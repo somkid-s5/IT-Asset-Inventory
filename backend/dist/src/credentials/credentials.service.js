@@ -113,7 +113,7 @@ let CredentialsService = class CredentialsService {
     }
     async update(id, updateCredentialDto) {
         const { password, ...rest } = updateCredentialDto;
-        let dataToUpdate = { ...rest };
+        const dataToUpdate = { ...rest };
         if (password) {
             dataToUpdate.encryptedPassword = this.encrypt(password);
             dataToUpdate.lastChangedDate = new Date();

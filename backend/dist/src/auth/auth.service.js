@@ -56,6 +56,9 @@ let AuthService = class AuthService {
         this.prisma = prisma;
         this.jwtService = jwtService;
     }
+    async getUserCount() {
+        return this.prisma.user.count();
+    }
     async register(registerDto) {
         const { username, displayName, password } = registerDto;
         const existingUser = await this.prisma.user.findUnique({
@@ -117,6 +120,24 @@ let AuthService = class AuthService {
         }
         return {
             access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarSeed: user.avatarSeed,
+                avatarImage: user.avatarImage,
+                role: user.role,
+            },
+        };
+    }
+    async me(userId) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+        if (!user) {
+            throw new common_1.UnauthorizedException('User not found');
+        }
+        return {
             user: {
                 id: user.id,
                 username: user.username,

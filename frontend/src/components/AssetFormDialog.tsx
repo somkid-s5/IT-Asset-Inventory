@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Database, HardDrive, Plus, Shield, Trash2, UserRound } from 'lucide-react';
+import { Database, Eye, EyeOff, FolderTree, HardDrive, Plus, Shield, Trash2, UserRound } from 'lucide-react';
 import api from '@/services/api';
 import { toast } from 'sonner';
 
@@ -125,6 +125,7 @@ const DEFAULT_FORM_STATE = {
   location: '',
   brandModel: '',
   sn: '',
+  parentId: '',
 };
 
 const typeOptions: { value: AssetType; label: string }[] = [
@@ -152,6 +153,7 @@ export function AssetFormDialog({
   onOpenChange,
   assetToEdit,
   onSuccess,
+  availableParents,
 }: AssetFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
@@ -161,6 +163,7 @@ export function AssetFormDialog({
   const [nodeLabels, setNodeLabels] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!open) {
@@ -246,6 +249,7 @@ export function AssetFormDialog({
       location: assetToEdit.location || '',
       brandModel: assetToEdit.brandModel || '',
       sn: assetToEdit.sn || '',
+      parentId: assetToEdit.parentId || '',
     });
 
     setAccessPoints(
@@ -535,109 +539,134 @@ export function AssetFormDialog({
       >
         <DialogHeader className="border-b border-border/70 px-5 py-4">
           <DialogTitle className="flex items-center gap-3 text-base">
-            <span className="icon-chip h-8 w-8 p-0 text-muted-foreground">
+            <span className="icon-chip flex items-center justify-center h-8 w-8 p-0 text-muted-foreground">
               <HardDrive className="h-4 w-4" />
             </span>
-            <span>{assetToEdit ? 'แก้ไขข้อมูลสินทรัพย์' : 'เพิ่มสินทรัพย์ใหม่'}</span>
+            <span>{assetToEdit ? 'Edit Asset Information' : 'Add New Asset'}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5 px-5 py-5">
-          <section className="grid gap-4 md:grid-cols-2">
-            <div className="muted-panel p-4">
-              <p className="workspace-subtle">ข้อมูลอัตลักษณ์</p>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label required>ชื่อสินทรัพย์ / โฮสต์เนม</Label>
-                  <Input
-                    required
-                    autoComplete="off"
-                    value={formData.name}
-                    onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-                    onBlur={() => handleFieldBlur('name')}
-                    placeholder="ระบุชื่อสินทรัพย์หรือชื่อโฮสต์"
-                    className={formErrors.name && touchedFields.name ? 'border-destructive focus-visible:ring-destructive' : undefined}
-                  />
-                  {formErrors.name && touchedFields.name && (
-                    <p className="text-[11px] text-destructive">{formErrors.name}</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label optional>รหัสสินทรัพย์</Label>
-                  <Input
-                    autoComplete="off"
-                    value={formData.assetId}
-                    onChange={(event) => setFormData({ ...formData, assetId: event.target.value })}
-                    onBlur={() => handleFieldBlur('assetId')}
-                    placeholder="รหัสอ้างอิง"
-                    className={formErrors.assetId && touchedFields.assetId ? 'border-destructive focus-visible:ring-destructive' : undefined}
-                  />
-                  {formErrors.assetId && touchedFields.assetId && (
-                    <p className="text-[11px] text-destructive">{formErrors.assetId}</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label required>ประเภท</Label>
-                  <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as AssetType })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {typeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label optional>ยี่ห้อ / รุ่น</Label>
-                  <Input
-                    autoComplete="off"
-                    value={formData.brandModel}
-                    onChange={(event) => setFormData({ ...formData, brandModel: event.target.value })}
-                    placeholder="เช่น Dell PowerEdge R740"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label optional>หมายเลขซีเรียล</Label>
-                  <Input
-                    autoComplete="off"
-                    value={formData.sn}
-                    onChange={(event) => setFormData({ ...formData, sn: event.target.value })}
-                    onBlur={() => handleFieldBlur('sn')}
-                    placeholder="S/N Number"
-                    className={formErrors.sn && touchedFields.sn ? 'border-destructive focus-visible:ring-destructive' : undefined}
-                  />
-                  {formErrors.sn && touchedFields.sn && (
-                    <p className="text-[11px] text-destructive">{formErrors.sn}</p>
-                  )}
-                </div>
-              </div>
+        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5 px-5 py-5 pt-0">
+          <section className="muted-panel p-4">
+            <div className="flex items-center gap-2 border-b border-border/70 pb-3 mb-4">
+              <p className="workspace-subtle">Asset Properties</p>
             </div>
 
-            <div className="muted-panel p-4">
-              <p className="workspace-subtle">ตำแหน่งที่ตั้ง</p>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label optional>สถานที่</Label>
-                  <Input
-                    autoComplete="off"
-                    value={formData.location}
-                    onChange={(event) => setFormData({ ...formData, location: event.target.value })}
-                    placeholder="เช่น Data Center 1"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label optional>ตู้แร็ค</Label>
-                  <Input
-                    autoComplete="off"
-                    value={formData.rack}
-                    onChange={(event) => setFormData({ ...formData, rack: event.target.value })}
-                    placeholder="เช่น Rack A1"
-                  />
-                </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
+                <Label required>Asset Name / Hostname</Label>
+                <Input
+                  required
+                  autoComplete="off"
+                  value={formData.name}
+                  onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+                  onBlur={() => handleFieldBlur('name')}
+                  placeholder="Enter asset or host name"
+                  className={formErrors.name && touchedFields.name ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                />
+                {formErrors.name && touchedFields.name && (
+                  <p className="text-[11px] text-destructive">{formErrors.name}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label required>Type</Label>
+                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as AssetType })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label optional>Asset ID</Label>
+                <Input
+                  autoComplete="off"
+                  value={formData.assetId}
+                  onChange={(event) => setFormData({ ...formData, assetId: event.target.value })}
+                  onBlur={() => handleFieldBlur('assetId')}
+                  placeholder="Ref ID"
+                  className={formErrors.assetId && touchedFields.assetId ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                />
+                {formErrors.assetId && touchedFields.assetId && (
+                  <p className="text-[11px] text-destructive">{formErrors.assetId}</p>
+                )}
+              </div>
+              <div className="space-y-1.5 ">
+                <Label optional>Brand / Model</Label>
+                <Input
+                  autoComplete="off"
+                  value={formData.brandModel}
+                  onChange={(event) => setFormData({ ...formData, brandModel: event.target.value })}
+                  placeholder="e.g. Dell PowerEdge R740"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label optional>Serial Number</Label>
+                <Input
+                  autoComplete="off"
+                  value={formData.sn}
+                  onChange={(event) => setFormData({ ...formData, sn: event.target.value })}
+                  onBlur={() => handleFieldBlur('sn')}
+                  placeholder="S/N Number"
+                  className={formErrors.sn && touchedFields.sn ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                />
+                {formErrors.sn && touchedFields.sn && (
+                  <p className="text-[11px] text-destructive">{formErrors.sn}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label optional>Location</Label>
+                <Input
+                  autoComplete="off"
+                  value={formData.location}
+                  onChange={(event) => setFormData({ ...formData, location: event.target.value })}
+                  placeholder="e.g. Data Center 1"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label optional>Rack</Label>
+                <Input
+                  autoComplete="off"
+                  value={formData.rack}
+                  onChange={(event) => setFormData({ ...formData, rack: event.target.value })}
+                  placeholder="e.g. Rack A1"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label optional>Parent Asset</Label>
+                <Select
+                  value={formData.parentId || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, parentId: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger className="bg-card/50">
+                    <div className="flex items-center gap-2">
+                      <FolderTree className="h-3.5 w-3.5 text-muted-foreground/50" />
+                      <SelectValue placeholder="Select parent" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Parent (Standalone)</SelectItem>
+                    {availableParents
+                      .filter(p => p.id !== assetToEdit?.id)
+                      .map((parent) => (
+                        <SelectItem key={parent.id} value={parent.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground uppercase font-bold">{parent.type}</span>
+                            <span>{parent.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </section>
@@ -645,8 +674,8 @@ export function AssetFormDialog({
           <section className="muted-panel p-4">
             <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
               <div>
-                <p className="workspace-subtle">ช่องทางการเข้าถึง</p>
-                <p className="mt-1 text-xs text-muted-foreground">กำหนด IP และบัญชีผู้ใช้งานสำหรับแต่ละส่วนประกอบ</p>
+                <p className="workspace-subtle">Access Points</p>
+                <p className="mt-1 text-xs text-muted-foreground">Define IP addresses and credentials for each component</p>
               </div>
               <div className="flex items-center gap-2">
                 <Select value={assetMode} onValueChange={(value) => setAssetMode(value as 'single' | 'multi')}>
@@ -654,19 +683,19 @@ export function AssetFormDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="single">สินทรัพย์เดี่ยว</SelectItem>
-                    <SelectItem value="multi">สินทรัพย์หลายโหนด</SelectItem>
+                    <SelectItem value="single">Single Asset</SelectItem>
+                    <SelectItem value="multi">Multi-Node Asset</SelectItem>
                   </SelectContent>
                 </Select>
                 {assetMode === 'multi' && (
                   <Button type="button" variant="outline" size="sm" onClick={addNodeLabel}>
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    เพิ่มโหนด
+                    Add Node
                   </Button>
                 )}
                 <Button type="button" size="sm" onClick={() => setAccessPoints((current) => [...current, { ...EMPTY_ACCESS_POINT, nodeLabel: assetMode === 'multi' ? nodeLabels[0] || 'Node A' : '' }])}>
                   <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  เพิ่มแถว
+                  Add Row
                 </Button>
               </div>
             </div>
@@ -705,7 +734,7 @@ export function AssetFormDialog({
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <Shield className="h-4 w-4 text-muted-foreground" />
-                      รายการที่ {index + 1}
+                      Entry {index + 1}
                     </div>
                     {accessPoints.length > 1 && (
                       <Button
@@ -720,10 +749,10 @@ export function AssetFormDialog({
                     )}
                   </div>
 
-                  <div className={`grid gap-3 ${assetMode === 'multi' ? 'md:grid-cols-2 xl:grid-cols-5' : 'md:grid-cols-2 xl:grid-cols-4'}`}>
+                  <div className={`grid gap-2 items-start ${assetMode === 'multi' ? 'md:grid-cols-2 xl:grid-cols-5' : 'md:grid-cols-2 xl:grid-cols-4'}`}>
                     {assetMode === 'multi' && (
                       <div className="space-y-1.5">
-                        <Label optional>Node</Label>
+                        <Label optional className="whitespace-nowrap">Node</Label>
                         <Select value={point.nodeLabel || undefined} onValueChange={(value) => updateAccessPoint(index, 'nodeLabel', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a node" />
@@ -739,7 +768,7 @@ export function AssetFormDialog({
                       </div>
                     )}
                     <div className="space-y-1.5">
-                      <Label optional>Access Type</Label>
+                      <Label optional className="whitespace-nowrap">Type</Label>
                       <Select value={point.type || undefined} onValueChange={(value) => updateAccessPoint(index, 'type', value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
@@ -754,7 +783,7 @@ export function AssetFormDialog({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>Access Method</Label>
+                      <Label optional className="whitespace-nowrap">Method</Label>
                       <Select
                         value={point.manageType || undefined}
                         onValueChange={(value) => updateAccessPoint(index, 'manageType', value)}
@@ -772,7 +801,7 @@ export function AssetFormDialog({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>IP Address</Label>
+                      <Label optional className="whitespace-nowrap">IP Address</Label>
                       <Input
                         autoComplete="off"
                         value={point.address}
@@ -785,7 +814,7 @@ export function AssetFormDialog({
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>Version / Firmware</Label>
+                      <Label optional className="whitespace-nowrap">Version</Label>
                       <Input
                         autoComplete="off"
                         value={point.version}
@@ -828,13 +857,22 @@ export function AssetFormDialog({
                             onChange={(event) => updateAccessUser(index, userIndex, 'username', event.target.value)}
                             placeholder="Username"
                           />
-                          <Input
-                            type="password"
-                            autoComplete="new-password"
-                            value={user.password}
-                            onChange={(event) => updateAccessUser(index, userIndex, 'password', event.target.value)}
-                            placeholder="Password"
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showPasswords[`${index}-${userIndex}`] ? 'text' : 'password'}
+                              autoComplete="new-password"
+                              value={user.password}
+                              onChange={(event) => updateAccessUser(index, userIndex, 'password', event.target.value)}
+                              placeholder="Password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPasswords((prev) => ({ ...prev, [`${index}-${userIndex}`]: !prev[`${index}-${userIndex}`] }))}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground"
+                            >
+                              {showPasswords[`${index}-${userIndex}`] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </button>
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"
@@ -870,8 +908,8 @@ export function AssetFormDialog({
           <section className="muted-panel p-4">
             <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
               <div>
-                <p className="workspace-subtle">คุณสมบัติเพิ่มเติม</p>
-                <p className="mt-1 text-xs text-muted-foreground">ข้อมูลเสริม เช่น RAM, CPU, หรือรายละเอียดการรับประกัน</p>
+                <p className="workspace-subtle">Additional Specifications</p>
+                <p className="mt-1 text-xs text-muted-foreground">Supplementary data such as RAM, CPU, or warranty details</p>
               </div>
               <Button
                 type="button"
@@ -921,18 +959,18 @@ export function AssetFormDialog({
 
           <div className="flex flex-col-reverse gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              ยกเลิก
+              Cancel
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
                   <Database className="mr-2 h-4 w-4 animate-pulse" />
-                  กำลังบันทึก...
+                  Saving...
                 </>
               ) : assetToEdit ? (
-                'บันทึกการแก้ไข'
+                'Save Changes'
               ) : (
-                'สร้างสินทรัพย์'
+                'Create Asset'
               )}
             </Button>
           </div>

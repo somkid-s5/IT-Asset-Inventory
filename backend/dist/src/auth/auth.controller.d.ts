@@ -8,7 +8,21 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
-    register(registerDto: RegisterDto, res: Response): Promise<{
+    me(req: Request & {
+        user: {
+            id: string;
+        };
+    }): Promise<{
+        user: {
+            id: string;
+            username: string;
+            displayName: string;
+            avatarSeed: string;
+            avatarImage: string | null;
+            role: import(".prisma/client").$Enums.Role;
+        };
+    }>;
+    register(registerDto: RegisterDto, res: Response, registrationKey?: string): Promise<{
         user: {
             id: string;
             username: string;

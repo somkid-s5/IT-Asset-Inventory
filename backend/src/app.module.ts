@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
@@ -11,9 +12,11 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { UsersModule } from './users/users.module';
 import { DatabasesModule } from './databases/databases.module';
 import { VmModule } from './vm/vm.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 15,
@@ -25,7 +28,8 @@ import { VmModule } from './vm/vm.module';
     DashboardModule,
     UsersModule,
     DatabasesModule,
-    VmModule
+    VmModule,
+    AuditLogsModule
   ],
   controllers: [AppController],
   providers: [

@@ -37,7 +37,8 @@ const value = typeof window !== 'undefined' ? localStorage.getItem('key') : '';
 **ทำ:** เมื่อต้อง sync state กับ external source (localStorage, cookies)
 
 ```tsx
-// ดูตัวอย่างใน AuthContext.tsx
+// ดูตัวอย่างใน AuthContext.tsx 
+// แนะนำ: ใช้ useEffect ร่วมกับ /api/auth/me เพื่อยืนยัน session กับ server ทุกครั้งที่ mount
 ```
 
 ---
@@ -201,5 +202,5 @@ try {
 
 ---
 
-**Last Updated:** มีนาคม 2026
-**Maintained by:** Frontend Team
+**Last Updated:** เมษายน 2026 (Updated with Security Hardening)
+**Maintained by:** IT Platform Team

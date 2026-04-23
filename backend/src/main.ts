@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import { GlobalExceptionFilter } from './filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -26,6 +27,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
   await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();

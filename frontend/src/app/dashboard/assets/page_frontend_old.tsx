@@ -280,7 +280,7 @@ export default function AssetsPage() {
             </div>
           </td>
           <td className="px-3 py-2.5">
-            <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-medium ${typeStyles[asset.type]}`}>
+            <span className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${typeStyles[asset.type]}`}>
               {asset.type}
             </span>
           </td>
@@ -340,7 +340,7 @@ export default function AssetsPage() {
                   >
                     <Icon className={`h-3.5 w-3.5 ${tab.iconClassName}`} />
                     <span>{tab.label}</span>
-                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-foreground">
                       {countsByTab[tab.value]}
                     </span>
                   </button>

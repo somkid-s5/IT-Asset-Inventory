@@ -66,10 +66,10 @@ const ROLE_TABS: Array<{
   icon: typeof Users;
   iconClassName: string;
 }> = [
-    { label: 'ทั้งหมด', value: 'ALL', icon: Users, iconClassName: 'text-primary' },
-    { label: 'ผู้ดูแลระบบ', value: 'ADMIN', icon: Shield, iconClassName: 'text-emerald-500' },
-    { label: 'บรรณาธิการ', value: 'EDITOR', icon: PencilLine, iconClassName: 'text-sky-500' },
-    { label: 'ผู้ชม', value: 'VIEWER', icon: Eye, iconClassName: 'text-amber-500' },
+    { label: 'All', value: 'ALL', icon: Users, iconClassName: 'text-primary' },
+    { label: 'Admins', value: 'ADMIN', icon: Shield, iconClassName: 'text-emerald-500' },
+    { label: 'Editors', value: 'EDITOR', icon: PencilLine, iconClassName: 'text-sky-500' },
+    { label: 'Viewers', value: 'VIEWER', icon: Eye, iconClassName: 'text-amber-500' },
   ];
 
 function getErrorMessage(error: any, fallback: string) {
@@ -112,7 +112,7 @@ export default function UsersPage() {
       const response = await api.get<UserRecord[]>('/users');
       setUsers(response.data);
     } catch (error) {
-      toast.error(getErrorMessage(error, 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้'));
+      toast.error(getErrorMessage(error, 'Failed to load users'));
     } finally {
       setLoading(false);
     }
@@ -129,10 +129,10 @@ export default function UsersPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'ผู้ใช้งานระบบ',
+      title: 'User Management',
       breadcrumbs: [
-        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
-        { label: 'ผู้ใช้งานระบบ' },
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Users' },
       ],
     });
     return () => setHeader(null);
@@ -154,9 +154,9 @@ export default function UsersPage() {
     try {
       await api.patch(`/users/${userId}/role`, { role: nextRole });
       setUsers((current) => current.map((item) => (item.id === userId ? { ...item, role: nextRole } : item)));
-      toast.success('อัปเดตสิทธิ์สำเร็จ');
+      toast.success('Role updated');
     } catch (error) {
-      toast.error(getErrorMessage(error, 'ไม่สามารถอัปเดตสิทธิ์ได้'));
+      toast.error(getErrorMessage(error, 'Failed to update role'));
       await loadUsers();
     }
   };
@@ -168,7 +168,7 @@ export default function UsersPage() {
         <Checkbox
           checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="เลือกทั้งหมด"
+          aria-label="Select all"
           className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       ),
@@ -176,7 +176,7 @@ export default function UsersPage() {
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="เลือกแถว"
+          aria-label="Select row"
           className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       ),
@@ -185,7 +185,7 @@ export default function UsersPage() {
     },
     {
       accessorKey: 'displayName',
-      header: ({ column }) => <SortableHeader column={column} title="ชื่อที่แสดง" />,
+      header: ({ column }) => <SortableHeader column={column} title="Display Name" />,
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <UserAvatar seed={row.original.avatarSeed} imageUrl={row.original.avatarImage} label={row.original.displayName} className="h-8 w-8 rounded-lg shadow-sm" />
@@ -195,20 +195,20 @@ export default function UsersPage() {
     },
     {
       accessorKey: 'username',
-      header: ({ column }) => <SortableHeader column={column} title="ชื่อผู้ใช้" />,
+      header: ({ column }) => <SortableHeader column={column} title="Username" />,
       cell: ({ row }) => {
         const isCurrentUser = row.original.id === user?.id;
         return (
           <div className="flex items-center gap-2">
             <span className="text-[12px] font-mono text-muted-foreground">@{row.original.username}</span>
-            {isCurrentUser && <Badge variant="outline" className="text-[9px] bg-primary/10 text-primary border-primary/20">คุณ</Badge>}
+            {isCurrentUser && <Badge variant="outline" className="text-[9px] bg-primary/10 text-primary border-primary/20">You</Badge>}
           </div>
         );
       }
     },
     {
       accessorKey: 'role',
-      header: "สิทธิ์การใช้งาน",
+      header: "Permissions",
       cell: ({ row }) => {
         const isCurrentUser = row.original.id === user?.id;
         return (
@@ -231,8 +231,8 @@ export default function UsersPage() {
     },
     {
       accessorKey: 'createdAt',
-      header: "วันที่สร้าง",
-      cell: ({ getValue }) => <span className="text-[11px] text-muted-foreground">{new Date(getValue() as string).toLocaleDateString('th-TH')}</span>
+      header: "Created At",
+      cell: ({ getValue }) => <span className="text-[11px] text-muted-foreground">{new Date(getValue() as string).toLocaleDateString('en-US')}</span>
     },
     {
       id: 'actions',
@@ -256,7 +256,7 @@ export default function UsersPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                <DropdownMenuLabel>จัดการผู้ใช้</DropdownMenuLabel>
+                <DropdownMenuLabel>User Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                    className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
@@ -264,7 +264,7 @@ export default function UsersPage() {
                    disabled={isCurrentUser}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  ลบบัญชี
+                  Delete Account
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -295,12 +295,12 @@ export default function UsersPage() {
     setSubmitting(true);
     try {
       await api.post('/users', { username, displayName, password, role });
-      toast.success('สร้างผู้ใช้สำเร็จ');
+      toast.success('User created successfully');
       setUsername(''); setDisplayName(''); setPassword(''); setRole('VIEWER');
       setCreateOpen(false);
       void loadUsers();
     } catch (err) {
-      toast.error(getErrorMessage(err, 'ไม่สามารถสร้างผู้ใช้ได้'));
+      toast.error(getErrorMessage(err, 'Failed to create user'));
     } finally {
       setSubmitting(false);
     }
@@ -309,17 +309,17 @@ export default function UsersPage() {
   const handleResetPassword = async (e: FormEvent) => {
     e.preventDefault();
     if (!resetTarget) return;
-    if (resetPassword !== resetPasswordConfirm) return toast.error('รหัสผ่านไม่ตรงกัน');
+    if (resetPassword !== resetPasswordConfirm) return toast.error('Passwords do not match');
     if (!isPasswordValid(resetPassword)) return toast.error(PASSWORD_POLICY_MESSAGE);
 
     setResetSubmitting(true);
     try {
       await api.patch(`/users/${resetTarget.id}/reset-password`, { password: resetPassword });
-      toast.success('รีเซ็ตรหัสผ่านสำเร็จ');
+      toast.success('Password reset successfully');
       setResetPassword('');
       setResetTarget(null);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'ไม่สามารถรีเซ็ตรหัสผ่านได้'));
+      toast.error(getErrorMessage(err, 'Failed to reset password'));
     } finally {
       setResetSubmitting(false);
     }
@@ -332,9 +332,9 @@ export default function UsersPage() {
       await api.delete(`/users/${deleteTarget.id}`);
       setUsers(current => current.filter(item => item.id !== deleteTarget.id));
       setDeleteTarget(null);
-      toast.success('ลบผู้ใช้สำเร็จ');
+      toast.success('User deleted');
     } catch (err) {
-      toast.error(getErrorMessage(err, 'ไม่สามารถลบผู้ใช้ได้'));
+      toast.error(getErrorMessage(err, 'Failed to delete user'));
     } finally {
       setDeleteSubmitting(false);
     }
@@ -346,17 +346,20 @@ export default function UsersPage() {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="workspace-page p-6 space-y-6"
+      className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">ผู้ใช้งานระบบ</h1>
-          <p className="text-muted-foreground mt-1 text-sm">จัดการบัญชีผู้ใช้งาน สิทธิ์การเข้าถึง และรีเซ็ตรหัสผ่าน</p>
+          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Users className="h-3.5 w-3.5" />
+            System Access & User Directory
+          </h2>
+          <p className="text-xs text-muted-foreground/60">Manage staff accounts and security permissions</p>
         </div>
         <div className="flex items-center gap-2">
            <Button onClick={() => setCreateOpen(true)} className="h-9 shadow-lg shadow-primary/20">
              <Plus className="h-4 w-4 mr-2" />
-             เพิ่มผู้ใช้งาน
+             Add New User
            </Button>
         </div>
       </div>
@@ -388,7 +391,7 @@ export default function UsersPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
               <Input
-                placeholder="ค้นหาชื่อ หรือ @username..."
+                placeholder="Search name or @username..."
                 value={(table.getColumn('displayName')?.getFilterValue() as string) ?? ''}
                 onChange={(e) => table.getColumn('displayName')?.setFilterValue(e.target.value)}
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
@@ -416,7 +419,7 @@ export default function UsersPage() {
                   <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <LoaderCircle className="h-5 w-5 animate-spin" />
-                      <span className="text-sm">กำลังโหลด...</span>
+                      <span className="text-sm">Loading...</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -436,7 +439,7 @@ export default function UsersPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                     ไม่พบข้อมูลผู้ใช้
+                     No users found
                   </TableCell>
                 </TableRow>
               )}
@@ -446,11 +449,11 @@ export default function UsersPage() {
 
         <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
           <div className="flex-1 text-xs text-muted-foreground">
-            เลือกแล้ว {table.getFilteredSelectedRowModel().rows.length} จาก {table.getFilteredRowModel().rows.length} รายการ
+            Selected {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} items
           </div>
           <div className="flex items-center gap-6 lg:gap-8">
             <div className="flex items-center gap-2">
-              <p className="text-xs font-medium">แถวต่อหน้า</p>
+              <p className="text-xs font-medium text-muted-foreground">Rows per page</p>
               <select
                 value={table.getState().pagination.pageSize}
                 onChange={e => table.setPageSize(Number(e.target.value))}
@@ -462,7 +465,7 @@ export default function UsersPage() {
               </select>
             </div>
             <div className="flex w-[100px] items-center justify-center text-xs font-medium">
-              หน้า {table.getState().pagination.pageIndex + 1} จาก {table.getPageCount() || 1}
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
             </div>
             <div className="flex items-center gap-1">
               <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
@@ -480,24 +483,24 @@ export default function UsersPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="bg-card sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>เพิ่มผู้ใช้งาน</DialogTitle>
+            <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateUser} className="space-y-4 pt-4">
             <div className="space-y-1.5">
-              <Label htmlFor="create-display-name">ชื่อที่แสดง</Label>
+              <Label htmlFor="create-display-name">Display Name</Label>
               <Input id="create-display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="create-username">ชื่อผู้ใช้ (Username)</Label>
+              <Label htmlFor="create-username">Username</Label>
               <Input id="create-username" value={username} onChange={(e) => setUsername(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="create-password">รหัสผ่าน</Label>
+              <Label htmlFor="create-password">Password</Label>
               <Input id="create-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               <p className="text-[11px] text-muted-foreground">{PASSWORD_POLICY_MESSAGE}</p>
             </div>
             <div className="space-y-1.5">
-              <Label>สิทธิ์การใช้งาน</Label>
+              <Label>Permissions</Label>
               <Select value={role} onValueChange={(val) => setRole(val as Role)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -506,10 +509,10 @@ export default function UsersPage() {
               </Select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>ยกเลิก</Button>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={submitting}>
                 {submitting ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : null}
-                สร้างผู้ใช้
+                Create User
               </Button>
             </div>
           </form>
@@ -519,24 +522,24 @@ export default function UsersPage() {
       <Dialog open={!!resetTarget} onOpenChange={(open) => !open && setResetTarget(null)}>
         <DialogContent className="bg-card sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>รีเซ็ตรหัสผ่าน</DialogTitle>
+            <DialogTitle>Reset Password</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleResetPassword} className="space-y-4 pt-4">
             <div className="rounded-lg bg-muted/50 p-3 text-sm">
-              บัญชี: <span className="font-semibold">{resetTarget?.displayName}</span> (@{resetTarget?.username})
+              Account: <span className="font-semibold">{resetTarget?.displayName}</span> (@{resetTarget?.username})
             </div>
             <div className="space-y-1.5">
-              <Label>รหัสผ่านใหม่</Label>
+              <Label>New Password</Label>
               <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label>ยืนยันรหัสผ่านใหม่</Label>
+              <Label>Confirm New Password</Label>
               <Input type="password" value={resetPasswordConfirm} onChange={(e) => setResetPasswordConfirm(e.target.value)} required />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="ghost" onClick={() => setResetTarget(null)}>ยกเลิก</Button>
+              <Button type="button" variant="ghost" onClick={() => setResetTarget(null)}>Cancel</Button>
               <Button type="submit" disabled={resetSubmitting}>
-                {resetSubmitting ? 'กำลังรีเซ็ต...' : 'เปลี่ยนรหัสผ่าน'}
+                {resetSubmitting ? 'Resetting...' : 'Change Password'}
               </Button>
             </div>
           </form>
@@ -546,18 +549,18 @@ export default function UsersPage() {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-destructive">ลบผู้ใช้</DialogTitle>
+            <DialogTitle className="text-destructive">Delete User</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              ลบบัญชี <span className="font-bold text-foreground">{deleteTarget?.displayName}</span> ออกจากระบบ?
+              Are you sure you want to delete account <span className="font-bold text-foreground">{deleteTarget?.displayName}</span>?
             </p>
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>ยกเลิก</Button>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteUser} disabled={deleteSubmitting}>
               {deleteSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : null}
-              ยืนยันการลบ
+              Confirm Delete
             </Button>
           </div>
         </DialogContent>

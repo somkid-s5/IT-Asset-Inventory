@@ -1,5 +1,5 @@
 import { AssetStatus, AssetType } from '@prisma/client';
-import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class IpAllocationDto {
@@ -93,6 +93,7 @@ export class CreateAssetDto {
     sn?: string;
 
     @IsOptional()
+    @IsObject()
     customMetadata?: any;
 
     @IsOptional()

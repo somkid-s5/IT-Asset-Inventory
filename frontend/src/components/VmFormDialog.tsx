@@ -232,9 +232,9 @@ export function VmFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] overflow-y-auto border-border bg-card sm:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>{vmToEdit ? 'แก้ไขข้อมูลเครื่องเสมือน' : discoveryVm && submitMode === 'promote' ? 'ตั้งค่าเครื่องเสมือนให้สมบูรณ์' : discoveryVm ? 'รายละเอียดเครื่องเสมือน' : 'สร้างเครื่องเสมือนใหม่'}</DialogTitle>
+          <DialogTitle>{vmToEdit ? 'Edit Virtual Machine' : discoveryVm && submitMode === 'promote' ? 'Complete VM Setup' : discoveryVm ? 'VM Details' : 'Create New VM'}</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            ข้อมูลส่วน Source Sync จะอ่านค่าจาก vCenter โดยตรง ส่วน AssetOps Context จะบริหารจัดการโดยทีมงาน
+            Source Sync data is read directly from vCenter, while AssetOps Context is managed by the IT team.
           </p>
         </DialogHeader>
 
@@ -242,21 +242,21 @@ export function VmFormDialog({
           <section className="surface-panel p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">ข้อมูลจากการซิงค์ (Source Sync)</h3>
-                <p className="text-[11px] text-muted-foreground">ข้อมูลชุดนี้มาจาก vCenter โดยตรงและไม่สามารถแก้ไขได้</p>
+                <h3 className="text-sm font-semibold text-foreground">Source Sync Information</h3>
+                <p className="text-[11px] text-muted-foreground">This data comes directly from vCenter and is read-only.</p>
               </div>
               <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-[11px] text-muted-foreground">
-                แหล่งข้อมูล vCenter
+                vCenter Source
               </span>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-1.5">
-                <Label htmlFor="vm-name">ชื่อ VM</Label>
+                <Label htmlFor="vm-name">VM Name</Label>
                 <Input id="vm-name" value={formData.name} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-moid">รหัส MoID</Label>
+                <Label htmlFor="vm-moid">MoID</Label>
                 <Input id="vm-moid" value={formData.moid} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
@@ -264,20 +264,20 @@ export function VmFormDialog({
                 <Input id="vm-vcenter" value={formData.vcenterName} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-state">สถานะการทำงาน</Label>
+                <Label htmlFor="vm-state">Power Status</Label>
                 <Input
                   id="vm-state"
-                  value={formData.powerState === 'RUNNING' ? 'กำลังทำงาน (Running)' : formData.powerState === 'STOPPED' ? 'หยุดทำงาน (Stopped)' : 'ระงับชั่วคราว (Suspended)'}
+                  value={formData.powerState === 'RUNNING' ? 'Running' : formData.powerState === 'STOPPED' ? 'Stopped' : 'Suspended'}
                   readOnly
                   className="pointer-events-none"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-cluster">คลัสเตอร์ (Cluster)</Label>
+                <Label htmlFor="vm-cluster">Cluster</Label>
                 <Input id="vm-cluster" value={formData.cluster} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-host">โฮสต์ (Host)</Label>
+                <Label htmlFor="vm-host">Host</Label>
                 <Input id="vm-host" value={formData.host} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
@@ -285,27 +285,27 @@ export function VmFormDialog({
                 <Input id="vm-computer-name" value={formData.computerName} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-os">ระบบปฏิบัติการ (OS)</Label>
+                <Label htmlFor="vm-os">Guest OS</Label>
                 <Input id="vm-os" value={formData.guestOs} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-ip">เลข IP หลัก</Label>
+                <Label htmlFor="vm-ip">Primary IP</Label>
                 <Input id="vm-ip" value={formData.primaryIp} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-cpu">จำนวน CPU (Cores)</Label>
+                <Label htmlFor="vm-cpu">CPU (Cores)</Label>
                 <Input id="vm-cpu" value={formData.cpuCores} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-memory">หน่วยความจำ (GB)</Label>
+                <Label htmlFor="vm-memory">Memory (GB)</Label>
                 <Input id="vm-memory" value={formData.memoryGb} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-storage">พื้นที่จัดเก็บ (GB)</Label>
+                <Label htmlFor="vm-storage">Storage (GB)</Label>
                 <Input id="vm-storage" value={formData.storageGb} readOnly className="pointer-events-none" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vm-network">เครือข่าย (Network)</Label>
+                <Label htmlFor="vm-network">Network Label</Label>
                 <Input id="vm-network" value={formData.networkLabel} readOnly className="pointer-events-none" />
               </div>
             </div>
@@ -314,32 +314,32 @@ export function VmFormDialog({
           <section className="surface-panel p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">ข้อมูลทางธุรกิจ (AssetOps Context)</h3>
-                <p className="text-[11px] text-muted-foreground">ข้อมูลส่วนนี้บริหารจัดการโดยทีมงานเพื่อใช้ในการติดตามและระบุเจ้าของ</p>
+                <h3 className="text-sm font-semibold text-foreground">AssetOps Context (Business Info)</h3>
+                <p className="text-[11px] text-muted-foreground">This section is managed by IT staff for tracking and ownership.</p>
               </div>
               <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-[11px] text-muted-foreground">
-                การจัดการภายใน
+                Internal Management
               </span>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-1.5">
-                <Label required>ชื่อระบบ / บริการ</Label>
+                <Label required>System Name / Service</Label>
                 <Input
                   id="vm-system-name"
                   value={formData.systemName}
                   onChange={(event) => setFormData((current) => ({ ...current, systemName: event.target.value }))}
-                  placeholder="เช่น ระบบจ่ายเงิน, API Gateway"
+                  placeholder="e.g. Payment System, API Gateway"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label required>สภาพแวดล้อม</Label>
+                <Label required>Environment</Label>
                 <Select
                   value={formData.environment}
                   onValueChange={(value) => setFormData((current) => ({ ...current, environment: value as typeof formData.environment }))}
                 >
                   <SelectTrigger id="vm-env" className="w-full">
-                    <SelectValue placeholder="เลือกสภาพแวดล้อม" />
+                    <SelectValue placeholder="Select environment" />
                   </SelectTrigger>
                   <SelectContent>
                     {VM_ENVIRONMENT_FILTERS.filter((item) => item.value !== 'ALL').map((item) => (
@@ -351,13 +351,13 @@ export function VmFormDialog({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label required>บทบาทหน้าที่</Label>
+                <Label required>Service Role</Label>
                 <Select
                   value={formData.serviceRole}
                   onValueChange={(value) => setFormData((current) => ({ ...current, serviceRole: value }))}
                 >
                   <SelectTrigger id="vm-service-role" className="w-full">
-                    <SelectValue placeholder="เลือกบทบาทหน้าที่" />
+                    <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
                     {formData.serviceRole && !VM_SERVICE_ROLE_OPTIONS.includes(formData.serviceRole as (typeof VM_SERVICE_ROLE_OPTIONS)[number]) ? (
@@ -372,32 +372,32 @@ export function VmFormDialog({
                 </Select>
               </div>
               <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
-                <Label optional>วัตถุประสงค์การใช้งาน</Label>
+                <Label optional>Business Purpose</Label>
                 <textarea
                   id="vm-description"
                   value={formData.description}
                   onChange={(event) => setFormData((current) => ({ ...current, description: event.target.value }))}
                   className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-4 py-3 text-sm text-foreground shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)] outline-none transition-[color,box-shadow,border-color,background-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35"
-                  placeholder="อธิบายรายละเอียดการใช้งานเครื่องเสมือนนี้"
+                  placeholder="Describe the business purpose of this VM"
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
-                <Label optional>หมายเหตุการดำเนินงาน</Label>
+                <Label optional>Operational Notes</Label>
                 <textarea
                   id="vm-notes"
                   value={formData.notes}
                   onChange={(event) => setFormData((current) => ({ ...current, notes: event.target.value }))}
                   className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-4 py-3 text-sm text-foreground shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)] outline-none transition-[color,box-shadow,border-color,background-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35"
-                  placeholder="ระบุหมายเหตุสำหรับการปฏิบัติงาน"
+                  placeholder="Additional operational notes"
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label optional>แท็ก (Tags)</Label>
+                <Label optional>Tags</Label>
                 <Input
                   id="vm-tags"
                   value={formData.tags}
                   onChange={(event) => setFormData((current) => ({ ...current, tags: event.target.value }))}
-                  placeholder="เช่น api, linux, runtime (คั่นด้วยคอมม่า)"
+                  placeholder="e.g. api, linux, runtime (comma separated)"
                 />
               </div>
             </div>
@@ -406,12 +406,12 @@ export function VmFormDialog({
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">บัญชีผู้ใช้งานระบบปฏิบัติการ (Guest Accounts)</h3>
-                <p className="text-[11px] text-muted-foreground">สามารถระบุบัญชีผู้ใช้งานได้หลายบัญชีสำหรับเครื่องเสมือนนี้</p>
+                <h3 className="text-sm font-semibold text-foreground">Guest Accounts</h3>
+                <p className="text-[11px] text-muted-foreground">Add one or more OS-level accounts for this virtual machine.</p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => setAccounts((current) => [...current, { ...EMPTY_ACCOUNT }])}>
                 <Plus className="h-3.5 w-3.5" />
-                เพิ่มบัญชี
+                Add Account
               </Button>
             </div>
 
@@ -419,7 +419,7 @@ export function VmFormDialog({
               {accounts.map((account, index) => (
                 <div key={`vm-account-${index}`} className="surface-panel p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">บัญชีที่ {index + 1}</div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Account #{index + 1}</div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -434,21 +434,21 @@ export function VmFormDialog({
 
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                     <div className="space-y-1.5">
-                      <Label required>ชื่อผู้ใช้งาน</Label>
+                      <Label required>Username</Label>
                       <Input value={account.username} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, username: event.target.value } : item)))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label required>รหัสผ่าน</Label>
+                      <Label required>Password</Label>
                       <Input type="password" value={account.password} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, password: event.target.value } : item)))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>วิธีเข้าถึง</Label>
+                      <Label optional>Method</Label>
                       <Select
                         value={account.accessMethod}
                         onValueChange={(value) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, accessMethod: value } : item)))}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="เลือกวิธีเข้าถึง" />
+                          <SelectValue placeholder="Select method" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="SSH">SSH</SelectItem>
@@ -458,11 +458,11 @@ export function VmFormDialog({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>บทบาท</Label>
-                      <Input value={account.role} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, role: event.target.value } : item)))} placeholder="เช่น OS Admin, Service Account" />
+                      <Label optional>Role</Label>
+                      <Input value={account.role} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, role: event.target.value } : item)))} placeholder="e.g. OS Admin, Service Account" />
                     </div>
                     <div className="space-y-1.5 md:col-span-2 xl:col-span-1">
-                      <Label optional>หมายเหตุ</Label>
+                      <Label optional>Notes</Label>
                       <Input value={account.note} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, note: event.target.value } : item)))} />
                     </div>
                   </div>
@@ -473,10 +473,10 @@ export function VmFormDialog({
 
           <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              ยกเลิก
+              Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'กำลังบันทึก...' : vmToEdit ? 'บันทึกการแก้ไข' : submitMode === 'promote' ? 'บันทึกและนำเข้าคลังสินทรัพย์' : 'บันทึกร่าง'}
+              {loading ? 'Saving...' : vmToEdit ? 'Save Changes' : submitMode === 'promote' ? 'Promote to Inventory' : 'Save Draft'}
             </Button>
           </div>
         </form>

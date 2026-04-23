@@ -21,13 +21,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'AssetOps | ระบบจัดการสินทรัพย์ไอที',
-  description: 'ระบบศูนย์กลางสำหรับการจัดการสินทรัพย์ไอที ฐานข้อมูล และเครื่องเสมือนอย่างมีประสิทธิภาพ',
+  title: 'AssetOps | IT Asset Management',
+  description: 'Centralized repository for managing IT assets, databases, and virtual machines efficiently.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="th" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={`${inter.variable} ${prompt.variable} font-sans antialiased selection:bg-primary/30`}>
         {/* Skip Link for Accessibility */}
         <a
@@ -46,7 +46,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           <ReactQueryProvider>
             <AuthProvider>
               {children}
-              <Toaster />
+              <Toaster richColors position="top-right" />
             </AuthProvider>
           </ReactQueryProvider>
         </ThemeProvider>

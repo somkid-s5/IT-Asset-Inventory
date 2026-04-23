@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCredentialDto } from './dto/create-credential.dto';
 import { UpdateCredentialDto } from './dto/update-credential.dto';
@@ -91,7 +92,7 @@ export class CredentialsService {
     async update(id: string, updateCredentialDto: UpdateCredentialDto) {
         const { password, ...rest } = updateCredentialDto;
 
-        let dataToUpdate: any = { ...rest };
+        const dataToUpdate: Prisma.CredentialUpdateInput = { ...rest };
         if (password) {
             dataToUpdate.encryptedPassword = this.encrypt(password);
             dataToUpdate.lastChangedDate = new Date();

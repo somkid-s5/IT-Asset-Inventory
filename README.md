@@ -24,8 +24,9 @@
 
 ### 🔐 ความปลอดภัยและการตรวจสอบ (Security & Audit)
 *   **Role-Based Access Control (RBAC):** กำหนดสิทธิ์ผู้ใช้เป็น Admin, Editor หรือ Viewer
-*   **Credential Encryption:** รหัสผ่านทั้งหมดถูกเข้ารหัสด้วย AES-256 ก่อนลงฐานข้อมูล
+*   **Credential Encryption:** รหัสผ่านทั้งหมดถูกเข้ารหัสด้วย AES-256-GCM พร้อม Dynamic IV ก่อนลงฐานข้อมูล
 *   **Audit Logging:** บันทึกทุกกิจกรรมสำคัญ เช่น การดูรหัสผ่าน, การ Login หรือการแก้ไขข้อมูล
+*   **Production Hardening:** ระบบถูกปรับปรุงให้ปิดพอร์ตฐานข้อมูลจากภายนอก, หมุนเวียน Secrets ที่แข็งแกร่ง และมี Global Exception Filter เพื่อความปลอดภัยระดับสูง
 
 ---
 
@@ -42,7 +43,8 @@
 *   **NestJS 11** (Enterprise Node.js Framework)
 *   **Prisma ORM** (Type-safe Database Access)
 *   **PostgreSQL 15**
-*   **Passport.js & JWT** (Authentication)
+*   **Passport.js & JWT** (Cookie-based Authentication)
+*   **Security Features:** Helmet, Rate Limiting, Global Exception Filter
 
 ---
 

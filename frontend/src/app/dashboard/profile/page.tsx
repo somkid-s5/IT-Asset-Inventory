@@ -56,13 +56,13 @@ export default function ProfilePage() {
     }
 
     if (!file.type.startsWith('image/')) {
-      toast.error('กรุณาอัปโหลดไฟล์รูปภาพ');
+      toast.error('Please upload an image file');
       event.target.value = '';
       return;
     }
 
     if (file.size > MAX_AVATAR_FILE_SIZE) {
-      toast.error('ขนาดรูปตัวแทนต้องไม่เกิน 1 MB');
+      toast.error('Avatar image size must be less than 1 MB');
       event.target.value = '';
       return;
     }
@@ -104,9 +104,9 @@ export default function ProfilePage() {
           avatarImage: response.data.user.avatarImage,
         });
       }
-      toast.success('อัปเดตโปรไฟล์สำเร็จ');
+      toast.success('Profile updated');
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'ไม่สามารถอัปเดตโปรไฟล์ได้'));
+      toast.error(getErrorMessage(error, 'Failed to update profile'));
     } finally {
       setProfileSaving(false);
     }
@@ -116,7 +116,7 @@ export default function ProfilePage() {
     event.preventDefault();
 
     if (newPassword !== confirmPassword) {
-      toast.error('รหัสผ่านใหม่ไม่ตรงกัน');
+      toast.error('New passwords do not match');
       return;
     }
 
@@ -136,9 +136,9 @@ export default function ProfilePage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      toast.success('อัปเดทรหัสผ่านสำเร็จ');
+      toast.success('Password updated successfully');
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'ไม่สามารถอัปเดทรหัสผ่านได้'));
+      toast.error(getErrorMessage(error, 'Failed to update password'));
     } finally {
       setSaving(false);
     }
@@ -146,10 +146,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     setHeader({
-      title: 'โปรไฟล์',
+      title: 'Profile Settings',
       breadcrumbs: [
-        { label: 'พื้นที่ทำงาน', href: '/dashboard' },
-        { label: 'โปรไฟล์' },
+        { label: 'Workspace', href: '/dashboard' },
+        { label: 'Profile' },
       ],
     });
 
@@ -169,10 +169,10 @@ export default function ProfilePage() {
               label={displayName || user?.displayName || 'Infra Pilot'}
               className="h-8 w-8"
             />
-            <span className="font-semibold text-foreground">{displayName || user?.displayName || 'บัญชี'}</span>
+            <span className="font-semibold text-foreground">{displayName || user?.displayName || 'Account'}</span>
           </span>
-          <span className="inline-flex items-center gap-1.5">ชื่อผู้ใช้ <span className="font-semibold text-foreground">@{user?.username ?? '--'}</span></span>
-          <span className="inline-flex items-center gap-1.5">บทบาท <span className="font-semibold text-foreground">{user?.role ?? '--'}</span></span>
+          <span className="inline-flex items-center gap-1.5">Username <span className="font-semibold text-foreground">@{user?.username ?? '--'}</span></span>
+          <span className="inline-flex items-center gap-1.5">Role <span className="font-semibold text-foreground">{user?.role ?? '--'}</span></span>
         </div>
       </div>
 
@@ -182,12 +182,12 @@ export default function ProfilePage() {
             <div className="icon-chip h-8 w-8 p-0 text-foreground">
               <Shield className="h-3.5 w-3.5" />
             </div>
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">โปรไฟล์</h3>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">User Profile</h3>
           </div>
 
           <form onSubmit={handleProfileSubmit} className="mt-4 space-y-4 border-b border-border pb-4">
             <div className="space-y-1.5">
-              <Label htmlFor="displayName" required>ชื่อที่แสดง</Label>
+              <Label htmlFor="displayName" required>Display Name</Label>
               <Input
                 id="displayName"
                 autoComplete="name"
@@ -198,17 +198,17 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-2">
-              <Label optional>รูปตัวแทน</Label>
+              <Label optional>Avatar</Label>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
               <div className="muted-panel flex flex-wrap items-center gap-3 px-4 py-4">
                 <UserAvatar
                   seed={avatarSeed}
                   imageUrl={avatarImage}
-                  label={displayName || user?.displayName || 'อินฟรา ไพล็อต'}
+                  label={displayName || user?.displayName || 'Infra Pilot'}
                   className="h-12 w-12"
                 />
                 <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                  อัปโหลดรูปภาพ
+                  Upload Photo
                 </Button>
                 <Button
                   type="button"
@@ -218,19 +218,19 @@ export default function ProfilePage() {
                     setAvatarSeed(createClientAvatarSeed());
                   }}
                 >
-                  สุ่มรูปตัวแทน
+                  Randomize
                 </Button>
                 {avatarImage ? (
                   <Button type="button" variant="ghost" onClick={() => setAvatarImage(null)}>
-                    ลบออก
+                    Remove
                   </Button>
                 ) : null}
               </div>
-              <p className="text-[11px] text-muted-foreground">อัปโหลดรูป JPG, PNG, หรือ WebP ขนาดไม่เกิน 1 MB หากไม่มีรูปภาพ จะใช้รูปตัวแทน DiceBear แทน</p>
+              <p className="text-[11px] text-muted-foreground">Upload JPG, PNG, or WebP (max 1 MB). If empty, DiceBear avatar will be used.</p>
             </div>
 
             <Button type="submit" variant="outline" disabled={profileSaving}>
-              {profileSaving ? 'กำลังบันทึกโปรไฟล์...' : 'บันทึกโปรไฟล์'}
+              {profileSaving ? 'Saving profile...' : 'Save Profile'}
             </Button>
           </form>
 
@@ -238,12 +238,12 @@ export default function ProfilePage() {
             <div className="icon-chip h-8 w-8 p-0 text-foreground">
               <KeyRound className="h-3.5 w-3.5" />
             </div>
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">เปลี่ยนรหัสผ่าน</h3>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">Change Password</h3>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="currentPassword" required>รหัสผ่านปัจจุบัน</Label>
+              <Label htmlFor="currentPassword" required>Current Password</Label>
               <Input
                 id="currentPassword"
                 type="password"
@@ -255,7 +255,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="newPassword" required>รหัสผ่านใหม่</Label>
+              <Label htmlFor="newPassword" required>New Password</Label>
               <Input
                 id="newPassword"
                 type="password"
@@ -268,7 +268,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" required>ยืนยันรหัสผ่านใหม่</Label>
+              <Label htmlFor="confirmPassword" required>Confirm New Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -280,7 +280,7 @@ export default function ProfilePage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={saving}>
-              {saving ? 'กำลังอัปเดทรหัสผ่าน...' : 'อัปเดทรหัสผ่าน'}
+              {saving ? 'Updating password...' : 'Update Password'}
             </Button>
           </form>
         </div>
@@ -290,7 +290,7 @@ export default function ProfilePage() {
             <div className="icon-chip h-8 w-8 p-0 text-foreground">
               <Shield className="h-3.5 w-3.5" />
             </div>
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">หมายเหตุความปลอดภัย</h3>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">Security Notes</h3>
           </div>
 
           <div className="mt-4 space-y-2">
@@ -298,10 +298,10 @@ export default function ProfilePage() {
               {PASSWORD_POLICY_MESSAGE}
             </div>
             <div className="muted-panel px-3 py-3 text-xs leading-5 text-muted-foreground">
-              หากคุณลืมรหัสผ่าน ผู้ดูแลระบบสามารถรีเซ็ตให้ได้จากหน้า <span className="font-medium text-foreground">ผู้ใช้</span>
+              If you forget your password, an administrator can reset it from the <span className="font-medium text-foreground">Users</span> page.
             </div>
             <div className="muted-panel px-3 py-3 text-xs leading-5 text-muted-foreground">
-              การเปลี่ยนแปลงบทบาทยังคงต้องผ่านผู้ดูแลระบบ และแยกออกจากการตั้งค่าโปรไฟล์ส่วนตัวโดยตั้งใจ
+              Role changes must be performed by an administrator and are intentionally separated from personal profile settings.
             </div>
           </div>
         </div>

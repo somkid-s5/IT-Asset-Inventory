@@ -25,7 +25,15 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    async register(registerDto, res) {
+    async me(req) {
+        return this.authService.me(req.user.id);
+    }
+    async register(registerDto, res, registrationKey) {
+        const userCount = await this.authService.getUserCount();
+        const secret = process.env.REGISTRATION_SECRET;
+        if (userCount > 0 && secret && registrationKey !== secret) {
+            throw new common_1.UnauthorizedException('Registration is restricted. Valid registration key required.');
+        }
         const result = await this.authService.register(registerDto);
         this.setAuthCookie(res, result.access_token);
         return { user: result.user };
@@ -62,11 +70,20 @@ let AuthController = class AuthController {
 };
 exports.AuthController = AuthController;
 __decorate([
+    (0, common_1.Get)('me'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "me", null);
+__decorate([
     (0, common_1.Post)('register'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Res)({ passthrough: true })),
+    __param(2, (0, common_1.Headers)('x-registration-key')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_dto_1.RegisterDto, Object]),
+    __metadata("design:paramtypes", [register_dto_1.RegisterDto, Object, String]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
 __decorate([
