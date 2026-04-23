@@ -9,50 +9,50 @@ export declare class CredentialsService {
     encrypt(text: string): string;
     decrypt(text: string): string;
     create(createCredentialDto: CreateCredentialDto): Promise<{
-        type: string | null;
-        assetId: string;
-        manageType: string | null;
-        username: string;
         id: string;
+        username: string;
         createdAt: Date;
         updatedAt: Date;
+        assetId: string;
+        type: string | null;
+        manageType: string | null;
         nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
     findByAsset(assetId: string): Promise<{
-        assetId: string;
-        username: string;
         id: string;
+        username: string;
         createdAt: Date;
         updatedAt: Date;
+        assetId: string;
         lastChangedDate: Date | null;
     }[]>;
     revealPassword(id: string, userId: string): Promise<{
         password: string;
     }>;
     update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{
-        type: string | null;
-        assetId: string;
-        manageType: string | null;
-        username: string;
         id: string;
+        username: string;
         createdAt: Date;
         updatedAt: Date;
+        assetId: string;
+        type: string | null;
+        manageType: string | null;
         nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
     remove(id: string): Promise<{
-        type: string | null;
-        assetId: string;
-        manageType: string | null;
-        username: string;
         id: string;
+        username: string;
         createdAt: Date;
         updatedAt: Date;
+        assetId: string;
+        type: string | null;
+        manageType: string | null;
         nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;

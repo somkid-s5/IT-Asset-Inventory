@@ -123,11 +123,10 @@ export declare class DatabasesController {
         updatedAt: Date;
     }>;
     remove(id: string): Promise<{
-        name: string;
-        ipAddress: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         environment: string | null;
         status: string | null;
         owner: string | null;
@@ -136,6 +135,7 @@ export declare class DatabasesController {
         host: string;
         note: string | null;
         engine: string;
+        ipAddress: string;
         port: string | null;
         serviceName: string | null;
         backupPolicy: string | null;
