@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     localStorage.setItem('user', JSON.stringify(response.data.user));
                     emitAuthChange();
                 }
-            } catch (error) {
+            } catch {
                 // If verification fails, clear local state
                 if (localStorage.getItem('user')) {
                     localStorage.removeItem('user');

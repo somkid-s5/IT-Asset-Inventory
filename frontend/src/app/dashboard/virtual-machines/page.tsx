@@ -153,9 +153,9 @@ export default function VmPage() {
             {activeView === 'PENDING' ? (
               <PendingTable data={pendingQueue} onOpen={openPendingSetup} openingId={openingPendingId} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
             ) : activeView === 'ACTIVE' ? (
-              <ActiveTable data={activeQueue} onOpen={(id) => router.push(`/dashboard/virtual-machines/${id}`)} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
+              <ActiveTable data={activeQueue} onOpen={(id: string) => router.push(`/dashboard/virtual-machines/${id}`)} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
             ) : (
-              <OrphanedTable data={orphanedQueue} onOpen={(id) => router.push(`/dashboard/virtual-machines/${id}`)} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
+              <OrphanedTable data={orphanedQueue} onOpen={(id: string) => router.push(`/dashboard/virtual-machines/${id}`)} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
             )}
           </>
         )}
@@ -190,7 +190,7 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
     let exportData: any[] = [];
     
     if (view === 'PENDING') {
-      exportData = dataToExport.map(vm => ({
+      exportData = dataToExport.map((vm: any) => ({
         VMName: vm.name,
         SystemName: vm.systemName || '',
         IPAddress: vm.primaryIp || '',
@@ -210,7 +210,7 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
         Notes: vm.notes || vm.note || vm.description || '',
       }));
     } else {
-      exportData = dataToExport.map(vm => ({
+      exportData = dataToExport.map((vm: any) => ({
         SystemName: vm.systemName || vm.displayName || '',
         VMName: vm.name,
         IPAddress: vm.primaryIp || '',

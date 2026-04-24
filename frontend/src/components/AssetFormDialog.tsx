@@ -84,6 +84,7 @@ interface AssetFormAsset {
   brandModel?: string | null;
   sn?: string | null;
   manageType?: string | null;
+  parentId?: string | null;
   customMetadata?: Record<string, unknown> | null;
   ipAllocations?: AssetIpAllocation[];
   credentials?: AssetCredential[];
