@@ -45,7 +45,7 @@ services:
       - DEFAULT_EDITOR_PASSWORD=${DEFAULT_EDITOR_PASSWORD:-ChangeMe#Editor2026!}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - PORT=3001
-    command: sh -c "npx prisma migrate deploy && node dist/main"
+    command: sh -c "npx prisma migrate deploy && npm run start:prod"
     networks:
       - infrapilot_network
     depends_on:
