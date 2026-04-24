@@ -5,24 +5,24 @@ export declare class CredentialsController {
     private readonly credentialsService;
     constructor(credentialsService: CredentialsService);
     create(createCredentialDto: CreateCredentialDto): Promise<{
-        id: string;
+        type: string | null;
+        assetId: string;
+        manageType: string | null;
         username: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
-        assetId: string;
-        type: string | null;
-        manageType: string | null;
         nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
     findByAsset(assetId: string): Promise<{
-        id: string;
+        assetId: string;
         username: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
-        assetId: string;
         lastChangedDate: Date | null;
     }[]>;
     revealPassword(id: string, req: {
@@ -33,26 +33,26 @@ export declare class CredentialsController {
         password: string;
     }>;
     update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{
-        id: string;
+        type: string | null;
+        assetId: string;
+        manageType: string | null;
         username: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
-        assetId: string;
-        type: string | null;
-        manageType: string | null;
         nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
     remove(id: string): Promise<{
-        id: string;
+        type: string | null;
+        assetId: string;
+        manageType: string | null;
         username: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
-        assetId: string;
-        type: string | null;
-        manageType: string | null;
         nodeLabel: string | null;
         version: string | null;
         encryptedPassword: string;

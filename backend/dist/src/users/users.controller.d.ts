@@ -7,8 +7,8 @@ export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
     findAll(): Promise<{
-        id: string;
         username: string;
+        id: string;
         displayName: string;
         avatarSeed: string;
         avatarImage: string | null;
@@ -21,8 +21,8 @@ export declare class UsersController {
             id: string;
         };
     }): Promise<{
-        id: string;
         username: string;
+        id: string;
         displayName: string;
         avatarSeed: string;
         avatarImage: string | null;
@@ -35,8 +35,8 @@ export declare class UsersController {
             id: string;
         };
     }): Promise<{
-        id: string;
         username: string;
+        id: string;
         displayName: string;
         avatarSeed: string;
         avatarImage: string | null;
