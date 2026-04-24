@@ -20,7 +20,7 @@ services:
     container_name: infrapilot_pgadmin
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@infrapilot.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@infrapilot.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-ChangeMe#PgAdmin2026!}
 #    ports:
 #      - "5050:80"
