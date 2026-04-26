@@ -77,6 +77,16 @@ enum AuditAction {
   DELETE_ASSET
   CREATE_CREDENTIAL
   UPDATE_CREDENTIAL
+  CREATE_DATABASE
+  UPDATE_DATABASE
+  DELETE_DATABASE
+  CREATE_VM
+  UPDATE_VM
+  DELETE_VM
+  VCENTER_SYNC
+  CREATE_SOURCE
+  DELETE_SOURCE
+  UPDATE_SOURCE
 }
 
 model User {
@@ -97,6 +107,8 @@ model User {
   vmDiscoveries       VmDiscovery[]
   vmInventories       VmInventory[]
   auditLogs           AuditLog[]
+  assetNotes          AssetNote[]
+  assetAttachments    AssetAttachment[]
 }
 
 model IPAllocation {
@@ -154,6 +166,13 @@ model Asset {
 
   patchInfo   PatchInfo?
   credentials Credential[]
+  notes       AssetNote[]
+  attachments AssetAttachment[]
+
+  @@index([status])
+  @@index([type])
+  @@index([environment])
+  @@index([owner])
 }
 
 model PatchInfo {
@@ -199,6 +218,10 @@ model AuditLog {
   details   String? // Optional JSON or text details
 
   timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([action])
 }
 
 model DatabaseInventory {
@@ -225,6 +248,10 @@ model DatabaseInventory {
   accounts  DatabaseAccount[]
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
+
+  @@index([status])
+  @@index([engine])
+  @@index([environment])
 }
 
 model DatabaseAccount {
@@ -357,6 +384,10 @@ model VmInventory {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([lifecycleState])
+  @@index([environment])
+  @@index([owner])
 }
 
 model VmGuestAccount {
@@ -373,4 +404,35 @@ model VmGuestAccount {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AssetNote {
+  id      String @id @default(uuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  content  String  // Note content (markdown-friendly)
+  isPinned Boolean @default(false)
+
+  createdByUserId String
+  createdByUser   User   @relation(fields: [createdByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AssetAttachment {
+  id      String @id @default(uuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  filename   String // display filename e.g. "rack-photo.jpg"
+  storedPath String // relative path e.g. "uploads/assets/uuid.jpg"
+  mimeType   String // e.g. "image/jpeg"
+  sizeBytes  Int
+
+  createdByUserId String
+  createdByUser   User   @relation(fields: [createdByUserId], references: [id])
+
+  createdAt DateTime @default(now())
 }

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
-import { AssetStatus, Prisma } from '@prisma/client';
+import { AssetStatus, AuditAction, Prisma } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 
 type AssetWithRelations = Prisma.AssetGetPayload<{
@@ -12,6 +12,8 @@ type AssetWithRelations = Prisma.AssetGetPayload<{
         parent: true;
         children: true;
         credentials: true;
+        notes: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } } };
+        attachments: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } } };
     };
 }>;
 
@@ -130,6 +132,21 @@ export class AssetsService {
                 parent: true,
                 children: true,
                 credentials: true,
+                notes: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } }, orderBy: [{ isPinned: 'desc' as const }, { createdAt: 'desc' as const }] },
+                attachments: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } }, orderBy: { createdAt: 'desc' as const } },
+            },
+        });
+
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: AuditAction.CREATE_ASSET,
+                targetId: created.id,
+                details: JSON.stringify({
+                    name: created.name,
+                    type: created.type,
+                    assetId: created.assetId,
+                }),
             },
         });
 
@@ -137,18 +154,27 @@ export class AssetsService {
     }
 
     async findAll() {
-        const assets = await this.prisma.asset.findMany({
+        const assets = await this.prisma.asset.findMany({ take: 1000,
             include: {
                 patchInfo: true,
                 ipAllocations: true,
                 parent: true,
                 children: true,
-                credentials: true,
+                credentials: {
+                    select: {
+                        id: true,
+                        username: true,
+                        type: true,
+                        lastChangedDate: true,
+                    }
+                },
+                notes: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } }, orderBy: [{ isPinned: 'desc' as const }, { createdAt: 'desc' as const }] },
+                attachments: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } }, orderBy: { createdAt: 'desc' as const } },
             },
             orderBy: { createdAt: 'desc' },
         });
 
-        return assets.map((asset) => this.toListItem(asset));
+        return assets.map((asset) => this.toListItem(asset as any));
     }
 
     async findOne(id: string) {
@@ -160,6 +186,8 @@ export class AssetsService {
                 parent: true,
                 children: true,
                 credentials: true,
+                notes: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } }, orderBy: [{ isPinned: 'desc' as const }, { createdAt: 'desc' as const }] },
+                attachments: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } }, orderBy: { createdAt: 'desc' as const } },
             },
         });
 
@@ -170,7 +198,7 @@ export class AssetsService {
         return this.toDetail(asset);
     }
 
-    async update(id: string, updateAssetDto: UpdateAssetDto) {
+    async update(id: string, updateAssetDto: UpdateAssetDto, userId: string) {
         await this.findOne(id);
 
         const { ips, credentials, ...assetData } = updateAssetDto;
@@ -197,18 +225,46 @@ export class AssetsService {
                     parent: true,
                     children: true,
                     credentials: true,
+                    notes: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } }, orderBy: [{ isPinned: 'desc' as const }, { createdAt: 'desc' as const }] },
+                    attachments: { include: { createdByUser: { select: { id: true, displayName: true, avatarSeed: true } } }, orderBy: { createdAt: 'desc' as const } },
                 },
             });
+        });
+
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: AuditAction.UPDATE_ASSET,
+                targetId: updated.id,
+                details: JSON.stringify({
+                    name: updated.name,
+                    type: updated.type,
+                }),
+            },
         });
 
         return this.toDetail(updated);
     }
 
-    async remove(id: string) {
-        await this.findOne(id);
-
-        return this.prisma.asset.delete({
+    async remove(id: string, userId: string) {
+        const asset = await this.findOne(id);
+ 
+        const deleted = await this.prisma.asset.delete({
             where: { id },
         });
+
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: AuditAction.DELETE_ASSET,
+                targetId: id,
+                details: JSON.stringify({
+                    name: asset.name,
+                    type: asset.type,
+                }),
+            },
+        });
+
+        return deleted;
     }
 }
