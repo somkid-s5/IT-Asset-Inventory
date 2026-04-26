@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { AuditAction, Prisma } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDatabaseDto } from './dto/create-database.dto';
@@ -104,19 +104,35 @@ export class DatabasesService {
       },
     });
 
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.CREATE_DATABASE,
+        targetId: created.id,
+        details: JSON.stringify({
+          name: created.name,
+          engine: created.engine,
+          host: created.host,
+        }),
+      },
+    });
+
     return this.toDetail(created);
   }
 
   async findAll() {
     const databases = await this.prisma.databaseInventory.findMany({
+      take: 1000,
       include: {
-        accounts: true,
+        accounts: {
+          select: { id: true }
+        },
         createdByUser: true,
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    return databases.map((database) => this.toListItem(database));
+    return databases.map((database) => this.toListItem(database as any));
   }
 
   async findOne(id: string) {
@@ -135,7 +151,7 @@ export class DatabasesService {
     return this.toDetail(database);
   }
 
-  async update(id: string, updateDatabaseDto: UpdateDatabaseDto) {
+  async update(id: string, updateDatabaseDto: UpdateDatabaseDto, userId: string) {
     await this.findOne(id);
 
     const updated = await this.prisma.databaseInventory.update({
@@ -175,11 +191,37 @@ export class DatabasesService {
       },
     });
 
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_DATABASE,
+        targetId: updated.id,
+        details: JSON.stringify({
+          name: updated.name,
+          engine: updated.engine,
+        }),
+      },
+    });
+
     return this.toDetail(updated);
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
-    return this.prisma.databaseInventory.delete({ where: { id } });
+  async remove(id: string, userId: string) {
+    const db = await this.findOne(id);
+    const deleted = await this.prisma.databaseInventory.delete({ where: { id } });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.DELETE_DATABASE,
+        targetId: id,
+        details: JSON.stringify({
+          name: db.name,
+          host: db.host,
+        }),
+      },
+    });
+
+    return deleted;
   }
 }

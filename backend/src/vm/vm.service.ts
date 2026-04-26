@@ -16,6 +16,7 @@ import {
   VmEnvironment,
   VmLifecycleState,
   VmPowerState,
+  AuditAction,
 } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -400,13 +401,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       suggestedServiceRole: discovery.suggestedServiceRole,
       suggestedCriticality: discovery.suggestedCriticality,
       note: discovery.notes,
-      guestAccounts: discovery.guestAccounts.map((account) => ({
-        username: account.username,
-        password: this.credentialsService.decrypt(account.encryptedPassword),
-        accessMethod: account.accessMethod,
-        role: account.role,
-        note: account.note,
-      })),
+      guestAccounts: discovery.guestAccounts
+        .filter((account) => (account as any).encryptedPassword)
+        .map((account) => ({
+          username: account.username,
+          password: this.credentialsService.decrypt(account.encryptedPassword),
+          accessMethod: account.accessMethod,
+          role: account.role,
+          note: account.note,
+        })),
     };
   }
 
@@ -446,13 +449,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       managedFields: inventory.managedFields,
       guestAccountsCount: inventory.guestAccounts.length,
       notes: inventory.notes,
-      guestAccounts: inventory.guestAccounts.map((account) => ({
-        username: account.username,
-        password: this.credentialsService.decrypt(account.encryptedPassword),
-        accessMethod: account.accessMethod,
-        role: account.role,
-        note: account.note,
-      })),
+      guestAccounts: inventory.guestAccounts
+        .filter((account) => (account as any).encryptedPassword)
+        .map((account) => ({
+          username: account.username,
+          password: this.credentialsService.decrypt(account.encryptedPassword),
+          accessMethod: account.accessMethod,
+          role: account.role,
+          note: account.note,
+        })),
       sourceHistory: inventory.source
         ? [
             {
@@ -1088,6 +1093,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   async findSources() {
     await this.ensureSeedData();
     const sources = await this.prisma.vmVCenterSource.findMany({
+      take: 1000,
       include: {
         discoveries: {
           where: {
@@ -1131,10 +1137,18 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.VCENTER_SYNC,
+        details: `Created vCenter source: ${source.name} (${source.endpoint})`,
+      },
+    });
+
     return this.mapSource(source);
   }
 
-  async updateSource(id: string, dto: SaveVmSourceDto) {
+  async updateSource(id: string, dto: SaveVmSourceDto, userId: string) {
     await this.ensureSeedData();
     const currentSource = await this.prisma.vmVCenterSource.findUnique({
       where: { id },
@@ -1176,10 +1190,19 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.VCENTER_SYNC,
+        targetId: source.id,
+        details: `Updated vCenter source: ${source.name} (${source.endpoint})`,
+      },
+    });
+
     return this.mapSource(source);
   }
 
-  async removeSource(id: string) {
+  async removeSource(id: string, userId: string) {
     await this.ensureSeedData();
     const source = await this.prisma.vmVCenterSource.findUnique({ where: { id } });
     if (!source) {
@@ -1187,10 +1210,20 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     }
 
     await this.prisma.vmVCenterSource.delete({ where: { id } });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.DELETE_SOURCE || 'VCENTER_SYNC',
+        targetId: id,
+        details: `Deleted vCenter source: ${source.name}`,
+      },
+    });
+
     return { success: true };
   }
 
-  async syncAllSources() {
+  async syncAllSources(userId: string) {
     await this.ensureSeedData();
     const sources = await this.prisma.vmVCenterSource.findMany({
       orderBy: { createdAt: 'asc' },
@@ -1249,7 +1282,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async syncSource(id: string) {
+  async syncSource(id: string, userId: string) {
     await this.ensureSeedData();
     const source = await this.prisma.vmVCenterSource.findUnique({
       where: { id },
@@ -1260,7 +1293,16 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      return await this.syncSourceData(source);
+      const result = await this.syncSourceData(source);
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.VCENTER_SYNC,
+          targetId: id,
+          details: `Manual sync of vCenter source: ${source.name}. Discovered ${result.discoveredCount} VMs.`,
+        },
+      });
+      return result;
     } catch (error) {
       const connectionError = this.getHumanConnectionError(error);
 
@@ -1282,6 +1324,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   async findDiscoveries() {
     await this.ensureSeedData();
     const discoveries = await this.prisma.vmDiscovery.findMany({
+      take: 1000,
       where: {
         state: {
           not: VmDiscoveryState.ARCHIVED,
@@ -1289,12 +1332,14 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       },
       include: {
         source: true,
-        guestAccounts: true,
+        guestAccounts: {
+          select: { id: true }
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
 
-    return discoveries.map((discovery) => this.mapDiscovery(discovery));
+    return discoveries.map((discovery) => this.mapDiscovery(discovery as any));
   }
 
   async findDiscovery(id: string) {
@@ -1354,6 +1399,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       include: {
         source: true,
         guestAccounts: true,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_VM,
+        targetId: id,
+        details: `Updated VM draft: ${updated.name} (moid: ${updated.moid})`,
       },
     });
 
@@ -1474,10 +1528,19 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       return inventory;
     });
 
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.CREATE_VM,
+        targetId: promoted.id,
+        details: `Promoted VM to inventory: ${promoted.name} (moid: ${promoted.moid})`,
+      },
+    });
+
     return this.mapInventory(promoted);
   }
 
-  async archiveDiscovery(id: string) {
+  async archiveDiscovery(id: string, userId: string) {
     await this.ensureSeedData();
     await this.prisma.vmDiscovery.update({
       where: { id },
@@ -1489,6 +1552,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   async findInventory() {
     await this.ensureSeedData();
     const inventories = await this.prisma.vmInventory.findMany({
+      take: 1000,
       where: {
         lifecycleState: {
           not: VmLifecycleState.ARCHIVED,
@@ -1496,12 +1560,14 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       },
       include: {
         source: true,
-        guestAccounts: true,
+        guestAccounts: {
+          select: { id: true }
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
 
-    return inventories.map((inventory) => this.mapInventory(inventory));
+    return inventories.map((inventory) => this.mapInventory(inventory as any));
   }
 
   async findInventoryById(id: string) {
@@ -1554,10 +1620,19 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_VM,
+        targetId: id,
+        details: `Updated VM inventory: ${updated.name} (moid: ${updated.moid})`,
+      },
+    });
+
     return this.mapInventory(updated);
   }
 
-  async archiveInventory(id: string, lifecycleState?: VmLifecycleState) {
+  async archiveInventory(id: string, userId: string, lifecycleState?: VmLifecycleState) {
     await this.ensureSeedData();
     await this.prisma.vmInventory.update({
       where: { id },
