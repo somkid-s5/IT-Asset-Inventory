@@ -19,7 +19,7 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 15,
+      limit: 100,
     }]),
     PrismaModule,
     AuthModule,

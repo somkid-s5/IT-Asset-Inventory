@@ -27,9 +27,11 @@ export class AuthController {
         const userCount = await this.authService.getUserCount();
         const secret = process.env.REGISTRATION_SECRET;
 
-        // Only enforce secret if at least one user exists and secret is configured
-        if (userCount > 0 && secret && registrationKey !== secret) {
-            throw new UnauthorizedException('Registration is restricted. Valid registration key required.');
+        // Only enforce secret if at least one user exists
+        if (userCount > 0) {
+            if (!secret || registrationKey !== secret) {
+                throw new UnauthorizedException('Registration is restricted. Valid registration key required.');
+            }
         }
 
         const result = await this.authService.register(registerDto);
