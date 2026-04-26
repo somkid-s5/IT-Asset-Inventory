@@ -115,6 +115,8 @@ export default function AuditLogsPage() {
       header: "User",
       cell: ({ row }) => {
         const u = row.original.user;
+        if (!u) return <span className="text-xs text-muted-foreground italic">System / Deleted User</span>;
+        
         return (
           <div className="flex items-center gap-3">
             <UserAvatar seed={u.avatarSeed} imageUrl={u.avatarImage} label={u.displayName} className="h-8 w-8 rounded-lg shadow-sm" />
@@ -127,15 +129,16 @@ export default function AuditLogsPage() {
       },
       filterFn: (row, id, value) => {
         const user = row.original.user;
-        return user.displayName.toLowerCase().includes(value.toLowerCase()) || 
-               user.username.toLowerCase().includes(value.toLowerCase());
+        if (!user) return false;
+        return (user.displayName?.toLowerCase() || '').includes(value.toLowerCase()) || 
+               (user.username?.toLowerCase() || '').includes(value.toLowerCase());
       }
     },
     {
       accessorKey: 'action',
       header: ({ column }) => <SortableHeader column={column} title="Action" />,
       cell: ({ getValue }) => {
-        const action = getValue() as string;
+        const action = (getValue() as string) || 'UNKNOWN';
         const colorClass = action.includes('DELETE') ? 'bg-destructive/10 text-destructive border-destructive/20' 
                          : action.includes('VIEW') || action.includes('LOGIN') ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
                          : action.includes('CREATE') ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
@@ -172,7 +175,10 @@ export default function AuditLogsPage() {
     getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: (row, columnId, filterValue) => {
       const u = row.original.user;
-      const searchStr = `${u.displayName} ${u.username} ${row.original.action} ${row.original.details || ''}`.toLowerCase();
+      const action = row.original.action || '';
+      const details = row.original.details || '';
+      const userStr = u ? `${u.displayName} ${u.username}` : 'system';
+      const searchStr = `${userStr} ${action} ${details}`.toLowerCase();
       return searchStr.includes(filterValue.toLowerCase());
     }
   });

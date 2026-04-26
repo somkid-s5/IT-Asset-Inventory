@@ -18,13 +18,14 @@ function buildDiceBearUrl(seed: string) {
 }
 
 function buildFallbackDataUrl(label: string) {
+  const safeLabel = label || 'User';
   const initials =
-    label
+    safeLabel
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? '')
-      .join('') || 'IP';
+      .join('') || 'U';
 
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">

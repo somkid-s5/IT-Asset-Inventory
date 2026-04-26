@@ -133,7 +133,6 @@ export default function AssetsPage() {
         { label: 'Assets' },
       ],
     });
-    return () => setHeader(null);
   }, [setHeader]);
 
   const filteredData = useMemo(() => {

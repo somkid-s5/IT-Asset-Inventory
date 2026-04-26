@@ -4,25 +4,29 @@ import { UpdateCredentialDto } from './dto/update-credential.dto';
 export declare class CredentialsController {
     private readonly credentialsService;
     constructor(credentialsService: CredentialsService);
-    create(createCredentialDto: CreateCredentialDto): Promise<{
-        type: string | null;
-        assetId: string;
-        manageType: string | null;
+    create(createCredentialDto: CreateCredentialDto, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         username: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        type: string | null;
         nodeLabel: string | null;
+        manageType: string | null;
         version: string | null;
+        assetId: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
     findByAsset(assetId: string): Promise<{
-        assetId: string;
         username: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        assetId: string;
         lastChangedDate: Date | null;
     }[]>;
     revealPassword(id: string, req: {
@@ -32,29 +36,37 @@ export declare class CredentialsController {
     }): Promise<{
         password: string;
     }>;
-    update(id: string, updateCredentialDto: UpdateCredentialDto): Promise<{
-        type: string | null;
-        assetId: string;
-        manageType: string | null;
+    update(id: string, updateCredentialDto: UpdateCredentialDto, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         username: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        type: string | null;
         nodeLabel: string | null;
+        manageType: string | null;
         version: string | null;
+        assetId: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;
-    remove(id: string): Promise<{
-        type: string | null;
-        assetId: string;
-        manageType: string | null;
+    remove(id: string, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         username: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        type: string | null;
         nodeLabel: string | null;
+        manageType: string | null;
         version: string | null;
+        assetId: string;
         encryptedPassword: string;
         lastChangedDate: Date | null;
     }>;

@@ -4,8 +4,8 @@
 BACKUP_DIR="./backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 CONTAINER_NAME="infrapilot_db"
-DB_NAME="postgres"
-DB_USER="postgres"
+DB_NAME="${POSTGRES_DB:-infrapilot_db}"
+DB_USER="${POSTGRES_USER:-infrapilot}"
 
 # Create backup directory if it doesn't exist
 mkdir -p $BACKUP_DIR

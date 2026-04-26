@@ -13,8 +13,8 @@ export class CredentialsController {
 
     @Roles('ADMIN', 'EDITOR')
     @Post()
-    create(@Body() createCredentialDto: CreateCredentialDto) {
-        return this.credentialsService.create(createCredentialDto);
+    create(@Body() createCredentialDto: CreateCredentialDto, @Request() req: { user: { id: string } }) {
+        return this.credentialsService.create(createCredentialDto, req.user.id);
     }
 
     @Get('asset/:assetId')
@@ -31,13 +31,17 @@ export class CredentialsController {
 
     @Roles('ADMIN', 'EDITOR')
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateCredentialDto: UpdateCredentialDto) {
-        return this.credentialsService.update(id, updateCredentialDto);
+    update(
+        @Param('id') id: string, 
+        @Body() updateCredentialDto: UpdateCredentialDto,
+        @Request() req: { user: { id: string } }
+    ) {
+        return this.credentialsService.update(id, updateCredentialDto, req.user.id);
     }
 
     @Roles('ADMIN')
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.credentialsService.remove(id);
+    remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+        return this.credentialsService.remove(id, req.user.id);
     }
 }

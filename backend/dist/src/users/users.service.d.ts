@@ -6,8 +6,8 @@ export declare class UsersService {
     constructor(prisma: PrismaService);
     findAll(): Promise<{
         username: string;
-        id: string;
         displayName: string;
+        id: string;
         avatarSeed: string;
         avatarImage: string | null;
         role: import(".prisma/client").$Enums.Role;
@@ -16,8 +16,8 @@ export declare class UsersService {
     }[]>;
     create(createUserDto: CreateUserDto, actorUserId: string): Promise<{
         username: string;
-        id: string;
         displayName: string;
+        id: string;
         avatarSeed: string;
         avatarImage: string | null;
         role: import(".prisma/client").$Enums.Role;
@@ -26,8 +26,8 @@ export declare class UsersService {
     }>;
     updateRole(userId: string, role: Role, currentUserId: string): Promise<{
         username: string;
-        id: string;
         displayName: string;
+        id: string;
         avatarSeed: string;
         avatarImage: string | null;
         role: import(".prisma/client").$Enums.Role;

@@ -32,7 +32,11 @@ export declare class VmController {
         lastSyncAt: string;
         notes: string | null;
     }>;
-    updateSource(id: string, dto: SaveVmSourceDto): Promise<{
+    updateSource(id: string, dto: SaveVmSourceDto, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         id: string;
         name: string;
         version: string;
@@ -43,10 +47,18 @@ export declare class VmController {
         lastSyncAt: string;
         notes: string | null;
     }>;
-    removeSource(id: string): Promise<{
+    removeSource(id: string, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         success: boolean;
     }>;
-    syncAllSources(): Promise<{
+    syncAllSources(req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         success: boolean;
         message: string;
         successCount: number;
@@ -65,7 +77,11 @@ export declare class VmController {
         apiFamily?: undefined;
         version?: undefined;
     }>;
-    syncSource(id: string): Promise<{
+    syncSource(id: string, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         success: boolean;
         message: string;
         discoveredCount: number;
@@ -288,7 +304,11 @@ export declare class VmController {
             status: string;
         }[];
     }>;
-    archiveDiscovery(id: string): Promise<{
+    archiveDiscovery(id: string, req: {
+        user: {
+            id: string;
+        };
+    }): Promise<{
         success: boolean;
     }>;
     findInventory(): Promise<{
@@ -454,7 +474,11 @@ export declare class VmController {
             status: string;
         }[];
     }>;
-    archiveInventory(id: string, lifecycleState?: VmLifecycleState): Promise<{
+    archiveInventory(id: string, req: {
+        user: {
+            id: string;
+        };
+    }, lifecycleState?: VmLifecycleState): Promise<{
         success: boolean;
     }>;
 }

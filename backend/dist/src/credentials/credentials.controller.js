@@ -25,8 +25,8 @@ let CredentialsController = class CredentialsController {
     constructor(credentialsService) {
         this.credentialsService = credentialsService;
     }
-    create(createCredentialDto) {
-        return this.credentialsService.create(createCredentialDto);
+    create(createCredentialDto, req) {
+        return this.credentialsService.create(createCredentialDto, req.user.id);
     }
     findByAsset(assetId) {
         return this.credentialsService.findByAsset(assetId);
@@ -34,11 +34,11 @@ let CredentialsController = class CredentialsController {
     revealPassword(id, req) {
         return this.credentialsService.revealPassword(id, req.user.id);
     }
-    update(id, updateCredentialDto) {
-        return this.credentialsService.update(id, updateCredentialDto);
+    update(id, updateCredentialDto, req) {
+        return this.credentialsService.update(id, updateCredentialDto, req.user.id);
     }
-    remove(id) {
-        return this.credentialsService.remove(id);
+    remove(id, req) {
+        return this.credentialsService.remove(id, req.user.id);
     }
 };
 exports.CredentialsController = CredentialsController;
@@ -46,8 +46,9 @@ __decorate([
     (0, roles_decorator_1.Roles)('ADMIN', 'EDITOR'),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_credential_dto_1.CreateCredentialDto]),
+    __metadata("design:paramtypes", [create_credential_dto_1.CreateCredentialDto, Object]),
     __metadata("design:returntype", void 0)
 ], CredentialsController.prototype, "create", null);
 __decorate([
@@ -71,16 +72,18 @@ __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_credential_dto_1.UpdateCredentialDto]),
+    __metadata("design:paramtypes", [String, update_credential_dto_1.UpdateCredentialDto, Object]),
     __metadata("design:returntype", void 0)
 ], CredentialsController.prototype, "update", null);
 __decorate([
     (0, roles_decorator_1.Roles)('ADMIN'),
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], CredentialsController.prototype, "remove", null);
 exports.CredentialsController = CredentialsController = __decorate([

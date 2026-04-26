@@ -8,8 +8,8 @@ export declare class UsersController {
     constructor(usersService: UsersService);
     findAll(): Promise<{
         username: string;
-        id: string;
         displayName: string;
+        id: string;
         avatarSeed: string;
         avatarImage: string | null;
         role: import(".prisma/client").$Enums.Role;
@@ -22,8 +22,8 @@ export declare class UsersController {
         };
     }): Promise<{
         username: string;
-        id: string;
         displayName: string;
+        id: string;
         avatarSeed: string;
         avatarImage: string | null;
         role: import(".prisma/client").$Enums.Role;
@@ -36,8 +36,8 @@ export declare class UsersController {
         };
     }): Promise<{
         username: string;
-        id: string;
         displayName: string;
+        id: string;
         avatarSeed: string;
         avatarImage: string | null;
         role: import(".prisma/client").$Enums.Role;

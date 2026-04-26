@@ -94,7 +94,6 @@ export default function VmPage() {
         { label: 'Virtual Machines' },
       ],
     });
-    return () => setHeader(null);
   }, [setHeader]);
 
   const openPendingSetup = async (id: string) => {

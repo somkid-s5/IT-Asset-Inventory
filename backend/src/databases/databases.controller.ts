@@ -30,13 +30,17 @@ export class DatabasesController {
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDatabaseDto: UpdateDatabaseDto) {
-    return this.databasesService.update(id, updateDatabaseDto);
+  update(
+    @Param('id') id: string, 
+    @Body() updateDatabaseDto: UpdateDatabaseDto,
+    @Request() req: { user: { id: string } }
+  ) {
+    return this.databasesService.update(id, updateDatabaseDto, req.user.id);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.databasesService.remove(id);
+  remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.databasesService.remove(id, req.user.id);
   }
 }
