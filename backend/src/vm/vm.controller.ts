@@ -36,20 +36,24 @@ export class VmController {
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Patch('sources/:id')
-  updateSource(@Param('id') id: string, @Body() dto: SaveVmSourceDto) {
-    return this.vmService.updateSource(id, dto);
+  updateSource(
+    @Param('id') id: string, 
+    @Body() dto: SaveVmSourceDto,
+    @Request() req: { user: { id: string } }
+  ) {
+    return this.vmService.updateSource(id, dto, req.user.id);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Delete('sources/:id')
-  removeSource(@Param('id') id: string) {
-    return this.vmService.removeSource(id);
+  removeSource(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.vmService.removeSource(id, req.user.id);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post('sources/sync-all')
-  syncAllSources() {
-    return this.vmService.syncAllSources();
+  syncAllSources(@Request() req: { user: { id: string } }) {
+    return this.vmService.syncAllSources(req.user.id);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
@@ -60,8 +64,8 @@ export class VmController {
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post('sources/:id/sync')
-  syncSource(@Param('id') id: string) {
-    return this.vmService.syncSource(id);
+  syncSource(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.vmService.syncSource(id, req.user.id);
   }
 
   @Get('discoveries')
@@ -96,8 +100,8 @@ export class VmController {
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post('discoveries/:id/archive')
-  archiveDiscovery(@Param('id') id: string) {
-    return this.vmService.archiveDiscovery(id);
+  archiveDiscovery(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.vmService.archiveDiscovery(id, req.user.id);
   }
 
   @Get('inventory')
@@ -122,7 +126,11 @@ export class VmController {
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post('inventory/:id/archive')
-  archiveInventory(@Param('id') id: string, @Body('lifecycleState') lifecycleState?: VmLifecycleState) {
-    return this.vmService.archiveInventory(id, lifecycleState);
+  archiveInventory(
+    @Param('id') id: string, 
+    @Request() req: { user: { id: string } },
+    @Body('lifecycleState') lifecycleState?: VmLifecycleState
+  ) {
+    return this.vmService.archiveInventory(id, req.user.id, lifecycleState);
   }
 }

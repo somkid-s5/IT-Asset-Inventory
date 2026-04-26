@@ -97,7 +97,6 @@ export default function DbPage() {
         { label: 'Databases' },
       ],
     });
-    return () => setHeader(null);
   }, [setHeader]);
 
   const filteredData = useMemo(() => {

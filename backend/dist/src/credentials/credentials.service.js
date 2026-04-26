@@ -44,14 +44,18 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CredentialsService = void 0;
 const common_1 = require("@nestjs/common");
+const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../prisma/prisma.service");
 const crypto = __importStar(require("crypto"));
 let CredentialsService = class CredentialsService {
     prisma;
     algorithm = 'aes-256-gcm';
-    secretKey = process.env.CREDENTIAL_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    secretKey = (process.env.CREDENTIAL_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY);
     constructor(prisma) {
         this.prisma = prisma;
+        if (!this.secretKey || Buffer.from(this.secretKey, 'hex').length !== 32) {
+            throw new Error('CRITICAL: CREDENTIAL_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)');
+        }
     }
     encrypt(text) {
         const iv = crypto.randomBytes(16);
@@ -69,15 +73,28 @@ let CredentialsService = class CredentialsService {
         decrypted += decipher.final('utf8');
         return decrypted;
     }
-    async create(createCredentialDto) {
+    async create(createCredentialDto, userId) {
         const { password, ...rest } = createCredentialDto;
         const encryptedPassword = this.encrypt(password);
-        return this.prisma.credential.create({
+        const created = await this.prisma.credential.create({
             data: {
                 ...rest,
                 encryptedPassword,
             },
         });
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: client_1.AuditAction.CREATE_CREDENTIAL,
+                targetId: created.id,
+                details: JSON.stringify({
+                    username: created.username,
+                    assetId: created.assetId,
+                    type: created.type,
+                }),
+            },
+        });
+        return created;
     }
     async findByAsset(assetId) {
         return this.prisma.credential.findMany({
@@ -111,22 +128,46 @@ let CredentialsService = class CredentialsService {
             password: this.decrypt(credential.encryptedPassword),
         };
     }
-    async update(id, updateCredentialDto) {
+    async update(id, updateCredentialDto, userId) {
         const { password, ...rest } = updateCredentialDto;
         const dataToUpdate = { ...rest };
         if (password) {
             dataToUpdate.encryptedPassword = this.encrypt(password);
             dataToUpdate.lastChangedDate = new Date();
         }
-        return this.prisma.credential.update({
+        const updated = await this.prisma.credential.update({
             where: { id },
             data: dataToUpdate,
         });
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: client_1.AuditAction.UPDATE_CREDENTIAL,
+                targetId: id,
+                details: JSON.stringify({
+                    username: updated.username,
+                    passwordChanged: !!password,
+                }),
+            },
+        });
+        return updated;
     }
-    async remove(id) {
-        return this.prisma.credential.delete({
+    async remove(id, userId) {
+        const credential = await this.prisma.credential.findUnique({ where: { id } });
+        if (!credential)
+            throw new common_1.NotFoundException('Credential not found');
+        const deleted = await this.prisma.credential.delete({
             where: { id },
         });
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: 'DELETE_ASSET',
+                targetId: id,
+                details: `Deleted credential ${credential.username} from asset ${credential.assetId}`,
+            },
+        });
+        return deleted;
     }
     getKeyBuffer() {
         if (/^[0-9a-fA-F]{64}$/.test(this.secretKey)) {

@@ -78,7 +78,7 @@
 ## 🔑 บัญชีผู้ใช้เริ่มต้น (Default Access)
 หลังจากการรัน `npx prisma db seed`:
 *   **Username:** `admin`
-*   **Password:** `ChangeMe#Admin2026!` *(กรุณาเปลี่ยนทันทีหลังเข้าใช้งาน)*
+*   **Password:** `AssetOpsAdmin2026!` *(กรุณาเปลี่ยนทันทีหลังเข้าใช้งาน)*
 
 ---
 
@@ -89,5 +89,4 @@
 
 ---
 
-## 📄 ใบอนุญาต (License)
-UNLICENSED (ลิขสิทธิ์เฉพาะภายในองค์กร)
+

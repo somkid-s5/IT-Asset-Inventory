@@ -31,7 +31,7 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({ isGlobal: true }),
             throttler_1.ThrottlerModule.forRoot([{
                     ttl: 60000,
-                    limit: 15,
+                    limit: 100,
                 }]),
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,

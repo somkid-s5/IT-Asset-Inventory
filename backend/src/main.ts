@@ -8,13 +8,17 @@ import { GlobalExceptionFilter } from './filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Security headers
-  app.use(helmet());
+  // Security headers with CORS-friendly settings for assets
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false,
+  }));
 
   // Enable CORS with credentials support
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true, // Allow cookies
+    exposedHeaders: ['set-cookie'],
   });
 
   // Enable cookie parser

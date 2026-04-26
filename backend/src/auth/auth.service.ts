@@ -91,6 +91,18 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
+        await this.prisma.auditLog.create({
+            data: {
+                userId: user.id,
+                action: AuditAction.LOGIN,
+                details: JSON.stringify({
+                    username: user.username,
+                    displayName: user.displayName,
+                    role: user.role,
+                }),
+            },
+        });
+
         return {
             access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
             user: {

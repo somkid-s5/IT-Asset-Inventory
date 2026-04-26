@@ -76,6 +76,7 @@ nano .env
 *   `CREDENTIAL_ENCRYPTION_KEY`: (ข้อความ 64 ตัวอักษร Hex สำหรับเข้ารหัสรหัสผ่าน)
 *   `NEXT_PUBLIC_API_URL`: **ระบุ IP ของ Server** เช่น http://192.168.1.50/api
 *   `FRONTEND_URL`: **ระบุ IP ของ Server** เช่น http://192.168.1.50
+*   `REGISTRATION_SECRET`: (รหัสผ่านสำหรับการลงทะเบียนผู้ใช้ใหม่หลังสร้าง Admin แล้ว)
 
 ---
 
@@ -194,6 +195,6 @@ crontab -e
 
 ## 10. ข้อมูลบัญชีเริ่มต้น (Default Credentials)
 *ดูข้อมูลนี้ได้จากไฟล์ `backend/prisma/seed.ts`*
-*   **Email:** `admin@example.com` (หรือตามที่คุณระบุใน Seed)
-*   **Password:** ตามที่ระบุในไฟล์ `seed.ts` หรือ `.env`
+*   **Email:** `admin@infrapilot.local`
+*   **Password:** `AssetOpsAdmin2026!` (หรือตามที่คุณระบุใน .env)
 *   *คำแนะนำ: ให้เปลี่ยนรหัสผ่านทันทีหลัง Login ครั้งแรก*

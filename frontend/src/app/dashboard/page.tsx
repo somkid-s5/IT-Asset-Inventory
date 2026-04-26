@@ -86,7 +86,6 @@ export default function DashboardPage() {
         { label: 'Dashboard' },
       ],
     });
-    return () => setHeader(null);
   }, [setHeader]);
 
   const assetChartData = useMemo(() => {

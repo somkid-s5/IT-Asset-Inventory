@@ -93,7 +93,7 @@ export declare class DatabasesService {
         createdAt: Date;
         updatedAt: Date;
     }>;
-    update(id: string, updateDatabaseDto: UpdateDatabaseDto): Promise<{
+    update(id: string, updateDatabaseDto: UpdateDatabaseDto, userId: string): Promise<{
         accounts: {
             id: string;
             username: string;
@@ -124,20 +124,20 @@ export declare class DatabasesService {
         createdAt: Date;
         updatedAt: Date;
     }>;
-    remove(id: string): Promise<{
-        name: string;
-        ipAddress: string;
+    remove(id: string, userId: string): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        environment: string | null;
+        name: string;
+        ipAddress: string;
+        version: string | null;
         status: string | null;
         owner: string | null;
+        environment: string | null;
         createdByUserId: string;
-        version: string | null;
-        host: string;
         note: string | null;
         engine: string;
+        host: string;
         port: string | null;
         serviceName: string | null;
         backupPolicy: string | null;

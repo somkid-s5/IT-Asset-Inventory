@@ -31,8 +31,10 @@ let AuthController = class AuthController {
     async register(registerDto, res, registrationKey) {
         const userCount = await this.authService.getUserCount();
         const secret = process.env.REGISTRATION_SECRET;
-        if (userCount > 0 && secret && registrationKey !== secret) {
-            throw new common_1.UnauthorizedException('Registration is restricted. Valid registration key required.');
+        if (userCount > 0) {
+            if (!secret || registrationKey !== secret) {
+                throw new common_1.UnauthorizedException('Registration is restricted. Valid registration key required.');
+            }
         }
         const result = await this.authService.register(registerDto);
         this.setAuthCookie(res, result.access_token);

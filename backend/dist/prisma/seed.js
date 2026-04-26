@@ -50,8 +50,8 @@ function encryptPasswordForSeed(password, hexKey) {
     return `${iv.toString('hex')}:${encrypted}:${authTag}`;
 }
 async function main() {
-    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'ChangeMe#Admin2026!';
-    const defaultEditorPassword = process.env.DEFAULT_EDITOR_PASSWORD || 'ChangeMe#Editor2026!';
+    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'AssetOpsAdmin2026!';
+    const defaultEditorPassword = process.env.DEFAULT_EDITOR_PASSWORD || 'AssetOpsEditor2026!';
     console.log('Clearing old data...');
     await prisma.auditLog.deleteMany();
     await prisma.credential.deleteMany();
@@ -86,12 +86,15 @@ async function main() {
         {
             name: 'db-prod-01',
             type: client_1.AssetType.SERVER,
-            ipAddress: '10.0.1.45',
-            macAddress: '00:1B:44:11:3A:B7',
             osVersion: 'Ubuntu 22.04 LTS',
             status: client_1.AssetStatus.ACTIVE,
             department: 'Database Admins',
             owner: 'db-team',
+            ipAllocations: {
+                create: [
+                    { address: '10.0.1.45', type: 'Management' }
+                ]
+            },
             patchInfo: {
                 create: {
                     currentVersion: 'PG-14.2',
@@ -104,11 +107,15 @@ async function main() {
         {
             name: 'web-front-lb',
             type: client_1.AssetType.SERVER,
-            ipAddress: '10.0.2.12',
             osVersion: 'NGINX Alpine',
             status: client_1.AssetStatus.ACTIVE,
             department: 'Web Infrastructure',
             owner: 'web-team',
+            ipAllocations: {
+                create: [
+                    { address: '10.0.2.12', type: 'VIP' }
+                ]
+            },
             patchInfo: {
                 create: {
                     currentVersion: '1.24.0',
@@ -121,10 +128,14 @@ async function main() {
         {
             name: 'auth-service-vm',
             type: client_1.AssetType.SERVER,
-            ipAddress: '10.0.5.99',
             osVersion: 'Windows Server 2019',
             status: client_1.AssetStatus.ACTIVE,
             department: 'Security',
+            ipAllocations: {
+                create: [
+                    { address: '10.0.5.99', type: 'Management' }
+                ]
+            },
             patchInfo: {
                 create: {
                     currentVersion: 'Win-2019-B2',
@@ -137,18 +148,26 @@ async function main() {
         {
             name: 'internal-wiki',
             type: client_1.AssetType.SERVER,
-            ipAddress: '10.0.8.20',
             osVersion: 'Confluence 8.0',
             status: client_1.AssetStatus.ACTIVE,
             department: 'IT Support',
+            ipAllocations: {
+                create: [
+                    { address: '10.0.8.20', type: 'Management' }
+                ]
+            },
         },
         {
             name: 'legacy-app-server',
             type: client_1.AssetType.SERVER,
-            ipAddress: '10.0.1.100',
             osVersion: 'Windows Server 2008 R2',
             status: client_1.AssetStatus.DECOMMISSIONED,
             department: 'Legacy Systems',
+            ipAllocations: {
+                create: [
+                    { address: '10.0.1.100', type: 'Legacy' }
+                ]
+            },
         }
     ];
     console.log('Seeding assets...');

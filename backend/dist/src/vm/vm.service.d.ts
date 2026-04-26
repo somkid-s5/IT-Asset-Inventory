@@ -74,7 +74,7 @@ export declare class VmService implements OnModuleInit, OnModuleDestroy {
         lastSyncAt: string;
         notes: string | null;
     }>;
-    updateSource(id: string, dto: SaveVmSourceDto): Promise<{
+    updateSource(id: string, dto: SaveVmSourceDto, userId: string): Promise<{
         id: string;
         name: string;
         version: string;
@@ -85,10 +85,10 @@ export declare class VmService implements OnModuleInit, OnModuleDestroy {
         lastSyncAt: string;
         notes: string | null;
     }>;
-    removeSource(id: string): Promise<{
+    removeSource(id: string, userId: string): Promise<{
         success: boolean;
     }>;
-    syncAllSources(): Promise<{
+    syncAllSources(userId: string): Promise<{
         success: boolean;
         message: string;
         successCount: number;
@@ -107,7 +107,7 @@ export declare class VmService implements OnModuleInit, OnModuleDestroy {
         apiFamily?: undefined;
         version?: undefined;
     }>;
-    syncSource(id: string): Promise<{
+    syncSource(id: string, userId: string): Promise<{
         success: boolean;
         message: string;
         discoveredCount: number;
@@ -306,7 +306,7 @@ export declare class VmService implements OnModuleInit, OnModuleDestroy {
             status: string;
         }[];
     }>;
-    archiveDiscovery(id: string): Promise<{
+    archiveDiscovery(id: string, userId: string): Promise<{
         success: boolean;
     }>;
     findInventory(): Promise<{
@@ -456,7 +456,7 @@ export declare class VmService implements OnModuleInit, OnModuleDestroy {
             status: string;
         }[];
     }>;
-    archiveInventory(id: string, lifecycleState?: VmLifecycleState): Promise<{
+    archiveInventory(id: string, userId: string, lifecycleState?: VmLifecycleState): Promise<{
         success: boolean;
     }>;
 }

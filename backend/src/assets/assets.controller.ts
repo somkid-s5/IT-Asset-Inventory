@@ -30,13 +30,17 @@ export class AssetsController {
 
     @Roles(Role.ADMIN, Role.EDITOR)
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateAssetDto: UpdateAssetDto) {
-        return this.assetsService.update(id, updateAssetDto);
+    update(
+        @Param('id') id: string, 
+        @Body() updateAssetDto: UpdateAssetDto,
+        @Request() req: { user: { id: string } }
+    ) {
+        return this.assetsService.update(id, updateAssetDto, req.user.id);
     }
 
     @Roles(Role.ADMIN, Role.EDITOR)
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.assetsService.remove(id);
+    remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+        return this.assetsService.remove(id, req.user.id);
     }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useSyncExternalStore, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import api from '@/services/api';
 
 interface User {
@@ -104,9 +104,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const hydrated = useSyncExternalStore(subscribe, getClientHydratedSnapshot, getServerHydratedSnapshot);
     const loading = !hydrated;
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
         const verifyAuth = async () => {
+            // Skip verification if on login page and no user is stored locally
+            // This prevents noisy 401 errors in the console on initial load
+            if (pathname === '/login' && !localStorage.getItem('user')) {
+                return;
+            }
+
             try {
                 const response = await api.get('/auth/me');
                 if (response.data.user) {
@@ -121,9 +128,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 }
             }
         };
-        
-        verifyAuth();
-    }, []);
+
+        if (hydrated) {
+            verifyAuth();
+        }
+    }, [pathname, hydrated]);
 
     const login = (userData: User) => {
         // Token is stored in HttpOnly cookie on backend
