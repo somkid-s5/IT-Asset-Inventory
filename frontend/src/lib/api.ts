@@ -9,7 +9,7 @@ if (isProd && !apiUrl) {
 }
 
 const api = axios.create({
-  baseURL: apiUrl || 'http://localhost:3001/api',
+  baseURL: apiUrl || (isProd ? '/api' : 'http://localhost:3001/api'),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

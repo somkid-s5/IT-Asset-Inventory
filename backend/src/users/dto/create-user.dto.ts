@@ -1,6 +1,9 @@
 import { Role } from '@prisma/client';
 import { IsEnum, IsString, Matches, MinLength } from 'class-validator';
-import { PASSWORD_POLICY_MESSAGE, PASSWORD_POLICY_REGEX } from '../../auth/password-policy';
+import {
+  PASSWORD_POLICY_MESSAGE,
+  PASSWORD_POLICY_REGEX,
+} from '../../auth/password-policy';
 
 export class CreateUserDto {
   @IsString()

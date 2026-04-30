@@ -208,6 +208,7 @@ function formatRelativeTime(dateStr: string) {
 
 function getApiBase() {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (process.env.NODE_ENV === 'production') return '/api';
   if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.hostname}:3001/api`;
   return 'http://localhost:3001/api';
 }
@@ -463,6 +464,7 @@ function AttachmentsSection({ assetId, initialAttachments }: { assetId: string; 
           </motion.div>
         )}
       </AnimatePresence>
+      <input type="file" ref={fileInputRef} onChange={(e) => handleUpload(e.target.files)} className="hidden" aria-hidden="true" />
     </div>
   );
 }
@@ -924,6 +926,7 @@ export default function AssetDetailsPage() {
   }, [asset]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (accessRows.length > 0) setOpenAccordion(accessRows[0].key);
   }, [assetId, accessRows.length]); // Added accessRows.length as dependency
 

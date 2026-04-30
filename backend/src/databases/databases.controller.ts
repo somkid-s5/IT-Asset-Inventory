@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -14,7 +24,10 @@ export class DatabasesController {
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post()
-  create(@Body() createDatabaseDto: CreateDatabaseDto, @Request() req: { user: { id: string } }) {
+  create(
+    @Body() createDatabaseDto: CreateDatabaseDto,
+    @Request() req: { user: { id: string } },
+  ) {
     return this.databasesService.create(createDatabaseDto, req.user.id);
   }
 
@@ -31,9 +44,9 @@ export class DatabasesController {
   @Roles(Role.ADMIN, Role.EDITOR)
   @Patch(':id')
   update(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @Body() updateDatabaseDto: UpdateDatabaseDto,
-    @Request() req: { user: { id: string } }
+    @Request() req: { user: { id: string } },
   ) {
     return this.databasesService.update(id, updateDatabaseDto, req.user.id);
   }
@@ -42,5 +55,15 @@ export class DatabasesController {
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
     return this.databasesService.remove(id, req.user.id);
+  }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Get(':id/accounts/:accountId/password')
+  revealPassword(
+    @Param('id') id: string,
+    @Param('accountId') accountId: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.databasesService.revealPassword(id, accountId, req.user.id);
   }
 }

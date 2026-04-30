@@ -8,14 +8,14 @@ import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { 
   ChevronDown, Database, LayoutDashboard, Monitor, 
-  PanelLeft, Server, Users, Workflow, Settings, 
-  HelpCircle, ChevronLeft, Activity
+  Server, Users, Workflow, ChevronLeft, Activity
 } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 type NavItem = {
   title: string;
   url: string;
-  icon: any;
+  icon: LucideIcon;
 };
 
 const primaryNavItems: NavItem[] = [
@@ -42,7 +42,10 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
   const [computeOpen, setComputeOpen] = useState(inComputeSection);
 
   useEffect(() => {
-    if (inComputeSection) setComputeOpen(true);
+    if (inComputeSection && !computeOpen) {
+      setComputeOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inComputeSection]);
 
   const renderNavItem = (item: NavItem, isChild = false) => {
@@ -131,7 +134,8 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
       </button>
 
       <div className="p-4 border-t border-sidebar-border/30 bg-sidebar-background/50 backdrop-blur-md">
-         {renderNavItem({ title: 'Settings', url: '/dashboard/settings', icon: Settings })}
+         {/* Settings feature is coming soon */}
+         {/* {renderNavItem({ title: 'Settings', url: '/dashboard/settings', icon: Settings })} */}
       </div>
     </aside>
   );

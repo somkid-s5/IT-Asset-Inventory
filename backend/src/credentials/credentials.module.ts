@@ -8,6 +8,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   providers: [CredentialsService],
   controllers: [CredentialsController],
-  exports: [CredentialsService]
+  exports: [CredentialsService],
 })
-export class CredentialsModule { }
+export class CredentialsModule {}

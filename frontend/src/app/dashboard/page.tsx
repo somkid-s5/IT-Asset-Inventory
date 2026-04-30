@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   AlertTriangle, Database, RefreshCw, Server, 
@@ -69,6 +69,11 @@ const itemVariants: any = {
 export default function DashboardPage() {
   const router = useRouter();
   const { setHeader } = usePageHeader();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['dashboard-overview'],
@@ -146,17 +151,19 @@ export default function DashboardPage() {
               <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-4 w-4 text-primary" />Asset Distribution</CardTitle>
               <CardDescription>Breakdown of IT resources across the system</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-[300px]">
-              {assetChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={assetChartData} innerRadius={70} outerRadius={95} paddingAngle={4} dataKey="value">
-                      {assetChartData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={entry.color} /> ))}
-                    </Pie>
-                    <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))' }} itemStyle={{ color: 'hsl(var(--foreground))' }} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                  </PieChart>
-                </ResponsiveContainer>
+            <CardContent className="flex-1 min-h-[300px] relative">
+              {mounted && assetChartData.length > 0 ? (
+                <div className="absolute inset-0 overflow-hidden">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={assetChartData} innerRadius={70} outerRadius={95} paddingAngle={4} dataKey="value">
+                        {assetChartData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={entry.color} /> ))}
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))' }} itemStyle={{ color: 'hsl(var(--foreground))' }} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No data available</div>
               )}

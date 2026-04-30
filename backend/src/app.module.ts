@@ -17,10 +17,12 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     PrismaModule,
     AuthModule,
     AssetsModule,
@@ -29,7 +31,7 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     UsersModule,
     DatabasesModule,
     VmModule,
-    AuditLogsModule
+    AuditLogsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -40,4 +42,4 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

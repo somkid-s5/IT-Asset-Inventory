@@ -6,10 +6,10 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/dashboard')
 export class DashboardController {
-    constructor(private readonly dashboardService: DashboardService) { }
+  constructor(private readonly dashboardService: DashboardService) {}
 
-    @Get('overview')
-    getOverview() {
-        return this.dashboardService.getOverview();
-    }
+  @Get('overview')
+  getOverview() {
+    return this.dashboardService.getOverview();
+  }
 }

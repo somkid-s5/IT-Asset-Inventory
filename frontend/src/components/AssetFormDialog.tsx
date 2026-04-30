@@ -2,7 +2,7 @@
 
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -463,6 +463,7 @@ export function AssetFormDialog({
         location: formData.location.trim() || undefined,
         brandModel: formData.brandModel.trim() || undefined,
         sn: formData.sn.trim() || undefined,
+        parentId: formData.parentId ? formData.parentId : null,
         ips: finalIps,
         credentials: finalCredentials,
         customMetadata: Object.keys(customMetadata).length > 0 ? customMetadata : undefined,
@@ -478,15 +479,15 @@ export function AssetFormDialog({
 
       onSuccess();
       onOpenChange(false);
-    } catch (error: unknown) {
-      const message =
-        typeof error === 'object' &&
-          error !== null &&
-          'response' in error &&
-          typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
-          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-          : 'Failed to save asset';
-
+    } catch (error: any) {
+      console.error(error);
+      const errRes = error?.response?.data;
+      let message = 'Failed to save asset';
+      if (errRes?.message) {
+        message = Array.isArray(errRes.message) ? errRes.message.join(', ') : errRes.message;
+      } else if (errRes?.error) {
+        message = errRes.error;
+      }
       toast.error(message);
     } finally {
       setLoading(false);
@@ -545,6 +546,9 @@ export function AssetFormDialog({
             </span>
             <span>{assetToEdit ? 'Edit Asset Information' : 'Add New Asset'}</span>
           </DialogTitle>
+          <DialogDescription>
+            {assetToEdit ? 'Update the details and specifications for this hardware asset.' : 'Register a new hardware or infrastructure component in the inventory.'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5 px-5 py-5 pt-0">

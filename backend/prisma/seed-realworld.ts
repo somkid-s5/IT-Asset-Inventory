@@ -39,8 +39,8 @@ async function main() {
 
     console.log('🚀 Starting GOD-MODE simulation seed...');
 
-    const adminPasswordHash = await bcrypt.hash('AssetOpsAdmin2026!', 10);
-    const somkidPasswordHash = await bcrypt.hash('Somkid@2026', 10);
+    const adminPasswordHash = await bcrypt.hash(process.env.DEFAULT_ADMIN_PASSWORD || 'AssetOpsAdmin2026!', 10);
+    const somkidPasswordHash = await bcrypt.hash(process.env.DEFAULT_EDITOR_PASSWORD || 'Somkid@2026', 10);
 
     const admin = await prisma.user.create({
         data: {
