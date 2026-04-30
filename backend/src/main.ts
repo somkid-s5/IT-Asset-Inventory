@@ -9,14 +9,18 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Security headers with CORS-friendly settings for assets
-  app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    crossOriginEmbedderPolicy: false,
-  }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Enable CORS with credentials support
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin:
+      process.env.FRONTEND_URL ||
+      (process.env.NODE_ENV === 'production' ? false : 'http://localhost:3000'),
     credentials: true, // Allow cookies
     exposedHeaders: ['set-cookie'],
   });
@@ -36,4 +40,7 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3001);
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Fatal error during bootstrap:', err);
+  process.exit(1);
+});

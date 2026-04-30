@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { Request } from 'express';
 import { Roles } from '../auth/roles.decorator';
@@ -21,7 +31,10 @@ export class UsersController {
   }
 
   @Post()
-  create(@Body() createUserDto: CreateUserDto, @Req() req: Request & { user: { id: string } }) {
+  create(
+    @Body() createUserDto: CreateUserDto,
+    @Req() req: Request & { user: { id: string } },
+  ) {
     return this.usersService.create(createUserDto, req.user.id);
   }
 
@@ -31,11 +44,18 @@ export class UsersController {
     @Body() updateUserRoleDto: UpdateUserRoleDto,
     @Req() req: Request & { user: { id: string } },
   ) {
-    return this.usersService.updateRole(userId, updateUserRoleDto.role, req.user.id);
+    return this.usersService.updateRole(
+      userId,
+      updateUserRoleDto.role,
+      req.user.id,
+    );
   }
 
   @Delete(':id')
-  remove(@Param('id') userId: string, @Req() req: Request & { user: { id: string } }) {
+  remove(
+    @Param('id') userId: string,
+    @Req() req: Request & { user: { id: string } },
+  ) {
     return this.usersService.remove(userId, req.user.id);
   }
 
@@ -45,6 +65,10 @@ export class UsersController {
     @Body() resetPasswordDto: ResetPasswordDto,
     @Req() req: Request & { user: { id: string } },
   ) {
-    return this.usersService.resetPassword(userId, resetPasswordDto.password, req.user.id);
+    return this.usersService.resetPassword(
+      userId,
+      resetPasswordDto.password,
+      req.user.id,
+    );
   }
 }

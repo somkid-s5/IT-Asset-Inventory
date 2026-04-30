@@ -1,5 +1,9 @@
 import { AuditAction } from '@prisma/client';
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -9,193 +13,213 @@ import { createAvatarSeed } from './avatar-seed';
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private prisma: PrismaService,
-        private jwtService: JwtService,
-    ) { }
-    
-    async getUserCount() {
-        return this.prisma.user.count();
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
+
+  async getUserCount() {
+    return this.prisma.user.count();
+  }
+
+  async register(registerDto: RegisterDto) {
+    const { username, displayName, password } = registerDto;
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { username },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('Username already exists');
     }
 
-    async register(registerDto: RegisterDto) {
-        const { username, displayName, password } = registerDto;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
 
-        const existingUser = await this.prisma.user.findUnique({
-            where: { username },
-        });
+    // Provide ADMIN role to the first user created, others get viewer or default.
+    const userCount = await this.prisma.user.count();
+    const role = userCount === 0 ? 'ADMIN' : 'VIEWER';
 
-        if (existingUser) {
-            throw new ConflictException('Username already exists');
-        }
+    const user = await this.prisma.user.create({
+      data: {
+        username,
+        displayName,
+        avatarSeed: createAvatarSeed(),
+        email: null,
+        passwordHash,
+        role,
+      },
+    });
 
-        const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(password, salt);
+    await this.prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: AuditAction.CREATE_USER,
+        targetId: user.id,
+        details: JSON.stringify({
+          username: user.username,
+          displayName: user.displayName,
+          role: user.role,
+          source: 'self-register',
+        }),
+      },
+    });
 
-        // Provide ADMIN role to the first user created, others get viewer or default.
-        const userCount = await this.prisma.user.count();
-        const role = userCount === 0 ? 'ADMIN' : 'VIEWER';
+    return {
+      access_token: this.jwtService.sign({
+        sub: user.id,
+        username: user.username,
+        role: user.role,
+      }),
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarSeed: user.avatarSeed,
+        avatarImage: user.avatarImage,
+        role: user.role,
+      },
+    };
+  }
 
-        const user = await this.prisma.user.create({
-            data: {
-                username,
-                displayName,
-                avatarSeed: createAvatarSeed(),
-                email: null,
-                passwordHash,
-                role,
-            },
-        });
+  async login(loginDto: LoginDto) {
+    const { username, password } = loginDto;
 
-        await this.prisma.auditLog.create({
-            data: {
-                userId: user.id,
-                action: AuditAction.CREATE_USER,
-                targetId: user.id,
-                details: JSON.stringify({
-                    username: user.username,
-                    displayName: user.displayName,
-                    role: user.role,
-                    source: 'self-register',
-                }),
-            },
-        });
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+    });
 
-        return {
-            access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
-            user: {
-                id: user.id,
-                username: user.username,
-                displayName: user.displayName,
-                avatarSeed: user.avatarSeed,
-                avatarImage: user.avatarImage,
-                role: user.role,
-            },
-        };
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    async login(loginDto: LoginDto) {
-        const { username, password } = loginDto;
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
-        const user = await this.prisma.user.findUnique({
-            where: { username },
-        });
-
-        if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-
-        await this.prisma.auditLog.create({
-            data: {
-                userId: user.id,
-                action: AuditAction.LOGIN,
-                details: JSON.stringify({
-                    username: user.username,
-                    displayName: user.displayName,
-                    role: user.role,
-                }),
-            },
-        });
-
-        return {
-            access_token: this.jwtService.sign({ sub: user.id, username: user.username, role: user.role }),
-            user: {
-                id: user.id,
-                username: user.username,
-                displayName: user.displayName,
-                avatarSeed: user.avatarSeed,
-                avatarImage: user.avatarImage,
-                role: user.role,
-            },
-        };
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    async me(userId: string) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-        });
+    await this.prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: AuditAction.LOGIN,
+        details: JSON.stringify({
+          username: user.username,
+          displayName: user.displayName,
+          role: user.role,
+        }),
+      },
+    });
 
-        if (!user) {
-            throw new UnauthorizedException('User not found');
-        }
+    return {
+      access_token: this.jwtService.sign({
+        sub: user.id,
+        username: user.username,
+        role: user.role,
+      }),
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarSeed: user.avatarSeed,
+        avatarImage: user.avatarImage,
+        role: user.role,
+      },
+    };
+  }
 
-        return {
-            user: {
-                id: user.id,
-                username: user.username,
-                displayName: user.displayName,
-                avatarSeed: user.avatarSeed,
-                avatarImage: user.avatarImage,
-                role: user.role,
-            },
-        };
+  async me(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
 
-    async updateProfile(userId: string, displayName?: string, avatarSeed?: string, avatarImage?: string | null) {
-        if (avatarImage && !avatarImage.startsWith('data:image/')) {
-            throw new ConflictException('Avatar image format is invalid');
-        }
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarSeed: user.avatarSeed,
+        avatarImage: user.avatarImage,
+        role: user.role,
+      },
+    };
+  }
 
-        const user = await this.prisma.user.update({
-            where: { id: userId },
-            data: {
-                ...(displayName ? { displayName } : {}),
-                ...(avatarSeed ? { avatarSeed } : {}),
-                ...(avatarImage !== undefined ? { avatarImage } : {}),
-            },
-        });
-
-        return {
-            user: {
-                id: user.id,
-                username: user.username,
-                displayName: user.displayName,
-                avatarSeed: user.avatarSeed,
-                avatarImage: user.avatarImage,
-                role: user.role,
-            },
-        };
+  async updateProfile(
+    userId: string,
+    displayName?: string,
+    avatarSeed?: string,
+    avatarImage?: string | null,
+  ) {
+    if (avatarImage && !avatarImage.startsWith('data:image/')) {
+      throw new ConflictException('Avatar image format is invalid');
     }
 
-    async changePassword(userId: string, currentPassword: string, newPassword: string) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-        });
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(displayName ? { displayName } : {}),
+        ...(avatarSeed ? { avatarSeed } : {}),
+        ...(avatarImage !== undefined ? { avatarImage } : {}),
+      },
+    });
 
-        if (!user) {
-            throw new UnauthorizedException('User not found');
-        }
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarSeed: user.avatarSeed,
+        avatarImage: user.avatarImage,
+        role: user.role,
+      },
+    };
+  }
 
-        const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Current password is incorrect');
-        }
-
-        const passwordHash = await bcrypt.hash(newPassword, 10);
-
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: { passwordHash },
-        });
-
-        await this.prisma.auditLog.create({
-            data: {
-                userId,
-                action: AuditAction.CHANGE_OWN_PASSWORD,
-                targetId: userId,
-                details: JSON.stringify({
-                    source: 'self-service',
-                }),
-            },
-        });
-
-        return { success: true };
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.CHANGE_OWN_PASSWORD,
+        targetId: userId,
+        details: JSON.stringify({
+          source: 'self-service',
+        }),
+      },
+    });
+
+    return { success: true };
+  }
 }

@@ -268,6 +268,9 @@ export default function VmSourcesPage() {
         <DialogContent className="max-w-2xl bg-card p-0 rounded-2xl overflow-hidden">
           <DialogHeader className="border-b border-border/70 px-6 py-5 bg-muted/20">
             <DialogTitle>{editingSourceId ? 'Edit vCenter Source' : 'Add vCenter Source'}</DialogTitle>
+            <DialogDescription>
+              {editingSourceId ? 'Update vCenter API connection parameters and credentials.' : 'Configure a new vCenter server connection for automated VM discovery.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-5 px-6 py-6">
             <div className="grid gap-4 md:grid-cols-2">
@@ -316,7 +319,12 @@ export default function VmSourcesPage() {
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
-          <DialogHeader><DialogTitle className="text-destructive">Delete Source</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Delete Source</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. All data related to this source will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
           <div className="py-4"><p className="text-sm text-muted-foreground">Are you sure you want to delete <span className="font-bold text-foreground">{deleteTarget?.name}</span>?</p></div>
           <div className="flex justify-end gap-3">
              <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>

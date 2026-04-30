@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState, useCallback } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Monitor, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -231,11 +231,14 @@ export function VmFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] overflow-y-auto border-border bg-card sm:max-w-5xl">
-        <DialogHeader>
-          <DialogTitle>{vmToEdit ? 'Edit Virtual Machine' : discoveryVm && submitMode === 'promote' ? 'Complete VM Setup' : discoveryVm ? 'VM Details' : 'Create New VM'}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Source Sync data is read directly from vCenter, while AssetOps Context is managed by the IT team.
-          </p>
+        <DialogHeader className="px-6 pt-6">
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <Monitor className="h-5 w-5 text-primary" />
+            {vmToEdit ? 'Edit Virtual Machine' : discoveryVm && submitMode === 'promote' ? 'Complete VM Setup' : discoveryVm ? 'VM Details' : 'Create New VM'}
+          </DialogTitle>
+          <DialogDescription>
+            {vmToEdit ? 'Modify the existing virtual machine configuration.' : 'Enter virtual machine specifications and resource allocations.'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">

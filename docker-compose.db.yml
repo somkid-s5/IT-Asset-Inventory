@@ -1,16 +1,16 @@
 version: '3.8'
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: it-asset-db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: infrapilot
+      POSTGRES_PASSWORD: AssetOpsPostgres2026!
+      POSTGRES_DB: infrapilot_db
     ports:
       - "5435:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_test_data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
+  postgres_test_data:

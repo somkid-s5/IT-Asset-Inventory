@@ -100,6 +100,43 @@ export default function DatabaseDetailPage() {
     }
   };
 
+  const handleRevealPassword = async (accountId: string) => {
+    if (!database) return;
+    try {
+      if (revealedPasswords[accountId]) {
+        setRevealedPasswords(c => ({...c, [accountId]: false}));
+        return;
+      }
+      const res = await api.get<{password: string}>(`/databases/${database.id}/accounts/${accountId}/password`);
+      setDatabase({
+        ...database,
+        accounts: database.accounts.map(a => 
+          a.id === accountId ? { ...a, password: res.data.password } : a
+        )
+      });
+      setRevealedPasswords(c => ({...c, [accountId]: true}));
+    } catch (err) {
+      toast.error("Failed to reveal password");
+    }
+  };
+
+  const copyPassword = async (accountId: string, currentPassword?: string) => {
+    if (!database) return;
+    try {
+      let pwdToCopy = currentPassword;
+      if (!pwdToCopy) {
+        const res = await api.get<{password: string}>(`/databases/${database.id}/accounts/${accountId}/password`);
+        pwdToCopy = res.data.password;
+      }
+      if (pwdToCopy) {
+        await navigator.clipboard.writeText(pwdToCopy);
+        toast.success("คัดลอก Password แล้ว");
+      }
+    } catch {
+      toast.error("ไม่สามารถคัดลอก password ได้");
+    }
+  };
+
   const hostValue = database.port ? `${database.ipAddress}:${database.port}` : database.ipAddress;
 
   const properties = [
@@ -254,15 +291,15 @@ export default function DatabaseDetailPage() {
                            <button onClick={() => { void copyValue(account.username, 'Username'); }} className="text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                            <div className="font-mono bg-muted/50 px-2 py-1 rounded-md min-w-[160px] text-center font-semibold tabular-nums transition-all">
                              {isRev ? account.password : '••••••••••••'}
                            </div>
-                           <button onClick={() => setRevealedPasswords(c => ({...c, [account.id]: !isRev}))} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                           <button onClick={() => handleRevealPassword(account.id)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
                              {isRev ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                            </button>
-                           <button onClick={() => { void copyValue(account.password, 'Password'); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                           <button onClick={() => { void copyPassword(account.id, account.password); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
                              <Copy className="h-4 w-4" />
                            </button>
                         </div>

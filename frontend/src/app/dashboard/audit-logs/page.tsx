@@ -24,6 +24,7 @@ import {
   Search, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface UserInfo {
   username: string;
@@ -73,8 +74,9 @@ export default function AuditLogsPage() {
     
     const loadLogs = async () => {
       try {
-        const response = await api.get<AuditLogRecord[]>('/audit-logs');
-        setLogs(response.data);
+        const response = await api.get('/audit-logs');
+        const responseData = response.data as any;
+        setLogs(responseData.data || responseData);
       } catch (error) {
         toast.error('Failed to load audit logs');
       } finally {
@@ -149,11 +151,43 @@ export default function AuditLogsPage() {
     {
       accessorKey: 'details',
       header: "Details",
-      cell: ({ row }) => (
-        <div className="max-w-[300px] truncate text-xs text-muted-foreground" title={row.original.details || 'N/A'}>
-          {row.original.details || <span className="italic opacity-50">No details</span>}
-        </div>
-      )
+      cell: ({ row }) => {
+        const details = row.original.details;
+        if (!details) return <span className="italic opacity-50 text-xs text-muted-foreground">No details</span>;
+
+        let formattedDetails = details;
+        try {
+            formattedDetails = JSON.stringify(JSON.parse(details), null, 2);
+        } catch (e) {
+            // Not JSON, keep as is
+        }
+
+        return (
+          <Dialog>
+            <DialogTrigger asChild>
+              <div 
+                className="max-w-[300px] truncate text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors hover:bg-muted/50 p-1 -ml-1 rounded" 
+                title="Click to view full details"
+              >
+                {row.original.details}
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-md md:max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Audit Log Details</DialogTitle>
+                <DialogDescription>
+                  Full details and metadata for this audit event.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="bg-muted p-4 rounded-md overflow-x-auto max-h-[60vh] overflow-y-auto">
+                <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap">
+                  {formattedDetails}
+                </pre>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      }
     },
     {
       accessorKey: 'ipAddress',

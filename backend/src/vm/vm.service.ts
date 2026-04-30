@@ -99,11 +99,19 @@ type VcenterVmDetail = {
     version?: string;
     cpu?: { count?: number };
     memory?: { size_MiB?: number; size_mib?: number };
-    disks?: Array<{ value?: Record<string, unknown> }> | Record<string, Record<string, unknown>>;
-    nics?: Array<{ value?: Record<string, unknown> }> | Record<string, Record<string, unknown>>;
+    disks?:
+      | Array<{ value?: Record<string, unknown> }>
+      | Record<string, Record<string, unknown>>;
+    nics?:
+      | Array<{ value?: Record<string, unknown> }>
+      | Record<string, Record<string, unknown>>;
   };
-  disks?: Array<{ value?: Record<string, unknown> }> | Record<string, Record<string, unknown>>;
-  nics?: Array<{ value?: Record<string, unknown> }> | Record<string, Record<string, unknown>>;
+  disks?:
+    | Array<{ value?: Record<string, unknown> }>
+    | Record<string, Record<string, unknown>>;
+  nics?:
+    | Array<{ value?: Record<string, unknown> }>
+    | Record<string, Record<string, unknown>>;
   host?: string;
   host_name?: string;
   cluster?: string;
@@ -181,7 +189,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async ensureSeedData() {
+  private ensureSeedData() {
     return;
   }
 
@@ -267,27 +275,39 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         orderBy: { createdAt: 'asc' },
       });
       const now = new Date();
-      const dueSources = sources.filter((source) => this.shouldAutoSyncSource(source, now));
+      const dueSources = sources.filter((source) =>
+        this.shouldAutoSyncSource(source, now),
+      );
 
       for (const source of dueSources) {
         try {
-          this.logger.log(`Auto-syncing source ${source.name} (${source.syncInterval})`);
+          this.logger.log(
+            `Auto-syncing source ${source.name} (${source.syncInterval})`,
+          );
           await this.syncSourceData(source);
         } catch (error) {
           const connectionError = this.getHumanConnectionError(error);
 
-          await this.prisma.vmVCenterSource.update({
-            where: { id: source.id },
-            data: {
-              status: 'Connection failed',
-            },
-          });
+          try {
+            await this.prisma.vmVCenterSource.update({
+              where: { id: source.id },
+              data: {
+                status: 'Connection failed',
+              },
+            });
+          } catch {
+            this.logger.error(
+              'Failed to update source status after sync failure',
+            );
+          }
 
           this.logger.warn(
             `Auto-sync failed for source ${source.name}: ${connectionError.message}${connectionError.detail ? ` - ${connectionError.detail}` : ''}`,
           );
         }
       }
+    } catch (error) {
+      this.logger.error('VM Auto-sync cycle failed', error);
     } finally {
       this.autoSyncRunning = false;
     }
@@ -313,7 +333,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       .filter((account) => account.username.trim())
       .map((account) => ({
         username: account.username.trim(),
-        encryptedPassword: this.credentialsService.encrypt(account.password ?? ''),
+        encryptedPassword: this.credentialsService.encrypt(
+          account.password ?? '',
+        ),
         accessMethod: account.accessMethod.trim(),
         role: account.role.trim(),
         note: this.sanitizeText(account.note),
@@ -338,12 +360,17 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     const missingFields = required
       .filter(([, value]) => !value)
       .map(([label]) => label);
-    const completeness = Math.round(((required.length - missingFields.length) / required.length) * 100);
+    const completeness = Math.round(
+      ((required.length - missingFields.length) / required.length) * 100,
+    );
 
     return {
       missingFields,
       completeness,
-      state: missingFields.length === 0 ? VmDiscoveryState.READY_TO_PROMOTE : VmDiscoveryState.NEEDS_CONTEXT,
+      state:
+        missingFields.length === 0
+          ? VmDiscoveryState.READY_TO_PROMOTE
+          : VmDiscoveryState.NEEDS_CONTEXT,
     };
   }
 
@@ -402,7 +429,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       suggestedCriticality: discovery.suggestedCriticality,
       note: discovery.notes,
       guestAccounts: discovery.guestAccounts
-        .filter((account) => (account as any).encryptedPassword)
+        .filter((account) => account.encryptedPassword)
         .map((account) => ({
           username: account.username,
           password: this.credentialsService.decrypt(account.encryptedPassword),
@@ -450,7 +477,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       guestAccountsCount: inventory.guestAccounts.length,
       notes: inventory.notes,
       guestAccounts: inventory.guestAccounts
-        .filter((account) => (account as any).encryptedPassword)
+        .filter((account) => account.encryptedPassword)
         .map((account) => ({
           username: account.username,
           password: this.credentialsService.decrypt(account.encryptedPassword),
@@ -473,7 +500,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
 
   private normalizeEndpoint(endpoint: string) {
     const trimmed = endpoint.trim();
-    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const withProtocol = /^https?:\/\//i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed}`;
     const url = new URL(withProtocol);
     if (!url.pathname || url.pathname === '/') {
       url.pathname = '/ui';
@@ -570,7 +599,8 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     if (lower.includes('timed out')) {
       return {
         message: 'Connection timed out',
-        detail: 'The vCenter endpoint did not respond before the timeout window closed.',
+        detail:
+          'The vCenter endpoint did not respond before the timeout window closed.',
       };
     }
 
@@ -584,7 +614,8 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     if (lower.includes('econnrefused')) {
       return {
         message: 'Connection refused',
-        detail: 'The server refused the TCP connection. Check the host, port, and firewall rules.',
+        detail:
+          'The server refused the TCP connection. Check the host, port, and firewall rules.',
       };
     }
 
@@ -601,17 +632,26 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  private async authenticateVcenter(endpoint: string, username?: string | null, password?: string | null) {
+  private async authenticateVcenter(
+    endpoint: string,
+    username?: string | null,
+    password?: string | null,
+  ) {
     const trimmedUsername = username?.trim();
     const trimmedPassword = password ?? '';
 
     if (!trimmedUsername || !trimmedPassword) {
-      throw new Error('Username and password are required to connect to vCenter.');
+      throw new Error(
+        'Username and password are required to connect to vCenter.',
+      );
     }
 
     const baseUrl = this.getVcenterApiBase(endpoint);
     const headers = {
-      Authorization: this.buildBasicAuthHeader(trimmedUsername, trimmedPassword),
+      Authorization: this.buildBasicAuthHeader(
+        trimmedUsername,
+        trimmedPassword,
+      ),
       Accept: 'application/json',
     };
 
@@ -634,7 +674,12 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       lastStatusCode = response.statusCode;
       const sessionId = this.extractVcenterPayload(response.data);
 
-      if (response.statusCode >= 200 && response.statusCode < 300 && typeof sessionId === 'string' && sessionId) {
+      if (
+        response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        typeof sessionId === 'string' &&
+        sessionId
+      ) {
         return {
           apiFamily: candidate.apiFamily,
           baseUrl,
@@ -643,25 +688,35 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       }
 
       if (response.statusCode === 401 || response.statusCode === 403) {
-        throw new Error('Authentication failed. Check the username, password, and API permissions.');
+        throw new Error(
+          'Authentication failed. Check the username, password, and API permissions.',
+        );
       }
     }
 
-    throw new Error(`Unable to create a vCenter API session. Last response status: ${lastStatusCode || 'unknown'}.`);
+    throw new Error(
+      `Unable to create a vCenter API session. Last response status: ${lastStatusCode || 'unknown'}.`,
+    );
   }
 
-  private async requestVcenterResource<T>(session: VcenterSession, paths: string[]) {
+  private async requestVcenterResource<T>(
+    session: VcenterSession,
+    paths: string[],
+  ) {
     let lastStatusCode = 0;
     let lastBody = '';
 
     for (const path of paths) {
-      const response = await this.requestJson<T | { value?: T }>(new URL(path, session.baseUrl), {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'vmware-api-session-id': session.sessionId,
+      const response = await this.requestJson<T | { value?: T }>(
+        new URL(path, session.baseUrl),
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            'vmware-api-session-id': session.sessionId,
+          },
         },
-      });
+      );
 
       lastStatusCode = response.statusCode;
       lastBody = response.rawBody;
@@ -675,11 +730,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       }
 
       if (response.statusCode === 401 || response.statusCode === 403) {
-        throw new Error('The vCenter session is not authorized to read this resource.');
+        throw new Error(
+          'The vCenter session is not authorized to read this resource.',
+        );
       }
     }
 
-    throw new Error(`vCenter API request failed with status ${lastStatusCode || 'unknown'}${lastBody ? `: ${lastBody}` : ''}`);
+    throw new Error(
+      `vCenter API request failed with status ${lastStatusCode || 'unknown'}${lastBody ? `: ${lastBody}` : ''}`,
+    );
   }
 
   private async getVcenterVersion(session: VcenterSession) {
@@ -689,7 +748,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         '/api/appliance/system/version',
       ]).catch((error) => {
         const message = error instanceof Error ? error.message : '';
-        if (message.toLowerCase().includes('not authorized') || message.toLowerCase().includes('unauthorized')) {
+        if (
+          message.toLowerCase().includes('not authorized') ||
+          message.toLowerCase().includes('unauthorized')
+        ) {
           return {
             version: 'Unavailable (insufficient privilege)',
           } satisfies VcenterApplianceVersion;
@@ -700,7 +762,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
 
     const version = versionInfo?.version?.trim();
     const buildValue = versionInfo as VcenterApplianceVersion | null;
-    const build = typeof buildValue?.build === 'string' ? buildValue.build.trim() : undefined;
+    const build =
+      typeof buildValue?.build === 'string'
+        ? buildValue.build.trim()
+        : undefined;
 
     if (version && build) {
       return `${version} (build ${build})`;
@@ -714,7 +779,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   private unwrapDeviceCollection(
-    devices?: Array<{ value?: Record<string, unknown> }> | Record<string, Record<string, unknown>> | null,
+    devices?:
+      | Array<{ value?: Record<string, unknown> }>
+      | Record<string, Record<string, unknown>>
+      | null,
   ) {
     if (!devices) {
       return [] as Record<string, unknown>[];
@@ -754,55 +822,69 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   private extractDisks(detail: VcenterVmDetail) {
-    const disks = this.unwrapDeviceCollection(detail.hardware?.disks ?? detail.disks ?? null);
+    const disks = this.unwrapDeviceCollection(
+      detail.hardware?.disks ?? detail.disks ?? null,
+    );
 
-    return disks.map((disk, index) => {
-      const rawDisk = disk as {
-        capacity?: number;
-        capacity_bytes?: number;
-        capacity_MiB?: number;
-        capacity_mib?: number;
-        datastore?: string;
-        label?: string;
-        backing?: { datastore?: string } | null;
-        vmdk_file?: string;
-      };
-      const capacityBytes = Number(rawDisk.capacity ?? rawDisk.capacity_bytes ?? 0);
-      const capacityMiB = Number(rawDisk.capacity_MiB ?? rawDisk.capacity_mib ?? 0);
-      const sizeGb = capacityBytes
-        ? Math.max(1, Math.round(capacityBytes / 1024 / 1024 / 1024))
-        : capacityMiB
-          ? Math.max(1, Math.round(capacityMiB / 1024))
-          : 0;
+    return disks
+      .map((disk, index) => {
+        const rawDisk = disk as {
+          capacity?: number;
+          capacity_bytes?: number;
+          capacity_MiB?: number;
+          capacity_mib?: number;
+          datastore?: string;
+          label?: string;
+          backing?: { datastore?: string } | null;
+          vmdk_file?: string;
+        };
+        const capacityBytes = Number(
+          rawDisk.capacity ?? rawDisk.capacity_bytes ?? 0,
+        );
+        const capacityMiB = Number(
+          rawDisk.capacity_MiB ?? rawDisk.capacity_mib ?? 0,
+        );
+        const sizeGb = capacityBytes
+          ? Math.max(1, Math.round(capacityBytes / 1024 / 1024 / 1024))
+          : capacityMiB
+            ? Math.max(1, Math.round(capacityMiB / 1024))
+            : 0;
 
-      const datastore =
-        typeof rawDisk.datastore === 'string'
-          ? rawDisk.datastore
-          : typeof rawDisk.backing === 'object' && rawDisk.backing && 'datastore' in rawDisk.backing
-            ? String(rawDisk.backing.datastore ?? '')
+        const datastore =
+          typeof rawDisk.datastore === 'string'
+            ? rawDisk.datastore
             : typeof rawDisk.backing === 'object' &&
                 rawDisk.backing &&
-                'vmdk_file' in rawDisk.backing &&
-                typeof (rawDisk.backing as { vmdk_file?: string }).vmdk_file === 'string'
-              ? String((rawDisk.backing as { vmdk_file?: string }).vmdk_file ?? '')
-                  .match(/^\[([^\]]+)\]/)?.[1]
-            : undefined;
+                'datastore' in rawDisk.backing
+              ? String(rawDisk.backing.datastore ?? '')
+              : typeof rawDisk.backing === 'object' &&
+                  rawDisk.backing &&
+                  'vmdk_file' in rawDisk.backing &&
+                  typeof (rawDisk.backing as { vmdk_file?: string })
+                    .vmdk_file === 'string'
+                ? String(
+                    (rawDisk.backing as { vmdk_file?: string }).vmdk_file ?? '',
+                  ).match(/^\[([^\]]+)\]/)?.[1]
+                : undefined;
 
-      const label =
-        typeof rawDisk.label === 'string' && rawDisk.label.trim()
-          ? rawDisk.label
-          : `Hard disk ${index + 1}`;
+        const label =
+          typeof rawDisk.label === 'string' && rawDisk.label.trim()
+            ? rawDisk.label
+            : `Hard disk ${index + 1}`;
 
-      return {
-        label,
-        sizeGb,
-        ...(datastore ? { datastore } : {}),
-      } satisfies VmDisk;
-    }).filter((disk) => disk.sizeGb > 0);
+        return {
+          label,
+          sizeGb,
+          ...(datastore ? { datastore } : {}),
+        } satisfies VmDisk;
+      })
+      .filter((disk) => disk.sizeGb > 0);
   }
 
   private extractNetworkLabel(detail: VcenterVmDetail) {
-    const firstNic = this.unwrapDeviceCollection(detail.hardware?.nics ?? detail.nics ?? null)[0] as
+    const firstNic = this.unwrapDeviceCollection(
+      detail.hardware?.nics ?? detail.nics ?? null,
+    )[0] as
       | {
           network_name?: string;
           network?: string;
@@ -818,12 +900,20 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     const candidates = [
       firstNic.network_name,
       firstNic.network,
-      typeof firstNic.backing === 'object' && firstNic.backing ? (firstNic.backing as { network_name?: string }).network_name : undefined,
-      typeof firstNic.backing === 'object' && firstNic.backing ? (firstNic.backing as { network?: string }).network : undefined,
+      typeof firstNic.backing === 'object' && firstNic.backing
+        ? (firstNic.backing as { network_name?: string }).network_name
+        : undefined,
+      typeof firstNic.backing === 'object' && firstNic.backing
+        ? (firstNic.backing as { network?: string }).network
+        : undefined,
       firstNic.label,
     ];
 
-    return candidates.find((value) => typeof value === 'string' && value.trim())?.trim() ?? '--';
+    return (
+      candidates
+        .find((value) => typeof value === 'string' && value.trim())
+        ?.trim() ?? '--'
+    );
   }
 
   private inferEnvironment(sourceName: string, vmName: string) {
@@ -851,7 +941,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     const session = await this.authenticateVcenter(
       source.endpoint,
       source.username,
-      source.encryptedPassword ? this.credentialsService.decrypt(source.encryptedPassword) : null,
+      source.encryptedPassword
+        ? this.credentialsService.decrypt(source.encryptedPassword)
+        : null,
     );
     const version = await this.getVcenterVersion(session);
     const hosts =
@@ -864,13 +956,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         '/rest/vcenter/cluster',
         '/api/vcenter/cluster',
       ]).catch(() => null)) ?? [];
-    const fallbackHost = hosts.length === 1 ? hosts[0]?.name ?? '--' : '--';
-    const fallbackCluster = clusters.length === 1 ? clusters[0]?.name ?? '--' : '--';
+    const fallbackHost = hosts.length === 1 ? (hosts[0]?.name ?? '--') : '--';
+    const fallbackCluster =
+      clusters.length === 1 ? (clusters[0]?.name ?? '--') : '--';
 
-    const summaries = (await this.requestVcenterResource<VcenterVmSummary[]>(session, [
-      '/api/vcenter/vm',
-      '/rest/vcenter/vm',
-    ])) ?? [];
+    const summaries =
+      (await this.requestVcenterResource<VcenterVmSummary[]>(session, [
+        '/api/vcenter/vm',
+        '/rest/vcenter/vm',
+      ])) ?? [];
 
     const records = await Promise.all(
       summaries.map(async (summary) => {
@@ -907,7 +1001,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
               : fallbackHost !== '--'
                 ? 'SOURCE_SINGLE_HOST'
                 : 'UNKNOWN',
-          computerName: this.sanitizeText(guestIdentity?.host_name ?? guestIdentity?.name) ?? undefined,
+          computerName:
+            this.sanitizeText(
+              guestIdentity?.host_name ?? guestIdentity?.name,
+            ) ?? undefined,
           guestOs:
             guestIdentity?.full_name?.localized ??
             guestIdentity?.full_name?.default_message ??
@@ -915,12 +1012,20 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             detail?.guest_OS ??
             '--',
           primaryIp: guestIdentity?.ip_address ?? '--',
-          cpuCores: detail?.cpu?.count ?? detail?.hardware?.cpu?.count ?? summary.cpu_count ?? 1,
-          memoryGb: detail ? this.extractMemoryGb(detail, summary) : Math.max(1, Math.round((summary.memory_size_mib ?? 0) / 1024)),
+          cpuCores:
+            detail?.cpu?.count ??
+            detail?.hardware?.cpu?.count ??
+            summary.cpu_count ??
+            1,
+          memoryGb: detail
+            ? this.extractMemoryGb(detail, summary)
+            : Math.max(1, Math.round((summary.memory_size_mib ?? 0) / 1024)),
           storageGb,
           disks,
           networkLabel: detail ? this.extractNetworkLabel(detail) : '--',
-          powerState: this.mapPowerState(detail?.power_state ?? summary.power_state),
+          powerState: this.mapPowerState(
+            detail?.power_state ?? summary.power_state,
+          ),
           environment,
           criticality: this.inferCriticality(environment),
         };
@@ -946,7 +1051,8 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           include: { guestAccounts: true },
         });
 
-        const discoveryGuestAccountCount = existingDiscovery?.guestAccountsCount ?? 0;
+        const discoveryGuestAccountCount =
+          existingDiscovery?.guestAccountsCount ?? 0;
         const completeness = this.computeCompleteness({
           systemName: existingDiscovery?.systemName,
           environment: existingDiscovery?.environment ?? record.environment,
@@ -1060,7 +1166,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         where: {
           sourceId: source.id,
           lifecycleState: {
-            notIn: [VmLifecycleState.ARCHIVED, VmLifecycleState.DELETED_IN_VCENTER],
+            notIn: [
+              VmLifecycleState.ARCHIVED,
+              VmLifecycleState.DELETED_IN_VCENTER,
+            ],
           },
           moid: {
             notIn: Array.from(seenMoids),
@@ -1091,7 +1200,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async findSources() {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     const sources = await this.prisma.vmVCenterSource.findMany({
       take: 1000,
       include: {
@@ -1110,8 +1219,12 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async createSource(dto: SaveVmSourceDto, userId: string) {
-    await this.ensureSeedData();
-    const session = await this.authenticateVcenter(dto.endpoint, dto.username, dto.password);
+    this.ensureSeedData();
+    const session = await this.authenticateVcenter(
+      dto.endpoint,
+      dto.username,
+      dto.password,
+    );
     const version = await this.getVcenterVersion(session);
     const source = await this.prisma.vmVCenterSource.create({
       data: {
@@ -1119,7 +1232,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         endpoint: dto.endpoint.trim(),
         version,
         username: this.sanitizeText(dto.username),
-        encryptedPassword: dto.password ? this.credentialsService.encrypt(dto.password) : null,
+        encryptedPassword: dto.password
+          ? this.credentialsService.encrypt(dto.password)
+          : null,
         syncInterval: dto.syncInterval.trim(),
         notes: this.sanitizeText(dto.notes),
         status: 'Ready to sync',
@@ -1149,7 +1264,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async updateSource(id: string, dto: SaveVmSourceDto, userId: string) {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     const currentSource = await this.prisma.vmVCenterSource.findUnique({
       where: { id },
     });
@@ -1164,7 +1279,11 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       : currentSource.encryptedPassword
         ? this.credentialsService.decrypt(currentSource.encryptedPassword)
         : null;
-    const session = await this.authenticateVcenter(dto.endpoint, username, password);
+    const session = await this.authenticateVcenter(
+      dto.endpoint,
+      username,
+      password,
+    );
     const version = await this.getVcenterVersion(session);
 
     const source = await this.prisma.vmVCenterSource.update({
@@ -1174,7 +1293,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         endpoint: dto.endpoint.trim(),
         version,
         username,
-        ...(dto.password ? { encryptedPassword: this.credentialsService.encrypt(dto.password) } : {}),
+        ...(dto.password
+          ? { encryptedPassword: this.credentialsService.encrypt(dto.password) }
+          : {}),
         syncInterval: dto.syncInterval.trim(),
         notes: this.sanitizeText(dto.notes),
         status: 'Ready to sync',
@@ -1203,8 +1324,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async removeSource(id: string, userId: string) {
-    await this.ensureSeedData();
-    const source = await this.prisma.vmVCenterSource.findUnique({ where: { id } });
+    this.ensureSeedData();
+    const source = await this.prisma.vmVCenterSource.findUnique({
+      where: { id },
+    });
     if (!source) {
       throw new NotFoundException(`VM source ${id} not found`);
     }
@@ -1223,8 +1346,8 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return { success: true };
   }
 
-  async syncAllSources(userId: string) {
-    await this.ensureSeedData();
+  async syncAllSources() {
+    this.ensureSeedData();
     const sources = await this.prisma.vmVCenterSource.findMany({
       orderBy: { createdAt: 'asc' },
     });
@@ -1245,8 +1368,12 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         }
       }),
     );
-    const successCount = results.filter((result) => result.status === 'fulfilled').length;
-    const failedResults = results.filter((result) => result.status === 'rejected');
+    const successCount = results.filter(
+      (result) => result.status === 'fulfilled',
+    ).length;
+    const failedResults = results.filter(
+      (result) => result.status === 'rejected',
+    );
 
     return {
       success: failedResults.length === 0,
@@ -1261,7 +1388,11 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
 
   async testSourceConnection(dto: TestVmSourceConnectionDto) {
     try {
-      const session = await this.authenticateVcenter(dto.endpoint, dto.username, dto.password);
+      const session = await this.authenticateVcenter(
+        dto.endpoint,
+        dto.username,
+        dto.password,
+      );
       const version = await this.getVcenterVersion(session);
 
       return {
@@ -1283,7 +1414,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async syncSource(id: string, userId: string) {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     const source = await this.prisma.vmVCenterSource.findUnique({
       where: { id },
     });
@@ -1322,7 +1453,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async findDiscoveries() {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     const discoveries = await this.prisma.vmDiscovery.findMany({
       take: 1000,
       where: {
@@ -1333,7 +1464,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       include: {
         source: true,
         guestAccounts: {
-          select: { id: true }
+          select: { id: true },
         },
       },
       orderBy: { updatedAt: 'desc' },
@@ -1343,7 +1474,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async findDiscovery(id: string) {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     const discovery = await this.prisma.vmDiscovery.findUnique({
       where: { id },
       include: {
@@ -1360,7 +1491,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async updateDiscovery(id: string, dto: SaveVmDraftDto, userId: string) {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     await this.findDiscovery(id);
 
     const guestAccounts = this.buildVmGuestAccounts(dto.guestAccounts);
@@ -1415,7 +1546,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async promoteDiscovery(id: string, dto: SaveVmDraftDto, userId: string) {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     const discovery = await this.prisma.vmDiscovery.findUnique({
       where: { id },
       include: {
@@ -1449,84 +1580,86 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         ? normalizedDisks
         : ((discovery.disks ?? undefined) as Prisma.InputJsonValue | undefined);
 
-    const promoted = await this.prisma.$transaction<VmInventoryWithRelations>(async (tx) => {
-      await tx.vmDiscovery.update({
-        where: { id },
-        data: {
-          systemName: dto.systemName.trim(),
-          owner: dto.owner?.trim() ?? '',
-          environment: dto.environment,
-          businessUnit: dto.businessUnit?.trim() ?? '',
-          slaTier: dto.slaTier?.trim() ?? '',
-          serviceRole: dto.serviceRole.trim(),
-          criticality: dto.criticality ?? VmCriticality.STANDARD,
-          description: dto.description.trim(),
-          notes: dto.notes.trim(),
-          tags: this.parseTags(dto.tags),
-          disks: normalizedDisks,
-          guestAccountsCount: guestAccounts.length,
-          completeness: completeness.completeness,
-          missingFields: completeness.missingFields,
-          state: VmDiscoveryState.ARCHIVED,
-          createdByUserId: userId,
-          guestAccounts: {
-            deleteMany: {},
-            create: guestAccounts,
+    const promoted = await this.prisma.$transaction<VmInventoryWithRelations>(
+      async (tx) => {
+        await tx.vmDiscovery.update({
+          where: { id },
+          data: {
+            systemName: dto.systemName.trim(),
+            owner: dto.owner?.trim() ?? '',
+            environment: dto.environment,
+            businessUnit: dto.businessUnit?.trim() ?? '',
+            slaTier: dto.slaTier?.trim() ?? '',
+            serviceRole: dto.serviceRole.trim(),
+            criticality: dto.criticality ?? VmCriticality.STANDARD,
+            description: dto.description.trim(),
+            notes: dto.notes.trim(),
+            tags: this.parseTags(dto.tags),
+            disks: normalizedDisks,
+            guestAccountsCount: guestAccounts.length,
+            completeness: completeness.completeness,
+            missingFields: completeness.missingFields,
+            state: VmDiscoveryState.ARCHIVED,
+            createdByUserId: userId,
+            guestAccounts: {
+              deleteMany: {},
+              create: guestAccounts,
+            },
           },
-        },
-      });
+        });
 
-      await tx.vmInventory.deleteMany({
-        where: { discoveryId: id },
-      });
+        await tx.vmInventory.deleteMany({
+          where: { discoveryId: id },
+        });
 
-      const inventory = await tx.vmInventory.create({
-        data: {
-          discoveryId: id,
-          sourceId: discovery.sourceId,
-          name: discovery.name,
-          systemName: dto.systemName.trim(),
-          moid: discovery.moid,
-          environment: dto.environment,
-          cluster: discovery.cluster,
-          clusterResolution: discovery.clusterResolution,
-          host: discovery.host,
-          hostResolution: discovery.hostResolution,
-          computerName: discovery.computerName,
-          guestOs: discovery.guestOs,
-          primaryIp: discovery.primaryIp,
-          cpuCores: discovery.cpuCores,
-          memoryGb: discovery.memoryGb,
-          storageGb: discovery.storageGb,
-          disks: promotedDisks,
-          networkLabel: discovery.networkLabel,
-          powerState: discovery.powerState,
-          lifecycleState: dto.lifecycleState ?? VmLifecycleState.ACTIVE,
-          syncState: 'Synced',
-          owner: dto.owner?.trim() ?? '',
-          businessUnit: dto.businessUnit?.trim() ?? '',
-          slaTier: dto.slaTier?.trim() ?? '',
-          serviceRole: dto.serviceRole.trim(),
-          criticality: dto.criticality ?? VmCriticality.STANDARD,
-          description: dto.description.trim(),
-          tags: this.parseTags(dto.tags),
-          lastSyncAt: new Date(),
-          syncedFields: SYNCED_FIELDS,
-          managedFields: MANAGED_FIELDS,
-          notes: dto.notes.trim(),
-          createdByUserId: userId,
-          guestAccounts: {
-            create: guestAccounts,
+        const inventory = await tx.vmInventory.create({
+          data: {
+            discoveryId: id,
+            sourceId: discovery.sourceId,
+            name: discovery.name,
+            systemName: dto.systemName.trim(),
+            moid: discovery.moid,
+            environment: dto.environment,
+            cluster: discovery.cluster,
+            clusterResolution: discovery.clusterResolution,
+            host: discovery.host,
+            hostResolution: discovery.hostResolution,
+            computerName: discovery.computerName,
+            guestOs: discovery.guestOs,
+            primaryIp: discovery.primaryIp,
+            cpuCores: discovery.cpuCores,
+            memoryGb: discovery.memoryGb,
+            storageGb: discovery.storageGb,
+            disks: promotedDisks,
+            networkLabel: discovery.networkLabel,
+            powerState: discovery.powerState,
+            lifecycleState: dto.lifecycleState ?? VmLifecycleState.ACTIVE,
+            syncState: 'Synced',
+            owner: dto.owner?.trim() ?? '',
+            businessUnit: dto.businessUnit?.trim() ?? '',
+            slaTier: dto.slaTier?.trim() ?? '',
+            serviceRole: dto.serviceRole.trim(),
+            criticality: dto.criticality ?? VmCriticality.STANDARD,
+            description: dto.description.trim(),
+            tags: this.parseTags(dto.tags),
+            lastSyncAt: new Date(),
+            syncedFields: SYNCED_FIELDS,
+            managedFields: MANAGED_FIELDS,
+            notes: dto.notes.trim(),
+            createdByUserId: userId,
+            guestAccounts: {
+              create: guestAccounts,
+            },
           },
-        },
-        include: {
-          source: true,
-          guestAccounts: true,
-        },
-      });
+          include: {
+            source: true,
+            guestAccounts: true,
+          },
+        });
 
-      return inventory;
-    });
+        return inventory;
+      },
+    );
 
     await this.prisma.auditLog.create({
       data: {
@@ -1540,8 +1673,8 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return this.mapInventory(promoted);
   }
 
-  async archiveDiscovery(id: string, userId: string) {
-    await this.ensureSeedData();
+  async archiveDiscovery(id: string) {
+    this.ensureSeedData();
     await this.prisma.vmDiscovery.update({
       where: { id },
       data: { state: VmDiscoveryState.ARCHIVED },
@@ -1550,7 +1683,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async findInventory() {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     const inventories = await this.prisma.vmInventory.findMany({
       take: 1000,
       where: {
@@ -1561,7 +1694,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       include: {
         source: true,
         guestAccounts: {
-          select: { id: true }
+          select: { id: true },
         },
       },
       orderBy: { updatedAt: 'desc' },
@@ -1571,7 +1704,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async findInventoryById(id: string) {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     const inventory = await this.prisma.vmInventory.findUnique({
       where: { id },
       include: {
@@ -1588,7 +1721,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async updateInventory(id: string, dto: SaveVmDraftDto, userId: string) {
-    await this.ensureSeedData();
+    this.ensureSeedData();
     await this.findInventoryById(id);
 
     const guestAccounts = this.buildVmGuestAccounts(dto.guestAccounts);
@@ -1632,8 +1765,12 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return this.mapInventory(updated);
   }
 
-  async archiveInventory(id: string, userId: string, lifecycleState?: VmLifecycleState) {
-    await this.ensureSeedData();
+  async archiveInventory(
+    id: string,
+    userId: string,
+    lifecycleState?: VmLifecycleState,
+  ) {
+    this.ensureSeedData();
     await this.prisma.vmInventory.update({
       where: { id },
       data: {

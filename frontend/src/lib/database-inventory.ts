@@ -39,7 +39,8 @@ export interface DatabaseAccountDetail {
   id: string;
   username: string;
   role?: string | null;
-  password: string;
+  password?: string;
+  hasPassword?: boolean;
   privileges: string[];
   note?: string | null;
   createdAt?: string;

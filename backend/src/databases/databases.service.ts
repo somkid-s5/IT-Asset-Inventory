@@ -23,14 +23,20 @@ export class DatabasesService {
     return value?.trim() || null;
   }
 
-  private buildAccounts(accounts: CreateDatabaseDto['accounts'] | UpdateDatabaseDto['accounts']) {
+  private buildAccounts(
+    accounts: CreateDatabaseDto['accounts'] | UpdateDatabaseDto['accounts'],
+  ) {
     return (accounts ?? [])
       .filter((account) => account.username.trim())
       .map((account) => ({
         username: account.username.trim(),
         role: this.sanitizeText(account.role),
-        encryptedPassword: this.credentialsService.encrypt(account.password ?? ''),
-        privileges: (account.privileges ?? []).map((privilege) => privilege.trim()).filter(Boolean),
+        encryptedPassword: this.credentialsService.encrypt(
+          account.password ?? '',
+        ),
+        privileges: (account.privileges ?? [])
+          .map((privilege) => privilege.trim())
+          .filter(Boolean),
         note: this.sanitizeText(account.note),
       }));
   }
@@ -66,7 +72,7 @@ export class DatabasesService {
         id: account.id,
         username: account.username,
         role: account.role,
-        password: this.credentialsService.decrypt(account.encryptedPassword),
+        hasPassword: !!account.encryptedPassword,
         privileges: account.privileges,
         note: account.note,
         createdAt: account.createdAt,
@@ -89,8 +95,12 @@ export class DatabasesService {
         owner: this.sanitizeText(createDatabaseDto.owner),
         backupPolicy: this.sanitizeText(createDatabaseDto.backupPolicy),
         replication: this.sanitizeText(createDatabaseDto.replication),
-        linkedApps: (createDatabaseDto.linkedApps ?? []).map((app) => app.trim()).filter(Boolean),
-        maintenanceWindow: this.sanitizeText(createDatabaseDto.maintenanceWindow),
+        linkedApps: (createDatabaseDto.linkedApps ?? [])
+          .map((app) => app.trim())
+          .filter(Boolean),
+        maintenanceWindow: this.sanitizeText(
+          createDatabaseDto.maintenanceWindow,
+        ),
         status: this.sanitizeText(createDatabaseDto.status),
         note: this.sanitizeText(createDatabaseDto.note),
         createdByUserId: userId,
@@ -125,7 +135,7 @@ export class DatabasesService {
       take: 1000,
       include: {
         accounts: {
-          select: { id: true }
+          select: { id: true },
         },
         createdByUser: true,
       },
@@ -151,31 +161,69 @@ export class DatabasesService {
     return this.toDetail(database);
   }
 
-  async update(id: string, updateDatabaseDto: UpdateDatabaseDto, userId: string) {
+  async update(
+    id: string,
+    updateDatabaseDto: UpdateDatabaseDto,
+    userId: string,
+  ) {
     await this.findOne(id);
 
     const updated = await this.prisma.databaseInventory.update({
       where: { id },
       data: {
-        ...(updateDatabaseDto.name !== undefined ? { name: updateDatabaseDto.name.trim() } : {}),
-        ...(updateDatabaseDto.engine !== undefined ? { engine: updateDatabaseDto.engine.trim() } : {}),
-        ...(updateDatabaseDto.version !== undefined ? { version: this.sanitizeText(updateDatabaseDto.version) } : {}),
-        ...(updateDatabaseDto.environment !== undefined ? { environment: this.sanitizeText(updateDatabaseDto.environment) } : {}),
-        ...(updateDatabaseDto.host !== undefined ? { host: updateDatabaseDto.host.trim() } : {}),
-        ...(updateDatabaseDto.ipAddress !== undefined ? { ipAddress: updateDatabaseDto.ipAddress.trim() } : {}),
-        ...(updateDatabaseDto.port !== undefined ? { port: this.sanitizeText(updateDatabaseDto.port) } : {}),
-        ...(updateDatabaseDto.serviceName !== undefined ? { serviceName: this.sanitizeText(updateDatabaseDto.serviceName) } : {}),
-        ...(updateDatabaseDto.owner !== undefined ? { owner: this.sanitizeText(updateDatabaseDto.owner) } : {}),
-        ...(updateDatabaseDto.backupPolicy !== undefined ? { backupPolicy: this.sanitizeText(updateDatabaseDto.backupPolicy) } : {}),
-        ...(updateDatabaseDto.replication !== undefined ? { replication: this.sanitizeText(updateDatabaseDto.replication) } : {}),
+        ...(updateDatabaseDto.name !== undefined
+          ? { name: updateDatabaseDto.name.trim() }
+          : {}),
+        ...(updateDatabaseDto.engine !== undefined
+          ? { engine: updateDatabaseDto.engine.trim() }
+          : {}),
+        ...(updateDatabaseDto.version !== undefined
+          ? { version: this.sanitizeText(updateDatabaseDto.version) }
+          : {}),
+        ...(updateDatabaseDto.environment !== undefined
+          ? { environment: this.sanitizeText(updateDatabaseDto.environment) }
+          : {}),
+        ...(updateDatabaseDto.host !== undefined
+          ? { host: updateDatabaseDto.host.trim() }
+          : {}),
+        ...(updateDatabaseDto.ipAddress !== undefined
+          ? { ipAddress: updateDatabaseDto.ipAddress.trim() }
+          : {}),
+        ...(updateDatabaseDto.port !== undefined
+          ? { port: this.sanitizeText(updateDatabaseDto.port) }
+          : {}),
+        ...(updateDatabaseDto.serviceName !== undefined
+          ? { serviceName: this.sanitizeText(updateDatabaseDto.serviceName) }
+          : {}),
+        ...(updateDatabaseDto.owner !== undefined
+          ? { owner: this.sanitizeText(updateDatabaseDto.owner) }
+          : {}),
+        ...(updateDatabaseDto.backupPolicy !== undefined
+          ? { backupPolicy: this.sanitizeText(updateDatabaseDto.backupPolicy) }
+          : {}),
+        ...(updateDatabaseDto.replication !== undefined
+          ? { replication: this.sanitizeText(updateDatabaseDto.replication) }
+          : {}),
         ...(updateDatabaseDto.linkedApps !== undefined
-          ? { linkedApps: updateDatabaseDto.linkedApps.map((app) => app.trim()).filter(Boolean) }
+          ? {
+              linkedApps: updateDatabaseDto.linkedApps
+                .map((app) => app.trim())
+                .filter(Boolean),
+            }
           : {}),
         ...(updateDatabaseDto.maintenanceWindow !== undefined
-          ? { maintenanceWindow: this.sanitizeText(updateDatabaseDto.maintenanceWindow) }
+          ? {
+              maintenanceWindow: this.sanitizeText(
+                updateDatabaseDto.maintenanceWindow,
+              ),
+            }
           : {}),
-        ...(updateDatabaseDto.status !== undefined ? { status: this.sanitizeText(updateDatabaseDto.status) } : {}),
-        ...(updateDatabaseDto.note !== undefined ? { note: this.sanitizeText(updateDatabaseDto.note) } : {}),
+        ...(updateDatabaseDto.status !== undefined
+          ? { status: this.sanitizeText(updateDatabaseDto.status) }
+          : {}),
+        ...(updateDatabaseDto.note !== undefined
+          ? { note: this.sanitizeText(updateDatabaseDto.note) }
+          : {}),
         ...(updateDatabaseDto.accounts !== undefined
           ? {
               accounts: {
@@ -208,7 +256,9 @@ export class DatabasesService {
 
   async remove(id: string, userId: string) {
     const db = await this.findOne(id);
-    const deleted = await this.prisma.databaseInventory.delete({ where: { id } });
+    const deleted = await this.prisma.databaseInventory.delete({
+      where: { id },
+    });
 
     await this.prisma.auditLog.create({
       data: {
@@ -223,5 +273,35 @@ export class DatabasesService {
     });
 
     return deleted;
+  }
+
+  async revealPassword(id: string, accountId: string, userId: string) {
+    const db = await this.findOne(id);
+    const account = await this.prisma.databaseAccount.findUnique({
+      where: { id: accountId },
+    });
+
+    if (!account || account.databaseInventoryId !== id) {
+      throw new NotFoundException(
+        `Account ${accountId} not found in database ${id}`,
+      );
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.VIEW_PASSWORD,
+        targetId: account.id,
+        details: JSON.stringify({
+          databaseId: id,
+          databaseName: db.name,
+          account: account.username,
+        }),
+      },
+    });
+
+    return {
+      password: this.credentialsService.decrypt(account.encryptedPassword),
+    };
   }
 }

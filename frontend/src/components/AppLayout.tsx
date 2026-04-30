@@ -43,6 +43,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
 
   // Handle fake progress bar on navigation
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsNavigating(true);
     const timer = setTimeout(() => setIsNavigating(false), 300);
     return () => clearTimeout(timer);

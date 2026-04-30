@@ -11,12 +11,12 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { CredentialsModule } from '../credentials/credentials.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    CredentialsModule,
-    MulterModule.register({}),
-  ],
+  imports: [PrismaModule, CredentialsModule, MulterModule.register({})],
   providers: [AssetsService, AssetNotesService, AssetAttachmentsService],
-  controllers: [AssetsController, AssetNotesController, AssetAttachmentsController],
+  controllers: [
+    AssetsController,
+    AssetNotesController,
+    AssetAttachmentsController,
+  ],
 })
 export class AssetsModule {}

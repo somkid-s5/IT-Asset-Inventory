@@ -22,16 +22,17 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 function getErrorMessage(error: unknown) {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error &&
-    typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
-  ) {
-    return (error as { response?: { data?: { message?: string } } }).response?.data?.message as string
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const data = (error as { response?: { data?: any } }).response?.data;
+    if (data?.message) {
+      if (typeof data.message === "string") return data.message;
+      if (typeof data.message === "object" && data.message.error) return data.message.error;
+      return JSON.stringify(data.message);
+    }
+    if (data?.error) return data.error;
   }
 
-  return "Login failed"
+  return "Login failed. Please check your connection."
 }
 
 export default function LoginPage() {
@@ -61,7 +62,8 @@ export default function LoginPage() {
       login(response.data.user)
       toast.success("Signed in successfully")
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error))
+      const msg = getErrorMessage(error);
+      toast.error(msg);
     } finally {
       setLoading(false)
     }

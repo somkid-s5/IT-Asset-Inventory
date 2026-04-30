@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
+import { Database, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import api from '@/services/api';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -95,7 +95,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
       databaseToEdit.accounts.length > 0
         ? databaseToEdit.accounts.map((account) => ({
           username: account.username,
-          password: account.password,
+          password: account.password ?? '',
           role: account.role ?? '',
           privileges: joinCommaSeparated(account.privileges),
           note: account.note ?? '',
@@ -150,15 +150,15 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
       onOpenChange(false);
       onSuccess();
-    } catch (error: unknown) {
-      const message =
-        typeof error === 'object' &&
-          error !== null &&
-          'response' in error &&
-          typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
-          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-          : 'Failed to save database';
-
+    } catch (error: any) {
+      console.error(error);
+      const errRes = error?.response?.data;
+      let message = 'Failed to save database';
+      if (errRes?.message) {
+        message = Array.isArray(errRes.message) ? errRes.message.join(', ') : errRes.message;
+      } else if (errRes?.error) {
+        message = errRes.error;
+      }
       toast.error(message);
     } finally {
       setLoading(false);
@@ -168,10 +168,13 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] overflow-y-auto bg-card sm:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>{databaseToEdit ? 'Edit Database' : 'Add New Database'}</DialogTitle>
-          <DialogDescription className="sr-only">
-            Enter database details, including name, type, environment, and connection parameters.
+        <DialogHeader className="px-6 pt-6">
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <Database className="h-5 w-5 text-primary" />
+            {databaseToEdit ? 'Update Database Details' : 'Register New Database'}
+          </DialogTitle>
+          <DialogDescription>
+            {databaseToEdit ? 'Modify the existing database instance settings.' : 'Enter database connection and configuration details.'}
           </DialogDescription>
         </DialogHeader>
 
