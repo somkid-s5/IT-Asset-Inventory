@@ -81,9 +81,9 @@ interface Asset {
 
 const TABS: { label: string; value: 'ALL' | AssetType; icon: typeof Box; iconClassName: string }[] = [
   { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
-  { label: 'Servers', value: 'SERVER', icon: Server, iconClassName: 'text-emerald-500' },
+  { label: 'Servers', value: 'SERVER', icon: Server, iconClassName: 'text-success' },
   { label: 'Storage', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-500' },
-  { label: 'Switches', value: 'SWITCH', icon: Shield, iconClassName: 'text-amber-500' },
+  { label: 'Switches', value: 'SWITCH', icon: Shield, iconClassName: 'text-warning' },
 ];
 
 function getAssetIcon(type: AssetType) {

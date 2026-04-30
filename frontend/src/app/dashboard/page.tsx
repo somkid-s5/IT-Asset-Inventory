@@ -127,8 +127,8 @@ export default function DashboardPage() {
         </div>
         <motion.div variants={itemVariants} className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1 font-medium bg-card/50 border-border/50">
-            <Activity className="h-3 w-3 text-emerald-500 mr-2 animate-pulse" />
-            <span className="text-emerald-500">System Online</span>
+            <Activity className="h-3 w-3 text-success mr-2 animate-pulse" />
+            <span className="text-success">System Online</span>
           </Badge>
           <Button variant="outline" size="sm" className="shadow-sm bg-card h-9" onClick={() => void refetch()} disabled={isFetching}>
             <RefreshCw className={cn("mr-2 h-3.5 w-3.5", isFetching && "animate-spin")} />
@@ -146,12 +146,12 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-12">
         <motion.div variants={itemVariants} className="lg:col-span-8">
-          <Card className="glass-card h-full border-none shadow-xl flex flex-col">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-4 w-4 text-primary" />Asset Distribution</CardTitle>
+          <Card className="glass-card h-full border border-border/40 bg-card/40 backdrop-blur-2xl shadow-xl flex flex-col rounded-[24px] overflow-hidden">
+            <CardHeader className="pb-2 border-b border-border/20 bg-muted/10 px-6 py-5">
+              <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-5 w-5 text-primary" />Asset Distribution</CardTitle>
               <CardDescription>Breakdown of IT resources across the system</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-[300px] relative">
+            <CardContent className="flex-1 min-h-[320px] relative p-6">
               {mounted && assetChartData.length > 0 ? (
                 <div className="absolute inset-0 overflow-hidden">
                   <ResponsiveContainer width="100%" height="100%">
@@ -172,23 +172,23 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} className="lg:col-span-4">
-          <Card className="glass-card h-full border-none shadow-xl flex flex-col">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-amber-500" />Requires Attention</CardTitle>
+          <Card className="glass-card h-full border border-border/40 bg-card/40 backdrop-blur-2xl shadow-xl flex flex-col rounded-[24px] overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/20 bg-muted/10 px-6 py-5">
+              <CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-warning" />Requires Attention</CardTitle>
               <CardDescription>Critical items requiring action</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 space-y-3">
+            <CardContent className="flex-1 space-y-3 p-6">
               {attentionItems.length > 0 ? (
                 attentionItems.map((item: any) => (
                   <button key={item.id} onClick={() => router.push(item.route)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors text-left">
-                    <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center"><AlertTriangle className="h-4 w-4 text-amber-500" /></div>
+                    <div className="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center"><AlertTriangle className="h-4 w-4 text-warning" /></div>
                     <span className="text-sm font-medium flex-1">{item.title}</span>
                     <ArrowUpRight className="h-4 w-4 text-muted-foreground/30" />
                   </button>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
-                   <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500"><ShieldCheck className="h-6 w-6" /></div>
+                   <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center text-success"><ShieldCheck className="h-6 w-6" /></div>
                    <p className="text-sm font-medium">Everything is normal</p>
                    <p className="text-xs text-muted-foreground px-6">There are currently no urgent issues in your infrastructure.</p>
                 </div>
@@ -202,18 +202,38 @@ export default function DashboardPage() {
 }
 
 function StatCard({ title, value, icon: Icon, subtitle, color, onClick }: any) {
-  const colors: any = { primary: 'bg-primary', success: 'bg-emerald-500', info: 'bg-indigo-500', warning: 'bg-amber-500' };
+  const styles: any = {
+    primary: { bg: 'group-hover:bg-primary/5', border: 'group-hover:border-primary/50', text: 'text-primary', dot: 'bg-primary', gradient: 'from-primary/20 via-primary/5 to-transparent' },
+    success: { bg: 'group-hover:bg-success/5', border: 'group-hover:border-success/50', text: 'text-success', dot: 'bg-success', gradient: 'from-success/20 via-success/5 to-transparent' },
+    info: { bg: 'group-hover:bg-info/5', border: 'group-hover:border-info/50', text: 'text-info', dot: 'bg-info', gradient: 'from-info/20 via-info/5 to-transparent' },
+    warning: { bg: 'group-hover:bg-warning/5', border: 'group-hover:border-warning/50', text: 'text-warning', dot: 'bg-warning', gradient: 'from-warning/20 via-warning/5 to-transparent' },
+  };
+  const theme = styles[color] || styles.primary;
+
   return (
-    <motion.div variants={itemVariants}>
-      <Card className="group relative overflow-hidden border-none shadow-lg hover:shadow-2xl transition-all cursor-pointer bg-card" onClick={onClick}>
-        <div className={cn("absolute left-0 top-0 h-full w-1.5 transition-all group-hover:w-3", colors[color])} />
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground/80">{title}</CardTitle>
-          <div className={cn("p-2 rounded-lg text-white shadow-sm transition-transform group-hover:scale-110", colors[color])}><Icon className="h-4 w-4" /></div>
+    <motion.div variants={itemVariants} className="h-full">
+      <Card 
+        className={cn(
+          "group relative overflow-hidden h-full rounded-[24px] border border-border/40 bg-card/40 backdrop-blur-2xl shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer",
+          theme.border
+        )} 
+        onClick={onClick}
+      >
+        <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", theme.gradient)} />
+        <div className={cn("absolute inset-0 transition-colors duration-500", theme.bg)} />
+        
+        <CardHeader className="flex flex-row items-start justify-between pb-2 relative z-10 space-y-0 px-5 pt-5">
+          <div className={cn("p-2.5 rounded-2xl bg-background/80 border border-border/50 shadow-sm transition-transform duration-500 group-hover:scale-110", theme.text)}>
+            <Icon className="h-5 w-5" strokeWidth={2.5} />
+          </div>
+          <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{title}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold tracking-tight">{value?.toLocaleString() || 0}</div>
-          <p className="text-xs text-muted-foreground mt-2 font-medium">{subtitle}</p>
+        <CardContent className="relative z-10 px-5 pb-5 pt-4">
+          <div className="text-4xl font-extrabold tracking-tighter font-display">{value?.toLocaleString() || 0}</div>
+          <p className="text-xs text-muted-foreground mt-3 font-medium flex items-center gap-2">
+            <span className={cn("w-1.5 h-1.5 rounded-full shadow-sm", theme.dot)}></span>
+            {subtitle}
+          </p>
         </CardContent>
       </Card>
     </motion.div>
