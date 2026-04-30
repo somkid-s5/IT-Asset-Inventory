@@ -167,9 +167,9 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto bg-card sm:max-w-4xl">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+      <DialogContent className="max-h-[88vh] overflow-y-auto bg-card/60 backdrop-blur-3xl border-border/50 sm:max-w-4xl rounded-[24px] shadow-2xl p-0">
+        <DialogHeader className="border-b border-border/40 px-6 py-5 bg-muted/10">
+          <DialogTitle className="text-xl font-bold flex items-center gap-3 font-display">
             <Database className="h-5 w-5 text-primary" />
             {databaseToEdit ? 'Update Database Details' : 'Register New Database'}
           </DialogTitle>
@@ -178,7 +178,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5 pt-0">
           <div className="space-y-4">
             <div className="space-y-1">
               <h3 className="text-sm font-semibold text-foreground">Core Details</h3>
@@ -421,7 +421,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
