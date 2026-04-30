@@ -76,7 +76,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
         <AppSidebar collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
 
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 h-[84px] border-b border-border/60 bg-card/80 backdrop-blur-xl px-4 sm:px-6 lg:px-8 shadow-sm">
+          <header className="sticky top-0 z-20 h-[84px] border-b border-sidebar-border/30 bg-sidebar-background backdrop-blur-xl px-4 sm:px-6 lg:px-8 shadow-sm">
             <div className="app-shell flex h-full items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="lg:hidden">

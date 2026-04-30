@@ -167,8 +167,8 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto bg-card/60 backdrop-blur-3xl border-border/50 sm:max-w-4xl rounded-[24px] shadow-2xl p-0">
-        <DialogHeader className="border-b border-border/40 px-6 py-5 bg-muted/10">
+      <DialogContent className="max-h-[88vh] overflow-y-auto bg-card border-border sm:max-w-4xl rounded-xl shadow-2xl p-0">
+        <DialogHeader className="border-b border-border px-6 py-5 bg-muted">
           <DialogTitle className="text-xl font-bold flex items-center gap-3 font-display">
             <Database className="h-5 w-5 text-primary" />
             {databaseToEdit ? 'Update Database Details' : 'Register New Database'}

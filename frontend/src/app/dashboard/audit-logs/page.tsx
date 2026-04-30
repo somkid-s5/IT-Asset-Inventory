@@ -235,8 +235,8 @@ export default function AuditLogsPage() {
         </div>
       </div>
 
-      <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
-        <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <Card className="border-2 border-border shadow-md bg-card overflow-hidden p-0 gap-0 rounded-[24px]">
+        <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
             <Input
@@ -250,11 +250,11 @@ export default function AuditLogsPage() {
 
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-muted/30">
+            <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id} className="border-border/50 hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
                   {headerGroup.headers.map(header => (
-                    <TableHead key={header.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4">
+                    <TableHead key={header.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4 border-b-2 border-border">
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -275,7 +275,7 @@ export default function AuditLogsPage() {
                 table.getRowModel().rows.map(row => (
                   <TableRow 
                     key={row.id} 
-                    className="group border-border/40 hover:bg-muted/30 transition-colors"
+                    className="group border-b border-border hover:bg-muted/50 transition-colors"
                   >
                     {row.getVisibleCells().map(cell => (
                       <TableCell key={cell.id} className="py-3 px-4">

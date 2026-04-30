@@ -74,11 +74,11 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        'sidebar-gradient relative hidden min-h-screen shrink-0 border-r border-sidebar-border transition-all duration-300 ease-in-out lg:flex lg:flex-col',
+        'sidebar-gradient sticky top-0 h-screen hidden shrink-0 border-r border-sidebar-border transition-all duration-300 ease-in-out lg:flex lg:flex-col',
         collapsed ? 'w-20' : 'w-72',
       )}
     >
-      <div className={cn('flex h-20 items-center px-6 border-b border-sidebar-border/30', collapsed && 'justify-center px-0')}>
+      <div className={cn('flex h-[84px] items-center px-6 border-b border-sidebar-border/30', collapsed && 'justify-center px-0')}>
         <BrandMark compact={collapsed} />
       </div>
 
