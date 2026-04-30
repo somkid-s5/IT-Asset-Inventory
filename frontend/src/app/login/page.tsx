@@ -82,7 +82,7 @@ export default function LoginPage() {
       <div className="min-h-screen bg-background px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
           {/* Left Panel */}
-          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-[#0f172a] p-8 text-white lg:flex">
+          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-[hsl(var(--sidebar-background))] p-8 text-white lg:flex">
             <div>
               <BrandMark tone="inverse" className="relative z-10" />
               <div className="relative z-10 mt-10">

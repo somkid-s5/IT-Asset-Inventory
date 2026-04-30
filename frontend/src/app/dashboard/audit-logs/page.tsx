@@ -142,9 +142,9 @@ export default function AuditLogsPage() {
       cell: ({ getValue }) => {
         const action = (getValue() as string) || 'UNKNOWN';
         const colorClass = action.includes('DELETE') ? 'bg-destructive/10 text-destructive border-destructive/20' 
-                         : action.includes('VIEW') || action.includes('LOGIN') ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                         : action.includes('CREATE') ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                         : 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+                         : action.includes('VIEW') || action.includes('LOGIN') ? 'bg-primary/10 text-primary border-primary/20'
+                         : action.includes('CREATE') ? 'bg-success/10 text-success border-success/20'
+                         : 'bg-warning/10 text-warning border-warning/20';
         return <Badge variant="outline" className={colorClass}>{action}</Badge>;
       }
     },

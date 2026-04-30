@@ -2,7 +2,7 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* Brand Colors - High-end Indigo Palette */
+  /* Brand Colors - Slate Teal Palette */
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -28,6 +28,7 @@
   --color-medium: hsl(var(--medium));
   --color-low: hsl(var(--low));
   --color-success: hsl(var(--success));
+  --color-info: hsl(var(--info));
   --color-warning: hsl(var(--warning));
   
   --radius-lg: var(--radius);
@@ -49,78 +50,114 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
+  /* ─── Base Surfaces ─── */
+  --background: 210 20% 98%;
+  --foreground: 220 25% 12%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 220 25% 12%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 239 84% 67%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  --critical: 0 84% 60%;
-  --high: 22 90% 55%;
-  --medium: 45 90% 50%;
-  --low: 215 25% 60%;
-  --success: 142 70% 45%;
-  --warning: 45 90% 50%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 239 84% 67%;
+  --popover-foreground: 220 25% 12%;
+
+  /* ─── Primary (Teal) ─── */
+  --primary: 168 80% 36%;
+  --primary-foreground: 0 0% 100%;
+
+  /* ─── Secondary ─── */
+  --secondary: 210 18% 95%;
+  --secondary-foreground: 220 25% 20%;
+
+  /* ─── Muted ─── */
+  --muted: 210 18% 95%;
+  --muted-foreground: 215 15% 48%;
+
+  /* ─── Accent ─── */
+  --accent: 185 70% 94%;
+  --accent-foreground: 168 80% 25%;
+
+  /* ─── Destructive ─── */
+  --destructive: 347 77% 50%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* ─── Semantic Status ─── */
+  --critical: 347 77% 50%;
+  --high: 25 95% 53%;
+  --medium: 38 92% 50%;
+  --low: 210 20% 58%;
+  --success: 160 84% 39%;
+  --info: 199 89% 48%;
+  --warning: 38 92% 50%;
+
+  /* ─── Borders & Inputs ─── */
+  --border: 214 25% 88%;
+  --input: 214 25% 88%;
+  --ring: 168 80% 36%;
   --radius: 0.75rem;
-  
-  --sidebar-background: 210 40% 99%;
-  --sidebar-foreground: 215 25% 27%;
-  --sidebar-primary: 239 84% 67%;
+
+  /* ─── Sidebar (Light) ─── */
+  --sidebar-background: 210 25% 99%;
+  --sidebar-foreground: 220 20% 25%;
+  --sidebar-primary: 168 80% 36%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 40% 96%;
-  --sidebar-accent-foreground: 222 47% 11%;
-  --sidebar-border: 214 32% 91%;
-  --sidebar-ring: 239 84% 67%;
+  --sidebar-accent: 168 40% 95%;
+  --sidebar-accent-foreground: 168 80% 25%;
+  --sidebar-border: 214 20% 92%;
+  --sidebar-ring: 168 80% 36%;
 }
 
 :root.dark, .dark {
-  --background: 222 47% 6%;
-  --foreground: 210 40% 98%;
-  --card: 222 47% 9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222 47% 9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 239 84% 67%;
-  --primary-foreground: 222 47% 6%;
-  --secondary: 222 47% 12%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 222 47% 12%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 222 47% 12%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  --critical: 0 84% 65%;
-  --high: 22 90% 60%;
-  --medium: 45 90% 55%;
-  --low: 215 25% 70%;
-  --success: 142 70% 55%;
-  --warning: 45 90% 55%;
-  --border: 222 47% 15%;
-  --input: 222 47% 15%;
-  --ring: 239 84% 67%;
-  
-  --sidebar-background: 222 47% 4%;
-  --sidebar-foreground: 215 20% 75%;
-  --sidebar-primary: 239 84% 67%;
-  --sidebar-primary-foreground: 222 47% 6%;
-  --sidebar-accent: 222 47% 10%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 222 47% 12%;
-  --sidebar-ring: 239 84% 67%;
+  /* ─── Base Surfaces ─── */
+  --background: 224 20% 10%;
+  --foreground: 210 15% 92%;
+
+  /* ─── Cards & Panels ─── */
+  --card: 224 18% 14%;
+  --card-foreground: 210 15% 92%;
+  --popover: 224 18% 16%;
+  --popover-foreground: 210 15% 92%;
+
+  /* ─── Primary (Teal — brighter for dark) ─── */
+  --primary: 168 70% 48%;
+  --primary-foreground: 224 20% 8%;
+
+  /* ─── Secondary ─── */
+  --secondary: 224 18% 18%;
+  --secondary-foreground: 210 15% 85%;
+
+  /* ─── Muted ─── */
+  --muted: 224 18% 18%;
+  --muted-foreground: 215 12% 62%;
+
+  /* ─── Accent ─── */
+  --accent: 168 40% 15%;
+  --accent-foreground: 168 60% 70%;
+
+  /* ─── Destructive ─── */
+  --destructive: 347 80% 58%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* ─── Semantic Status (brighter for dark bg) ─── */
+  --critical: 347 80% 62%;
+  --high: 25 95% 62%;
+  --medium: 38 92% 58%;
+  --low: 210 20% 65%;
+  --success: 160 75% 50%;
+  --info: 199 89% 55%;
+  --warning: 38 92% 58%;
+
+  /* ─── Borders & Inputs ─── */
+  --border: 224 15% 22%;
+  --input: 224 15% 22%;
+  --ring: 168 70% 48%;
+
+  /* ─── Sidebar ─── */
+  --sidebar-background: 224 22% 7%;
+  --sidebar-foreground: 215 12% 68%;
+  --sidebar-primary: 168 70% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 224 18% 12%;
+  --sidebar-accent-foreground: 210 15% 90%;
+  --sidebar-border: 224 18% 15%;
+  --sidebar-ring: 168 70% 48%;
 }
 
 @layer base {
@@ -129,6 +166,8 @@
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-inter), "Prompt", sans-serif !important;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+    background-image: radial-gradient(circle at 50% -20%, hsl(var(--primary) / 0.05), transparent 60%);
+    background-attachment: fixed;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -154,15 +193,15 @@
 
   /* ─── Sidebar ─── */
   .sidebar-gradient {
-    background: linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, color-mix(in oklab, hsl(var(--sidebar-background)) 92%, black) 100%);
+    background: linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, color-mix(in oklab, hsl(var(--sidebar-background)) 96%, hsl(var(--primary))) 100%);
   }
   .active-nav-item {
-    @apply bg-primary/10 text-primary font-semibold shadow-[inset_0_0_0_1px_rgba(99,102,241,0.1)];
+    @apply bg-primary/10 text-primary font-semibold shadow-[inset_0_0_0_1px_rgba(13,148,136,0.1)];
   }
 
   /* ─── Glass Card ─── */
   .glass-card {
-    @apply rounded-2xl border border-border/50 bg-card/70 shadow-xl backdrop-blur-xl transition-all hover:shadow-2xl hover:bg-card/90;
+    @apply rounded-2xl border border-border/60 bg-card/80 shadow-xl backdrop-blur-xl transition-all hover:shadow-2xl hover:bg-card/95;
   }
 
   /* ─── Dot Pattern (Login) ─── */

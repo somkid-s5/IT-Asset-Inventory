@@ -14,7 +14,7 @@ export function BrandMark({ compact = false, tone = "default", className }: Bran
 
   return (
     <div className={cn("flex items-center gap-3.5", compact && "gap-0", className)}>
-      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary shadow-lg shadow-primary/20">
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary shadow-lg shadow-primary/25">
         <svg 
           viewBox="0 0 24 24" 
           fill="none" 

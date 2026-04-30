@@ -109,7 +109,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                 >
                   <div className="relative h-5 w-5 transition-transform duration-500 group-hover:rotate-45">
                     {theme === 'dark' ? (
-                      <Sun className="h-5 w-5 text-amber-400" />
+                      <Sun className="h-5 w-5 text-teal-300" />
                     ) : (
                       <Moon className="h-5 w-5 text-primary" />
                     )}

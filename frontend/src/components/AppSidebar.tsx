@@ -85,7 +85,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
       <nav className="flex-1 space-y-8 overflow-y-auto py-8 px-3.5 custom-scrollbar">
         {/* Main Section */}
         <div className="space-y-1.5">
-          {!collapsed && <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/30">Main</p>}
+          {!collapsed && <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/50">Main</p>}
           {primaryNavItems.map(item => renderNavItem(item))}
         </div>
 
@@ -93,7 +93,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         <div className="space-y-1.5">
           {!collapsed && (
             <>
-              <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/30">Infrastructure</p>
+              <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/50">Infrastructure</p>
               <button
                 onClick={() => setComputeOpen(!computeOpen)}
                 className={cn(
@@ -118,7 +118,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
 
         {user?.role === 'ADMIN' && (
           <div className="space-y-1.5 pt-4">
-             {!collapsed && <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/30">Admin</p>}
+             {!collapsed && <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/50">Admin</p>}
              {renderNavItem({ title: 'Users', url: '/dashboard/users', icon: Users })}
              {renderNavItem({ title: 'Audit Logs', url: '/dashboard/audit-logs', icon: Activity })}
           </div>
