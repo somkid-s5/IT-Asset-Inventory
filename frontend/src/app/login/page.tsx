@@ -82,7 +82,8 @@ export default function LoginPage() {
       <div className="min-h-screen bg-background px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
           {/* Left Panel */}
-          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-[hsl(var(--sidebar-background))] p-8 text-white lg:flex">
+          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-slate-950 p-8 text-white lg:flex overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-50"></div>
             <div>
               <BrandMark tone="inverse" className="relative z-10" />
               <div className="relative z-10 mt-10">
@@ -129,7 +130,7 @@ export default function LoginPage() {
 
 
           {/* Right Panel - Login Form */}
-          <div className="relative flex flex-1 items-center justify-center bg-background p-6 sm:p-8 lg:p-10">
+          <div className="relative flex flex-1 items-center justify-center bg-card p-6 sm:p-8 lg:p-10">
             <div className="w-full max-w-md">
               <div className="lg:hidden">
                 <BrandMark />
