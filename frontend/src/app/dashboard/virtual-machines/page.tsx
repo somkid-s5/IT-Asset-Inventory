@@ -141,7 +141,7 @@ export default function VmPage() {
         </div>
       </div>
 
-      <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
+      <Card className="border-2 border-border shadow-md bg-card overflow-hidden p-0 gap-0 rounded-[24px]">
         {isLoading ? (
            <div className="p-20 flex flex-col items-center justify-center text-muted-foreground">
              <LoaderCircle className="h-8 w-8 animate-spin mb-4 text-primary" />
@@ -275,7 +275,7 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
   };
 
   return (
-    <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       {/* Left: View Tabs */}
       <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit shrink-0">
         {(
@@ -432,16 +432,16 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
       <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} />
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-muted/30">
-            {table.getHeaderGroups().map(hg => (
-              <TableRow key={hg.id} className="border-border/50 hover:bg-transparent">
-                {hg.headers.map(h => <TableHead key={h.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
+          <TableHeader className="bg-transparent">
+            {table.getHeaderGroups().map((hg: any) => (
+              <TableRow key={hg.id} className="border-border hover:bg-transparent">
+                {hg.headers.map((h: any) => <TableHead key={h.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4 border-b-2 border-border">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? table.getRowModel().rows.map(row => (
-              <TableRow key={row.id} className="border-border/40 hover:bg-muted/30 transition-colors">
+            {table.getRowModel().rows.length ? table.getRowModel().rows.map((row: any) => (
+              <TableRow key={row.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                 {row.getVisibleCells().map(cell => <TableCell key={cell.id} className="py-3 px-4">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
               </TableRow>
             )) : (

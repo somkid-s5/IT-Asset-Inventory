@@ -537,9 +537,9 @@ export function AssetFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         key={assetToEdit?.id ?? 'new-asset'}
-        className="max-h-[92vh] overflow-y-auto bg-card/60 backdrop-blur-3xl border-border/50 p-0 sm:max-w-4xl rounded-[24px] shadow-2xl"
+        className="max-h-[92vh] overflow-y-auto bg-card border-border p-0 sm:max-w-4xl rounded-xl shadow-2xl"
       >
-        <DialogHeader className="border-b border-border/40 px-6 py-5 bg-muted/10">
+        <DialogHeader className="border-b border-border px-6 py-5 bg-muted">
           <DialogTitle className="flex items-center gap-3 text-lg font-display">
             <span className="icon-chip flex items-center justify-center h-8 w-8 p-0 text-muted-foreground">
               <HardDrive className="h-4 w-4" />

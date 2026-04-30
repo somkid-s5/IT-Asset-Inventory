@@ -5,10 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
-import { 
-  ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, 
-  Database, FolderTree, HardDrive, LoaderCircle, 
-  Pencil, Plus, Search, Server, Shield, Trash2, 
+import {
+  ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown,
+  Database, FolderTree, HardDrive, LoaderCircle,
+  Pencil, Plus, Search, Server, Shield, Trash2,
   Box, Columns, ChevronLeft, ChevronRight as ChevronRightIcon,
   CheckCircle2, MoreHorizontal, Download, Filter, AlertTriangle
 } from 'lucide-react';
@@ -21,12 +21,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+const containerVariants: any = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+};
+
+const itemVariants: any = {
+  hidden: { y: 15, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.4, ease: "easeOut" } }
+};
+
 import { AssetsTableSkeleton } from '@/components/Skeletons';
-import { 
-  DropdownMenu, DropdownMenuCheckboxItem, 
-  DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu, DropdownMenuCheckboxItem,
+  DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -217,9 +230,9 @@ export default function AssetsPage() {
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                   className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
-                   onClick={() => setAssetPendingDelete(asset)}
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
+                  onClick={() => setAssetPendingDelete(asset)}
                 >
                   Delete Asset
                 </DropdownMenuItem>
@@ -276,8 +289,8 @@ export default function AssetsPage() {
     const exportData = filteredData.map(asset => {
       const ips = asset.ipAllocations?.map(ip => ip.address).join('; ') || '';
       const credentials = asset.credentials?.map(c => c.username).join('; ') || '';
-      const customMetadata = asset.customMetadata 
-        ? Object.entries(asset.customMetadata).map(([k,v]) => `${k}:${v}`).join('; ') 
+      const customMetadata = asset.customMetadata
+        ? Object.entries(asset.customMetadata).map(([k, v]) => `${k}:${v}`).join('; ')
         : '';
 
       return {
@@ -301,24 +314,24 @@ export default function AssetsPage() {
     }
 
     const headers = Object.keys(exportData[0]).join(',');
-    const csvRows = exportData.map(row => 
+    const csvRows = exportData.map(row =>
       Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
     );
-    
+
     const BOM = "\uFEFF";
     const csvString = BOM + [headers, ...csvRows].join('\n');
     const blob = new Blob([csvString], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     const fileName = `Assets_Export_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.csv`;
-    
+
     link.href = url;
     link.setAttribute('download', fileName);
     link.download = fileName; // Set both attribute and property
-    
+
     document.body.appendChild(link);
-    
+
     // Use a more standard event dispatching
     const event = new MouseEvent('click', {
       bubbles: true,
@@ -326,7 +339,7 @@ export default function AssetsPage() {
       view: window
     });
     link.dispatchEvent(event);
-    
+
     setTimeout(() => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
@@ -338,12 +351,13 @@ export default function AssetsPage() {
   if (isLoading && assets.length === 0) return <AssetsTableSkeleton />;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
       className="space-y-6 pt-0"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <HardDrive className="h-3.5 w-3.5" />
@@ -352,21 +366,22 @@ export default function AssetsPage() {
           <p className="text-xs text-muted-foreground/60">Manage your physical and network assets</p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
-             <Download className="h-4 w-4 mr-2" />
-             Export
-           </Button>
-           {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+          <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
             <Button onClick={() => { setEditingAsset(undefined); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
               <Plus className="h-4 w-4 mr-2" />
               Add Asset
             </Button>
           )}
         </div>
-      </div>
+      </motion.div>
 
-      <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
-        <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <motion.div variants={itemVariants}>
+        <Card className="border-2 border-border gap-0 shadow-md bg-card overflow-hidden p-0 rounded-[24px]">
+        <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           {/* Tabs */}
           <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit">
             {TABS.map((tab) => (
@@ -375,8 +390,8 @@ export default function AssetsPage() {
                 onClick={() => setActiveTab(tab.value)}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
-                  activeTab === tab.value 
-                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/50" 
+                  activeTab === tab.value
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/50"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/50"
                 )}
               >
@@ -396,7 +411,7 @@ export default function AssetsPage() {
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
               />
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-9 w-9 bg-card">
@@ -423,11 +438,11 @@ export default function AssetsPage() {
 
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-muted/30">
+            <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id} className="border-border/50 hover:bg-transparent">
+                <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
                   {headerGroup.headers.map(header => (
-                    <TableHead key={header.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4">
+                    <TableHead key={header.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4 border-b-2 border-border">
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -437,9 +452,9 @@ export default function AssetsPage() {
             <TableBody>
               {table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map(row => (
-                  <TableRow 
-                    key={row.id} 
-                    className="group border-border/40 hover:bg-muted/30 transition-colors cursor-pointer"
+                  <TableRow
+                    key={row.id}
+                    className="group border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => router.push(`/dashboard/assets/${row.original.id}`)}
                   >
                     {row.getVisibleCells().map(cell => (
@@ -456,7 +471,7 @@ export default function AssetsPage() {
                       <EmptyState
                         icon={HardDrive}
                         title="No assets found"
-                        description={assets.length === 0 
+                        description={assets.length === 0
                           ? "You haven't added any infrastructure assets yet. Start by adding your first server or switch."
                           : "No assets match your current search or filter criteria."
                         }
@@ -516,6 +531,7 @@ export default function AssetsPage() {
           </div>
         </div>
       </Card>
+      </motion.div>
 
       {/* Asset Form Dialog */}
       <AssetFormDialog
@@ -531,8 +547,8 @@ export default function AssetsPage() {
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-               <AlertTriangle className="h-5 w-5" />
-               Confirm Delete
+              <AlertTriangle className="h-5 w-5" />
+              Confirm Delete
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
@@ -542,11 +558,11 @@ export default function AssetsPage() {
             </p>
           </div>
           <div className="flex justify-end gap-3">
-             <Button variant="ghost" onClick={() => setAssetPendingDelete(null)}>Cancel</Button>
-             <Button variant="destructive" onClick={confirmDeleteAsset} disabled={!!deletingId}>
-               {deletingId ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-               Confirm Delete
-             </Button>
+            <Button variant="ghost" onClick={() => setAssetPendingDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteAsset} disabled={!!deletingId}>
+              {deletingId ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Confirm Delete
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

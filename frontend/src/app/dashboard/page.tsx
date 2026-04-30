@@ -2,10 +2,10 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  AlertTriangle, Database, RefreshCw, Server, 
-  ShieldCheck, Users, Monitor, ShieldAlert, 
-  Laptop, Activity, ArrowUpRight 
+import {
+  AlertTriangle, Database, RefreshCw, Server,
+  ShieldCheck, Users, Monitor, ShieldAlert,
+  Laptop, Activity, ArrowUpRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import api from '@/services/api';
 import { DashboardSkeleton } from '@/components/Skeletons';
 import { motion } from 'framer-motion';
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend 
+import {
+  PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend
 } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { cn } from '@/lib/utils';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useQuery } from '@tanstack/react-query';
@@ -93,13 +94,25 @@ export default function DashboardPage() {
     });
   }, [setHeader]);
 
+  const chartConfig = useMemo(() => {
+    if (!data?.assets.breakdown) return {};
+    const config: any = {};
+    const colors = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(var(--info))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
+    data.assets.breakdown.forEach((b, i) => {
+      config[b.label] = {
+        label: b.label.toUpperCase(),
+        color: colors[i % colors.length]
+      };
+    });
+    return config;
+  }, [data]);
+
   const assetChartData = useMemo(() => {
     if (!data?.assets.breakdown) return [];
-    const colors = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(var(--info))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
-    return data.assets.breakdown.map((b, i) => ({
+    return data.assets.breakdown.map((b) => ({
       name: b.label,
       value: b.count,
-      color: colors[i % colors.length]
+      fill: `var(--color-${b.label})`
     }));
   }, [data]);
 
@@ -114,7 +127,7 @@ export default function DashboardPage() {
   if (isLoading) return <DashboardSkeleton />;
 
   return (
-    <motion.div 
+    <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -146,23 +159,31 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-12">
         <motion.div variants={itemVariants} className="lg:col-span-8">
-          <Card className="glass-card h-full border border-border/40 bg-card/40 backdrop-blur-2xl shadow-xl flex flex-col rounded-[24px] overflow-hidden">
-            <CardHeader className="pb-2 border-b border-border/20 bg-muted/10 px-6 py-5">
+          <Card className="h-full border-2 border-border bg-card flex flex-col rounded-[24px] overflow-hidden p-0 gap-0">
+            <CardHeader className="pb-2 border-b-2 border-border bg-muted/80 px-6 py-5">
               <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-5 w-5 text-primary" />Asset Distribution</CardTitle>
               <CardDescription>Breakdown of IT resources across the system</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-[320px] relative p-6">
               {mounted && assetChartData.length > 0 ? (
-                <div className="absolute inset-0 overflow-hidden">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center pt-8">
+                  <ChartContainer config={chartConfig} className="w-full max-w-[320px] h-full aspect-square">
                     <PieChart>
-                      <Pie data={assetChartData} innerRadius={70} outerRadius={95} paddingAngle={4} dataKey="value">
-                        {assetChartData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={entry.color} /> ))}
-                      </Pie>
-                      <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))' }} itemStyle={{ color: 'hsl(var(--foreground))' }} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                      <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                      <Pie
+                        data={assetChartData}
+                        innerRadius={80}
+                        outerRadius={105}
+                        paddingAngle={5}
+                        dataKey="value"
+                        nameKey="name"
+                        // stroke="hsl(var(--background))"
+                        // strokeWidth={3}
+                        cornerRadius={6}
+                      />
+                      <ChartLegend content={<ChartLegendContent />} className="flex-wrap gap-2 text-[10px] pb-4" />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No data available</div>
@@ -172,8 +193,8 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} className="lg:col-span-4">
-          <Card className="glass-card h-full border border-border/40 bg-card/40 backdrop-blur-2xl shadow-xl flex flex-col rounded-[24px] overflow-hidden">
-            <CardHeader className="pb-4 border-b border-border/20 bg-muted/10 px-6 py-5">
+          <Card className="h-full border-2 border-border bg-card flex flex-col rounded-[24px] overflow-hidden p-0 gap-0">
+            <CardHeader className="pb-4 border-b-2 border-border bg-muted/80 px-6 py-5">
               <CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-warning" />Requires Attention</CardTitle>
               <CardDescription>Critical items requiring action</CardDescription>
             </CardHeader>
@@ -188,9 +209,9 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
-                   <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center text-success"><ShieldCheck className="h-6 w-6" /></div>
-                   <p className="text-sm font-medium">Everything is normal</p>
-                   <p className="text-xs text-muted-foreground px-6">There are currently no urgent issues in your infrastructure.</p>
+                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center text-success"><ShieldCheck className="h-6 w-6" /></div>
+                  <p className="text-sm font-medium">Everything is normal</p>
+                  <p className="text-xs text-muted-foreground px-6">There are currently no urgent issues in your infrastructure.</p>
                 </div>
               )}
             </CardContent>
@@ -212,30 +233,36 @@ function StatCard({ title, value, icon: Icon, subtitle, color, onClick }: any) {
 
   return (
     <motion.div variants={itemVariants} className="h-full">
-      <Card 
+      <Card
         className={cn(
-          "group relative overflow-hidden h-full rounded-[24px] border border-border/40 bg-card/40 backdrop-blur-2xl shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer",
+          "group relative overflow-hidden rounded-[20px] border-2 border-border bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-0 gap-0",
           theme.border
-        )} 
+        )}
         onClick={onClick}
       >
         <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", theme.gradient)} />
         <div className={cn("absolute inset-0 transition-colors duration-500", theme.bg)} />
-        
-        <CardHeader className="flex flex-row items-start justify-between pb-2 relative z-10 space-y-0 px-5 pt-5">
-          <div className={cn("p-2.5 rounded-2xl bg-background/80 border border-border/50 shadow-sm transition-transform duration-500 group-hover:scale-110", theme.text)}>
-            <Icon className="h-5 w-5" strokeWidth={2.5} />
+
+        <div className="p-4 relative z-10 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={cn("p-1.5 rounded-lg bg-background border border-border/50", theme.text)}>
+                <Icon className="h-4 w-4" strokeWidth={2.5} />
+              </div>
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{title}</span>
+            </div>
           </div>
-          <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="relative z-10 px-5 pb-5 pt-4">
-          <div className="text-4xl font-extrabold tracking-tighter font-display">{value?.toLocaleString() || 0}</div>
-          <p className="text-xs text-muted-foreground mt-3 font-medium flex items-center gap-2">
-            <span className={cn("w-1.5 h-1.5 rounded-full shadow-sm", theme.dot)}></span>
-            {subtitle}
-          </p>
-        </CardContent>
+          <div className="pl-1">
+            <div className="text-3xl font-bold font-mono tracking-tight text-foreground">{value?.toLocaleString() || 0}</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-medium flex items-center gap-1.5">
+              <span className={cn("w-1.5 h-1.5 rounded-full shadow-sm", theme.dot)}></span>
+              {subtitle}
+            </p>
+          </div>
+        </div>
       </Card>
     </motion.div>
   );
 }
+
+
