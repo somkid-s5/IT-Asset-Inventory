@@ -134,8 +134,6 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
       </button>
 
       <div className="p-4 border-t border-sidebar-border/30 bg-sidebar-background/50 backdrop-blur-md">
-         {/* Settings feature is coming soon */}
-         {/* {renderNavItem({ title: 'Settings', url: '/dashboard/settings', icon: Settings })} */}
       </div>
     </aside>
   );
