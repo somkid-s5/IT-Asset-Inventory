@@ -441,8 +441,10 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.length ? table.getRowModel().rows.map((row: any) => (
-              <TableRow key={row.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                {row.getVisibleCells().map(cell => <TableCell key={cell.id} className="py-3 px-4">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
+              <TableRow key={row.id} className="border-b border-border hover:bg-muted/50 transition-colors h-14">
+                {row.getVisibleCells().map((cell: any) => <TableCell key={cell.id} className="py-2.5 px-4 text-sm text-foreground align-middle">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>)}
               </TableRow>
             )) : (
               <TableRow>

@@ -48,37 +48,50 @@
 
 ---
 
-## 🚀 การเริ่มต้นใช้งาน (Getting Started)
+## 🚀 การเริ่มต้นใช้งานแบบ Plug & Play
 
-### การติดตั้งสำหรับนักพัฒนา (Development)
-1.  **Clone Repository:**
+เพียง 2 ขั้นตอน ระบบจะสร้างฐานข้อมูล, API และหน้าเว็บให้พร้อมใช้งานทันที:
+
+1. **เตรียม Environment (คัดลอก .env และสร้างคีย์ความปลอดภัย):**
     ```bash
-    git clone <URL_REPO>
-    cd IT-Asset-Inventory
+    node scripts/setup.js
     ```
-2.  **Setup Backend:**
+2. **รันระบบทั้งหมดด้วย Docker:**
     ```bash
-    cd backend && npm install
-    cp .env.example .env # ตั้งค่า DATABASE_URL และ SECRET ต่างๆ
+    docker-compose up -d --build
+    ```
+
+ระบบจะพร้อมใช้งานที่:
+- **Frontend:** `http://localhost:3000`
+- **Backend API:** `http://localhost:3001/api`
+- **pgAdmin:** `http://localhost:5050` (ถ้าเปิดใช้งาน)
+
+### การรันฝั่ง Development แยกส่วน (Local Dev)
+หากคุณเป็นนักพัฒนาและต้องการรันแยกส่วนโดยไม่ใช้ Docker สามารถทำได้ (สคริปต์จะดึง `.env` จาก Root ให้เองอัตโนมัติ):
+
+1. **เตรียม Environment (คัดลอก .env และสร้างคีย์ความปลอดภัย):**
+    ```bash
+    node scripts/setup.js
+    ```
+2. **รัน Backend:**
+    ```bash
+    cd backend
+    npm install
     npx prisma migrate dev
+    npx prisma db seed
     npm run start:dev
     ```
-3.  **Setup Frontend:**
+3. **รัน Frontend:**
     ```bash
-    cd ../frontend && npm install
+    cd frontend
+    npm install
     npm run dev
     ```
 
-### การติดตั้งสำหรับใช้งานจริง (Production)
-เรามีคู่มือฉบับละเอียดสำหรับการติดตั้งผ่าน **Docker** และการตั้งค่า **Nginx Reverse Proxy** สามารถดูได้ที่:
-👉 **[คู่มือการติดตั้ง Production (DEPLOYMENT_GUIDE.md)](./DEPLOYMENT_GUIDE.md)**
-
 ---
-
-## 🔑 บัญชีผู้ใช้เริ่มต้น (Default Access)
-หลังจากการรัน `npx prisma db seed`:
+ระบบทำการ Seed ข้อมูลเริ่มต้นให้เรียบร้อยแล้ว:
 *   **Username:** `admin`
-*   **Password:** `AssetOpsAdmin2026!` *(กรุณาเปลี่ยนทันทีหลังเข้าใช้งาน)*
+*   **Password:** `AssetOpsAdmin2026!` *(กรุณาเปลี่ยนทันทีหลังจากเข้าระบบครั้งแรก)*
 
 ---
 
