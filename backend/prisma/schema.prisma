@@ -64,6 +64,21 @@ enum VmCriticality {
   STANDARD
 }
 
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CLIENT
+  RESOLVED
+  CLOSED
+}
+
 enum AuditAction {
   VIEW_PASSWORD
   COPY_PASSWORD
@@ -109,6 +124,11 @@ model User {
   auditLogs           AuditLog[]
   assetNotes          AssetNote[]
   assetAttachments    AssetAttachment[]
+
+  assignedTickets  Ticket[]           @relation("AssignedTickets")
+  createdTickets   Ticket[]           @relation("CreatedTickets")
+  ticketComments   TicketComment[]
+  writtenArticles  KnowledgeArticle[]
 }
 
 model IPAllocation {
@@ -168,6 +188,7 @@ model Asset {
   credentials Credential[]
   notes       AssetNote[]
   attachments AssetAttachment[]
+  tickets     Ticket[]
 
   @@index([status])
   @@index([type])
@@ -435,4 +456,76 @@ model AssetAttachment {
   createdByUser   User   @relation(fields: [createdByUserId], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  tickets   Ticket[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ticket {
+  id          String         @id @default(uuid())
+  ticketNo    String         @unique
+  title       String
+  description String?
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+
+  clientId    String
+  client      Client         @relation(fields: [clientId], references: [id])
+  
+  assetId     String?
+  asset       Asset?         @relation(fields: [assetId], references: [id])
+
+  assigneeId  String?
+  assignee    User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
+
+  creatorId   String
+  creator     User           @relation("CreatedTickets", fields: [creatorId], references: [id])
+
+  comments    TicketComment[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  resolvedAt  DateTime?
+
+  @@index([status])
+  @@index([priority])
+}
+
+model TicketComment {
+  id          String   @id @default(uuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  content     String
+  commentType String   @default("GENERAL") // GENERAL, INVESTIGATION, ACTION, RESOLUTION
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model KnowledgeCategory {
+  id          String             @id @default(uuid())
+  name        String             @unique
+  icon        String?
+  articles    KnowledgeArticle[]
+}
+
+model KnowledgeArticle {
+  id          String            @id @default(uuid())
+  title       String
+  content     String
+  categoryId  String
+  category    KnowledgeCategory @relation(fields: [categoryId], references: [id])
+  authorId    String
+  author      User              @relation(fields: [authorId], references: [id])
+  viewCount   Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([categoryId])
 }

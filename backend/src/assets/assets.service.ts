@@ -26,6 +26,13 @@ type AssetWithRelations = Prisma.AssetGetPayload<{
         };
       };
     };
+    tickets: {
+      include: {
+        client: true;
+        assignee: { select: { displayName: true } };
+      };
+      orderBy: { createdAt: 'desc' };
+    };
   };
 }>;
 
@@ -174,6 +181,13 @@ export class AssetsService {
           },
           orderBy: { createdAt: 'desc' as const },
         },
+        tickets: {
+          include: {
+            client: true,
+            assignee: { select: { displayName: true } },
+          },
+          orderBy: { createdAt: 'desc' as const },
+        },
       },
     });
 
@@ -265,6 +279,13 @@ export class AssetsService {
           },
           orderBy: { createdAt: 'desc' as const },
         },
+        tickets: {
+          include: {
+            client: true,
+            assignee: { select: { displayName: true } },
+          },
+          orderBy: { createdAt: 'desc' as const },
+        },
       },
     });
 
@@ -322,6 +343,13 @@ export class AssetsService {
               createdByUser: {
                 select: { id: true, displayName: true, avatarSeed: true },
               },
+            },
+            orderBy: { createdAt: 'desc' as const },
+          },
+          tickets: {
+            include: {
+              client: true,
+              assignee: { select: { displayName: true } },
             },
             orderBy: { createdAt: 'desc' as const },
           },

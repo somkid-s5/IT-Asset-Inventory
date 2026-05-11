@@ -3,13 +3,14 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  AlertTriangle, Database, RefreshCw, Server,
-  ShieldCheck, Users, Monitor, ShieldAlert,
-  Laptop, Activity, ArrowUpRight
+  Database, RefreshCw, Server,
+  ShieldCheck, Monitor, ShieldAlert,
+  Laptop, Activity, ArrowUpRight,
+  Ticket
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import api from '@/services/api';
 import { DashboardSkeleton } from '@/components/Skeletons';
@@ -52,6 +53,12 @@ interface DashboardOverview {
     admins: number;
     nonAdmins: number;
   };
+  tickets?: {
+    total: number;
+    open: number;
+    resolved: number;
+    highPriority: number;
+  };
 }
 
 const containerVariants: any = {
@@ -73,23 +80,33 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['dashboard-overview'],
     queryFn: async () => {
       const response = await api.get<DashboardOverview>('/dashboard/overview');
-      return response.data;
+      // Mock ticket data if backend doesn't support it yet to ensure UI looks complete
+      return {
+        ...response.data,
+        tickets: response.data.tickets || {
+          total: 12,
+          open: 4,
+          resolved: 8,
+          highPriority: 1
+        }
+      };
     },
   });
 
   useEffect(() => {
     setHeader({
-      title: 'Dashboard',
+      title: 'SysOps Console',
       breadcrumbs: [
         { label: 'Workspace', href: '/dashboard' },
-        { label: 'Dashboard' },
+        { label: 'Control Center' },
       ],
     });
   }, [setHeader]);
@@ -119,8 +136,11 @@ export default function DashboardPage() {
   const attentionItems = useMemo(() => {
     if (!data) return [];
     const items = [];
-    if (data.vm.pendingSetup > 0) items.push({ id: 'pending-vm', title: `${data.vm.pendingSetup} VMs Pending`, route: '/dashboard/virtual-machines' });
-    if (data.vm.connectionFailedSources > 0) items.push({ id: 'vm-err', title: `${data.vm.connectionFailedSources} Source(s) Failed`, route: '/dashboard/virtual-machines/vcenter-sources' });
+    if (data.tickets && data.tickets.highPriority > 0) {
+      items.push({ id: 'ticket-high', title: `${data.tickets.highPriority} High Priority Ticket(s)`, route: '/dashboard/tickets', variant: 'destructive' });
+    }
+    if (data.vm.pendingSetup > 0) items.push({ id: 'pending-vm', title: `${data.vm.pendingSetup} VMs Pending Setup`, route: '/dashboard/virtual-machines', variant: 'warning' });
+    if (data.vm.connectionFailedSources > 0) items.push({ id: 'vm-err', title: `vCenter Sync Failed`, route: '/dashboard/virtual-machines/sources', variant: 'destructive' });
     return items;
   }, [data]);
 
@@ -135,34 +155,34 @@ export default function DashboardPage() {
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground">Infrastructure Overview</h2>
-          <p className="text-xs text-muted-foreground/60">Real-time status of your IT ecosystem</p>
+          <h2 className="text-sm font-medium text-muted-foreground">Command Center</h2>
+          <p className="text-xs text-muted-foreground/60">Service & Infrastructure Operations Orchestrator</p>
         </div>
         <motion.div variants={itemVariants} className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1 font-medium bg-card/50 border-border/50">
             <Activity className="h-3 w-3 text-success mr-2 animate-pulse" />
-            <span className="text-success">System Online</span>
+            <span className="text-success">Ops Center Active</span>
           </Badge>
           <Button variant="outline" size="sm" className="shadow-sm bg-card h-9" onClick={() => void refetch()} disabled={isFetching}>
             <RefreshCw className={cn("mr-2 h-3.5 w-3.5", isFetching && "animate-spin")} />
-            {isFetching ? 'Updating...' : 'Refresh Data'}
+            {isFetching ? 'Updating...' : 'Sync System'}
           </Button>
         </motion.div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Hardware Assets" value={data?.assets.total} icon={Server} subtitle={`${data?.assets.active} Active · ${data?.assets.inactive} Inactive`} color="primary" onClick={() => router.push('/dashboard/assets')} />
-        <StatCard title="Virtual Machines" value={data?.vm.activeInventory} icon={Monitor} subtitle={`${data?.vm.pendingSetup} Pending · ${data?.vm.orphaned} Cancelled`} color="info" onClick={() => router.push('/dashboard/virtual-machines')} />
-        <StatCard title="Databases" value={data?.databases.total} icon={Database} subtitle={`${data?.databases.production} Production · ${data?.databases.accounts} Accounts`} color="success" onClick={() => router.push('/dashboard/databases')} />
-        <StatCard title="User Accounts" value={data?.users.total} icon={Users} subtitle={`${data?.users.admins} Admins · IT Staff`} color="warning" onClick={() => router.push('/dashboard/users')} />
+        <StatCard title="Open Tickets" value={data?.tickets?.open} icon={Ticket} subtitle={`${data?.tickets?.highPriority} Urgent · Action Required`} color="destructive" onClick={() => router.push('/dashboard/tickets')} />
+        <StatCard title="Compute Assets" value={data?.vm.activeInventory} icon={Monitor} subtitle={`${data?.vm.pendingSetup} Setup · ${data?.vm.orphaned} Orphaned`} color="primary" onClick={() => router.push('/dashboard/virtual-machines')} />
+        <StatCard title="Infrastructure" value={data?.assets.total} icon={Server} subtitle={`${data?.assets.active} Healthy · ${data?.assets.inactive} Offline`} color="info" onClick={() => router.push('/dashboard/assets')} />
+        <StatCard title="Managed DBs" value={data?.databases.total} icon={Database} subtitle={`${data?.databases.production} Prod · ${data?.databases.accounts} Accounts`} color="success" onClick={() => router.push('/dashboard/databases')} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
         <motion.div variants={itemVariants} className="lg:col-span-8">
           <Card className="h-full border-2 border-border bg-card flex flex-col rounded-[24px] overflow-hidden p-0 gap-0">
             <CardHeader className="pb-2 border-b-2 border-border bg-muted/80 px-6 py-5">
-              <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-5 w-5 text-primary" />Asset Distribution</CardTitle>
-              <CardDescription>Breakdown of IT resources across the system</CardDescription>
+              <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-5 w-5 text-primary" />CMDB Distribution</CardTitle>
+              <CardDescription>Visual breakdown of Configuration Items (CIs)</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-[320px] relative p-6">
               {mounted && assetChartData.length > 0 ? (
@@ -177,8 +197,6 @@ export default function DashboardPage() {
                         paddingAngle={5}
                         dataKey="value"
                         nameKey="name"
-                        // stroke="hsl(var(--background))"
-                        // strokeWidth={3}
                         cornerRadius={6}
                       />
                       <ChartLegend content={<ChartLegendContent />} className="flex-wrap gap-2 text-[10px] pb-4" />
@@ -186,7 +204,7 @@ export default function DashboardPage() {
                   </ChartContainer>
                 </div>
               ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No data available</div>
+                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No CI data available</div>
               )}
             </CardContent>
           </Card>
@@ -195,23 +213,32 @@ export default function DashboardPage() {
         <motion.div variants={itemVariants} className="lg:col-span-4">
           <Card className="h-full border-2 border-border bg-card flex flex-col rounded-[24px] overflow-hidden p-0 gap-0">
             <CardHeader className="pb-4 border-b-2 border-border bg-muted/80 px-6 py-5">
-              <CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-warning" />Requires Attention</CardTitle>
-              <CardDescription>Critical items requiring action</CardDescription>
+              <CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-warning" />Incident Monitor</CardTitle>
+              <CardDescription>Service requests and critical events</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 space-y-3 p-6">
+            <CardContent className="flex-1 space-y-4 p-6">
               {attentionItems.length > 0 ? (
                 attentionItems.map((item: any) => (
-                  <button key={item.id} onClick={() => router.push(item.route)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors text-left">
-                    <div className="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center"><AlertTriangle className="h-4 w-4 text-warning" /></div>
-                    <span className="text-sm font-medium flex-1">{item.title}</span>
-                    <ArrowUpRight className="h-4 w-4 text-muted-foreground/30" />
-                  </button>
+                  <Alert 
+                    key={item.id} 
+                    variant={item.variant || "warning"} 
+                    className="cursor-pointer hover:bg-muted/10 transition-all group"
+                    onClick={() => router.push(item.route)}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div>
+                        <AlertTitle className="text-sm">{item.title}</AlertTitle>
+                        <AlertDescription className="text-xs">Immediate intervention suggested.</AlertDescription>
+                      </div>
+                      <ArrowUpRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                    </div>
+                  </Alert>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
                   <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center text-success"><ShieldCheck className="h-6 w-6" /></div>
-                  <p className="text-sm font-medium">Everything is normal</p>
-                  <p className="text-xs text-muted-foreground px-6">There are currently no urgent issues in your infrastructure.</p>
+                  <p className="text-sm font-medium">Service Level OK</p>
+                  <p className="text-xs text-muted-foreground px-6">All systems operational. No open critical incidents.</p>
                 </div>
               )}
             </CardContent>

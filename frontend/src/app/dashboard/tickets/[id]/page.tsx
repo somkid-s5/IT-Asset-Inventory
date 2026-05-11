@@ -1,0 +1,337 @@
+'use client';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ticketsService, TicketStatus, TicketPriority, TicketCommentType } from '@/services/tickets';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePageHeader } from '@/contexts/PageHeaderContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  ChevronLeft, Clock, User, MessageSquare, 
+  Send, ShieldAlert, CheckCircle2, PlayCircle, 
+  History, Box, HardDrive, 
+  ExternalLink, Trash2, LoaderCircle, Activity,
+  Search, Shield, CheckCircle
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
+import dynamic from 'next/dynamic';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+
+const NotionEditor = dynamic(() => import('@/components/NotionEditor'), { 
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[150px] w-full bg-muted/20 animate-pulse rounded-[24px] border-2 border-dashed border-border/40 flex items-center justify-center">
+      <LoaderCircle className="h-6 w-6 animate-spin opacity-20" />
+    </div>
+  )
+});
+
+export default function TicketDetailsPage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const { setHeader } = usePageHeader();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [commentContent, setCommentContent] = useState('');
+  const [commentType, setCommentType] = useState<TicketCommentType>('GENERAL');
+
+  const { data: ticket, isLoading } = useQuery({
+    queryKey: ['ticket', id],
+    queryFn: () => ticketsService.findOne(id as string),
+    enabled: !!id,
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: (status: TicketStatus) => ticketsService.update(id as string, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', id] });
+      toast.success('Ticket status updated');
+    }
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: ({ content, type }: { content: string; type: TicketCommentType }) => ticketsService.addComment(id as string, content, type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', id] });
+      setCommentContent('');
+      setCommentType('GENERAL');
+      toast.success('Activity log added');
+    }
+  });
+
+  useEffect(() => {
+    if (ticket) {
+      setHeader({
+        title: `Ticket ${ticket.ticketNo}`,
+        breadcrumbs: [
+          { label: 'Workspace', href: '/dashboard' },
+          { label: 'Tickets', href: '/dashboard/tickets' },
+          { label: ticket.ticketNo },
+        ],
+      });
+    }
+  }, [ticket, setHeader]);
+
+  if (isLoading) return <TicketSkeleton />;
+  if (!ticket) return <div>Ticket not found</div>;
+
+  const priorityColors: Record<TicketPriority, string> = {
+    LOW: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
+    MEDIUM: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+    HIGH: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
+    CRITICAL: 'text-rose-500 bg-rose-500/10 border-rose-500/20 animate-pulse',
+  };
+
+  const statusColors: Record<TicketStatus, string> = {
+    OPEN: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+    IN_PROGRESS: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+    WAITING_FOR_CLIENT: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+    RESOLVED: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+    CLOSED: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      {/* Top Action Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <Button variant="ghost" size="sm" onClick={() => router.back()} className="rounded-xl font-bold text-xs w-fit">
+          <ChevronLeft className="h-4 w-4 mr-1" /> Back to Workspace
+        </Button>
+        
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="rounded-xl h-10 px-5 font-black uppercase text-[10px] tracking-widest border-2 shadow-sm">
+                 Update Status
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl border-2">
+              <DropdownMenuItem onClick={() => updateStatusMutation.mutate('IN_PROGRESS')} className="font-bold text-xs gap-2">
+                 <PlayCircle className="h-4 w-4 text-amber-500" /> Start Working
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updateStatusMutation.mutate('WAITING_FOR_CLIENT')} className="font-bold text-xs gap-2">
+                 <Clock className="h-4 w-4 text-purple-500" /> Waiting for Client
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updateStatusMutation.mutate('RESOLVED')} className="font-bold text-xs gap-2 text-emerald-600 focus:text-emerald-600 focus:bg-emerald-500/5">
+                 <CheckCircle2 className="h-4 w-4" /> Resolve Ticket
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content (Left) */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="p-8 rounded-[32px] border-2 shadow-xl bg-card/50 backdrop-blur-sm space-y-8 relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-8 opacity-5">
+                <ShieldAlert className="h-40 w-40 rotate-12" />
+             </div>
+
+             <div className="space-y-4 relative z-10">
+                <div className="flex flex-wrap items-center gap-2">
+                   <Badge variant="outline" className={cn("px-3 py-0.5 rounded-full font-black text-[10px] uppercase tracking-widest border-2", priorityColors[ticket.priority])}>
+                      {ticket.priority}
+                   </Badge>
+                   <Badge variant="outline" className={cn("px-3 py-0.5 rounded-full font-black text-[10px] uppercase tracking-widest border-2", statusColors[ticket.status])}>
+                      {ticket.status.replace(/_/g, ' ')}
+                   </Badge>
+                </div>
+                <h1 className="text-4xl font-black tracking-tight leading-tight">{ticket.title}</h1>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{ticket.description || 'No description provided.'}</p>
+             </div>
+
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6 border-t border-border/40">
+                <div className="space-y-1">
+                   <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Requested By</p>
+                   <p className="text-sm font-bold">{ticket.client.name}</p>
+                </div>
+                <div className="space-y-1">
+                   <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Assignee</p>
+                   <p className={cn("text-sm font-bold", ticket.assigneeId === user?.id && "text-primary")}>
+                      {ticket.assignee?.displayName || 'Unassigned'}
+                   </p>
+                </div>
+                <div className="space-y-1">
+                   <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Created</p>
+                   <p className="text-sm font-bold">{new Date(ticket.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div className="space-y-1">
+                   <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Time Active</p>
+                   <p className="text-sm font-bold">{formatDistanceToNow(new Date(ticket.createdAt))}</p>
+                </div>
+             </div>
+          </Card>
+
+          {/* Activity Log Area */}
+          <div className="space-y-6">
+             <h2 className="text-xl font-black px-2 flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" /> Activity & Work Logs
+             </h2>
+             
+             <div className="space-y-4">
+                {ticket.comments?.length === 0 ? (
+                  <div className="p-10 text-center rounded-[32px] border-2 border-dashed bg-muted/5 opacity-40">
+                     <p className="text-sm font-medium">No activity logged yet. Start the investigation!</p>
+                  </div>
+                ) : (
+                  ticket.comments?.map((comment) => (
+                    <div key={comment.id} className={cn(
+                      "flex flex-col gap-4 p-5 rounded-[24px] border-2 group transition-all",
+                      comment.isSystem ? "bg-muted/30 border-border/40" : "bg-card border-border/60 hover:border-primary/20"
+                    )}>
+                       <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                         <div className="flex items-center gap-3">
+                           <div className="h-8 w-8 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
+                              {comment.isSystem ? <History className="h-4 w-4 opacity-40" /> : <User className="h-4 w-4 opacity-40" />}
+                           </div>
+                           <div className="flex flex-col">
+                             <span className="text-xs font-black uppercase tracking-tight">{comment.user?.displayName || 'System'}</span>
+                             <span className="text-[10px] text-muted-foreground/60 font-medium">{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span>
+                           </div>
+                         </div>
+                         {!comment.isSystem && (
+                           <Badge variant="outline" className={cn(
+                             "text-[9px] font-black uppercase tracking-widest px-2 py-0 h-5 border-2",
+                             comment.commentType === 'INVESTIGATION' && "text-amber-500 border-amber-500/20 bg-amber-500/5",
+                             comment.commentType === 'ACTION' && "text-blue-500 border-blue-500/20 bg-blue-500/5",
+                             comment.commentType === 'RESOLUTION' && "text-emerald-500 border-emerald-500/20 bg-emerald-500/5",
+                             comment.commentType === 'GENERAL' && "text-muted-foreground border-border/40"
+                           )}>
+                             {comment.commentType === 'INVESTIGATION' && <Search className="w-3 h-3 mr-1" />}
+                             {comment.commentType === 'ACTION' && <Shield className="w-3 h-3 mr-1" />}
+                             {comment.commentType === 'RESOLUTION' && <CheckCircle className="w-3 h-3 mr-1" />}
+                             {comment.commentType}
+                           </Badge>
+                         )}
+                       </div>
+                       <div className="text-sm leading-relaxed text-foreground/90 overflow-hidden">
+                          {comment.isSystem ? (
+                            <p>{comment.content}</p>
+                          ) : (
+                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/40 prose-img:rounded-xl">
+                               <MarkdownRenderer content={comment.content} />
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                  ))
+                )}
+             </div>
+
+             {/* Add Work Log */}
+             <div className="p-6 rounded-[32px] border-2 bg-card/30 backdrop-blur-md shadow-lg space-y-4 border-primary/10">
+                <div className="flex items-center justify-between mb-2">
+                   <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Add Work Log</Label>
+                   <Select value={commentType} onValueChange={(val: TicketCommentType) => setCommentType(val)}>
+                      <SelectTrigger className="w-[180px] h-8 text-xs font-bold rounded-lg border-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-2">
+                        <SelectItem value="GENERAL">General Update</SelectItem>
+                        <SelectItem value="INVESTIGATION">Investigation</SelectItem>
+                        <SelectItem value="ACTION">Action Taken</SelectItem>
+                        <SelectItem value="RESOLUTION">Resolution</SelectItem>
+                      </SelectContent>
+                   </Select>
+                </div>
+                
+                <div className="min-h-[150px] bg-card rounded-2xl border-2 border-border/40 overflow-hidden">
+                   <NotionEditor 
+                      onChange={(markdown) => setCommentContent(markdown)}
+                   />
+                </div>
+
+                <div className="flex justify-between items-center px-1 pt-2">
+                   <p className="text-[10px] text-muted-foreground italic font-medium uppercase tracking-tighter">Support staff will be notified via Line.</p>
+                   <Button 
+                      onClick={() => commentMutation.mutate({ content: commentContent, type: commentType })}
+                      disabled={!commentContent.trim() || commentMutation.isPending}
+                      className="rounded-xl px-6 font-bold shadow-xl shadow-primary/20"
+                   >
+                      {commentMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                      Post Update
+                   </Button>
+                </div>
+             </div>
+          </div>
+        </div>
+
+        {/* Sidebar (Right) */}
+        <div className="space-y-6">
+           {/* Asset Connection Card */}
+           <Card className="p-6 rounded-[32px] border-2 bg-primary/[0.02] border-primary/10 space-y-4">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 flex items-center gap-2">
+                 <Box className="h-3 w-3" /> Related Asset
+              </h3>
+              {ticket.asset ? (
+                <div className="space-y-4">
+                   <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 shadow-sm">
+                         <HardDrive className="h-6 w-6" />
+                      </div>
+                      <div className="overflow-hidden">
+                         <p className="text-sm font-black truncate">{ticket.asset.name}</p>
+                         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">{ticket.asset.type}</p>
+                      </div>
+                   </div>
+                   <Button 
+                     variant="outline" 
+                     onClick={() => router.push(`/dashboard/assets/${ticket.assetId}?returnTo=/dashboard/tickets/${id}`)}
+                     className="w-full rounded-xl text-[10px] font-black uppercase tracking-widest h-10 border-2"
+                   >
+                      View Inventory Detail <ExternalLink className="h-3 w-3 ml-2" />
+                   </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                   <p className="text-xs text-muted-foreground/60 italic leading-relaxed">No asset linked to this ticket yet.</p>
+                   <Button variant="outline" className="w-full rounded-xl text-[10px] font-black uppercase tracking-widest h-10 border-dashed border-2 opacity-60">
+                      Link Asset Inventory
+                   </Button>
+                </div>
+              )}
+           </Card>
+
+           {/* Quick Actions / Audit Card */}
+           <Card className="p-6 rounded-[32px] border-2 space-y-4 bg-muted/20">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Management</h3>
+              <div className="grid grid-cols-1 gap-2">
+                 <Button variant="outline" className="w-full justify-start rounded-xl text-[11px] font-bold h-10 border-2">
+                    <History className="h-3.5 w-3.5 mr-2 opacity-60" /> View History
+                 </Button>
+                 <Button variant="outline" className="w-full justify-start rounded-xl text-[11px] font-bold h-10 border-2 text-rose-500 hover:text-rose-600 hover:bg-rose-500/5 border-rose-500/10">
+                    <Trash2 className="h-3.5 w-3.5 mr-2 opacity-60" /> Delete Ticket
+                 </Button>
+              </div>
+           </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TicketSkeleton() {
+  return (
+    <div className="max-w-6xl mx-auto space-y-6">
+      <Skeleton className="h-10 w-48 rounded-xl" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Skeleton className="lg:col-span-2 h-[400px] rounded-[32px]" />
+        <Skeleton className="h-[200px] rounded-[32px]" />
+      </div>
+    </div>
+  );
+}

@@ -196,7 +196,7 @@ export default function DbPage() {
         );
       }
     }
-  ], [loadingEditId]);
+  ], [loadingEditId, router]);
 
   const table = useReactTable({
     data: filteredData,

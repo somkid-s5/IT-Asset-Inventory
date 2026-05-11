@@ -23,16 +23,18 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 function getErrorMessage(error: unknown) {
   if (typeof error === "object" && error !== null && "response" in error) {
-    const data = (error as { response?: { data?: any } }).response?.data;
-    if (data?.message) {
-      if (typeof data.message === "string") return data.message;
-      if (typeof data.message === "object" && data.message.error) return data.message.error;
-      return JSON.stringify(data.message);
+    const status = (error as { response?: { status?: number } }).response?.status;
+    
+    // Unified message for all common authentication/validation failures
+    if (status === 400 || status === 401 || status === 403) {
+      return "Invalid username or password.";
     }
-    if (data?.error) return data.error;
+    
+    if (status === 429) return "Too many attempts. Please try again later.";
+    if (status === 404 || status === 500) return "Authentication service unavailable. Please contact IT.";
   }
 
-  return "Login failed. Please check your connection."
+  return "Login failed. Please check your network connection."
 }
 
 export default function LoginPage() {
@@ -50,7 +52,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace("/dashboard/assets")
+      router.replace("/dashboard")
     }
   }, [authLoading, router, user])
 
@@ -191,13 +193,6 @@ export default function LoginPage() {
                   {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
               </form>
-
-              <div className="mt-6 flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/40 px-4 py-3 text-[13px] text-muted-foreground">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <LockKeyhole className="h-4 w-4" />
-                </div>
-                Secure environment for internal data management.
-              </div>
             </div>
           </div>
         </div>

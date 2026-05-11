@@ -31,10 +31,10 @@ export function BrandMark({ compact = false, tone = "default", className }: Bran
 
       <div className={cn("min-w-0 leading-tight", compact && "hidden")}>
         <p className={cn("font-display text-[17px] font-bold tracking-tight", titleClass)}>
-          Asset<span className="text-primary">Ops</span>
+          Sys<span className="text-primary">Ops</span>
         </p>
         <p className={cn("text-[9px] font-bold uppercase tracking-[0.2em] opacity-80", subtitleClass)}>
-          Infrastructure
+          IT Service Management
         </p>
       </div>
     </div>
