@@ -196,32 +196,30 @@
 
 @layer base {
   * { @apply border-border; }
+  html {
+    font-size: 14px;
+  }
   body { 
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-mono) !important;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
-  }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-display font-bold tracking-tight;
-    font-family: var(--font-display) !important;
-    text-transform: uppercase;
+    font-size: 0.925rem;
   }
 }
 
 @layer components {
   /* ─── Layout Shells ─── */
-  .workspace-page { @apply space-y-5 pb-6; }
+  .workspace-page { @apply space-y-3 pb-3; }
   .app-shell { @apply mx-auto w-full max-w-7xl; }
 
-  /* ─── Hero Section (Detail Pages) ─── */
+  /* ─── Hero Section ─── */
   .workspace-hero {
-    @apply rounded-2xl border border-border/60 bg-card p-5 shadow-sm;
+    @apply rounded-lg border border-border/60 bg-card p-3 shadow-sm;
   }
 
   /* ─── Surface Panels ─── */
   .surface-panel {
-    @apply rounded-2xl border border-border/60 bg-card shadow-sm;
+    @apply rounded-xl border border-border/60 bg-card shadow-sm;
   }
 
   /* ─── Sidebar ─── */
@@ -229,32 +227,26 @@
     background: linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, color-mix(in oklab, hsl(var(--sidebar-background)) 96%, hsl(var(--primary))) 100%);
   }
   .active-nav-item {
-    @apply bg-primary/10 text-primary font-bold shadow-[inset_4px_0_0_0_hsl(var(--primary))];
+    @apply bg-primary/10 text-primary font-bold shadow-[inset_3px_0_0_0_hsl(var(--primary))];
   }
 
   /* ─── Standard Card ─── */
   .glass-card {
-    @apply rounded-xl border border-border bg-card shadow-md hover:shadow-lg transition-all;
-  }
-
-  /* ─── Dot Pattern (Login) ─── */
-  .dot-pattern {
-    background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0);
-    background-size: 24px 24px;
+    @apply rounded-lg border border-border bg-card shadow-sm hover:shadow-md transition-all;
   }
 
   /* ─── Table Styles ─── */
-  .table-shell { @apply overflow-hidden rounded-[24px] border-2 border-border bg-card shadow-md p-0; }
-  .table-frame { @apply w-full text-left text-sm; }
-  .table-frame thead { @apply bg-muted/80; }
+  .table-shell { @apply overflow-hidden rounded-xl border border-border bg-card shadow-sm p-0; }
+  .table-frame { @apply w-full text-left text-[13px]; }
+  .table-frame thead { @apply bg-muted/50; }
   .table-frame thead th {
-    @apply px-5 py-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground border-b-2 border-border;
+    @apply px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border;
   }
   .table-frame tbody td {
-    @apply px-5 py-4 text-sm text-foreground font-medium;
+    @apply px-4 py-2.5 text-[13px] text-foreground font-medium;
   }
   .table-frame tbody tr {
-    @apply border-b border-border transition-colors hover:bg-muted/50;
+    @apply border-b border-border transition-colors hover:bg-muted/30;
   }
   .table-frame tbody tr:last-child {
     @apply border-0;

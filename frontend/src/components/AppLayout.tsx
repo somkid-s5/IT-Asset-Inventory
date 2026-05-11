@@ -90,15 +90,15 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
         )}
 
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 h-[84px] border-b border-sidebar-border/30 bg-sidebar-background backdrop-blur-xl px-4 sm:px-6 lg:px-8 shadow-sm">
+          <header className="sticky top-0 z-20 h-[56px] border-b border-sidebar-border/20 bg-sidebar-background backdrop-blur-xl px-4 sm:px-6 lg:px-8 shadow-sm">
             <div className="app-shell flex h-full items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
                 <button
                   onClick={toggleSidebar}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background hover:bg-muted lg:hidden"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background hover:bg-muted lg:hidden"
                   aria-label="Toggle Menu"
                 >
-                  {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+                  {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
                 </button>
                 
                 <div className="lg:hidden">
@@ -109,13 +109,13 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                   {header ? (
                     <motion.div 
                       key={header.title}
-                      initial={{ opacity: 0, x: -12 }}
+                      initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 12 }}
-                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      exit={{ opacity: 0, x: 8 }}
+                      transition={{ duration: 0.2 }}
                       className="min-w-0"
                     >
-                      <h1 className="truncate text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                      <h1 className="truncate text-lg font-bold tracking-tight text-foreground">
                         {header.title}
                       </h1>
                     </motion.div>
@@ -123,40 +123,37 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                 </AnimatePresence>
               </div>
 
-              <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="group relative flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background transition-all hover:border-primary/30 hover:bg-muted"
+                  className="group relative flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background transition-all hover:border-primary/30 hover:bg-muted"
                   title="Toggle theme"
                 >
-                  <div className="relative h-5 w-5 transition-transform duration-500 group-hover:rotate-45">
+                  <div className="relative h-4 w-4 transition-transform duration-500 group-hover:rotate-45">
                     {theme === 'dark' ? (
-                      <Sun className="h-5 w-5 text-teal-300" />
+                      <Sun className="h-4 w-4 text-teal-300" />
                     ) : (
-                      <Moon className="h-5 w-5 text-primary" />
+                      <Moon className="h-4 w-4 text-primary" />
                     )}
                   </div>
                 </button>
 
-                <div className="h-8 w-px bg-border/60" />
+                <div className="h-6 w-px bg-border/40" />
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="group flex items-center gap-3 rounded-xl border border-transparent p-1 px-2 transition-all hover:bg-muted/50">
+                    <button className="group flex items-center gap-2 rounded-xl border border-transparent p-1 px-1 transition-all hover:bg-muted/50">
                       <div className="relative">
                         <UserAvatar
                           seed={user?.avatarSeed}
                           imageUrl={user?.avatarImage}
                           label={user?.displayName ?? 'Admin'}
-                          className="h-9 w-9 border-2 border-border/50 ring-0 transition-all group-hover:border-primary/40 group-hover:shadow-md"
+                          className="h-7 w-7 border-border/50 ring-0"
                         />
-                        <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
+                        <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-card bg-emerald-500" />
                       </div>
                       <div className="hidden min-w-0 text-left sm:block">
-                        <div className="truncate text-sm font-bold leading-none text-foreground">{user?.displayName ?? 'User'}</div>
-                        <div className="mt-1 truncate text-[11px] font-medium leading-none text-muted-foreground/70 uppercase tracking-wider">
-                          {user?.role ?? 'Role'}
-                        </div>
+                        <div className="truncate text-xs font-bold leading-none text-foreground">{user?.displayName ?? 'User'}</div>
                       </div>
                     </button>
                   </DropdownMenuTrigger>
