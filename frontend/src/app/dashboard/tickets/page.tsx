@@ -4,49 +4,57 @@ import { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { ticketsService, Ticket, TicketPriority, TicketStatus } from '@/services/tickets';
-import { useRouter } from 'next/navigation';
-import {
-  Ticket as TicketIcon, Plus, Search, Filter,
-  MoreHorizontal, ChevronLeft, ChevronRight,
-  Clock, CheckCircle2, AlertCircle, PlayCircle,
-  ArrowUp, ArrowDown, ChevronsUpDown
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from '@/components/ui/table';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import {
-  flexRender, getCoreRowModel, getSortedRowModel,
-  getPaginationRowModel, getFilteredRowModel, useReactTable,
-  ColumnDef, SortingState, VisibilityState
-} from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  PlayCircle,
+  Plus,
+  Search,
+  Ticket as TicketIcon
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  ColumnDef,
+  flexRender,
+  SortingState,
+} from '@tanstack/react-table';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { AssetsTableSkeleton } from '@/components/Skeletons';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EmptyState } from '@/components/EmptyState';
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
 };
 
 const itemVariants = {
-  hidden: { y: 15, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.3 } }
+  hidden: { y: 10, opacity: 0 },
+  visible: { y: 0, opacity: 1 }
 };
 
 export default function TicketsPage() {
-  const { user } = useAuth();
-  const { setHeader } = usePageHeader();
   const router = useRouter();
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
+  const { setHeader } = usePageHeader();
+  const { user } = useAuth();
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [activeTab, setActiveTab] = useState('my-active');
 
@@ -107,7 +115,7 @@ export default function TicketsPage() {
         return (
           <div className="flex items-center gap-2">
             {isMine && <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" title="Assigned to you" />}
-            <span className={cn("font-mono text-xs font-bold", isMine ? "text-primary" : "text-muted-foreground/60")}>
+            <span className={cn("font-mono text-[11px] font-bold", isMine ? "text-primary" : "text-muted-foreground/60")}>
               {row.original.ticketNo}
             </span>
           </div>
@@ -118,12 +126,12 @@ export default function TicketsPage() {
       accessorKey: 'title',
       header: 'Subject',
       cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span className="font-semibold text-foreground truncate max-w-[300px]">
+        <div className="flex flex-col overflow-hidden max-w-[200px]">
+          <span className="font-bold text-[13px] text-foreground truncate">
             {row.original.title}
           </span>
-          <span className="text-[10px] text-muted-foreground">
-            Client: {row.original.client.name}
+          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter truncate">
+            {row.original.client.name}
           </span>
         </div>
       ),
@@ -134,7 +142,7 @@ export default function TicketsPage() {
       cell: ({ getValue }) => {
         const priority = getValue() as TicketPriority;
         return (
-          <Badge variant="outline" className={cn("text-[10px] font-bold px-2 py-0", priorityColors[priority])}>
+          <Badge variant="outline" className={cn("text-[9px] font-black px-1.5 py-0 h-4.5 border-2 uppercase tracking-tighter", priorityColors[priority])}>
             {priority}
           </Badge>
         );
@@ -147,9 +155,9 @@ export default function TicketsPage() {
         const status = getValue() as TicketStatus;
         const Icon = statusIcons[status];
         return (
-          <div className="flex items-center gap-2">
-            <Icon className="h-3.5 w-3.5 opacity-70" />
-            <span className="text-xs font-medium">{status.replace(/_/g, ' ')}</span>
+          <div className="flex items-center gap-1.5">
+            <Icon className="h-3 w-3 opacity-60" />
+            <span className="text-[11px] font-bold uppercase tracking-tighter">{status.replace(/_/g, ' ')}</span>
           </div>
         );
       },
@@ -162,7 +170,7 @@ export default function TicketsPage() {
         const isMine = row.original.assigneeId === user?.id;
         return (
           <div className="flex items-center gap-2">
-            <span className={cn("text-xs", isMine ? "font-bold text-primary" : "opacity-80")}>
+            <span className={cn("text-[11px] font-bold uppercase tracking-tight", isMine ? "text-primary" : "text-muted-foreground/80")}>
               {isMine ? 'YOU' : (assignee?.displayName || '--')}
             </span>
           </div>
@@ -173,7 +181,7 @@ export default function TicketsPage() {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ getValue }) => (
-        <span className="text-[11px] opacity-60 font-medium">
+        <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-tighter">
           {new Date(getValue() as string).toLocaleDateString()}
         </span>
       ),
@@ -185,13 +193,13 @@ export default function TicketsPage() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors px-3 text-xs font-bold"
+            className="h-7 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors px-2.5 text-[10px] font-black uppercase tracking-widest"
             onClick={(e) => {
               e.stopPropagation();
               router.push(`/dashboard/tickets/${row.original.id}`);
             }}
           >
-            MANAGE
+            Manage
           </Button>
         </div>
       ),
@@ -259,130 +267,135 @@ export default function TicketsPage() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4"
     >
-      {/* Stats Cards with [My] / [Total] */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Cards - Compact */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, i) => (
           <motion.div key={i} variants={itemVariants}>
-            <Card className={cn("p-5 border-2 border-border/50 bg-card/50 backdrop-blur-sm relative overflow-hidden group hover:border-border transition-all", stat.bg)}>
+            <Card className={cn("p-4 border border-border/50 bg-card relative overflow-hidden group hover:border-primary/20 transition-all shadow-sm rounded-xl", stat.bg)}>
               <div className="flex justify-between items-start relative z-10">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{stat.label}</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-3xl font-black font-display", stat.color)}>{stat.value}</span>
-                    <span className="text-xs font-bold text-muted-foreground/40">/ {stat.total}</span>
+                <div className="space-y-0.5">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{stat.label}</p>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={cn("text-2xl font-black font-display", stat.color)}>{stat.value}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground/30">/ {stat.total}</span>
                   </div>
                 </div>
-                <div className={cn("p-2 rounded-xl bg-background/50 border border-border shadow-inner", stat.color)}>
-                  <stat.icon className="h-5 w-5" strokeWidth={2.5} />
+                <div className={cn("p-1.5 rounded-lg bg-background/50 border border-border/50 shadow-inner", stat.color)}>
+                  <stat.icon className="h-4 w-4" strokeWidth={2.5} />
                 </div>
               </div>
-              <div className={cn("absolute -right-4 -bottom-4 h-16 w-16 opacity-5 blur-2xl rounded-full bg-current transition-all group-hover:opacity-10", stat.color)} />
             </Card>
           </motion.div>
         ))}
       </div>
 
       {/* Main Content Layout */}
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
-            <TabsList className="grid w-full grid-cols-4 md:w-[600px] rounded-xl bg-muted/50 p-1 border border-border/50">
-              <TabsTrigger value="my-active" className="rounded-lg text-xs font-bold uppercase tracking-wider data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full lg:w-auto">
+            <TabsList className="grid w-full grid-cols-4 lg:w-[480px] h-9 p-0.5 rounded-lg bg-muted/50 border border-border/40">
+              <TabsTrigger value="my-active" className="rounded-md text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary py-1">
                 My Tasks ({myActive.length})
               </TabsTrigger>
-              <TabsTrigger value="active-pool" className="rounded-lg text-xs font-bold uppercase tracking-wider data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                Active Pool ({activePool.length})
+              <TabsTrigger value="active-pool" className="rounded-md text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1">
+                Pool ({activePool.length})
               </TabsTrigger>
-              <TabsTrigger value="unassigned" className="rounded-lg text-xs font-bold uppercase tracking-wider data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                Unassigned ({unassigned.length})
+              <TabsTrigger value="unassigned" className="rounded-md text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1">
+                Open ({unassigned.length})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="rounded-lg text-xs font-bold uppercase tracking-wider data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <TabsTrigger value="completed" className="rounded-md text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1">
                 Archive ({completed.length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 lg:w-48">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
               <Input
-                placeholder="Search ticket pool..."
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-9 h-10 rounded-xl bg-card/40 border-border/50 focus:border-primary/50 transition-all text-sm"
+                placeholder="Search pool..."
+                value={globalFilter ?? ''}
+                onChange={e => setGlobalFilter(e.target.value)}
+                className="h-9 pl-8 rounded-lg bg-card border-border/60 text-xs"
               />
             </div>
-            <Button onClick={() => router.push('/dashboard/tickets/new')} className="h-10 rounded-xl px-5 shadow-lg shadow-primary/20 font-bold text-xs uppercase tracking-wider">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button
+              onClick={() => router.push('/dashboard/tickets/new')}
+              size="sm"
+              className="h-9 px-4 rounded-lg font-bold text-xs shadow-md shadow-primary/10"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               New Ticket
             </Button>
           </div>
         </div>
 
-        <Card className="border-2 border-border/60 rounded-[32px] overflow-hidden bg-card/30 backdrop-blur-xl shadow-xl">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/40 border-b-2 border-border/50">
-                {table.getHeaderGroups().map(headerGroup => (
-                  <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
-                    {headerGroup.headers.map(header => (
-                      <TableHead key={header.id} className="text-[10px] font-black uppercase tracking-[0.2em] py-5 px-6 text-muted-foreground/70">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
+        {/* Standardized Table Frame */}
+        <div className="table-shell">
+          <table className="table-frame">
+            <thead>
+              {table.getHeaderGroups().map(headerGroup => (
+                <tr key={headerGroup.id} className="table-head-row">
+                  {headerGroup.headers.map(header => (
+                    <th key={header.id}>
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map(row => (
+                  <tr 
+                    key={row.id}
+                    onClick={() => router.push(`/dashboard/tickets/${row.original.id}`)}
+                    className={cn(
+                      "cursor-pointer",
+                      row.original.assigneeId === user?.id && "bg-primary/[0.01]"
+                    )}
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
                     ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                <AnimatePresence mode="popLayout">
-                  {table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map(row => (
-                      <TableRow
-                        key={row.id}
-                        className={cn(
-                          "group border-b border-border/40 hover:bg-primary/[0.03] transition-all cursor-pointer relative",
-                          row.original.assigneeId === user?.id && "bg-primary/[0.01]"
-                        )}
-                        onClick={() => router.push(`/dashboard/tickets/${row.original.id}`)}
-                      >
-                        {row.getVisibleCells().map(cell => (
-                          <TableCell key={cell.id} className="py-5 px-6">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={columns.length} className="h-72 text-center">
-                        <div className="flex flex-col items-center justify-center space-y-3 opacity-40">
-                          <TicketIcon className="h-12 w-12" strokeWidth={1} />
-                          <p className="text-sm font-medium uppercase tracking-widest">No matching tickets in this view</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </AnimatePresence>
-              </TableBody>
-            </Table>
-          </div>
-          
-          <div className="p-5 border-t border-border/40 flex items-center justify-between bg-muted/20">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={columns.length} className="h-48 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-2 opacity-30 uppercase tracking-widest font-black text-[10px]">
+                      <TicketIcon className="h-8 w-8" />
+                      <span>No matching records found</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          {/* Pagination - Compact */}
+          <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-t border-border/40">
+            <div className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">
               Showing {table.getRowModel().rows.length} of {filteredData.length} records
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-1">
               <Button
-                variant="outline" size="sm" className="h-9 w-9 p-0 rounded-lg border-border/50 bg-card/50"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-md hover:bg-primary/10 hover:text-primary"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
-                variant="outline" size="sm" className="h-9 w-9 p-0 rounded-lg border-border/50 bg-card/50"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 rounded-md hover:bg-primary/10 hover:text-primary"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
@@ -390,7 +403,7 @@ export default function TicketsPage() {
               </Button>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     </motion.div>
   );

@@ -65,8 +65,8 @@ export default function DocsPage() {
           {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
             <>
               <CategoryManager />
-              <Button onClick={() => router.push('/dashboard/docs/new')} className="rounded-xl h-11 px-6 font-bold shadow-lg shadow-primary/20">
-                <Plus className="h-4 w-4 mr-2" />
+              <Button onClick={() => router.push('/dashboard/docs/new')} size="sm" className="rounded-lg h-9 px-4 font-bold shadow-md shadow-primary/10">
+                <Plus className="h-3.5 w-3.5 mr-2" />
                 New Article
               </Button>
             </>

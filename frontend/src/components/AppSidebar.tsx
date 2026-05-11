@@ -81,14 +81,14 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
           }
         }}
         className={cn(
-          'group flex items-center rounded-xl transition-all duration-200 py-2.5',
-          collapsed ? 'justify-center px-2' : 'gap-3 px-3.5',
+          'group flex items-center rounded-lg transition-all duration-200 py-1.5',
+          collapsed ? 'justify-center px-1' : 'gap-2.5 px-3',
           active ? 'active-nav-item' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
           isChild && !collapsed && 'ml-4',
         )}
       >
-        <item.icon className={cn("shrink-0 h-5 w-5", active ? "text-primary" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70")} />
-        {!collapsed && <span className="truncate text-sm font-medium">{item.title}</span>}
+        <item.icon className={cn("shrink-0 h-4 w-4", active ? "text-primary" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70")} />
+        {!collapsed && <span className="truncate text-xs font-semibold">{item.title}</span>}
       </NavLink>
     );
   };
@@ -137,20 +137,20 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
     <aside
       className={cn(
         'sidebar-gradient fixed inset-y-0 left-0 z-40 flex h-screen shrink-0 flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:flex',
-        collapsed ? '-translate-x-full lg:w-20 lg:translate-x-0' : 'w-72 translate-x-0',
+        collapsed ? '-translate-x-full lg:w-16 lg:translate-x-0' : 'w-64 translate-x-0',
       )}
     >
       <div 
         onClick={onToggleCollapsed}
         className={cn(
-          'flex h-[84px] cursor-pointer items-center px-6 border-b border-sidebar-border/30 transition-colors hover:bg-sidebar-accent/30', 
+          'flex h-[56px] cursor-pointer items-center px-5 border-b border-sidebar-border/30 transition-colors hover:bg-sidebar-accent/30', 
           collapsed && 'justify-center px-0'
         )}
       >
-        <BrandMark compact={collapsed} />
+        <BrandMark compact={collapsed} className="scale-90 origin-left" />
       </div>
 
-      <nav className="flex-1 space-y-8 overflow-y-auto py-8 px-3.5 custom-scrollbar">
+      <nav className="flex-1 space-y-6 overflow-y-auto py-4 px-3 custom-scrollbar">
         {renderSection('Operations', operationsNavItems)}
         {renderSection('Inventory', inventoryNavItems)}
         {renderSection('System', systemNavItems, user?.role === 'ADMIN' && (

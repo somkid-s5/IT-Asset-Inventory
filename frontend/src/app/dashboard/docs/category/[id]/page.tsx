@@ -79,17 +79,17 @@ export default function CategoryPage() {
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
             <Input 
               placeholder={`Search in ${category.name}...`} 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 h-10 rounded-xl bg-card border-border/60"
+              className="pl-9 h-9 rounded-lg bg-card border-border/60 text-xs"
             />
           </div>
         </div>
-        <Button onClick={() => router.push(`/dashboard/docs/new?categoryId=${id}`)} className="rounded-xl h-10 px-5 font-bold shadow-lg shadow-primary/20">
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={() => router.push(`/dashboard/docs/new?categoryId=${id}`)} size="sm" className="rounded-lg h-9 px-4 font-bold shadow-md shadow-primary/10">
+          <Plus className="h-3.5 w-3.5 mr-2" />
           Add Article
         </Button>
       </div>
