@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useAuth } from '@/contexts/AuthContext';
 import { PageHeaderProvider, usePageHeader } from '@/contexts/PageHeaderContext';
 import { cn } from '@/lib/utils';
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun, Menu, X } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,6 +46,12 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsNavigating(true);
     const timer = setTimeout(() => setIsNavigating(false), 300);
+    
+    // Auto-close sidebar on mobile when navigating
+    if (window.innerWidth < 1024) {
+      setSidebarCollapsed(true);
+    }
+    
     return () => clearTimeout(timer);
   }, [pathname]);
 
@@ -75,10 +81,26 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
       <div className="flex min-h-screen w-full">
         <AppSidebar collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
 
+        {/* Mobile Backdrop */}
+        {!sidebarCollapsed && (
+          <div 
+            className="fixed inset-0 z-30 bg-background/60 backdrop-blur-sm transition-opacity lg:hidden"
+            onClick={toggleSidebar}
+          />
+        )}
+
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 h-[84px] border-b border-sidebar-border/30 bg-sidebar-background backdrop-blur-xl px-4 sm:px-6 lg:px-8 shadow-sm">
             <div className="app-shell flex h-full items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
+                <button
+                  onClick={toggleSidebar}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background hover:bg-muted lg:hidden"
+                  aria-label="Toggle Menu"
+                >
+                  {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+                </button>
+                
                 <div className="lg:hidden">
                   <BrandMark compact />
                 </div>

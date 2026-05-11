@@ -21,8 +21,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'AssetOps | IT Asset Management',
-  description: 'Centralized repository for managing IT assets, databases, and virtual machines efficiently.',
+  title: 'SysOps | IT Service Management',
+  description: 'Enterprise IT Service Management (ITSM) for managing assets, tickets, and infrastructure efficiently.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

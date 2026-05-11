@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { NavLink } from '@/components/NavLink';
 import { BrandMark } from '@/components/BrandMark';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { 
-  ChevronDown, Database, LayoutDashboard, Monitor, 
-  Server, Users, Workflow, ChevronLeft, Activity
+  Database, LayoutDashboard, Monitor, 
+  Server, Users, Workflow, ChevronLeft, Activity,
+  Ticket, BookOpen, ChevronDown
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type NavItem = {
   title: string;
@@ -18,14 +20,19 @@ type NavItem = {
   icon: LucideIcon;
 };
 
-const primaryNavItems: NavItem[] = [
+const operationsNavItems: NavItem[] = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Tickets', url: '/dashboard/tickets', icon: Ticket },
+  { title: 'Knowledge Base', url: '/dashboard/docs', icon: BookOpen },
+];
+
+const inventoryNavItems: NavItem[] = [
   { title: 'Assets', url: '/dashboard/assets', icon: Server },
+  { title: 'Virtual Machines', url: '/dashboard/virtual-machines', icon: Monitor },
   { title: 'Databases', url: '/dashboard/databases', icon: Database },
 ];
 
-const computeNavItems: NavItem[] = [
-  { title: 'Virtual Machines', url: '/dashboard/virtual-machines', icon: Monitor },
+const systemNavItems: NavItem[] = [
   { title: 'vCenter Sources', url: '/dashboard/virtual-machines/sources', icon: Workflow },
 ];
 
@@ -38,15 +45,20 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
   const { user } = useAuth();
   const pathname = usePathname();
   const currentPath = pathname || '/';
-  const inComputeSection = currentPath === '/dashboard/virtual-machines' || currentPath.startsWith('/dashboard/virtual-machines/');
-  const [computeOpen, setComputeOpen] = useState(inComputeSection);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    Operations: true,
+    Inventory: true,
+    System: true,
+  });
 
-  useEffect(() => {
-    if (inComputeSection && !computeOpen) {
-      setComputeOpen(true);
+  const toggleSection = (section: string) => {
+    if (collapsed) {
+      onToggleCollapsed();
+      setExpandedSections(prev => ({ ...prev, [section]: true }));
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inComputeSection]);
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const renderNavItem = (item: NavItem, isChild = false) => {
     const active = item.url === '/dashboard' ? currentPath === '/dashboard' : currentPath.startsWith(item.url);
@@ -58,6 +70,16 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         end={item.url === '/dashboard'}
         active={active}
         title={item.title}
+        onClick={(e) => {
+          if (collapsed) {
+            // If collapsed, clicking any item expands the sidebar
+            onToggleCollapsed();
+          } else if (active) {
+            // If already active and expanded, clicking it again collapses the sidebar
+            e.preventDefault();
+            onToggleCollapsed();
+          }
+        }}
         className={cn(
           'group flex items-center rounded-xl transition-all duration-200 py-2.5',
           collapsed ? 'justify-center px-2' : 'gap-3 px-3.5',
@@ -71,66 +93,84 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
     );
   };
 
+  const renderSection = (title: string, items: NavItem[], extraItems?: React.ReactNode) => {
+    const isExpanded = expandedSections[title];
+
+    return (
+      <div className="space-y-1">
+        <button
+          onClick={() => toggleSection(title)}
+          className={cn(
+            "flex w-full items-center justify-between px-3.5 py-2 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors",
+            collapsed && "justify-center px-0"
+          )}
+        >
+          {!collapsed ? (
+            <>
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em]">{title}</p>
+              <ChevronDown className={cn("h-3 w-3 transition-transform duration-300", !isExpanded && "-rotate-90")} />
+            </>
+          ) : (
+            <div className="h-px w-8 bg-sidebar-border/30" />
+          )}
+        </button>
+
+        <AnimatePresence initial={false}>
+          {(isExpanded || collapsed) && (
+            <motion.div
+              initial={collapsed ? { opacity: 1 } : { height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="space-y-1.5 overflow-hidden"
+            >
+              {items.map(item => renderNavItem(item))}
+              {extraItems}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   return (
     <aside
       className={cn(
-        'sidebar-gradient sticky top-0 h-screen hidden shrink-0 border-r border-sidebar-border transition-all duration-300 ease-in-out lg:flex lg:flex-col',
-        collapsed ? 'w-20' : 'w-72',
+        'sidebar-gradient fixed inset-y-0 left-0 z-40 flex h-screen shrink-0 flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:flex',
+        collapsed ? '-translate-x-full lg:w-20 lg:translate-x-0' : 'w-72 translate-x-0',
       )}
     >
-      <div className={cn('flex h-[84px] items-center px-6 border-b border-sidebar-border/30', collapsed && 'justify-center px-0')}>
+      <div 
+        onClick={onToggleCollapsed}
+        className={cn(
+          'flex h-[84px] cursor-pointer items-center px-6 border-b border-sidebar-border/30 transition-colors hover:bg-sidebar-accent/30', 
+          collapsed && 'justify-center px-0'
+        )}
+      >
         <BrandMark compact={collapsed} />
       </div>
 
       <nav className="flex-1 space-y-8 overflow-y-auto py-8 px-3.5 custom-scrollbar">
-        {/* Main Section */}
-        <div className="space-y-1.5">
-          {!collapsed && <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/50">Main</p>}
-          {primaryNavItems.map(item => renderNavItem(item))}
-        </div>
-
-        {/* Infrastructure Section */}
-        <div className="space-y-1.5">
-          {!collapsed && (
-            <>
-              <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/50">Infrastructure</p>
-              <button
-                onClick={() => setComputeOpen(!computeOpen)}
-                className={cn(
-                  'group flex w-full items-center rounded-xl py-2.5 transition-all gap-3 px-3.5',
-                  inComputeSection ? 'text-primary bg-primary/5' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50',
-                )}
-              >
-                <Monitor className={cn("h-5 w-5 shrink-0", inComputeSection ? "text-primary" : "text-sidebar-foreground/40")} />
-                <span className="flex-1 text-left text-sm font-medium text-foreground/80">Compute</span>
-                <ChevronDown className={cn('h-4 w-4 transition-transform duration-300', computeOpen && 'rotate-180')} />
-              </button>
-            </>
-          )}
-          
-          {/* เมื่อย่อ Sidebar ให้แสดงเมนูย่อยออกมาเลย ไม่ต้องมีปุ่ม Toggle */}
-          {(computeOpen || collapsed) && (
-            <div className={cn("space-y-1 mt-1", !collapsed && "animate-slide-in")}>
-              {computeNavItems.map(item => renderNavItem(item, true))}
-            </div>
-          )}
-        </div>
-
-        {user?.role === 'ADMIN' && (
-          <div className="space-y-1.5 pt-4">
-             {!collapsed && <p className="mb-3 px-3.5 text-[11px] font-bold uppercase tracking-[0.25em] text-sidebar-foreground/50">Admin</p>}
-             {renderNavItem({ title: 'Users', url: '/dashboard/users', icon: Users })}
-             {renderNavItem({ title: 'Audit Logs', url: '/dashboard/audit-logs', icon: Activity })}
-          </div>
-        )}
+        {renderSection('Operations', operationsNavItems)}
+        {renderSection('Inventory', inventoryNavItems)}
+        {renderSection('System', systemNavItems, user?.role === 'ADMIN' && (
+          <>
+            {renderNavItem({ title: 'Users', url: '/dashboard/users', icon: Users })}
+            {renderNavItem({ title: 'Audit Logs', url: '/dashboard/audit-logs', icon: Activity })}
+          </>
+        ))}
       </nav>
 
       {/* Collapse Toggle Button */}
       <button
         onClick={onToggleCollapsed}
-        className="absolute -right-3 top-24 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-card shadow-md transition-transform hover:scale-110 active:scale-95"
+        className={cn(
+          "absolute -right-[18px] top-24 z-50 flex h-9 w-9 items-center justify-center rounded-xl border-2 border-primary/20 bg-card shadow-xl transition-all duration-300 hover:border-primary/50 hover:bg-accent hover:scale-110 active:scale-95",
+          collapsed && "rounded-full"
+        )}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        <ChevronLeft className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-500", collapsed && "rotate-180")} />
+        <ChevronLeft className={cn("h-5 w-5 text-primary transition-transform duration-500", collapsed && "rotate-180")} />
       </button>
 
       <div className="p-4 border-t border-sidebar-border/30 bg-sidebar-background/50 backdrop-blur-md">

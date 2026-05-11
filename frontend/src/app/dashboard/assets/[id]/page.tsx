@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import api from '@/services/api';
 import {
   ArrowLeft,
   Boxes,
-  CalendarClock,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -34,7 +33,6 @@ import {
   Hash,
   Upload,
   X,
-  Check,
   Building2,
   History,
   Info,
@@ -46,12 +44,13 @@ import {
   ListOrdered,
   Link as LinkIcon,
   Quote,
+  User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { 
@@ -137,6 +136,7 @@ interface Asset {
   children?: { id: string; name: string; type: AssetType }[];
   notes?: AssetNote[];
   attachments?: AssetAttachment[];
+  tickets?: any[];
 }
 
 interface AccessRow {
@@ -857,15 +857,66 @@ function NotesSection({ assetId, initialNotes }: { assetId: string; initialNotes
   );
 }
 
+// ─── Ticket History Section ────────────────────────────────────────────────
+function TicketHistorySection({ tickets }: { tickets: any[] }) {
+  const router = useRouter();
+  
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-2 px-1">
+        <History className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-bold tracking-tight text-foreground">Maintenance & Support History</h2>
+        {tickets.length > 0 && (
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+            {tickets.length}
+          </span>
+        )}
+      </div>
+      
+      <div className="glass-card divide-y divide-border/40 overflow-hidden">
+        {tickets.length === 0 ? (
+          <div className="p-8 text-center text-xs text-muted-foreground italic">
+            No maintenance tickets recorded for this asset
+          </div>
+        ) : (
+          tickets.map((ticket) => (
+            <div 
+              key={ticket.id} 
+              className="group p-4 hover:bg-muted/30 transition-colors cursor-pointer"
+              onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
+            >
+              <div className="flex items-center justify-between mb-2">
+                 <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] font-bold text-primary">{ticket.ticketNo}</span>
+                    <Badge variant="outline" className="text-[9px] h-4.5 font-bold uppercase">{ticket.status.replace(/_/g, ' ')}</Badge>
+                 </div>
+                 <span className="text-[10px] text-muted-foreground">{new Date(ticket.createdAt).toLocaleDateString()}</span>
+              </div>
+              <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">{ticket.title}</h4>
+              <div className="flex items-center gap-4 mt-2 text-[10px] text-muted-foreground">
+                 <span className="flex items-center gap-1"><User className="h-3 w-3" /> {ticket.assignee?.displayName || 'Unassigned'}</span>
+                 <span>•</span>
+                 <span>Client: {ticket.client.name}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────
 export default function AssetDetailsPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { setHeader } = usePageHeader();
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
   const assetId = typeof params.id === 'string' ? params.id : '';
+  const returnTo = searchParams?.get('returnTo');
 
   const { data: asset, isLoading, isError } = useQuery({
     queryKey: ['asset', assetId],
@@ -926,9 +977,11 @@ export default function AssetDetailsPage() {
   }, [asset]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (accessRows.length > 0) setOpenAccordion(accessRows[0].key);
-  }, [assetId, accessRows.length]); // Added accessRows.length as dependency
+    const timer = setTimeout(() => {
+      if (accessRows.length > 0) setOpenAccordion(accessRows[0].key);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [assetId, accessRows]);
 
   if (isLoading) {
     return (
@@ -951,8 +1004,8 @@ export default function AssetDetailsPage() {
       className="workspace-page space-y-6 pt-2"
     >
       <div className="flex justify-between items-center">
-        <button onClick={() => router.push("/dashboard/assets")} className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> Back to Assets
+        <button onClick={() => router.push(returnTo || "/dashboard/assets")} className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> {returnTo ? "Back to Ticket" : "Back to Assets"}
         </button>
       </div>
 
@@ -1260,26 +1313,7 @@ export default function AssetDetailsPage() {
         <div className="space-y-6">
            <NotesSection assetId={assetId} initialNotes={asset.notes ?? []} />
            
-           <section className="space-y-4">
-              <div className="flex items-center gap-2 px-1">
-                <History className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-bold tracking-tight text-foreground">Activity</h2>
-              </div>
-              <div className="glass-card p-5 space-y-4">
-                 <div className="relative border-l-2 border-border/60 pl-4 py-1 space-y-6">
-                    <div className="relative">
-                       <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-card bg-emerald-500 shadow-sm" />
-                       <div className="text-xs font-bold text-foreground">Last Updated</div>
-                       <div className="text-[10px] font-medium text-muted-foreground">{asset.updatedAt ? formatRelativeTime(asset.updatedAt) : 'Never'}</div>
-                    </div>
-                    <div className="relative opacity-60">
-                       <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-card bg-muted shadow-sm" />
-                       <div className="text-xs font-bold text-foreground">System Synced</div>
-                       <div className="text-[10px] font-medium text-muted-foreground">Automatic check completed</div>
-                    </div>
-                 </div>
-              </div>
-           </section>
+           <TicketHistorySection tickets={asset.tickets ?? []} />
         </div>
       </div>
     </motion.div>

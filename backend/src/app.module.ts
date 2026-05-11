@@ -13,10 +13,22 @@ import { UsersModule } from './users/users.module';
 import { DatabasesModule } from './databases/databases.module';
 import { VmModule } from './vm/vm.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { TicketsModule } from './tickets/tickets.module';
+import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module';
+import { ClientsModule } from './clients/clients.module';
+import { TicketCommentsModule } from './ticket-comments/ticket-comments.module';
+import { NotificationsModule } from './notifications/notifications.module';
+
+import { join } from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -32,6 +44,11 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     DatabasesModule,
     VmModule,
     AuditLogsModule,
+    TicketsModule,
+    KnowledgeBaseModule,
+    ClientsModule,
+    TicketCommentsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

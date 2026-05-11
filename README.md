@@ -1,105 +1,44 @@
-# AssetOps (InfraPilot)
+# 🛡️ SysOps — IT Service Management (ITSM) Hub
 
-**AssetOps** เป็นระบบบริหารจัดการทรัพยากรไอที (IT Asset Inventory) ระดับองค์กรที่ออกแบบมาเพื่อรวบรวมข้อมูลโครงสร้างพื้นฐานทั้งหมดไว้ในที่เดียว ไม่ว่าจะเป็นอุปกรณ์ฮาร์ดแวร์, ฐานข้อมูล, เครื่องเสมือน (VMs), และข้อมูลการเข้าถึง (Credentials) ที่มีการเข้ารหัสอย่างปลอดภัย
+SysOps is a comprehensive, enterprise-grade **IT Service Management (ITSM)** platform designed to unify asset inventory, incident management, and infrastructure monitoring into a single, high-performance interface.
 
----
+![Version](https://img.shields.io/badge/version-1.0.0-primary?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-success?style=for-the-badge)
+![Stack](https://img.shields.io/badge/Stack-Next.js%20|%20NestJS%20|%20Prisma-info?style=for-the-badge)
 
-## ✨ ฟีเจอร์หลัก (Core Features)
+## 🚀 Key Features
 
-### 🖥️ การจัดการสินทรัพย์ (Asset Management)
-*   **Asset Hierarchy:** รองรับการจัดเก็บข้อมูลแบบโครงสร้างต้นไม้ (Parent-Child) เช่น Server ภายในตู้ Rack
-*   **Multi-Node Support:** จัดการ IP หลายชุด (Management, IPMI, VIP) ภายใต้ Asset เดียวกัน
-*   **Patch & Lifecycle:** ติดตามเวอร์ชันปัจจุบัน, วันหมดอายุ (EOL), และประวัติการ Patch
-*   **Flexible Metadata:** รองรับการเก็บข้อมูลเพิ่มเติมในรูปแบบ JSON
+### 🎫 Service Delivery (Operations)
+*   **Unified Ticketing System**: Streamlined incident reporting and request fulfillment.
+*   **Knowledge Base**: Centralized repository for technical documentation and self-service solutions.
+*   **Command Center**: Real-time dashboard for service levels and infrastructure health.
 
-### 🗄️ คลังฐานข้อมูล (Database Inventory)
-*   **Engine Tracking:** รองรับ SQL Server, Oracle, PostgreSQL, MySQL และอื่นๆ
-*   **Account Management:** จัดเก็บชื่อผู้ใช้และรหัสผ่านที่เข้ารหัส (Encrypted) พร้อมระบุสิทธิ์ (Privileges)
-*   **Environment Aware:** แยกข้อมูลตามสถานะ PROD, UAT, TEST หรือ DEV
+### 🏢 Asset Management (Inventory)
+*   **CMDB (Configuration Management Database)**: Comprehensive tracking of Hardware, Virtual Machines, and Databases.
+*   **Compute Orchestration**: Deep integration with vCenter for automated VM discovery and lifecycle tracking.
+*   **Data Inventory**: Automated mapping of database instances and user access audits.
 
-### ☁️ การจัดการเครื่องเสมือน (VM Management)
-*   **vCenter Integration:** เชื่อมต่อและดึงข้อมูลโดยตรงจาก vCenter (Discovery Mode)
-*   **Lifecycle State:** ติดตามสถานะตั้งแต่ Draft, Active ไปจนถึง Archived หรือ Deleted
-*   **Sync & Drift Detection:** ตรวจสอบความแตกต่างของข้อมูลระหว่างระบบจริงกับฐานข้อมูล Inventory
+### 🔐 System & Security
+*   **Role-Based Access Control (RBAC)**: Fine-grained permissions for IT staff and admins.
+*   **Audit Logging**: Full traceability of all configuration changes and system access.
+*   **Cyber UI**: Modern, high-performance interface with real-time animations and "Dark Mode" focus.
 
-### 🔐 ความปลอดภัยและการตรวจสอบ (Security & Audit)
-*   **Role-Based Access Control (RBAC):** กำหนดสิทธิ์ผู้ใช้เป็น Admin, Editor หรือ Viewer
-*   **Credential Encryption:** รหัสผ่านทั้งหมดถูกเข้ารหัสด้วย AES-256-GCM พร้อม Dynamic IV ก่อนลงฐานข้อมูล
-*   **Audit Logging:** บันทึกทุกกิจกรรมสำคัญ เช่น การดูรหัสผ่าน, การ Login หรือการแก้ไขข้อมูล
-*   **Production Hardening:** ระบบถูกปรับปรุงให้ปิดพอร์ตฐานข้อมูลจากภายนอก, หมุนเวียน Secrets ที่แข็งแกร่ง และมี Global Exception Filter เพื่อความปลอดภัยระดับสูง
+## 🛠️ Technical Stack
 
----
+*   **Frontend**: Next.js 15+, Tailwind CSS 4, Framer Motion, Radix UI, Sonner.
+*   **Backend**: NestJS, PostgreSQL, Prisma ORM.
+*   **Infrastucture**: Docker, vCenter API Integration.
 
-## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
+## 🏁 Getting Started
 
-### Frontend
-*   **Next.js 16** (App Router)
-*   **React 19**
-*   **Tailwind CSS v4** (Modern CSS Engine)
-*   **Shadcn UI** & **Lucide React**
-*   **TanStack Query v5** (Data Fetching)
-
-### Backend
-*   **NestJS 11** (Enterprise Node.js Framework)
-*   **Prisma ORM** (Type-safe Database Access)
-*   **PostgreSQL 15**
-*   **Passport.js & JWT** (Cookie-based Authentication)
-*   **Security Features:** Helmet, Rate Limiting, Global Exception Filter
-
----
-
-## 🚀 การเริ่มต้นใช้งานแบบ Plug & Play
-
-เพียง 2 ขั้นตอน ระบบจะสร้างฐานข้อมูล, API และหน้าเว็บให้พร้อมใช้งานทันที:
-
-1. **เตรียม Environment (คัดลอก .env และสร้างคีย์ความปลอดภัย):**
+1.  **Clone the repository**: `git clone ...`
+2.  **Environment Setup**: Copy `.env.example` to `.env` in both `backend` and `frontend` folders.
+3.  **Run with Docker**:
     ```bash
-    node scripts/setup.js
+    docker-compose up -d
     ```
-2. **รันระบบทั้งหมดด้วย Docker:**
-    ```bash
-    docker-compose up -d --build
-    ```
-
-ระบบจะพร้อมใช้งานที่:
-- **Frontend:** `http://localhost:3000`
-- **Backend API:** `http://localhost:3001/api`
-- **pgAdmin:** `http://localhost:5050` (ถ้าเปิดใช้งาน)
-
-### การรันฝั่ง Development แยกส่วน (Local Dev)
-หากคุณเป็นนักพัฒนาและต้องการรันแยกส่วนโดยไม่ใช้ Docker สามารถทำได้ (สคริปต์จะดึง `.env` จาก Root ให้เองอัตโนมัติ):
-
-1. **เตรียม Environment (คัดลอก .env และสร้างคีย์ความปลอดภัย):**
-    ```bash
-    node scripts/setup.js
-    ```
-2. **รัน Backend:**
-    ```bash
-    cd backend
-    npm install
-    npx prisma migrate dev
-    npx prisma db seed
-    npm run start:dev
-    ```
-3. **รัน Frontend:**
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-
----
-ระบบทำการ Seed ข้อมูลเริ่มต้นให้เรียบร้อยแล้ว:
-*   **Username:** `admin`
-*   **Password:** `AssetOpsAdmin2026!` *(กรุณาเปลี่ยนทันทีหลังจากเข้าระบบครั้งแรก)*
+4.  **Access the Dashboard**: Open `http://localhost:3000`
 
 ---
 
-## 📂 โครงสร้างโปรเจกต์
-*   `backend/`: ซอร์สโค้ด NestJS, Prisma Schema และ Migrations
-*   `frontend/`: ซอร์สโค้ด Next.js และ UI Components (Tailwind v4)
-*   `ui_cape/`: ภาพสกรีนช็อตตัวอย่างการใช้งานระบบ
-
----
-
-
+Developed with ❤️ for SysOps Professionals.

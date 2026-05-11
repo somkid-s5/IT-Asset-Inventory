@@ -1,22 +1,23 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import api from '@/services/api';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown,
+  ChevronsUpDown,
   Database, FolderTree, HardDrive, LoaderCircle,
   Pencil, Plus, Search, Server, Shield, Trash2,
-  Box, Columns, ChevronLeft, ChevronRight as ChevronRightIcon,
-  CheckCircle2, MoreHorizontal, Download, Filter, AlertTriangle
+  Box, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon,
+  MoreHorizontal, Columns, AlertTriangle, Download, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
 import { AssetFormDialog } from '@/components/LazyLoadedDialogs';
 import { EmptyState } from '@/components/EmptyState';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -242,7 +243,7 @@ export default function AssetsPage() {
         ) : null;
       }
     }
-  ], [user, loadingEditId]);
+  ], [user, loadingEditId, router, setAssetPendingDelete]);
 
   const table = useReactTable({
     data: filteredData,
@@ -544,25 +545,26 @@ export default function AssetsPage() {
 
       {/* Delete Confirmation */}
       <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
-        <DialogContent className="sm:max-w-[425px] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Confirm Delete
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              You are about to delete asset <span className="font-bold text-foreground">{assetPendingDelete?.name}</span>
-              <br />This action cannot be undone and all related data will be permanently removed.
+        <DialogContent className="sm:max-w-[425px] rounded-[24px] border-none p-0 overflow-hidden">
+          <Alert variant="destructive" className="rounded-none border-none py-6">
+            <AlertTitle className="text-xl">Confirm Delete</AlertTitle>
+            <AlertDescription className="text-sm opacity-90">
+              You are about to delete asset <span className="font-bold underline">{assetPendingDelete?.name}</span>
+            </AlertDescription>
+          </Alert>
+          
+          <div className="p-6 pt-2 space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              This action cannot be undone and all related data will be permanently removed from the infrastructure database.
             </p>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setAssetPendingDelete(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteAsset} disabled={!!deletingId}>
-              {deletingId ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Confirm Delete
-            </Button>
+            
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="ghost" onClick={() => setAssetPendingDelete(null)} className="rounded-xl">Cancel</Button>
+              <Button variant="destructive" onClick={confirmDeleteAsset} disabled={!!deletingId} className="rounded-xl shadow-lg shadow-destructive/20">
+                {deletingId ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Confirm Delete
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

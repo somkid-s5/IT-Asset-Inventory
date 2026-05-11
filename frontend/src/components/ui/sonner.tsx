@@ -21,26 +21,27 @@ const Toaster = ({ ...props }: ToasterProps) => {
       richColors
       expand={false}
       visibleToasts={3}
-      gap={10}
+      gap={12}
       offset={16}
       toastOptions={{
         classNames: {
           toast:
-            'rounded-[24px] border border-border/70 bg-popover/92 text-popover-foreground shadow-[0_24px_80px_-36px_rgba(0,0,0,0.7)] backdrop-blur-2xl',
-          title: 'text-sm font-semibold',
-          description: 'text-xs text-muted-foreground',
-          success: '!border-emerald-500/30 !bg-emerald-500/12 !text-emerald-950 dark:!text-emerald-100',
-          error: '!border-rose-500/30 !bg-rose-500/12 !text-rose-950 dark:!text-rose-100',
-          warning: '!border-amber-500/30 !bg-amber-500/12 !text-amber-950 dark:!text-amber-100',
-          info: '!border-sky-500/30 !bg-sky-500/12 !text-sky-950 dark:!text-sky-100',
+            'rounded-[24px] border-2 border-border/70 bg-popover/95 text-popover-foreground shadow-[0_24px_80px_-36px_rgba(0,0,0,0.8)] backdrop-blur-2xl transition-all duration-300 p-4 gap-4',
+          title: 'text-[15px] font-bold font-display uppercase tracking-tight ml-1',
+          description: 'text-[13px] text-muted-foreground font-medium opacity-90 ml-1',
+          actionButton: 'bg-primary text-primary-foreground font-bold rounded-xl px-4',
+          cancelButton: 'bg-muted text-muted-foreground font-bold rounded-xl px-4',
+          success: '!border-success/30 !bg-success/12 !text-success shadow-[0_0_40px_-12px_rgba(var(--success),0.2)]',
+          error: '!border-destructive/30 !bg-destructive/12 !text-destructive shadow-[0_0_40px_-12px_rgba(var(--destructive),0.2)]',
+          warning: '!border-warning/30 !bg-warning/12 !text-warning shadow-[0_0_40px_-12px_rgba(var(--warning),0.2)]',
+          info: '!border-info/30 !bg-info/12 !text-info shadow-[0_0_40px_-12px_rgba(var(--info),0.2)]',
         },
-      }}
-      icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
+      }}      icons={{
+        success: <div className="rounded-lg p-1 bg-success/20 border border-success/30 animate-toast-bounce"><CircleCheckIcon className="size-4" strokeWidth={3} /></div>,
+        info: <div className="rounded-lg p-1 bg-info/20 border border-info/30 animate-toast-float"><InfoIcon className="size-4" strokeWidth={3} /></div>,
+        warning: <div className="rounded-lg p-1 bg-warning/20 border border-warning/30 animate-toast-pulse"><TriangleAlertIcon className="size-4" strokeWidth={3} /></div>,
+        error: <div className="rounded-lg p-1 bg-destructive/20 border border-destructive/30 animate-toast-shake"><OctagonXIcon className="size-4" strokeWidth={3} /></div>,
+        loading: <Loader2Icon className="size-4 animate-spin text-primary" />,
       }}
       style={
         {
