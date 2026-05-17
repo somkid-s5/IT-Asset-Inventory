@@ -11,7 +11,7 @@ import {
   Send, ShieldAlert, CheckCircle2, PlayCircle, 
   History, Box, HardDrive, 
   ExternalLink, Trash2, LoaderCircle, Activity,
-  Search, Shield, CheckCircle
+  Search, Shield, CheckCircle, Monitor
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -191,7 +191,12 @@ export default function TicketDetailsPage() {
                   ticket.comments?.map((comment) => (
                     <div key={comment.id} className={cn(
                       "flex flex-col gap-4 p-5 rounded-[24px] border-2 group transition-all",
-                      comment.isSystem ? "bg-muted/30 border-border/40" : "bg-card border-border/60 hover:border-primary/20"
+                      comment.isSystem ? "bg-muted/30 border-border/40" : cn(
+                        "bg-card border-border/60 hover:border-primary/20",
+                        comment.commentType === 'INVESTIGATION' && "border-amber-500/30 bg-amber-500/[0.03]",
+                        comment.commentType === 'ACTION' && "border-blue-500/30 bg-blue-500/[0.03]",
+                        comment.commentType === 'RESOLUTION' && "border-emerald-500/30 bg-emerald-500/[0.03]"
+                      )
                     )}>
                        <div className="flex items-center justify-between border-b border-border/40 pb-3">
                          <div className="flex items-center gap-3">
@@ -305,6 +310,33 @@ export default function TicketDetailsPage() {
                 </div>
               )}
            </Card>
+
+           {/* VM Connection Card */}
+           {ticket.vm && (
+             <Card className="p-6 rounded-[32px] border-2 bg-indigo-500/[0.02] border-indigo-500/10 space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/60 flex items-center gap-2">
+                   <Monitor className="h-3 w-3" /> Related VM
+                </h3>
+                <div className="space-y-4">
+                   <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 border border-indigo-500/20 shadow-sm">
+                         <Monitor className="h-6 w-6" />
+                      </div>
+                      <div className="overflow-hidden">
+                         <p className="text-sm font-black truncate">{ticket.vm.name}</p>
+                         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Virtual Machine</p>
+                      </div>
+                   </div>
+                   <Button 
+                     variant="outline" 
+                     onClick={() => router.push(`/dashboard/virtual-machines/${ticket.vmId}?returnTo=/dashboard/tickets/${id}`)}
+                     className="w-full rounded-xl text-[10px] font-black uppercase tracking-widest h-10 border-2 hover:bg-indigo-500/5 hover:text-indigo-600 hover:border-indigo-500/20"
+                   >
+                      View VM Detail <ExternalLink className="h-3 w-3 ml-2" />
+                   </Button>
+                </div>
+             </Card>
+           )}
 
            {/* Quick Actions / Audit Card */}
            <Card className="p-6 rounded-[32px] border-2 space-y-4 bg-muted/20">
