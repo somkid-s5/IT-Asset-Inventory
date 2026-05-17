@@ -47,6 +47,12 @@ type VmInventoryWithRelations = Prisma.VmInventoryGetPayload<{
   include: {
     source: true;
     guestAccounts: true;
+    tickets: {
+      include: {
+        client: { select: { name: true } };
+        assignee: { select: { displayName: true } };
+      };
+    };
   };
 }>;
 
@@ -495,6 +501,16 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             },
           ]
         : [],
+      tickets: (inventory.tickets ?? []).map((ticket) => ({
+        id: ticket.id,
+        ticketNo: ticket.ticketNo,
+        title: ticket.title,
+        status: ticket.status,
+        priority: ticket.priority,
+        clientName: ticket.client?.name,
+        assigneeName: ticket.assignee?.displayName,
+        createdAt: ticket.createdAt,
+      })),
     };
   }
 
@@ -1710,6 +1726,13 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       include: {
         source: true,
         guestAccounts: true,
+        tickets: {
+          include: {
+            client: { select: { name: true } },
+            assignee: { select: { displayName: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 

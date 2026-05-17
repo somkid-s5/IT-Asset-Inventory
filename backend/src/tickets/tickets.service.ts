@@ -68,6 +68,9 @@ export class TicketsService {
         asset: {
           select: { id: true, name: true, type: true },
         },
+        vm: {
+          select: { id: true, name: true },
+        },
       },
     });
 
@@ -109,6 +112,9 @@ export class TicketsService {
         },
         asset: {
           select: { id: true, name: true, type: true },
+        },
+        vm: {
+          select: { id: true, name: true },
         },
         comments: {
           include: {

@@ -30,5 +30,9 @@ export class CreateTicketDto {
 
   @IsUUID()
   @IsOptional()
+  vmId?: string;
+
+  @IsUUID()
+  @IsOptional()
   assigneeId?: string;
 }
