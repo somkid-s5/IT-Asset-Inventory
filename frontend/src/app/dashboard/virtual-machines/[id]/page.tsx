@@ -4,15 +4,62 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Copy, Eye, EyeOff, ShieldCheck, Sparkles, Monitor, Cpu, Server, HardDrive, Network, Tag, Clock, Globe, LoaderCircle, Database } from 'lucide-react';
+import { ArrowLeft, Copy, Eye, EyeOff, ShieldCheck, Sparkles, Monitor, Cpu, Server, HardDrive, Network, Tag, Clock, Globe, LoaderCircle, Database, History, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VmFormDialog } from '@/components/VmFormDialog';
 import type { VmInventoryDetail } from '@/lib/vm-inventory';
 import { archiveVmInventory, getVmInventoryById } from '@/services/vm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+
+function TicketHistorySection({ tickets }: { tickets: any[] }) {
+  const router = useRouter();
+  
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-2 px-1">
+        <History className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-bold tracking-tight text-foreground">Maintenance & Support History</h2>
+        {tickets.length > 0 && (
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+            {tickets.length}
+          </span>
+        )}
+      </div>
+      
+      <div className="glass-card divide-y divide-border/40 overflow-hidden">
+        {tickets.length === 0 ? (
+          <div className="p-8 text-center text-xs text-muted-foreground italic">
+            No maintenance tickets recorded for this VM
+          </div>
+        ) : (
+          tickets.map((ticket) => (
+            <div 
+              key={ticket.id} 
+              className="group p-4 hover:bg-muted/30 transition-colors cursor-pointer"
+              onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
+            >
+              <div className="flex items-center justify-between mb-2">
+                 <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] font-bold text-primary">{ticket.ticketNo}</span>
+                    <Badge variant="outline" className="text-[9px] h-4.5 font-bold uppercase">{ticket.status.replace(/_/g, ' ')}</Badge>
+                 </div>
+                 <span className="text-[10px] text-muted-foreground">{new Date(ticket.createdAt).toLocaleDateString()}</span>
+              </div>
+              <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">{ticket.title}</h4>
+              <div className="flex items-center gap-4 mt-2 text-[10px] text-muted-foreground">
+                 <span className="flex items-center gap-1"><User className="h-3 w-3" /> {ticket.assignee?.displayName || 'Unassigned'}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
 
 export default function VmDetailPage() {
   const params = useParams();
@@ -120,207 +167,223 @@ export default function VmDetailPage() {
         </div>
       ) : null}
 
-      <section className="glass-card overflow-hidden">
-        <div className="p-6 sm:p-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between relative">
-          <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none"></div>
-          
-          <div className="flex items-start gap-5 relative z-10">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl">
-              <Monitor className="h-7 w-7" />
-            </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="space-y-6">
+          <section className="glass-card overflow-hidden">
+            <div className="p-6 sm:p-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between relative">
+              <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none"></div>
+              
+              <div className="flex items-start gap-5 relative z-10">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl">
+                  <Monitor className="h-7 w-7" />
+                </div>
 
-            <div className="space-y-2 min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground truncate max-w-[400px]" title={vm.name}>{vm.name}</h1>
-                <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider shrink-0", lifecycleBadge.class)}>{lifecycleBadge.label}</span>
-                <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider shrink-0", syncBadge.class)}>{syncBadge.label}</span>
-                <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider border-border bg-muted/50 text-foreground shrink-0")}>{vm.powerState}</span>
+                <div className="space-y-2 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground truncate max-w-[400px]" title={vm.name}>{vm.name}</h1>
+                    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider shrink-0", lifecycleBadge.class)}>{lifecycleBadge.label}</span>
+                    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider shrink-0", syncBadge.class)}>{syncBadge.label}</span>
+                    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider border-border bg-muted/50 text-foreground shrink-0")}>{vm.powerState}</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pt-1 min-w-0">
+                    <span className="font-semibold text-foreground/80 truncate max-w-[250px]">{vm.systemName}</span>
+                    <span className="flex items-center gap-1.5 shrink-0"><Globe className="h-3.5 w-3.5" /> <span className="font-mono text-xs text-foreground">{vm.primaryIp}</span></span>
+                    <span className="flex items-center gap-1.5 shrink-0"><Server className="h-3.5 w-3.5" /> <span className="text-foreground">{vm.host}</span></span>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pt-1 min-w-0">
-                <span className="font-semibold text-foreground/80 truncate max-w-[250px]">{vm.systemName}</span>
-                <span className="flex items-center gap-1.5 shrink-0"><Globe className="h-3.5 w-3.5" /> <span className="font-mono text-xs text-foreground">{vm.primaryIp}</span></span>
-                <span className="flex items-center gap-1.5 shrink-0"><Server className="h-3.5 w-3.5" /> <span className="text-foreground">{vm.host}</span></span>
+              <div className="flex shrink-0 flex-wrap items-center gap-3 lg:justify-end relative z-10">
+                <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-5 py-2.5 shadow-sm">
+                   <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1"><Cpu className="h-3 w-3"/> CPU</span>
+                   <span className="text-xl font-bold text-foreground">{vm.cpuCores} <span className="text-sm font-medium text-muted-foreground">vCPU</span></span>
+                </div>
+                <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-5 py-2.5 shadow-sm">
+                   <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1"><HardDrive className="h-3 w-3"/> RAM</span>
+                   <span className="text-xl font-bold text-foreground">{vm.memoryGb} <span className="text-sm font-medium text-muted-foreground">GB</span></span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-3 lg:justify-end relative z-10">
-            <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-5 py-2.5 shadow-sm">
-               <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1"><Cpu className="h-3 w-3"/> CPU</span>
-               <span className="text-xl font-bold text-foreground">{vm.cpuCores} <span className="text-sm font-medium text-muted-foreground">vCPU</span></span>
-            </div>
-            <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-5 py-2.5 shadow-sm">
-               <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1"><HardDrive className="h-3 w-3"/> RAM</span>
-               <span className="text-xl font-bold text-foreground">{vm.memoryGb} <span className="text-sm font-medium text-muted-foreground">GB</span></span>
-            </div>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-6 px-6 sm:px-8 border-t border-border/50 bg-background/30 overflow-x-auto custom-scrollbar">
-           {(['OVERVIEW', 'RESOURCES', 'CONTEXT'] as const).map(tab => (
-             <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "py-4 text-sm font-semibold uppercase tracking-wider transition-colors relative whitespace-nowrap",
-                  activeTab === tab ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                )}
-             >
-               {tab}
-               {activeTab === tab && (
-                 <motion.div layoutId="vm-tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-               )}
-             </button>
-           ))}
-        </div>
-      </section>
-
-      {/* Tab Content */}
-      <section className="glass-card p-6 sm:p-8 min-h-[300px]">
-        <AnimatePresence mode="wait">
-          {activeTab === 'OVERVIEW' && (
-            <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid gap-x-12 gap-y-8 md:grid-cols-2">
-               <div className="space-y-6">
-                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Server className="h-4 w-4"/> Connection Information</h3>
-                 <div className="space-y-4">
-                    <DetailRow label="vCenter Source" value={vm.vcenterName} />
-                    <DetailRow label="MoID" value={<span className="font-mono text-xs">{vm.moid}</span>} />
-                    <DetailRow label="IP Address" value={<span className="font-mono text-xs">{vm.primaryIp}</span>} />
-                    <DetailRow label="Host / Cluster" value={<>{vm.host} <span className="text-muted-foreground">({vm.cluster})</span></>} />
-                 </div>
-               </div>
-               <div className="space-y-6">
-                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4"/> Status & Timing</h3>
-                 <div className="space-y-4">
-                    <DetailRow label="Power State" value={vm.powerState} />
-                    <DetailRow label="Sync State" value={vm.syncState} />
-                    <DetailRow label="Last Sync" value={vm.lastSyncAt} />
-                 </div>
-               </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'RESOURCES' && (
-            <motion.div key="resources" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid gap-x-12 gap-y-8 md:grid-cols-2">
-               <div className="space-y-6">
-                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><HardDrive className="h-4 w-4"/> System Resources</h3>
-                 <div className="space-y-4">
-                    <DetailRow label="OS" value={vm.guestOs} />
-                    <DetailRow label="CPU" value={`${vm.cpuCores} Cores`} />
-                    <DetailRow label="Memory" value={`${vm.memoryGb} GB`} />
-                    <DetailRow label="Network" value={vm.networkLabel} />
-                 </div>
-               </div>
-               <div className="space-y-6">
-                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Database className="h-4 w-4"/> Storage Allocation</h3>
-                 <div className="space-y-4">
-                    <DetailRow label="Total Storage" value={`${vm.storageGb} GB`} />
-                    {vm.disks && vm.disks.length > 0 && (
-                      <div className="pt-2 space-y-3 border-l-2 border-border/50 pl-4 ml-1">
-                        {vm.disks.map((disk, idx) => (
-                           <div key={idx} className="space-y-1.5">
-                             <div className="flex justify-between text-sm">
-                               <span className="font-semibold">{disk.label}</span>
-                               <span className="font-mono text-xs">{disk.sizeGb} GB</span>
-                             </div>
-                             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                               {/* Progress bar removed as requested due to lack of usage data */}
-                             </div>
-                             <div className="text-[11px] text-muted-foreground">Datastore: {disk.datastore || '--'}</div>
-                           </div>
-                        ))}
-                      </div>
+            {/* Tab Navigation */}
+            <div className="flex items-center gap-6 px-6 sm:px-8 border-t border-border/50 bg-background/30 overflow-x-auto custom-scrollbar">
+               {(['OVERVIEW', 'RESOURCES', 'CONTEXT'] as const).map(tab => (
+                 <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={cn(
+                      "py-4 text-sm font-semibold uppercase tracking-wider transition-colors relative whitespace-nowrap",
+                      activeTab === tab ? "text-primary" : "text-muted-foreground hover:text-foreground"
                     )}
-                 </div>
-               </div>
-            </motion.div>
-          )}
+                 >
+                   {tab}
+                   {activeTab === tab && (
+                     <motion.div layoutId="vm-tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                   )}
+                 </button>
+               ))}
+            </div>
+          </section>
 
-          {activeTab === 'CONTEXT' && (
-            <motion.div key="context" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid gap-x-12 gap-y-8 md:grid-cols-2">
-               <div className="space-y-6">
-                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Tag className="h-4 w-4"/> AssetOps Context</h3>
-                 <div className="space-y-4">
-                    <DetailRow label="System Name" value={vm.systemName} />
-                    <DetailRow label="Environment" value={vm.environment} />
-                    <DetailRow label="Role" value={vm.serviceRole} />
-                    <DetailRow label="Tags" value={
-                      vm.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {vm.tags.map(t => <span key={t} className="px-2 py-0.5 bg-muted rounded-md text-[11px] font-medium">{t}</span>)}
-                        </div>
-                      ) : '--'
-                    } />
-                 </div>
-               </div>
-               <div className="space-y-6">
-                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><ShieldCheck className="h-4 w-4"/> Ownership & Usage</h3>
-                 <div className="space-y-4">
-                    <DetailRow label="Description" value={vm.description || '--'} align="col" />
-                    <DetailRow label="Notes" value={vm.notes || '--'} align="col" />
-                 </div>
-               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </section>
+          {/* Tab Content */}
+          <section className="glass-card p-6 sm:p-8 min-h-[300px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+              >
+                {activeTab === 'OVERVIEW' && (
+                  <div className="grid gap-x-12 gap-y-8 md:grid-cols-2">
+                     <div className="space-y-6">
+                       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Server className="h-4 w-4"/> Connection Information</h3>
+                       <div className="space-y-4">
+                          <DetailRow label="vCenter Source" value={vm.vcenterName} />
+                          <DetailRow label="MoID" value={<span className="font-mono text-xs">{vm.moid}</span>} />
+                          <DetailRow label="IP Address" value={<span className="font-mono text-xs">{vm.primaryIp}</span>} />
+                          <DetailRow label="Host / Cluster" value={<>{vm.host} <span className="text-muted-foreground">({vm.cluster})</span></>} />
+                       </div>
+                     </div>
+                     <div className="space-y-6">
+                       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4"/> Status & Timing</h3>
+                       <div className="space-y-4">
+                          <DetailRow label="Power State" value={vm.powerState} />
+                          <DetailRow label="Sync State" value={vm.syncState} />
+                          <DetailRow label="Last Sync" value={vm.lastSyncAt} />
+                       </div>
+                     </div>
+                  </div>
+                )}
 
-      {/* Guest Accounts Table */}
-      <section className="glass-card overflow-hidden">
-        <div className="p-6 border-b border-border/50">
-           <h2 className="text-lg font-bold tracking-tight flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-500"/> Guest OS Accounts</h2>
-        </div>
-        <div className="p-0 overflow-x-auto">
-          {vm.guestAccounts.length === 0 ? (
-             <div className="p-8 text-center text-sm text-muted-foreground">No account information saved</div>
-          ) : (
-            <table className="w-full text-sm text-left border-collapse">
-              <thead>
-                <tr className="bg-muted/20 border-b border-border/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  <th className="px-6 py-4">Username</th>
-                  <th className="px-6 py-4">Password</th>
-                  <th className="px-6 py-4">Method</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {vm.guestAccounts.map(account => {
-                  const isRev = revealedPasswords[account.username];
-                  return (
-                    <tr key={account.username} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                           <span className="font-mono font-semibold">{account.username}</span>
-                           <button onClick={() => { void copyValue(account.username, 'Username'); }} className="text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                           <div className="font-mono bg-muted/50 px-2 py-1 rounded-md min-w-[160px] text-center font-semibold tabular-nums transition-all">
-                             {isRev ? account.password : '••••••••••••'}
-                           </div>
-                           <button onClick={() => setRevealedPasswords(c => ({...c, [account.username]: !isRev}))} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
-                             {isRev ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                           </button>
-                           <button onClick={() => { void copyValue(account.password, 'Password'); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
-                             <Copy className="h-4 w-4" />
-                           </button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4"><span className="px-2.5 py-1 bg-background border border-border rounded-md text-[11px] font-semibold">{account.accessMethod}</span></td>
-                      <td className="px-6 py-4"><span className="px-2.5 py-1 bg-muted rounded-md text-[11px] font-semibold">{account.role}</span></td>
-                      <td className="px-6 py-4 text-muted-foreground text-xs">{account.note || '--'}</td>
+                {activeTab === 'RESOURCES' && (
+                  <div className="grid gap-x-12 gap-y-8 md:grid-cols-2">
+                     <div className="space-y-6">
+                       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><HardDrive className="h-4 w-4"/> System Resources</h3>
+                       <div className="space-y-4">
+                          <DetailRow label="OS" value={vm.guestOs} />
+                          <DetailRow label="CPU" value={`${vm.cpuCores} Cores`} />
+                          <DetailRow label="Memory" value={`${vm.memoryGb} GB`} />
+                          <DetailRow label="Network" value={vm.networkLabel} />
+                       </div>
+                     </div>
+                     <div className="space-y-6">
+                       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Database className="h-4 w-4"/> Storage Allocation</h3>
+                       <div className="space-y-4">
+                          <DetailRow label="Total Storage" value={`${vm.storageGb} GB`} />
+                          {vm.disks && vm.disks.length > 0 && (
+                            <div className="pt-2 space-y-3 border-l-2 border-border/50 pl-4 ml-1">
+                              {vm.disks.map((disk, idx) => (
+                                 <div key={idx} className="space-y-1.5">
+                                   <div className="flex justify-between text-sm">
+                                     <span className="font-semibold">{disk.label}</span>
+                                     <span className="font-mono text-xs">{disk.sizeGb} GB</span>
+                                   </div>
+                                   <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                     {/* Progress bar removed as requested due to lack of usage data */}
+                                   </div>
+                                   <div className="text-[11px] text-muted-foreground">Datastore: {disk.datastore || '--'}</div>
+                                 </div>
+                              ))}
+                            </div>
+                          )}
+                       </div>
+                     </div>
+                  </div>
+                )}
+
+                {activeTab === 'CONTEXT' && (
+                  <div className="grid gap-x-12 gap-y-8 md:grid-cols-2">
+                     <div className="space-y-6">
+                       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Tag className="h-4 w-4"/> AssetOps Context</h3>
+                       <div className="space-y-4">
+                          <DetailRow label="System Name" value={vm.systemName} />
+                          <DetailRow label="Environment" value={vm.environment} />
+                          <DetailRow label="Role" value={vm.serviceRole} />
+                          <DetailRow label="Tags" value={
+                            vm.tags.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {vm.tags.map(t => <span key={t} className="px-2 py-0.5 bg-muted rounded-md text-[11px] font-medium">{t}</span>)}
+                              </div>
+                            ) : '--'
+                          } />
+                       </div>
+                     </div>
+                     <div className="space-y-6">
+                       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><ShieldCheck className="h-4 w-4"/> Ownership & Usage</h3>
+                       <div className="space-y-4">
+                          <DetailRow label="Description" value={vm.description || '--'} align="col" />
+                          <DetailRow label="Notes" value={vm.notes || '--'} align="col" />
+                       </div>
+                     </div>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </section>
+
+          {/* Guest Accounts Table */}
+          <section className="glass-card overflow-hidden">
+            <div className="p-6 border-b border-border/50">
+               <h2 className="text-lg font-bold tracking-tight flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-500"/> Guest OS Accounts</h2>
+            </div>
+            <div className="p-0 overflow-x-auto">
+              {vm.guestAccounts.length === 0 ? (
+                 <div className="p-8 text-center text-sm text-muted-foreground">No account information saved</div>
+              ) : (
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead>
+                    <tr className="bg-muted/20 border-b border-border/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <th className="px-6 py-4">Username</th>
+                      <th className="px-6 py-4">Password</th>
+                      <th className="px-6 py-4">Method</th>
+                      <th className="px-6 py-4">Role</th>
+                      <th className="px-6 py-4">Notes</th>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {vm.guestAccounts.map(account => {
+                      const isRev = revealedPasswords[account.username];
+                      return (
+                        <tr key={account.username} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                               <span className="font-mono font-semibold">{account.username}</span>
+                               <button onClick={() => { void copyValue(account.username, 'Username'); }} className="text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                               <div className="font-mono bg-muted/50 px-2 py-1 rounded-md min-w-[160px] text-center font-semibold tabular-nums transition-all">
+                                 {isRev ? account.password : '••••••••••••'}
+                               </div>
+                               <button onClick={() => setRevealedPasswords(c => ({...c, [account.username]: !isRev}))} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                                 {isRev ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                               </button>
+                               <button onClick={() => { void copyValue(account.password, 'Password'); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                                 <Copy className="h-4 w-4" />
+                               </button>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4"><span className="px-2.5 py-1 bg-background border border-border rounded-md text-[11px] font-semibold">{account.accessMethod}</span></td>
+                          <td className="px-6 py-4"><span className="px-2.5 py-1 bg-muted rounded-md text-[11px] font-semibold">{account.role}</span></td>
+                          <td className="px-6 py-4 text-muted-foreground text-xs">{account.note || '--'}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
         </div>
-      </section>
+
+        <div className="space-y-6">
+          <TicketHistorySection tickets={vm.tickets} />
+        </div>
+      </div>
 
       <VmFormDialog open={editOpen} onOpenChange={setEditOpen} vmToEdit={vm} onSuccess={() => void loadVm()} />
       
