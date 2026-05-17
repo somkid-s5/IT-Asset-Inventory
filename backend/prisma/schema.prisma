@@ -402,6 +402,7 @@ model VmInventory {
   createdByUser   User?   @relation(fields: [createdByUserId], references: [id])
 
   guestAccounts VmGuestAccount[]
+  tickets       Ticket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -479,6 +480,9 @@ model Ticket {
   
   assetId     String?
   asset       Asset?         @relation(fields: [assetId], references: [id])
+
+  vmId        String?
+  vm          VmInventory?   @relation(fields: [vmId], references: [id])
 
   assigneeId  String?
   assignee    User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
