@@ -166,6 +166,12 @@ export class TicketsService {
         creator: {
           select: { id: true, displayName: true },
         },
+        asset: {
+          select: { id: true, name: true, type: true },
+        },
+        vm: {
+          select: { id: true, name: true },
+        },
       },
     });
 
