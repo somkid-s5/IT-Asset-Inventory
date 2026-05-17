@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
-  ChevronLeft, Clock, User, MessageSquare, 
+  ChevronLeft, Clock, User, 
   Send, ShieldAlert, CheckCircle2, PlayCircle, 
   History, Box, HardDrive, 
   ExternalLink, Trash2, LoaderCircle, Activity,
@@ -38,6 +38,21 @@ const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
     </div>
   )
 });
+
+const priorityColors: Record<TicketPriority, string> = {
+  LOW: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
+  MEDIUM: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+  HIGH: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
+  CRITICAL: 'text-rose-500 bg-rose-500/10 border-rose-500/20 animate-pulse',
+};
+
+const statusColors: Record<TicketStatus, string> = {
+  OPEN: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+  IN_PROGRESS: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+  WAITING_FOR_CLIENT: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+  RESOLVED: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+  CLOSED: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
+};
 
 export default function TicketDetailsPage() {
   const { id } = useParams();
@@ -87,21 +102,6 @@ export default function TicketDetailsPage() {
 
   if (isLoading) return <TicketSkeleton />;
   if (!ticket) return <div>Ticket not found</div>;
-
-  const priorityColors: Record<TicketPriority, string> = {
-    LOW: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
-    MEDIUM: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-    HIGH: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
-    CRITICAL: 'text-rose-500 bg-rose-500/10 border-rose-500/20 animate-pulse',
-  };
-
-  const statusColors: Record<TicketStatus, string> = {
-    OPEN: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
-    IN_PROGRESS: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-    WAITING_FOR_CLIENT: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
-    RESOLVED: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-    CLOSED: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
-  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20">

@@ -36,6 +36,8 @@ export interface Ticket {
   asset?: { id: string; name: string; type: string };
   assigneeId?: string;
   assignee?: { id: string; displayName: string };
+  vmId?: string;
+  vm?: { id: string; name: string };
   creatorId: string;
   creator: { id: string; displayName: string };
   comments?: TicketComment[];
