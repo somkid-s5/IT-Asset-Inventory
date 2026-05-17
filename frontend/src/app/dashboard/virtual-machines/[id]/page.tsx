@@ -12,10 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { VmFormDialog } from '@/components/VmFormDialog';
 import type { VmInventoryDetail } from '@/lib/vm-inventory';
 import { archiveVmInventory, getVmInventoryById } from '@/services/vm';
+import type { Ticket } from '@/services/tickets';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-function TicketHistorySection({ tickets }: { tickets: any[] }) {
+function TicketHistorySection({ tickets }: { tickets: Ticket[] }) {
   const router = useRouter();
   
   return (
@@ -37,9 +38,9 @@ function TicketHistorySection({ tickets }: { tickets: any[] }) {
           </div>
         ) : (
           tickets.map((ticket) => (
-            <div 
+            <button 
               key={ticket.id} 
-              className="group p-4 hover:bg-muted/30 transition-colors cursor-pointer"
+              className="group w-full text-left p-4 hover:bg-muted/30 transition-colors cursor-pointer block"
               onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
             >
               <div className="flex items-center justify-between mb-2">
@@ -53,7 +54,7 @@ function TicketHistorySection({ tickets }: { tickets: any[] }) {
               <div className="flex items-center gap-4 mt-2 text-[10px] text-muted-foreground">
                  <span className="flex items-center gap-1"><User className="h-3 w-3" /> {ticket.assignee?.displayName || 'Unassigned'}</span>
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>
