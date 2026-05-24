@@ -354,7 +354,7 @@ export default function UsersPage() {
             <Users className="h-3.5 w-3.5" />
             System Access & User Directory
           </h2>
-          <p className="text-xs text-muted-foreground/60">Manage staff accounts and security permissions</p>
+          <p className="text-xs text-muted-foreground">Manage staff accounts and security permissions</p>
         </div>
         <div className="flex items-center gap-2">
            <Button onClick={() => setCreateOpen(true)} className="h-9 shadow-lg shadow-primary/20">
@@ -378,7 +378,7 @@ export default function UsersPage() {
                     : "text-muted-foreground hover:text-foreground hover:bg-card/50"
                 )}
               >
-                <tab.icon className={cn("h-3.5 w-3.5", activeRole === tab.value ? tab.iconClassName : "text-muted-foreground/50")} />
+                <tab.icon className={cn("h-3.5 w-3.5", activeRole === tab.value ? tab.iconClassName : "text-muted-foreground")} />
                 {tab.label}
                 <Badge variant="neutral" className="ml-1 h-4 px-1 font-mono text-[9px] bg-muted/50">
                   {roleCounts[tab.value]}
@@ -389,7 +389,7 @@ export default function UsersPage() {
 
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search name or @username..."
                 value={(table.getColumn('displayName')?.getFilterValue() as string) ?? ''}

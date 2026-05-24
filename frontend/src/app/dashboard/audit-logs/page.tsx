@@ -17,7 +17,7 @@ import {
 import {
   flexRender, getCoreRowModel, getSortedRowModel,
   getPaginationRowModel, getFilteredRowModel, useReactTable,
-  ColumnDef, SortingState, ColumnFiltersState
+  ColumnDef, SortingState, ColumnFiltersState, type Column
 } from '@tanstack/react-table';
 import {
   Activity, ArrowDown, ArrowUp, ChevronsUpDown, LoaderCircle,
@@ -231,14 +231,14 @@ export default function AuditLogsPage() {
             <Activity className="h-3.5 w-3.5" />
             System Audit Logs
           </h2>
-          <p className="text-xs text-muted-foreground/60">Monitor all activities and changes in the system</p>
+          <p className="text-xs text-muted-foreground">Monitor all activities and changes in the system</p>
         </div>
       </div>
 
       <Card className="border-2 border-border shadow-md bg-card overflow-hidden p-0 gap-0 rounded-[24px]">
         <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search logs by user, action, or details..."
               value={globalFilter}

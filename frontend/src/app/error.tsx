@@ -32,7 +32,7 @@ export default function Error({
         <div className="surface-panel p-6 shadow-xl border-none">
           {process.env.NODE_ENV === 'development' && (
             <details className="text-left group mb-8">
-              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 hover:text-foreground transition-colors list-none flex items-center gap-2">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors list-none flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-destructive/50" />
                 Technical Error Details (Dev Only)
               </summary>

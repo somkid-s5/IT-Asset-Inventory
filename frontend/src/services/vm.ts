@@ -20,6 +20,7 @@ export type SaveVmDraftPayload = {
     role: string;
     note?: string;
   }>;
+  managedFields?: string[];
 };
 
 export type SaveVmSourcePayload = {

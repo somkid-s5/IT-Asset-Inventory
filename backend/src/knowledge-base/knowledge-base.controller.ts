@@ -24,8 +24,10 @@ import { KnowledgeBaseService } from './knowledge-base.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Role, Prisma } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { Public } from '../auth/public.decorator';
+import { CreateKnowledgeBaseDto } from './dto/create-knowledge-base.dto';
+import { UpdateKnowledgeBaseDto } from './dto/update-knowledge-base.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/knowledge-base')
@@ -113,7 +115,7 @@ export class KnowledgeBaseController {
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post('articles')
   createArticle(
-    @Body() data: { title: string; content: string; categoryId: string },
+    @Body() data: CreateKnowledgeBaseDto,
     @Request() req: { user: { id: string } },
   ) {
     return this.knowledgeBaseService.createArticle({
@@ -131,15 +133,14 @@ export class KnowledgeBaseController {
   @Public()
   @Get('recent')
   getRecentArticles(@Query('limit') limit?: string) {
-    return this.knowledgeBaseService.getRecentArticles(limit ? parseInt(limit) : 5);
+    return this.knowledgeBaseService.getRecentArticles(
+      limit ? parseInt(limit) : 5,
+    );
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Patch('articles/:id')
-  updateArticle(
-    @Param('id') id: string,
-    @Body() data: Prisma.KnowledgeArticleUpdateInput,
-  ) {
+  updateArticle(@Param('id') id: string, @Body() data: UpdateKnowledgeBaseDto) {
     return this.knowledgeBaseService.updateArticle(id, data);
   }
 

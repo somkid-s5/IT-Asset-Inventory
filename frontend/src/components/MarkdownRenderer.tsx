@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -8,12 +9,14 @@ import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface MarkdownRendererProps {
   content: string;
+  className?: string;
 }
 
-export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const handleCopy = (code: string) => {
@@ -24,26 +27,29 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   };
 
   return (
-    <div className="prose dark:prose-invert prose-slate max-w-none 
-      text-foreground
-      prose-headings:text-foreground prose-headings:font-black prose-headings:tracking-tight 
-      prose-a:text-primary 
-      prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md
-      prose-img:rounded-[32px] prose-img:shadow-2xl prose-img:border border-border/40
-      prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-none">
+    <div className={cn(
+      "prose dark:prose-invert prose-slate max-w-none text-foreground",
+      "prose-headings:text-foreground prose-headings:font-black prose-headings:tracking-tight",
+      "prose-a:text-primary",
+      "prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md",
+      "prose-img:rounded-[32px] prose-img:shadow-2xl prose-img:border border-border/40",
+      "prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-none",
+      className
+    )}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, inline, className, children, ...props }: any) {
+          code({ inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             const codeContent = String(children).replace(/\n$/, '');
 
-            if (!inline && match) {
+            if (!inline) {
+              const language = match ? match[1] : 'text';
               return (
                 <div className="relative group my-6 rounded-[20px] overflow-hidden border border-border/40 shadow-2xl bg-[#0d1117]">
                   <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-border/10">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      {match[1]}
+                      {language}
                     </span>
                     <Button
                       variant="ghost"
@@ -60,7 +66,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
                   </div>
                   <SyntaxHighlighter
                     style={atomDark}
-                    language={match[1]}
+                    language={language}
                     PreTag="div"
                     className="!m-0 !bg-transparent !p-6 text-sm leading-relaxed custom-scrollbar"
                     {...props}
@@ -77,16 +83,21 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               </code>
             );
           },
-          img({ node, ...props }: any) {
+          img({ ...props }: any) {
             return (
-              <div className="my-10">
-                <img 
-                  {...props} 
-                  className="w-full rounded-[24px] border border-border/40 shadow-xl" 
-                  alt={props.alt || 'Documentation Image'}
-                />
+              <div className="my-10 relative">
+                <div className="w-full rounded-[24px] border border-border/40 shadow-xl overflow-hidden bg-muted/20">
+                  <Image 
+                    src={props.src || ''} 
+                    alt={props.alt || 'Documentation Image'}
+                    width={1200}
+                    height={630}
+                    className="w-full h-auto"
+                    unoptimized={props.src?.startsWith('http') || props.src?.includes('/uploads/')}
+                  />
+                </div>
                 {props.alt && (
-                  <p className="mt-4 text-center text-xs font-bold text-muted-foreground/60 uppercase tracking-widest flex items-center justify-center gap-2">
+                  <p className="mt-4 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2">
                     <ImageIcon className="h-3.5 w-3.5" />
                     {props.alt}
                   </p>

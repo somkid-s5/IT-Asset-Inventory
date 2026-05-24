@@ -43,6 +43,7 @@ import {
   SortingState,
   ColumnFiltersState,
   VisibilityState,
+  Column,
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -307,7 +308,7 @@ export default function DbPage() {
             <Database className="h-3.5 w-3.5" />
             Relational Database Inventory
           </h2>
-          <p className="text-xs text-muted-foreground/60">Monitor and manage all database instances</p>
+          <p className="text-xs text-muted-foreground">Monitor and manage all database instances</p>
         </div>
         <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
@@ -335,7 +336,7 @@ export default function DbPage() {
                     : "text-muted-foreground hover:text-foreground hover:bg-card/50"
                 )}
               >
-                <tab.icon className={cn("h-3.5 w-3.5", activeEnvironment === tab.value ? tab.iconClassName : "text-muted-foreground/50")} />
+                <tab.icon className={cn("h-3.5 w-3.5", activeEnvironment === tab.value ? tab.iconClassName : "text-muted-foreground")} />
                 {tab.label}
                 <Badge variant="neutral" className="ml-1 h-4 px-1 font-mono text-[9px] bg-muted/50">
                   {countsByEnvironment[tab.value]}
@@ -346,7 +347,7 @@ export default function DbPage() {
 
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search name, host, IP..."
                 value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
@@ -487,7 +488,7 @@ export default function DbPage() {
   );
 }
 
-function SortableHeader({ column, title }: { column: any, title: string }) {
+function SortableHeader<TData, TValue>({ column, title }: { column: Column<TData, TValue>, title: string }) {
   return (
     <button onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="flex items-center gap-1 hover:text-foreground transition-colors group">
       {title}
