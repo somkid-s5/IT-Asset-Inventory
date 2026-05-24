@@ -3,6 +3,7 @@ import {
   IsArray,
   IsEnum,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   Min,
@@ -93,4 +94,23 @@ export class SaveVmDraftDto {
   @ValidateNested({ each: true })
   @Type(() => VmDiskDto)
   disks?: VmDiskDto[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @IsIn(
+    [
+      'name',
+      'primaryIp',
+      'cpuCores',
+      'memoryGb',
+      'storageGb',
+      'networkLabel',
+      'powerState',
+      'host',
+      'cluster',
+    ],
+    { each: true },
+  )
+  managedFields?: string[];
 }

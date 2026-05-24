@@ -364,7 +364,7 @@ export default function AssetsPage() {
             <HardDrive className="h-3.5 w-3.5" />
             Hardware & Infrastructure Inventory
           </h2>
-          <p className="text-xs text-muted-foreground/60">Manage your physical and network assets</p>
+          <p className="text-xs text-muted-foreground">Manage your physical and network assets</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
@@ -396,7 +396,7 @@ export default function AssetsPage() {
                     : "text-muted-foreground hover:text-foreground hover:bg-card/50"
                 )}
               >
-                <tab.icon className={cn("h-3.5 w-3.5", activeTab === tab.value ? tab.iconClassName : "text-muted-foreground/50")} />
+                <tab.icon className={cn("h-3.5 w-3.5", activeTab === tab.value ? tab.iconClassName : "text-muted-foreground")} />
                 {tab.label}
               </button>
             ))}
@@ -404,7 +404,7 @@ export default function AssetsPage() {
 
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name, IP, SN..."
                 value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
@@ -572,7 +572,7 @@ export default function AssetsPage() {
   );
 }
 
-function SortableHeader({ column, title }: { column: any, title: string }) {
+function SortableHeader<TData, TValue>({ column, title }: { column: import('@tanstack/react-table').Column<TData, TValue>, title: string }) {
   return (
     <button
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}

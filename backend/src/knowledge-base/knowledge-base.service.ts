@@ -15,8 +15,8 @@ export class KnowledgeBaseService {
 
   async initializeDefaults(authorId: string) {
     const defaults = [
-      { 
-        name: 'Server & Virtualization', 
+      {
+        name: 'Server & Virtualization',
         icon: 'server',
         articles: [
           {
@@ -35,7 +35,7 @@ This guide covers how to access the vCenter Server Management Interface (VAMI) f
 3. **Updates:** Check for patches in the "Update" tab.
 
 > [!CAUTION]
-> Always take a snapshot of the vCenter VM before performing any updates.`
+> Always take a snapshot of the vCenter VM before performing any updates.`,
           },
           {
             title: 'Standard VM Provisioning Checklist',
@@ -56,12 +56,12 @@ Example: \`SAP-PROD-APP-01\`
 ### OS Hardening
 * Disable unused services.
 * Enable local firewall (ufw/firewalld).
-* Install CrowdStrike sensor.`
-          }
-        ]
+* Install CrowdStrike sensor.`,
+          },
+        ],
       },
-      { 
-        name: 'Network & Security', 
+      {
+        name: 'Network & Security',
         icon: 'shield',
         articles: [
           {
@@ -77,12 +77,12 @@ Follow these steps to connect to the internal network via Cisco AnyConnect.
 
 ### Troubleshooting
 * **Error 401:** Password expired. Reset via AD Portal.
-* **Timeout:** Check if port 443 is blocked by your local ISP.`
-          }
-        ]
+* **Timeout:** Check if port 443 is blocked by your local ISP.`,
+          },
+        ],
       },
-      { 
-        name: 'Databases', 
+      {
+        name: 'Databases',
         icon: 'database',
         articles: [
           {
@@ -140,9 +140,9 @@ fi
 4. **Start services:** \`systemctl start infrapilot-backend\`
 
 ---
-*Last Reviewed: May 2026 by IT Infrastructure Team*`
-          }
-        ]
+*Last Reviewed: May 2026 by IT Infrastructure Team*`,
+          },
+        ],
       },
       { name: 'General Support', icon: 'help-circle' },
     ];
@@ -158,9 +158,9 @@ fi
       if (item.articles) {
         for (const art of item.articles) {
           const exists = await this.prisma.knowledgeArticle.findFirst({
-            where: { title: art.title }
+            where: { title: art.title },
           });
-          
+
           if (!exists) {
             await this.prisma.knowledgeArticle.create({
               data: {
@@ -168,7 +168,7 @@ fi
                 content: art.content,
                 categoryId: category.id,
                 authorId: authorId,
-              }
+              },
             });
           }
         }
@@ -180,11 +180,13 @@ fi
   async deleteCategory(id: string) {
     // Check if category has articles
     const count = await this.prisma.knowledgeArticle.count({
-      where: { categoryId: id }
+      where: { categoryId: id },
     });
-    
+
     if (count > 0) {
-      throw new Error('Cannot delete category with existing articles. Move or delete articles first.');
+      throw new Error(
+        'Cannot delete category with existing articles. Move or delete articles first.',
+      );
     }
 
     return this.prisma.knowledgeCategory.delete({

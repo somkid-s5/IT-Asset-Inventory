@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
 import {
@@ -61,7 +61,7 @@ export default function VmSourcesPage() {
   const [globalFilter, setGlobalFilter] = useState('');
 
   const syncMeta = `Synced ${sources[0]?.lastSyncAt ?? '--'} from ${sources.length} sources`;
-  const getConnectionTestKey = (data: typeof DEFAULT_SOURCE_FORM) => JSON.stringify({ endpoint: data.endpoint.trim(), username: data.username.trim(), password: data.password });
+  const getConnectionTestKey = useCallback((data: typeof DEFAULT_SOURCE_FORM) => JSON.stringify({ endpoint: data.endpoint.trim(), username: data.username.trim(), password: data.password }), []);
   const currentConnectionTestKey = getConnectionTestKey(formData);
   const isConnectionVerified = lastSuccessfulTestKey === currentConnectionTestKey;
 
@@ -73,16 +73,16 @@ export default function VmSourcesPage() {
     return () => setHeader(null);
   }, [setHeader]);
 
-  const resetForm = () => { setFormData(DEFAULT_SOURCE_FORM); setEditingSourceId(null); setLastSuccessfulTestKey(null); };
-  const openAddDialog = () => { resetForm(); setAddOpen(true); };
-  const openEditDialog = (source: VmVCenterSource) => {
+  const resetForm = useCallback(() => { setFormData(DEFAULT_SOURCE_FORM); setEditingSourceId(null); setLastSuccessfulTestKey(null); }, []);
+  const openAddDialog = useCallback(() => { resetForm(); setAddOpen(true); }, [resetForm]);
+  const openEditDialog = useCallback((source: VmVCenterSource) => {
     setEditingSourceId(source.id);
     setFormData({ name: source.name, endpoint: source.endpoint, username: '', password: '', syncInterval: source.syncInterval, notes: source.notes ?? '' });
     setLastSuccessfulTestKey(null);
     setAddOpen(true);
-  };
+  }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (lastSuccessfulTestKey !== getConnectionTestKey(formData)) return toast.error('Please test connection before saving');
     setSaving(true);
     try {
@@ -90,9 +90,9 @@ export default function VmSourcesPage() {
       else { await createVmSource(formData); toast.success('vCenter source created'); }
       setAddOpen(false); resetForm(); void refetch();
     } catch { toast.error('Failed to save source'); } finally { setSaving(false); }
-  };
+  }, [formData, editingSourceId, lastSuccessfulTestKey, getConnectionTestKey, resetForm, refetch]);
 
-  const handleTestConnection = async () => {
+  const handleTestConnection = useCallback(async () => {
     if (!formData.endpoint.trim()) return toast.error('Endpoint is required for testing');
     setTestingConnection(true);
     try {
@@ -100,34 +100,34 @@ export default function VmSourcesPage() {
       if (result.success) { setLastSuccessfulTestKey(getConnectionTestKey(formData)); toast.success(result.message); } 
       else { setLastSuccessfulTestKey(null); toast.error(result.message); }
     } catch { setLastSuccessfulTestKey(null); toast.error('Connection test failed'); } finally { setTestingConnection(false); }
-  };
+  }, [formData, getConnectionTestKey]);
 
-  const handleSyncAll = async () => {
+  const handleSyncAll = useCallback(async () => {
     setSyncingAll(true);
     try {
       const result = await syncAllVmSources();
       result.success ? toast.success(result.message) : toast.error(result.message);
       void refetch();
     } catch { toast.error('Sync failed'); } finally { setSyncingAll(false); }
-  };
+  }, [refetch]);
 
-  const handleSyncSource = async (source: VmVCenterSource) => {
+  const handleSyncSource = useCallback(async (source: VmVCenterSource) => {
     setSyncingSourceIds(c => [...c, source.id]);
     try {
       const result = await syncVmSource(source.id);
       result.success ? toast.success(result.message) : toast.error(result.message);
       void refetch();
     } catch { toast.error(`Sync failed for ${source.name}`); } finally { setSyncingSourceIds(c => c.filter(id => id !== source.id)); }
-  };
+  }, [refetch]);
 
-  const handleDeleteSource = async () => {
+  const handleDeleteSource = useCallback(async () => {
     if (!deleteTarget) return;
     try {
       await deleteVmSource(deleteTarget.id);
       toast.success(`${deleteTarget.name} deleted`);
       setDeleteTarget(null); void refetch();
     } catch { toast.error('Failed to delete source'); }
-  };
+  }, [deleteTarget, refetch]);
 
   const columns = useMemo<ColumnDef<VmVCenterSource>[]>(() => [
     {
@@ -176,7 +176,7 @@ export default function VmSourcesPage() {
         );
       }
     }
-  ], [syncingAll, syncingSourceIds]);
+  ], [syncingAll, syncingSourceIds, handleSyncSource, openEditDialog]);
 
   const table = useReactTable({
     data: sources, columns, state: { sorting, globalFilter },
@@ -197,7 +197,7 @@ export default function VmSourcesPage() {
             <Workflow className="h-3.5 w-3.5" />
             Infrastructure Integration Sources
           </h2>
-          <p className="text-xs text-muted-foreground/60">Configure and monitor vCenter API connections</p>
+          <p className="text-xs text-muted-foreground">Configure and monitor vCenter API connections</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={() => router.push('/dashboard/virtual-machines')}>
@@ -220,7 +220,7 @@ export default function VmSourcesPage() {
              {syncMeta}
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search sources..."
               value={globalFilter}

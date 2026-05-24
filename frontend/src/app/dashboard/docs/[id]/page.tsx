@@ -31,7 +31,7 @@ export default function ArticlePage() {
   });
 
   const handleCopyLink = () => {
-    const publicUrl = `${window.location.origin}/public/docs/article/${id}`;
+    const publicUrl = `${window.location.origin}/docs/${id}`;
     navigator.clipboard.writeText(publicUrl);
     toast.success('Public share link copied to clipboard!');
   };
@@ -94,7 +94,7 @@ export default function ArticlePage() {
                   {article.category.name}
                 </Badge>
                 <div className="h-1 w-1 rounded-full bg-border" />
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tight">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-tight">
                   <Clock className="h-3.5 w-3.5" />
                   {Math.ceil(article.content.split(' ').length / 200)} min read
                 </div>
@@ -138,7 +138,7 @@ export default function ArticlePage() {
                       variant="ghost" 
                       size="icon" 
                       className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 ml-2"
-                      onClick={() => router.push(`/dashboard/docs/article/${id}/edit`)}
+                      onClick={() => router.push(`/dashboard/docs/${id}/edit`)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -156,7 +156,7 @@ export default function ArticlePage() {
         <aside className="w-64 border-l border-border/40 p-6 hidden xl:block shrink-0 bg-muted/5">
           <div className="space-y-8 sticky top-0">
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Details</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Details</h4>
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-xs">
                   <Eye className="h-4 w-4 opacity-40" />
@@ -170,7 +170,7 @@ export default function ArticlePage() {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Actions</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Actions</h4>
               <div className="grid grid-cols-1 gap-2">
                  <Button 
                   variant="outline" 

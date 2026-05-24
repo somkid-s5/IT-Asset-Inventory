@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className={`${inter.variable} ${prompt.variable} font-sans antialiased selection:bg-primary/30`}>
+      <body className={`${inter.variable} ${prompt.variable} font-sans subpixel-antialiased selection:bg-primary/30`}>
         {/* Skip Link for Accessibility */}
         <a
           href="#main-content"

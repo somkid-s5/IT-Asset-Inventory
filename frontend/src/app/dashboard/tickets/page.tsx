@@ -109,13 +109,13 @@ export default function TicketsPage() {
   const columns = useMemo<ColumnDef<Ticket>[]>(() => [
     {
       accessorKey: 'ticketNo',
-      header: 'ID',
+      header: () => <span className="hidden sm:inline">ID</span>,
       cell: ({ row }) => {
         const isMine = row.original.assigneeId === user?.id;
         return (
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
             {isMine && <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" title="Assigned to you" />}
-            <span className={cn("font-mono text-[11px] font-bold", isMine ? "text-primary" : "text-muted-foreground/60")}>
+            <span className={cn("font-mono text-[11px] font-bold", isMine ? "text-primary" : "text-muted-foreground")}>
               {row.original.ticketNo}
             </span>
           </div>
@@ -126,13 +126,18 @@ export default function TicketsPage() {
       accessorKey: 'title',
       header: 'Subject',
       cell: ({ row }) => (
-        <div className="flex flex-col overflow-hidden max-w-[200px]">
+        <div className="flex flex-col overflow-hidden min-w-[140px] max-w-[200px]">
           <span className="font-bold text-[13px] text-foreground truncate">
             {row.original.title}
           </span>
-          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter truncate">
-            {row.original.client.name}
-          </span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter truncate">
+              {row.original.client.name}
+            </span>
+            <span className="sm:hidden text-[10px] text-muted-foreground font-black">
+              • {row.original.ticketNo}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -150,26 +155,26 @@ export default function TicketsPage() {
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: () => <span className="hidden xs:inline">Status</span>,
       cell: ({ getValue }) => {
         const status = getValue() as TicketStatus;
         const Icon = statusIcons[status];
         return (
           <div className="flex items-center gap-1.5">
             <Icon className="h-3 w-3 opacity-60" />
-            <span className="text-[11px] font-bold uppercase tracking-tighter">{status.replace(/_/g, ' ')}</span>
+            <span className="hidden xs:inline text-[11px] font-bold uppercase tracking-tighter">{status.replace(/_/g, ' ')}</span>
           </div>
         );
       },
     },
     {
       accessorKey: 'assignee',
-      header: 'Assignee',
+      header: () => <span className="hidden md:inline">Assignee</span>,
       cell: ({ row }) => {
         const assignee = row.original.assignee as any;
         const isMine = row.original.assigneeId === user?.id;
         return (
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             <span className={cn("text-[11px] font-bold uppercase tracking-tight", isMine ? "text-primary" : "text-muted-foreground/80")}>
               {isMine ? 'YOU' : (assignee?.displayName || '--')}
             </span>
@@ -178,10 +183,56 @@ export default function TicketsPage() {
       },
     },
     {
+      id: 'sla',
+      header: () => <span className="hidden md:inline">SLA Status</span>,
+      cell: ({ row }) => {
+        const ticket = row.original as any;
+        if (!ticket.slaDeadline) return <span className="hidden md:inline text-[11px] text-muted-foreground">--</span>;
+
+        const deadline = new Date(ticket.slaDeadline);
+        const resolved = ticket.resolvedAt ? new Date(ticket.resolvedAt) : null;
+
+        const now = new Date();
+        const totalSla = (ticket.slaLimitHours || 24) * 60 * 60 * 1000;
+        const created = new Date(ticket.createdAt);
+
+        const elapsed = (resolved ? resolved.getTime() : now.getTime()) - created.getTime();
+        const percent = Math.min(100, Math.max(0, (elapsed / totalSla) * 100));
+
+        const isBreached = ticket.slaStatus === 'BREACHED';
+        const isCompleted = ['RESOLVED', 'CLOSED'].includes(ticket.status);
+
+        let colorClass = 'bg-success';
+        if (isBreached) {
+          colorClass = 'bg-destructive';
+        } else if (percent > 75) {
+          colorClass = 'bg-warning animate-pulse';
+        } else if (percent > 50) {
+          colorClass = 'bg-orange-500';
+        }
+
+        return (
+          <div className="hidden md:flex flex-col gap-1 w-[80px]">
+            <div className="flex items-center justify-between text-[10px] font-black tracking-tighter uppercase">
+              <span className={cn(isBreached ? "text-destructive" : isCompleted ? "text-success" : "text-muted-foreground")}>
+                {isBreached ? 'Breached' : isCompleted ? 'Met SLA' : `${Math.round(100 - percent)}% left`}
+              </span>
+            </div>
+            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden border border-border/10">
+              <div
+                className={cn("h-full transition-all duration-500", colorClass)}
+                style={{ width: `${isCompleted && !isBreached ? 100 : percent}%` }}
+              />
+            </div>
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: 'createdAt',
-      header: 'Created',
+      header: () => <span className="hidden lg:inline">Created</span>,
       cell: ({ getValue }) => (
-        <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-tighter">
+        <span className="hidden lg:inline text-[10px] text-muted-foreground font-black uppercase tracking-tighter">
           {new Date(getValue() as string).toLocaleDateString()}
         </span>
       ),
@@ -193,13 +244,14 @@ export default function TicketsPage() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-7 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors px-2.5 text-[10px] font-black uppercase tracking-widest"
+            className="h-7 w-7 sm:w-auto sm:h-7 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors px-0 sm:px-2.5 text-[10px] font-black uppercase tracking-widest"
             onClick={(e) => {
               e.stopPropagation();
               router.push(`/dashboard/tickets/${row.original.id}`);
             }}
           >
-            Manage
+            <span className="hidden sm:inline">Manage</span>
+            <ChevronRight className="sm:hidden h-4 w-4" />
           </Button>
         </div>
       ),
@@ -276,10 +328,10 @@ export default function TicketsPage() {
             <Card className={cn("p-4 border border-border/50 bg-card relative overflow-hidden group hover:border-primary/20 transition-all shadow-sm rounded-xl", stat.bg)}>
               <div className="flex justify-between items-start relative z-10">
                 <div className="space-y-0.5">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{stat.label}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
                   <div className="flex items-baseline gap-1.5">
                     <span className={cn("text-2xl font-black font-display", stat.color)}>{stat.value}</span>
-                    <span className="text-[10px] font-bold text-muted-foreground/30">/ {stat.total}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground">/ {stat.total}</span>
                   </div>
                 </div>
                 <div className={cn("p-1.5 rounded-lg bg-background/50 border border-border/50 shadow-inner", stat.color)}>
@@ -294,18 +346,18 @@ export default function TicketsPage() {
       {/* Main Content Layout */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full lg:w-auto">
-            <TabsList className="grid w-full grid-cols-4 lg:w-[480px] h-9 p-0.5 rounded-lg bg-muted/50 border border-border/40">
-              <TabsTrigger value="my-active" className="rounded-md text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary py-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full lg:w-auto overflow-hidden">
+            <TabsList className="flex lg:grid lg:grid-cols-4 w-full lg:w-[480px] h-auto min-h-10 p-1 rounded-xl bg-muted/50 border border-border/40 overflow-x-auto custom-scrollbar">
+              <TabsTrigger value="my-active" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary py-1 px-3">
                 My Tasks ({myActive.length})
               </TabsTrigger>
-              <TabsTrigger value="active-pool" className="rounded-md text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1">
+              <TabsTrigger value="active-pool" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1 px-3">
                 Pool ({activePool.length})
               </TabsTrigger>
-              <TabsTrigger value="unassigned" className="rounded-md text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1">
+              <TabsTrigger value="unassigned" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1 px-3">
                 Open ({unassigned.length})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="rounded-md text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1">
+              <TabsTrigger value="completed" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card py-1 px-3">
                 Archive ({completed.length})
               </TabsTrigger>
             </TabsList>
@@ -313,7 +365,7 @@ export default function TicketsPage() {
 
           <div className="flex items-center gap-2">
             <div className="relative flex-1 lg:w-48">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Search pool..."
                 value={globalFilter ?? ''}
@@ -379,7 +431,7 @@ export default function TicketsPage() {
 
           {/* Pagination - Compact */}
           <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-t border-border/40">
-            <div className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
               Showing {table.getRowModel().rows.length} of {filteredData.length} records
             </div>
             <div className="flex items-center gap-1">

@@ -68,7 +68,7 @@ export default function PublicArticlePage() {
              </div>
           </div>
           <div className="hidden md:flex items-center gap-3">
-             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Secure Operations Center</p>
+             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Secure Operations Center</p>
           </div>
         </div>
       </nav>
@@ -89,7 +89,7 @@ export default function PublicArticlePage() {
                 {article.category.name}
               </Badge>
               <div className="h-1 w-1 rounded-full bg-border" />
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tight">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-tight">
                 <Clock className="h-3.5 w-3.5" />
                 {Math.ceil(article.content.split(' ').length / 200)} min read
               </div>

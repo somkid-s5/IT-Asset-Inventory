@@ -1,7 +1,8 @@
 'use client';
 
 import { FormEvent, useEffect, useState, useCallback } from 'react';
-import { Monitor, Plus, Trash2 } from 'lucide-react';
+import { Monitor, Plus, Trash2, Lock, Unlock, Shield } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -154,6 +155,9 @@ export function VmFormDialog({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(() => buildFormData(vmToEdit, discoveryVm));
   const [accounts, setAccounts] = useState<VmAccountFormValue[]>(() => buildAccounts(vmToEdit));
+  const [lockedFields, setLockedFields] = useState<string[]>(() => {
+    return vmToEdit?.managedFields || [];
+  });
 
   const resetForm = useCallback(() => {
     setFormData(buildFormData(vmToEdit, discoveryVm));
@@ -170,6 +174,7 @@ export function VmFormDialog({
           }))
           : [{ ...EMPTY_ACCOUNT }],
     );
+    setLockedFields(vmToEdit?.managedFields || []);
   }, [vmToEdit, discoveryVm]);
 
   useEffect(() => {
@@ -200,6 +205,7 @@ export function VmFormDialog({
         lifecycleState: formData.lifecycleState as 'DRAFT' | 'ACTIVE' | 'DELETED_IN_VCENTER',
         tags: formData.tags,
         guestAccounts: validAccounts,
+        managedFields: lockedFields,
       };
 
       if (vmToEdit) {
@@ -256,61 +262,247 @@ export function VmFormDialog({
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-1.5">
                 <Label htmlFor="vm-name">VM Name</Label>
-                <Input id="vm-name" value={formData.name} readOnly className="pointer-events-none" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="vm-moid">MoID</Label>
-                <Input id="vm-moid" value={formData.moid} readOnly className="pointer-events-none" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="vm-vcenter">vCenter Server</Label>
-                <Input id="vm-vcenter" value={formData.vcenterName} readOnly className="pointer-events-none" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="vm-state">Power Status</Label>
                 <Input
-                  id="vm-state"
-                  value={formData.powerState === 'RUNNING' ? 'Running' : formData.powerState === 'STOPPED' ? 'Stopped' : 'Suspended'}
-                  readOnly
-                  className="pointer-events-none"
+                  id="vm-name"
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, name: e.target.value }));
+                    if (!lockedFields.includes('name')) {
+                      setLockedFields(prev => [...prev, 'name']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('name')}
+                  className={cn(!lockedFields.includes('name') && "pointer-events-none opacity-80 bg-muted/20")}
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="vm-moid">MoID</Label>
+                <Input id="vm-moid" value={formData.moid} readOnly className="pointer-events-none opacity-80 bg-muted/20" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-vcenter">vCenter Server</Label>
+                <Input id="vm-vcenter" value={formData.vcenterName} readOnly className="pointer-events-none opacity-80 bg-muted/20" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-state">Power Status</Label>
+                <Select
+                  value={formData.powerState}
+                  onValueChange={(value) => {
+                    setFormData(c => ({ ...c, powerState: value }));
+                    if (!lockedFields.includes('powerState')) {
+                      setLockedFields(prev => [...prev, 'powerState']);
+                    }
+                  }}
+                  disabled={!lockedFields.includes('powerState')}
+                >
+                  <SelectTrigger id="vm-state" className={cn("w-full h-10", !lockedFields.includes('powerState') && "pointer-events-none opacity-80 bg-muted/20")}>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="RUNNING">Running</SelectItem>
+                    <SelectItem value="STOPPED">Stopped</SelectItem>
+                    <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="vm-cluster">Cluster</Label>
-                <Input id="vm-cluster" value={formData.cluster} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-cluster"
+                  value={formData.cluster}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, cluster: e.target.value }));
+                    if (!lockedFields.includes('cluster')) {
+                      setLockedFields(prev => [...prev, 'cluster']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('cluster')}
+                  className={cn(!lockedFields.includes('cluster') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-host">Host</Label>
-                <Input id="vm-host" value={formData.host} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-host"
+                  value={formData.host}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, host: e.target.value }));
+                    if (!lockedFields.includes('host')) {
+                      setLockedFields(prev => [...prev, 'host']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('host')}
+                  className={cn(!lockedFields.includes('host') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-computer-name">Computer Name</Label>
-                <Input id="vm-computer-name" value={formData.computerName} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-computer-name"
+                  value={formData.computerName}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, computerName: e.target.value }));
+                    if (!lockedFields.includes('computerName')) {
+                      setLockedFields(prev => [...prev, 'computerName']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('computerName')}
+                  className={cn(!lockedFields.includes('computerName') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-os">Guest OS</Label>
-                <Input id="vm-os" value={formData.guestOs} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-os"
+                  value={formData.guestOs}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, guestOs: e.target.value }));
+                    if (!lockedFields.includes('guestOs')) {
+                      setLockedFields(prev => [...prev, 'guestOs']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('guestOs')}
+                  className={cn(!lockedFields.includes('guestOs') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-ip">Primary IP</Label>
-                <Input id="vm-ip" value={formData.primaryIp} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-ip"
+                  value={formData.primaryIp}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, primaryIp: e.target.value }));
+                    if (!lockedFields.includes('primaryIp')) {
+                      setLockedFields(prev => [...prev, 'primaryIp']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('primaryIp')}
+                  className={cn(!lockedFields.includes('primaryIp') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-cpu">CPU (Cores)</Label>
-                <Input id="vm-cpu" value={formData.cpuCores} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-cpu"
+                  value={formData.cpuCores}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, cpuCores: e.target.value }));
+                    if (!lockedFields.includes('cpuCores')) {
+                      setLockedFields(prev => [...prev, 'cpuCores']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('cpuCores')}
+                  className={cn(!lockedFields.includes('cpuCores') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-memory">Memory (GB)</Label>
-                <Input id="vm-memory" value={formData.memoryGb} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-memory"
+                  value={formData.memoryGb}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, memoryGb: e.target.value }));
+                    if (!lockedFields.includes('memoryGb')) {
+                      setLockedFields(prev => [...prev, 'memoryGb']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('memoryGb')}
+                  className={cn(!lockedFields.includes('memoryGb') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-storage">Storage (GB)</Label>
-                <Input id="vm-storage" value={formData.storageGb} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-storage"
+                  value={formData.storageGb}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, storageGb: e.target.value }));
+                    if (!lockedFields.includes('storageGb')) {
+                      setLockedFields(prev => [...prev, 'storageGb']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('storageGb')}
+                  className={cn(!lockedFields.includes('storageGb') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vm-network">Network Label</Label>
-                <Input id="vm-network" value={formData.networkLabel} readOnly className="pointer-events-none" />
+                <Input
+                  id="vm-network"
+                  value={formData.networkLabel}
+                  onChange={(e) => {
+                    setFormData(c => ({ ...c, networkLabel: e.target.value }));
+                    if (!lockedFields.includes('networkLabel')) {
+                      setLockedFields(prev => [...prev, 'networkLabel']);
+                    }
+                  }}
+                  readOnly={!lockedFields.includes('networkLabel')}
+                  className={cn(!lockedFields.includes('networkLabel') && "pointer-events-none opacity-80 bg-muted/20")}
+                />
               </div>
+            </div>
+          </section>
+
+          {/* Drift Protection (Field Locks) Section */}
+          <section className="surface-panel p-4 space-y-4 border-2 border-primary/20 bg-primary/[0.01]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                   <Shield className="h-4 w-4 text-primary animate-pulse" /> Sync Drift Protection & Field Locks
+                </h3>
+                <p className="text-[11px] text-muted-foreground">Select fields that should NOT be overwritten by vCenter sync runs.</p>
+              </div>
+              <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-[11px] text-muted-foreground flex items-center gap-1 font-bold">
+                <Lock className="h-3 w-3" /> Manual Control
+              </span>
+            </div>
+
+            <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 pt-2">
+               {[
+                 { key: 'name', label: 'VM Name' },
+                 { key: 'primaryIp', label: 'Primary IP' },
+                 { key: 'cpuCores', label: 'CPU Cores' },
+                 { key: 'memoryGb', label: 'Memory RAM' },
+                 { key: 'storageGb', label: 'Storage GB' },
+                 { key: 'networkLabel', label: 'Network Label' },
+                 { key: 'powerState', label: 'Power Status' },
+                 { key: 'host', label: 'ESXi Host' },
+                 { key: 'cluster', label: 'VCenter Cluster' },
+               ].map((field) => {
+                 const isLocked = lockedFields.includes(field.key);
+                 return (
+                   <label
+                     key={field.key}
+                     className={cn(
+                       "flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all hover:bg-muted/40",
+                       isLocked ? "border-primary/40 bg-primary/[0.02]" : "border-border/60 bg-background/20"
+                     )}
+                   >
+                     <input
+                       type="checkbox"
+                       checked={isLocked}
+                       onChange={() => {
+                         setLockedFields(prev =>
+                           prev.includes(field.key)
+                             ? prev.filter(f => f !== field.key)
+                             : [...prev, field.key]
+                         );
+                       }}
+                       className="rounded border-border text-primary focus:ring-primary h-4 w-4 shrink-0"
+                     />
+                     <div className="min-w-0">
+                        <div className="text-xs font-bold truncate text-foreground">{field.label}</div>
+                        <div className="text-[9px] text-muted-foreground tracking-tight font-medium uppercase flex items-center gap-1">
+                           {isLocked ? (
+                             <><Lock className="h-2.5 w-2.5 text-primary" /> Protected</>
+                           ) : (
+                             <><Unlock className="h-2.5 w-2.5 text-muted-foreground" /> Auto-Sync</>
+                           )}
+                        </div>
+                     </div>
+                   </label>
+                 );
+               })}
             </div>
           </section>
 

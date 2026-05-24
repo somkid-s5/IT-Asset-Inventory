@@ -79,7 +79,7 @@ export default function CategoryPage() {
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input 
               placeholder={`Search in ${category.name}...`} 
               value={search}
@@ -107,7 +107,7 @@ export default function CategoryPage() {
             <div 
               key={article.id}
               className="group p-3 px-6 hover:bg-primary/[0.03] transition-all cursor-pointer flex items-center justify-between gap-4"
-              onClick={() => router.push(`/dashboard/docs/article/${article.id}`)}
+              onClick={() => router.push(`/dashboard/docs/${article.id}`)}
             >
               <div className="flex items-center gap-4 overflow-hidden flex-1">
                 <div className="h-8 w-8 rounded-lg bg-primary/5 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -117,7 +117,7 @@ export default function CategoryPage() {
                   <h3 className="font-bold text-sm truncate group-hover:text-primary transition-colors min-w-[200px]">
                     {article.title}
                   </h3>
-                  <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground/50 uppercase tracking-tighter shrink-0">
+                  <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter shrink-0">
                     <div className="flex items-center gap-1">
                       <User className="h-3 w-3" />
                       {article.author.displayName}

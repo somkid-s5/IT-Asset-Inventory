@@ -7,7 +7,8 @@ export class NotificationsService {
   private readonly lineNotifyToken: string;
 
   constructor(private configService: ConfigService) {
-    this.lineNotifyToken = this.configService.get<string>('LINE_NOTIFY_TOKEN') || '';
+    this.lineNotifyToken =
+      this.configService.get<string>('LINE_NOTIFY_TOKEN') || '';
   }
 
   async sendLineNotify(message: string) {
@@ -52,6 +53,19 @@ export class NotificationsService {
 
   async notifyTicketResolved(ticketNo: string, title: string) {
     const message = `\n✅ ปิดงานแล้ว\n🎫 เลขที่: ${ticketNo}\n📋 หัวข้อ: ${title}`;
+    await this.sendLineNotify(message);
+  }
+
+  async notifyNewComment(
+    ticketNo: string,
+    title: string,
+    authorName: string,
+    content: string,
+  ) {
+    // Truncate content if too long for Line Notify
+    const displayContent =
+      content.length > 100 ? content.substring(0, 97) + '...' : content;
+    const message = `\n💬 คอมเมนต์ใหม่: ${title}\n🎫 เลขที่: ${ticketNo}\n✍️ โดย: @${authorName}\n📝 ข้อความ: ${displayContent}`;
     await this.sendLineNotify(message);
   }
 }

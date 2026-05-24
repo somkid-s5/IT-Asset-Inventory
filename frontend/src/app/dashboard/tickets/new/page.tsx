@@ -105,7 +105,7 @@ export default function NewTicketPage() {
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info */}
-          <Card className="lg:col-span-2 p-6 rounded-[32px] border-2 shadow-lg space-y-6">
+          <Card className="lg:col-span-2 p-5 sm:p-6 rounded-[24px] sm:rounded-[32px] border-2 shadow-lg space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title" className="text-sm font-semibold ml-1">Problem Summary</Label>
               <Input
@@ -113,7 +113,7 @@ export default function NewTicketPage() {
                 placeholder="Briefly describe the issue..."
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
-                className="h-12 text-lg font-medium rounded-xl border-border/50 focus-visible:ring-primary/20"
+                className="h-11 sm:h-12 text-md sm:text-lg font-medium rounded-xl border-border/50 focus-visible:ring-primary/20"
                 required
               />
             </div>
@@ -125,14 +125,14 @@ export default function NewTicketPage() {
                 placeholder="Provide more context or steps taken..."
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                className="min-h-[200px] rounded-xl border-border/50 focus-visible:ring-primary/20 resize-none"
+                className="min-h-[150px] sm:min-h-[200px] rounded-xl border-border/50 focus-visible:ring-primary/20 resize-none"
               />
             </div>
           </Card>
 
           {/* Sidebar / Metadata */}
           <div className="space-y-6">
-            <Card className="p-6 rounded-[32px] border-2 shadow-md space-y-5 bg-muted/30">
+            <Card className="p-5 sm:p-6 rounded-[24px] sm:rounded-[32px] border-2 shadow-md space-y-5 bg-muted/30">
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <UserIcon className="h-3 w-3" /> Requester / Client

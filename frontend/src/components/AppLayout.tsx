@@ -1,12 +1,10 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
-import { AppBreadcrumbs } from '@/components/AppBreadcrumbs';
 import { BrandMark } from '@/components/BrandMark';
 import { UserAvatar } from '@/components/UserAvatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageHeaderProvider, usePageHeader } from '@/contexts/PageHeaderContext';
-import { cn } from '@/lib/utils';
 import { LogOut, Moon, Sun, Menu, X } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';

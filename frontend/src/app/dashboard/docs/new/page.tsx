@@ -183,7 +183,7 @@ export default function ArticleFormPage() {
               </div>
 
               <div className="space-y-4 pt-4 border-t border-border">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Writing Help</p>
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Writing Help</p>
                  <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
                     <p>Type <code className="text-primary font-bold">/</code> to insert blocks (images, tables, lists).</p>
                     <p>Highlight text to show the formatting menu.</p>

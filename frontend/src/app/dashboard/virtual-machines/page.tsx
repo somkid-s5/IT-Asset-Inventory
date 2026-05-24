@@ -3,14 +3,13 @@
 export const dynamic = 'force-dynamic';
 
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
 import {
-  AlertTriangle, ArrowDown, ArrowUp, ChevronsUpDown, 
-  CheckCircle2, Clock3, Monitor, RefreshCw, Search, Server, 
+  AlertTriangle, CheckCircle2, Clock3, Monitor, RefreshCw, Search, Server, 
   ChevronLeft, ChevronRight, Columns, Download, ShieldAlert,
-  LoaderCircle, Plus, Box
+  LoaderCircle, Box
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { VmFormDialog } from '@/components/LazyLoadedDialogs';
@@ -20,7 +19,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type VmDiscoveryItem, type VmInventoryItem } from '@/lib/vm-inventory';
-import { getVmDiscoveries, getVmDiscovery, getVmInventory, getVmSources } from '@/services/vm';
+import { getVmDiscoveries, getVmDiscovery, getVmInventory } from '@/services/vm';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -28,11 +27,10 @@ import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, 
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   flexRender, getCoreRowModel, getSortedRowModel,
   getPaginationRowModel, getFilteredRowModel, useReactTable,
-  ColumnDef, SortingState, ColumnFiltersState, VisibilityState,
+  ColumnDef, SortingState, VisibilityState,
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -96,7 +94,7 @@ export default function VmPage() {
     });
   }, [setHeader]);
 
-  const openPendingSetup = async (id: string) => {
+  const openPendingSetup = useCallback(async (id: string) => {
     try {
       setOpeningPendingId(id);
       const discovery = await getVmDiscovery(id);
@@ -107,7 +105,11 @@ export default function VmPage() {
     } finally {
       setOpeningPendingId(null);
     }
-  };
+  }, []);
+
+  const openInventoryDetail = useCallback((id: string) => {
+    router.push(`/dashboard/virtual-machines/${id}`);
+  }, [router]);
 
   const pendingQueue = useMemo(() => discoveries.filter(vm => vm.state !== 'DRIFTED'), [discoveries]);
   const activeQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ACTIVE' && vm.syncState !== 'Missing from source'), [inventory]);
@@ -131,7 +133,7 @@ export default function VmPage() {
             <Monitor className="h-3.5 w-3.5" />
             Compute & Virtualization Inventory
           </h2>
-          <p className="text-xs text-muted-foreground/60">Manage virtual instances across vCenter sources</p>
+          <p className="text-xs text-muted-foreground">Manage virtual instances across vCenter sources</p>
         </div>
         <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={() => router.push('/dashboard/virtual-machines/sources')}>
@@ -152,9 +154,9 @@ export default function VmPage() {
             {activeView === 'PENDING' ? (
               <PendingTable data={pendingQueue} onOpen={openPendingSetup} openingId={openingPendingId} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
             ) : activeView === 'ACTIVE' ? (
-              <ActiveTable data={activeQueue} onOpen={(id: string) => router.push(`/dashboard/virtual-machines/${id}`)} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
+              <ActiveTable data={activeQueue} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
             ) : (
-              <OrphanedTable data={orphanedQueue} onOpen={(id: string) => router.push(`/dashboard/virtual-machines/${id}`)} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
+              <OrphanedTable data={orphanedQueue} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
             )}
           </>
         )}
@@ -295,7 +297,7 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
                 : "text-muted-foreground hover:text-foreground hover:bg-card/50"
             )}
           >
-            <tab.icon className={cn("h-3.5 w-3.5", view === tab.key ? tab.iconClassName : "text-muted-foreground/50")} />
+            <tab.icon className={cn("h-3.5 w-3.5", view === tab.key ? tab.iconClassName : "text-muted-foreground")} />
             {tab.label}
             <Badge variant="neutral" className="ml-1 h-4 px-1 font-mono text-[9px] bg-muted/50">
               {stats[tab.key]}
@@ -307,7 +309,7 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
       {/* Right: Search & Actions */}
       <div className="flex items-center gap-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={VIEW_COPY[view].searchPlaceholder}
             value={searchTerm}

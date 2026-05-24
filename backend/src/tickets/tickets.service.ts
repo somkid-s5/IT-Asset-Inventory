@@ -4,7 +4,16 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { ClientsService } from '../clients/clients.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { TicketStatus, Prisma } from '@prisma/client';
+import { TicketStatus, TicketPriority, Prisma, Ticket } from '@prisma/client';
+
+type TicketWithRelations = Ticket & {
+  client?: any;
+  assignee?: any;
+  creator?: any;
+  asset?: any;
+  vm?: any;
+  comments?: any[];
+};
 
 @Injectable()
 export class TicketsService {
@@ -40,6 +49,57 @@ export class TicketsService {
     }
 
     return `SD-${yearMonth}-${nextNumber.toString().padStart(3, '0')}`;
+  }
+
+  private withSla(ticket: TicketWithRelations) {
+    if (!ticket) return null;
+
+    const slaLimits: Record<TicketPriority, number> = {
+      CRITICAL: 4,
+      HIGH: 12,
+      MEDIUM: 24,
+      LOW: 72,
+    };
+
+    const limitHours = slaLimits[ticket.priority] || 24;
+    const slaDeadline = new Date(
+      ticket.createdAt.getTime() + limitHours * 60 * 60 * 1000,
+    );
+
+    let slaStatus: 'WITHIN_SLA' | 'BREACHED' = 'WITHIN_SLA';
+    const resolveTime = ticket.resolvedAt || new Date();
+
+    if (resolveTime.getTime() > slaDeadline.getTime()) {
+      slaStatus = 'BREACHED';
+    }
+
+    const result = {
+      id: ticket.id,
+      ticketNo: ticket.ticketNo,
+      title: ticket.title,
+      description: ticket.description,
+      priority: ticket.priority,
+      status: ticket.status,
+      clientId: ticket.clientId,
+      assetId: ticket.assetId,
+      vmId: ticket.vmId,
+      assigneeId: ticket.assigneeId,
+      creatorId: ticket.creatorId,
+      createdAt: ticket.createdAt,
+      updatedAt: ticket.updatedAt,
+      resolvedAt: ticket.resolvedAt,
+      client: ticket.client as unknown,
+      assignee: ticket.assignee as unknown,
+      creator: ticket.creator as unknown,
+      asset: ticket.asset as unknown,
+      vm: ticket.vm as unknown,
+      comments: ticket.comments as unknown,
+      slaDeadline,
+      slaStatus,
+      slaLimitHours: limitHours,
+    };
+
+    return result;
   }
 
   async create(createTicketDto: CreateTicketDto, creatorId: string) {
@@ -81,11 +141,11 @@ export class TicketsService {
       ticket.client.name,
     );
 
-    return ticket;
+    return this.withSla(ticket);
   }
 
   async findAll() {
-    return this.prisma.ticket.findMany({
+    const tickets = await this.prisma.ticket.findMany({
       include: {
         client: true,
         assignee: {
@@ -97,6 +157,7 @@ export class TicketsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return tickets.map((ticket) => this.withSla(ticket));
   }
 
   async findOne(id: string) {
@@ -131,7 +192,7 @@ export class TicketsService {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
-    return ticket;
+    return this.withSla(ticket);
   }
 
   async update(id: string, updateTicketDto: UpdateTicketDto) {
@@ -192,7 +253,7 @@ export class TicketsService {
       );
     }
 
-    return updated;
+    return this.withSla(updated);
   }
 
   async remove(id: string) {

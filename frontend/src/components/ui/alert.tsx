@@ -99,9 +99,6 @@ const Alert = React.forwardRef<
     icon?: React.ReactNode;
   }
 >(({ className, variant, children, onClose, show = true, icon, ...props }, ref) => {
-  // Omit conflicting props before spreading to motion.div
-  const { onDrag, onDragStart, onDragEnd, onAnimationStart, ...safeProps } = props as any;
-
   return (
     <AnimatePresence>
       {show && (
@@ -112,7 +109,7 @@ const Alert = React.forwardRef<
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
           className={cn(alertVariants({ variant }), className)}
-          {...safeProps}
+          {...(props as any)}
         >
           {/* Cyber Accent Line */}
           <div 

@@ -51,8 +51,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { 
   Dialog, 
   DialogContent, 
@@ -469,31 +468,7 @@ function AttachmentsSection({ assetId, initialAttachments }: { assetId: string; 
   );
 }
 
-// ─── Markdown Renderer ─────────────────────────────────────────────────────
-function MarkdownRenderer({ content, className }: { content: string; className?: string }) {
-  return (
-    <div className={cn("prose prose-sm prose-invert max-w-none break-words", className)}>
-      <ReactMarkdown 
-        remarkPlugins={[remarkGfm]}
-        components={{
-          p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed text-foreground/90">{children}</p>,
-          ul: ({ children }) => <ul className="mb-2 list-disc pl-4 text-foreground/80">{children}</ul>,
-          ol: ({ children }) => <ol className="mb-2 list-decimal pl-4 text-foreground/80">{children}</ol>,
-          li: ({ children }) => <li className="mb-1">{children}</li>,
-          h1: ({ children }) => <h1 className="mb-3 text-lg font-bold text-foreground">{children}</h1>,
-          h2: ({ children }) => <h2 className="mb-2 text-base font-bold text-foreground">{children}</h2>,
-          h3: ({ children }) => <h3 className="mb-2 text-sm font-bold text-foreground">{children}</h3>,
-          strong: ({ children }) => <strong className="font-bold text-primary">{children}</strong>,
-          code: ({ children }) => <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-primary">{children}</code>,
-          blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/30 pl-3 italic text-muted-foreground">{children}</blockquote>,
-          a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-primary hover:underline">{children}</a>,
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
-}
+// Remove duplicate MarkdownRenderer
 
 // ─── Notes Section ─────────────────────────────────────────────────────────
 function NotesSection({ assetId, initialNotes }: { assetId: string; initialNotes: AssetNote[] }) {
@@ -639,7 +614,7 @@ function NotesSection({ assetId, initialNotes }: { assetId: string; initialNotes
                </div>
                {previewMode ? (
                  <div className="flex-1 overflow-y-auto bg-muted/20 rounded-2xl p-6 border border-border/40">
-                   {newContent ? <MarkdownRenderer content={newContent} /> : <span className="text-muted-foreground/50 italic text-sm">Nothing to preview...</span>}
+                   {newContent ? <MarkdownRenderer content={newContent} /> : <span className="text-muted-foreground italic text-sm">Nothing to preview...</span>}
                  </div>
                ) : (
                  <textarea
@@ -696,7 +671,7 @@ function NotesSection({ assetId, initialNotes }: { assetId: string; initialNotes
           className="w-full resize-none rounded-xl border border-border/60 bg-background/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
         />
         <div className="flex justify-between items-center">
-          <span className="text-[10px] text-muted-foreground/60 italic ml-1">Ctrl+Enter to submit</span>
+          <span className="text-[10px] text-muted-foreground italic ml-1">Ctrl+Enter to submit</span>
           <button
             onClick={() => void handleAdd()}
             disabled={submitting || !newContent.trim()}
@@ -857,8 +832,18 @@ function NotesSection({ assetId, initialNotes }: { assetId: string; initialNotes
   );
 }
 
+interface TicketSummary {
+  id: string;
+  ticketNo: string;
+  title: string;
+  status: string;
+  createdAt: string;
+  assignee?: { displayName: string } | null;
+  client: { name: string };
+}
+
 // ─── Ticket History Section ────────────────────────────────────────────────
-function TicketHistorySection({ tickets }: { tickets: any[] }) {
+function TicketHistorySection({ tickets }: { tickets: TicketSummary[] }) {
   const router = useRouter();
   
   return (

@@ -1,10 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTicketCommentDto } from './dto/create-ticket-comment.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TicketCommentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async create(
     ticketId: string,
@@ -16,12 +23,15 @@ export class TicketCommentsService {
     // Check if ticket exists
     const ticket = await this.prisma.ticket.findUnique({
       where: { id: ticketId },
+      include: {
+        creator: { select: { displayName: true } },
+      },
     });
     if (!ticket) {
       throw new NotFoundException(`Ticket with ID ${ticketId} not found`);
     }
 
-    return this.prisma.ticketComment.create({
+    const comment = await this.prisma.ticketComment.create({
       data: {
         ticketId,
         userId,
@@ -35,6 +45,22 @@ export class TicketCommentsService {
         },
       },
     });
+
+    // Notify if not a system message
+    if (!isSystem) {
+      this.notificationsService
+        .notifyNewComment(
+          ticket.ticketNo,
+          ticket.title,
+          comment.user?.displayName || 'Unknown',
+          content,
+        )
+        .catch((err) =>
+          console.error('Failed to send comment notification:', err),
+        );
+    }
+
+    return comment;
   }
 
   async findAllForTicket(ticketId: string) {
@@ -58,7 +84,9 @@ export class TicketCommentsService {
     }
     // Only author can delete
     if (comment.userId !== userId) {
-      throw new Error('You are not authorized to delete this comment');
+      throw new ForbiddenException(
+        'You are not authorized to delete this comment',
+      );
     }
 
     return this.prisma.ticketComment.delete({

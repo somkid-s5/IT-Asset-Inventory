@@ -87,7 +87,7 @@ export default function EditArticlePage() {
     try {
       await kbService.updateArticle(id as string, formData);
       toast.success('Article updated successfully');
-      router.push(`/dashboard/docs/article/${id}`);
+      router.push(`/dashboard/docs/${id}`);
     } catch (error) {
       toast.error('Failed to update article');
     } finally {
@@ -135,7 +135,7 @@ export default function EditArticlePage() {
         <div className="lg:col-span-3 space-y-6">
            <Card className="p-6 rounded-[32px] border-2 shadow-lg space-y-6 bg-card">
               <div className="space-y-2 px-1">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Article Title</Label>
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Article Title</Label>
                 <Input 
                   placeholder="Enter title..."
                   value={formData.title}
@@ -181,7 +181,7 @@ export default function EditArticlePage() {
         <div className="space-y-6">
            <Card className="p-6 rounded-[32px] border-2 shadow-md space-y-6 bg-muted/20 border-border/40">
               <div className="space-y-3">
-                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
+                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                     <FileText className="h-3 w-3" /> Category
                  </Label>
                  <Select 
@@ -200,7 +200,7 @@ export default function EditArticlePage() {
               </div>
 
               <div className="pt-6 border-t border-border/40">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-4">Markdown Tips</p>
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-4">Markdown Tips</p>
                  <div className="space-y-3">
                     {[
                         { label: 'Header', code: '# Title' },

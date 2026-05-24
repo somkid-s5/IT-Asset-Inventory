@@ -37,7 +37,7 @@ export default function NotionEditor({ initialContent, onChange }: NotionEditorP
       }
     }
     loadInitialContent();
-  }, [editor]); // Only run when editor instance is ready
+  }, [editor, initialContent]); // Only run when editor instance is ready or initialContent changes
 
   return (
     <div className="min-h-[600px] bg-card rounded-[24px] border-2 border-border/40 p-4 focus-within:border-primary/40 transition-all shadow-inner overflow-hidden">

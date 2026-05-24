@@ -1,4 +1,4 @@
-import { PrismaClient, Role, AssetType, AssetStatus } from '@prisma/client';
+import { PrismaClient, Role, AssetType, AssetStatus, TicketStatus, TicketPriority } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -27,6 +27,11 @@ async function main() {
     
     console.log('Step 1: Clearing existing data...');
     // Delete in reverse dependency order
+    await prisma.ticketComment.deleteMany();
+    await prisma.ticket.deleteMany();
+    await prisma.client.deleteMany();
+    await prisma.knowledgeArticle.deleteMany();
+    await prisma.knowledgeCategory.deleteMany();
     await prisma.auditLog.deleteMany();
     await prisma.credential.deleteMany();
     await prisma.patchInfo.deleteMany();
@@ -69,7 +74,17 @@ async function main() {
     });
     console.log(`✅ Users created (admin, soc_analyst).`);
 
-    console.log('Step 3: Creating sample assets...');
+    console.log('Step 3: Creating sample clients and categories...');
+    const client = await prisma.client.create({
+        data: { name: 'Internal IT' }
+    });
+
+    const category = await prisma.knowledgeCategory.create({
+        data: { name: 'General', icon: 'Book' }
+    });
+    console.log(`✅ Sample clients and categories created.`);
+
+    console.log('Step 4: Creating sample assets...');
     const assetsData = [
         {
             name: 'db-prod-01',
@@ -111,8 +126,31 @@ async function main() {
     }
     console.log(`✅ Sample assets created.`);
 
+    console.log('Step 5: Creating sample ticket and KB article...');
+    await prisma.ticket.create({
+        data: {
+            ticketNo: 'TKT-2026-0001',
+            title: 'Initial System Audit',
+            description: 'Perform full audit of production assets.',
+            clientId: client.id,
+            creatorId: adminUser.id,
+            status: TicketStatus.OPEN,
+            priority: TicketPriority.MEDIUM
+        }
+    });
+
+    await prisma.knowledgeArticle.create({
+        data: {
+            title: 'Getting Started',
+            content: 'Welcome to the IT Asset Inventory system.',
+            categoryId: category.id,
+            authorId: adminUser.id
+        }
+    });
+    console.log(`✅ Sample ticket and KB article created.`);
+
     if (encryptionKey && Buffer.from(encryptionKey, 'hex').length === 32) {
-        console.log('Step 4: Seeding credentials...');
+        console.log('Step 6: Seeding credentials...');
         await prisma.credential.create({
             data: {
                 assetId: createdAssets[0].id,
