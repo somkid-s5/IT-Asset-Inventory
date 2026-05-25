@@ -1,0 +1,2 @@
+- [x] Subtask 4.1: Update Ticket interface in frontend/src/services/tickets.ts
+- [x] Subtask 4.2: Move priorityColors and statusColors constants in frontend/src/app/dashboard/tickets/[id]/page.tsx

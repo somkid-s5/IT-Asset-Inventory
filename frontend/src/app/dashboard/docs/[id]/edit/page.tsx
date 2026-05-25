@@ -49,29 +49,29 @@ export default function EditArticlePage() {
     queryFn: kbService.getCategories,
   });
 
-  const { data: article, isLoading } = useQuery({
-    queryKey: ['kb-article', id],
-    queryFn: () => kbService.getArticle(id as string),
+  const { data: document, isLoading } = useQuery({
+    queryKey: ['kb-document', id],
+    queryFn: () => kbService.getDocument(id as string),
     enabled: !!id,
   });
 
   useEffect(() => {
-    if (article) {
+    if (document) {
       setFormData({
-        title: article.title,
-        content: article.content,
-        categoryId: article.categoryId,
+        title: document.title,
+        content: document.content,
+        categoryId: document.categoryId,
       });
     }
-  }, [article]);
+  }, [document]);
 
   useEffect(() => {
     setHeader({
-      title: 'Edit Article',
+      title: 'Edit Document',
       breadcrumbs: [
         { label: 'Workspace', href: '/dashboard' },
         { label: 'Knowledge Base', href: '/dashboard/docs' },
-        { label: 'Edit Article' },
+        { label: 'Edit Document' },
       ],
     });
   }, [setHeader]);
@@ -85,11 +85,11 @@ export default function EditArticlePage() {
 
     setIsSubmitting(true);
     try {
-      await kbService.updateArticle(id as string, formData);
-      toast.success('Article updated successfully');
-      router.push(`/dashboard/docs/article/${id}`);
+      await kbService.updateDocument(id as string, formData);
+      toast.success('Document updated successfully');
+      router.push(`/dashboard/docs/${id}`);
     } catch (error) {
-      toast.error('Failed to update article');
+      toast.error('Failed to update document');
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +110,7 @@ export default function EditArticlePage() {
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full hover:bg-primary/10 transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-black tracking-tight">Edit Article</h1>
+          <h1 className="text-3xl font-black tracking-tight">Edit Document</h1>
         </div>
         <div className="flex items-center gap-3">
             <Button 
@@ -135,7 +135,7 @@ export default function EditArticlePage() {
         <div className="lg:col-span-3 space-y-6">
            <Card className="p-6 rounded-[32px] border-2 shadow-lg space-y-6 bg-card">
               <div className="space-y-2 px-1">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Article Title</Label>
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Document Title</Label>
                 <Input 
                   placeholder="Enter title..."
                   value={formData.title}
@@ -157,9 +157,9 @@ export default function EditArticlePage() {
                 </div>
 
                 <TabsContent value="write" className="mt-0">
-                   {article && (
+                   {document && (
                     <NotionEditor 
-                      initialContent={article.content}
+                      initialContent={document.content}
                       onChange={(markdown) => setFormData(prev => ({ ...prev, content: markdown }))} 
                     />
                    )}
@@ -181,7 +181,7 @@ export default function EditArticlePage() {
         <div className="space-y-6">
            <Card className="p-6 rounded-[32px] border-2 shadow-md space-y-6 bg-muted/20 border-border/40">
               <div className="space-y-3">
-                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
+                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                     <FileText className="h-3 w-3" /> Category
                  </Label>
                  <Select 
@@ -200,7 +200,7 @@ export default function EditArticlePage() {
               </div>
 
               <div className="pt-6 border-t border-border/40">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-4">Markdown Tips</p>
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-4">Markdown Tips</p>
                  <div className="space-y-3">
                     {[
                         { label: 'Header', code: '# Title' },

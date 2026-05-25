@@ -97,6 +97,106 @@ export class DashboardService {
       count: group._count._all,
     }));
 
+    const [
+      totalTicketsCount,
+      openTicketsCount,
+      resolvedTicketsCount,
+      metSlaCountRaw,
+      breachedResolvedCountRaw,
+      breachedOpenCountRaw,
+    ] = await Promise.all([
+      this.prisma.ticket.count(),
+      this.prisma.ticket.count({
+        where: { status: { notIn: ['RESOLVED', 'CLOSED'] } },
+      }),
+      this.prisma.ticket.count({
+        where: { status: { in: ['RESOLVED', 'CLOSED'] } },
+      }),
+      this.prisma.$queryRaw<{ count: number }[]>`
+        SELECT COUNT(*)::int as count 
+        FROM "Ticket" 
+        WHERE ("status" = 'RESOLVED' OR "status" = 'CLOSED')
+          AND "resolvedAt" <= "createdAt" + (
+            CASE "priority"::text
+              WHEN 'CRITICAL' THEN 4
+              WHEN 'HIGH' THEN 12
+              WHEN 'MEDIUM' THEN 24
+              WHEN 'LOW' THEN 72
+              ELSE 24
+            END * interval '1 hour'
+          )
+      `,
+      this.prisma.$queryRaw<{ count: number }[]>`
+        SELECT COUNT(*)::int as count 
+        FROM "Ticket" 
+        WHERE ("status" = 'RESOLVED' OR "status" = 'CLOSED')
+          AND "resolvedAt" > "createdAt" + (
+            CASE "priority"::text
+              WHEN 'CRITICAL' THEN 4
+              WHEN 'HIGH' THEN 12
+              WHEN 'MEDIUM' THEN 24
+              WHEN 'LOW' THEN 72
+              ELSE 24
+            END * interval '1 hour'
+          )
+      `,
+      this.prisma.$queryRaw<{ count: number }[]>`
+        SELECT COUNT(*)::int as count 
+        FROM "Ticket" 
+        WHERE "status" NOT IN ('RESOLVED', 'CLOSED')
+          AND NOW() > "createdAt" + (
+            CASE "priority"::text
+              WHEN 'CRITICAL' THEN 4
+              WHEN 'HIGH' THEN 12
+              WHEN 'MEDIUM' THEN 24
+              WHEN 'LOW' THEN 72
+              ELSE 24
+            END * interval '1 hour'
+          )
+      `,
+    ]);
+
+    const metSlaCount = Number(metSlaCountRaw[0]?.count || 0);
+    const breachedResolvedCount = Number(
+      breachedResolvedCountRaw[0]?.count || 0,
+    );
+    const breachedOpenCount = Number(breachedOpenCountRaw[0]?.count || 0);
+    const breachedCount = breachedResolvedCount + breachedOpenCount;
+    const openCount = openTicketsCount;
+
+    const slaSuccessRate =
+      resolvedTicketsCount > 0
+        ? Math.round((metSlaCount / resolvedTicketsCount) * 100)
+        : 100;
+
+    // Asset Health Score Calculation
+    let healthScore = 100;
+
+    if (totalAssets > 0) {
+      const offlineRatio = (totalAssets - activeAssets) / totalAssets;
+      healthScore -= Math.round(offlineRatio * 30);
+    }
+
+    if (totalSources > 0) {
+      const failedRatio = connectionFailedSources / totalSources;
+      healthScore -= Math.round(failedRatio * 40);
+    }
+
+    const eolAssetsCount = await this.prisma.patchInfo.count({
+      where: {
+        eolDate: {
+          lt: new Date(),
+        },
+      },
+    });
+
+    if (totalAssets > 0) {
+      const eolRatio = eolAssetsCount / totalAssets;
+      healthScore -= Math.round(eolRatio * 30);
+    }
+
+    const assetHealthScore = Math.max(0, Math.min(100, healthScore));
+
     return {
       assets: {
         total: totalAssets,
@@ -123,6 +223,18 @@ export class DashboardService {
         total: totalUsers,
         admins: adminUsers,
         nonAdmins: Math.max(0, totalUsers - adminUsers),
+      },
+      tickets: {
+        total: totalTicketsCount,
+        open: openCount,
+        resolved: resolvedTicketsCount,
+        metSla: metSlaCount,
+        breached: breachedCount,
+        slaSuccessRate,
+      },
+      assetHealth: {
+        score: assetHealthScore,
+        eolCount: eolAssetsCount,
       },
     };
   }

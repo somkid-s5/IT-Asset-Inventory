@@ -5,7 +5,7 @@ import {
   IsEnum,
   IsUUID,
 } from 'class-validator';
-import { TicketPriority, TicketStatus } from '@prisma/client';
+import { TicketPriority } from '@prisma/client';
 
 export class CreateTicketDto {
   @IsString()
@@ -27,6 +27,10 @@ export class CreateTicketDto {
   @IsUUID()
   @IsOptional()
   assetId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  vmId?: string;
 
   @IsUUID()
   @IsOptional()

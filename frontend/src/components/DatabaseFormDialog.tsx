@@ -151,7 +151,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      console.error(error);
+      // Silent error handler
       const errRes = error?.response?.data;
       let message = 'Failed to save database';
       if (errRes?.message) {
@@ -397,7 +397,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                         <button
                           type="button"
                           onClick={() => setShowPasswords((prev) => ({ ...prev, [index]: !prev[index] }))}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         >
                           {showPasswords[index] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </button>

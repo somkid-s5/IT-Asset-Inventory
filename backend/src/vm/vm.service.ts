@@ -36,14 +36,23 @@ type VmSourceWithCounts = Prisma.VmVCenterSourceGetPayload<{
   };
 }>;
 
-type VmDiscoveryWithRelations = Prisma.VmDiscoveryGetPayload<{
-  include: {
-    source: true;
-    guestAccounts: true;
-  };
-}>;
+const VM_INVENTORY_INCLUDE = {
+  source: true,
+  guestAccounts: true,
+  tickets: {
+    include: {
+      client: { select: { name: true } },
+      assignee: { select: { displayName: true } },
+    },
+    orderBy: { createdAt: 'desc' as Prisma.SortOrder },
+  },
+};
 
 type VmInventoryWithRelations = Prisma.VmInventoryGetPayload<{
+  include: typeof VM_INVENTORY_INCLUDE;
+}>;
+
+type VmDiscoveryWithRelations = Prisma.VmDiscoveryGetPayload<{
   include: {
     source: true;
     guestAccounts: true;
@@ -495,6 +504,16 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             },
           ]
         : [],
+      tickets: (inventory.tickets ?? []).map((ticket) => ({
+        id: ticket.id,
+        ticketNo: ticket.ticketNo,
+        title: ticket.title,
+        status: ticket.status,
+        priority: ticket.priority,
+        clientName: ticket.client?.name,
+        assigneeName: ticket.assignee?.displayName,
+        createdAt: ticket.createdAt,
+      })),
     };
   }
 
@@ -1118,32 +1137,77 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           },
         });
 
-        await tx.vmInventory.updateMany({
+        // DRIFT PROTECTION: Fetch existing inventory to check managedFields
+        const existingInventory = await tx.vmInventory.findFirst({
           where: {
-            moid: record.moid,
+            moid: (record as { moid: string }).moid,
             sourceId: source.id,
             lifecycleState: {
               not: VmLifecycleState.ARCHIVED,
             },
           },
-          data: {
-            name: record.name,
-            cluster: record.cluster,
-            clusterResolution: record.clusterResolution,
-            host: record.host,
-            hostResolution: record.hostResolution,
-            computerName: record.computerName,
-            guestOs: record.guestOs,
-            primaryIp: record.primaryIp,
-            cpuCores: record.cpuCores,
-            memoryGb: record.memoryGb,
-            storageGb: record.storageGb,
-            disks: record.disks,
-            networkLabel: record.networkLabel,
-            powerState: record.powerState,
-            lastSyncAt: startedAt,
-            syncState: 'Synced',
+          select: {
+            managedFields: true,
           },
+        });
+
+        const rec = record as {
+          name: string;
+          cluster: string;
+          clusterResolution: string;
+          host: string;
+          hostResolution: string;
+          computerName: string | null;
+          guestOs: string;
+          primaryIp: string;
+          cpuCores: number;
+          memoryGb: number;
+          storageGb: number;
+          disks: Prisma.InputJsonValue;
+          networkLabel: string;
+          powerState: VmPowerState;
+          moid: string;
+        };
+
+        const managed = existingInventory?.managedFields || [];
+        const updateData: Prisma.VmInventoryUpdateInput = {
+          lastSyncAt: startedAt,
+          syncState: 'Synced',
+        };
+
+        if (!managed.includes('name')) updateData.name = rec.name;
+        if (!managed.includes('cluster')) {
+          updateData.cluster = rec.cluster;
+          updateData.clusterResolution = rec.clusterResolution;
+        }
+        if (!managed.includes('host')) {
+          updateData.host = rec.host;
+          updateData.hostResolution = rec.hostResolution;
+        }
+        if (!managed.includes('computerName'))
+          updateData.computerName = rec.computerName;
+        if (!managed.includes('guestOs')) updateData.guestOs = rec.guestOs;
+        if (!managed.includes('primaryIp'))
+          updateData.primaryIp = rec.primaryIp;
+        if (!managed.includes('cpuCores')) updateData.cpuCores = rec.cpuCores;
+        if (!managed.includes('memoryGb')) updateData.memoryGb = rec.memoryGb;
+        if (!managed.includes('storageGb'))
+          updateData.storageGb = rec.storageGb;
+        if (!managed.includes('disks')) updateData.disks = rec.disks;
+        if (!managed.includes('networkLabel'))
+          updateData.networkLabel = rec.networkLabel;
+        if (!managed.includes('powerState'))
+          updateData.powerState = rec.powerState;
+
+        await tx.vmInventory.updateMany({
+          where: {
+            moid: rec.moid,
+            sourceId: source.id,
+            lifecycleState: {
+              not: VmLifecycleState.ARCHIVED,
+            },
+          },
+          data: updateData,
         });
       }
 
@@ -1644,17 +1708,14 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             tags: this.parseTags(dto.tags),
             lastSyncAt: new Date(),
             syncedFields: SYNCED_FIELDS,
-            managedFields: MANAGED_FIELDS,
+            managedFields: dto.managedFields ?? MANAGED_FIELDS,
             notes: dto.notes.trim(),
             createdByUserId: userId,
             guestAccounts: {
               create: guestAccounts,
             },
           },
-          include: {
-            source: true,
-            guestAccounts: true,
-          },
+          include: VM_INVENTORY_INCLUDE,
         });
 
         return inventory;
@@ -1691,12 +1752,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           not: VmLifecycleState.ARCHIVED,
         },
       },
-      include: {
-        source: true,
-        guestAccounts: {
-          select: { id: true },
-        },
-      },
+      include: VM_INVENTORY_INCLUDE,
       orderBy: { updatedAt: 'desc' },
     });
 
@@ -1710,6 +1766,13 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       include: {
         source: true,
         guestAccounts: true,
+        tickets: {
+          include: {
+            client: { select: { name: true } },
+            assignee: { select: { displayName: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -1742,15 +1805,13 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         disks: this.normalizeDisks(dto.disks),
         lastSyncAt: new Date(),
         createdByUserId: userId,
+        managedFields: dto.managedFields ?? undefined,
         guestAccounts: {
           deleteMany: {},
           create: guestAccounts,
         },
       },
-      include: {
-        source: true,
-        guestAccounts: true,
-      },
+      include: VM_INVENTORY_INCLUDE,
     });
 
     await this.prisma.auditLog.create({

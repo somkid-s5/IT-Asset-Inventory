@@ -24,8 +24,9 @@ import { KnowledgeBaseService } from './knowledge-base.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Role, Prisma } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { Public } from '../auth/public.decorator';
+import { UpdateKnowledgeBaseDto } from './dto/update-knowledge-base.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/knowledge-base')
@@ -103,49 +104,57 @@ export class KnowledgeBaseController {
     return this.knowledgeBaseService.findCategory(id);
   }
 
-  // --- Articles ---
+  // --- Documents ---
   @Public()
-  @Get('articles')
-  findAllArticles(@Query('categoryId') categoryId?: string) {
-    return this.knowledgeBaseService.findAllArticles(categoryId);
+  @Get('documents')
+  findAllDocuments(@Query('categoryId') categoryId?: string) {
+    return this.knowledgeBaseService.findAllDocuments(categoryId);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
-  @Post('articles')
-  createArticle(
-    @Body() data: { title: string; content: string; categoryId: string },
+  @Post('documents')
+  createDocument(
+    @Body()
+    data: {
+      title: string;
+      content: string;
+      categoryId: string;
+      authorId: string;
+    },
     @Request() req: { user: { id: string } },
   ) {
-    return this.knowledgeBaseService.createArticle({
+    return this.knowledgeBaseService.createDocument({
       ...data,
       authorId: req.user.id,
     });
   }
 
   @Public()
-  @Get('articles/:id')
-  findArticle(@Param('id') id: string) {
-    return this.knowledgeBaseService.findArticle(id);
+  @Get('documents/:id')
+  findDocument(@Param('id') id: string) {
+    return this.knowledgeBaseService.findDocument(id);
   }
 
   @Public()
-  @Get('recent')
-  getRecentArticles(@Query('limit') limit?: string) {
-    return this.knowledgeBaseService.getRecentArticles(limit ? parseInt(limit) : 5);
+  @Get('recent/documents')
+  getRecentDocuments(@Query('limit') limit?: string) {
+    return this.knowledgeBaseService.getRecentDocuments(
+      limit ? parseInt(limit) : 5,
+    );
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
-  @Patch('articles/:id')
-  updateArticle(
+  @Patch('documents/:id')
+  updateDocument(
     @Param('id') id: string,
-    @Body() data: Prisma.KnowledgeArticleUpdateInput,
+    @Body() data: UpdateKnowledgeBaseDto,
   ) {
-    return this.knowledgeBaseService.updateArticle(id, data);
+    return this.knowledgeBaseService.updateDocument(id, data);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
-  @Delete('articles/:id')
-  removeArticle(@Param('id') id: string) {
-    return this.knowledgeBaseService.removeArticle(id);
+  @Delete('documents/:id')
+  removeDocument(@Param('id') id: string) {
+    return this.knowledgeBaseService.removeDocument(id);
   }
 }

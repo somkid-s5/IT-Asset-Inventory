@@ -480,7 +480,7 @@ export function AssetFormDialog({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error(error);
+      // Silent error handler
       const errRes = error?.response?.data;
       let message = 'Failed to save asset';
       if (errRes?.message) {
@@ -653,7 +653,7 @@ export function AssetFormDialog({
                 >
                   <SelectTrigger className="bg-card/50">
                     <div className="flex items-center gap-2">
-                      <FolderTree className="h-3.5 w-3.5 text-muted-foreground/50" />
+                      <FolderTree className="h-3.5 w-3.5 text-muted-foreground" />
                       <SelectValue placeholder="Select parent" />
                     </div>
                   </SelectTrigger>
@@ -873,7 +873,7 @@ export function AssetFormDialog({
                             <button
                               type="button"
                               onClick={() => setShowPasswords((prev) => ({ ...prev, [`${index}-${userIndex}`]: !prev[`${index}-${userIndex}`] }))}
-                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground"
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
                               {showPasswords[`${index}-${userIndex}`] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                             </button>
