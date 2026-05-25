@@ -480,7 +480,7 @@ export function AssetFormDialog({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error(error);
+      // Silent error handler
       const errRes = error?.response?.data;
       let message = 'Failed to save asset';
       if (errRes?.message) {

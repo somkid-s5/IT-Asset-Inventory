@@ -30,7 +30,7 @@ async function main() {
     await prisma.ticketComment.deleteMany();
     await prisma.ticket.deleteMany();
     await prisma.client.deleteMany();
-    await prisma.knowledgeArticle.deleteMany();
+    await prisma.knowledgeDocument.deleteMany();
     await prisma.knowledgeCategory.deleteMany();
     await prisma.auditLog.deleteMany();
     await prisma.credential.deleteMany();
@@ -126,7 +126,7 @@ async function main() {
     }
     console.log(`✅ Sample assets created.`);
 
-    console.log('Step 5: Creating sample ticket and KB article...');
+    console.log('Step 5: Creating sample ticket and KB document...');
     await prisma.ticket.create({
         data: {
             ticketNo: 'TKT-2026-0001',
@@ -139,7 +139,7 @@ async function main() {
         }
     });
 
-    await prisma.knowledgeArticle.create({
+    await prisma.knowledgeDocument.create({
         data: {
             title: 'Getting Started',
             content: 'Welcome to the IT Asset Inventory system.',
@@ -147,7 +147,7 @@ async function main() {
             authorId: adminUser.id
         }
     });
-    console.log(`✅ Sample ticket and KB article created.`);
+    console.log(`✅ Sample ticket and KB document created.`);
 
     if (encryptionKey && Buffer.from(encryptionKey, 'hex').length === 32) {
         console.log('Step 6: Seeding credentials...');

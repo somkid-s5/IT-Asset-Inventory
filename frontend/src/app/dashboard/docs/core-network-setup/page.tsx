@@ -24,39 +24,39 @@ export default function ArticleDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const { data: article, isLoading } = useQuery({
-    queryKey: ['kb-article', id],
-    queryFn: () => kbService.getArticle(id),
+  const { data: document, isLoading } = useQuery({
+    queryKey: ['kb-document', id],
+    queryFn: () => kbService.getDocument(id),
   });
 
   useEffect(() => {
-    if (article) {
+    if (document) {
       setHeader({
-        title: article.title,
+        title: document.title,
         breadcrumbs: [
           { label: 'Workspace', href: '/dashboard' },
           { label: 'Documentation', href: '/dashboard/docs' },
-          { label: article.category.name, href: `/dashboard/docs/category/${article.categoryId}` },
-          { label: 'Article' },
+          { label: document.category.name, href: `/dashboard/docs/category/${document.categoryId}` },
+          { label: 'Document' },
         ],
       });
     }
-  }, [article, setHeader]);
+  }, [document, setHeader]);
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this article?')) {
+    if (confirm('Are you sure you want to delete this document?')) {
       try {
-        await kbService.deleteArticle(id);
-        toast.success('Article deleted');
+        await kbService.deleteDocument(id);
+        toast.success('Document deleted');
         router.push('/dashboard/docs');
       } catch (error) {
-        toast.error('Failed to delete article');
+        toast.error('Failed to delete document');
       }
     }
   };
 
-  if (isLoading) return <div className="p-10 text-center">Loading article...</div>;
-  if (!article) return <div className="p-10 text-center">Article not found</div>;
+  if (isLoading) return <div className="p-10 text-center">Loading document...</div>;
+  if (!document) return <div className="p-10 text-center">Document not found</div>;
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
@@ -86,22 +86,22 @@ export default function ArticleDetailPage() {
         {/* Header Section */}
         <div className="space-y-4">
            <Badge variant="secondary" className="rounded-full px-3 py-1 bg-primary/5 text-primary border-primary/10 flex items-center gap-2 w-fit">
-              <Tag className="h-3 w-3" /> {article.category.name}
+              <Tag className="h-3 w-3" /> {document.category.name}
            </Badge>
-           <h1 className="text-4xl font-black tracking-tight leading-tight">{article.title}</h1>
+           <h1 className="text-4xl font-black tracking-tight leading-tight">{document.title}</h1>
            
            <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground pt-2">
               <div className="flex items-center gap-2">
                  <User className="h-4 w-4" />
-                 <span>{article.author.displayName}</span>
+                 <span>{document.author.displayName}</span>
               </div>
               <div className="flex items-center gap-2">
                  <Calendar className="h-4 w-4" />
-                 <span>{new Date(article.createdAt).toLocaleDateString()}</span>
+                 <span>{new Date(document.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center gap-2">
                  <Eye className="h-4 w-4" />
-                 <span>{article.viewCount} views</span>
+                 <span>{document.viewCount} views</span>
               </div>
            </div>
         </div>
@@ -112,7 +112,7 @@ export default function ArticleDetailPage() {
         <Card className="p-8 md:p-12 rounded-[40px] border-2 shadow-sm bg-card min-h-[500px]">
            <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-a:text-primary prose-img:rounded-3xl">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {article.content}
+                {document.content}
               </ReactMarkdown>
            </div>
         </Card>

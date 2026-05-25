@@ -18,7 +18,7 @@ export class KnowledgeBaseService {
       {
         name: 'Server & Virtualization',
         icon: 'server',
-        articles: [
+        documents: [
           {
             title: 'VMware vCenter: Accessing Management Interface',
             content: `## Overview
@@ -63,7 +63,7 @@ Example: \`SAP-PROD-APP-01\`
       {
         name: 'Network & Security',
         icon: 'shield',
-        articles: [
+        documents: [
           {
             title: 'VPN Connection Guide for Remote Work',
             content: `# Global VPN Access
@@ -84,7 +84,7 @@ Follow these steps to connect to the internal network via Cisco AnyConnect.
       {
         name: 'Databases',
         icon: 'database',
-        articles: [
+        documents: [
           {
             title: 'Enterprise Backup & Recovery Procedure',
             content: `# Enterprise Backup & Recovery Procedure
@@ -154,18 +154,16 @@ fi
         create: { name: item.name, icon: item.icon },
       });
 
-      // Create sample articles if provided
-      if (item.articles) {
-        for (const art of item.articles) {
-          const exists = await this.prisma.knowledgeArticle.findFirst({
-            where: { title: art.title },
+      // Create sample documents if provided
+      if (item.documents) {
+        for (const doc of item.documents) {
+          const exists = await this.prisma.knowledgeDocument.findFirst({
+            where: { title: doc.title, categoryId: category.id },
           });
-
           if (!exists) {
-            await this.prisma.knowledgeArticle.create({
+            await this.prisma.knowledgeDocument.create({
               data: {
-                title: art.title,
-                content: art.content,
+                ...doc,
                 categoryId: category.id,
                 authorId: authorId,
               },
@@ -178,14 +176,14 @@ fi
   }
 
   async deleteCategory(id: string) {
-    // Check if category has articles
-    const count = await this.prisma.knowledgeArticle.count({
+    // Check if category has documents
+    const count = await this.prisma.knowledgeDocument.count({
       where: { categoryId: id },
     });
 
     if (count > 0) {
       throw new Error(
-        'Cannot delete category with existing articles. Move or delete articles first.',
+        'Cannot delete category with existing documents. Move or delete documents first.',
       );
     }
 
@@ -198,7 +196,7 @@ fi
     return this.prisma.knowledgeCategory.findMany({
       include: {
         _count: {
-          select: { articles: true },
+          select: { documents: true },
         },
       },
       orderBy: { name: 'asc' },
@@ -209,7 +207,7 @@ fi
     const category = await this.prisma.knowledgeCategory.findUnique({
       where: { id },
       include: {
-        articles: {
+        documents: {
           include: {
             category: true,
             author: { select: { displayName: true, avatarSeed: true } },
@@ -217,7 +215,7 @@ fi
           orderBy: { createdAt: 'desc' },
         },
         _count: {
-          select: { articles: true },
+          select: { documents: true },
         },
       },
     });
@@ -225,14 +223,14 @@ fi
     return category;
   }
 
-  // --- Article CRUD ---
-  async createArticle(data: {
+  // --- Document CRUD ---
+  async createDocument(data: {
     title: string;
     content: string;
     categoryId: string;
     authorId: string;
   }) {
-    return this.prisma.knowledgeArticle.create({
+    return this.prisma.knowledgeDocument.create({
       data,
       include: {
         category: true,
@@ -241,51 +239,56 @@ fi
     });
   }
 
-  async findAllArticles(categoryId?: string) {
-    return this.prisma.knowledgeArticle.findMany({
-      where: categoryId ? { categoryId } : {},
+  async findAllDocuments(categoryId?: string) {
+    return this.prisma.knowledgeDocument.findMany({
+      where: categoryId ? { categoryId } : undefined,
       include: {
         category: true,
-        author: { select: { displayName: true } },
+        author: {
+          select: { id: true, displayName: true, username: true },
+        },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
     });
   }
 
-  async findArticle(id: string) {
-    const article = await this.prisma.knowledgeArticle.findUnique({
+  async findDocument(id: string) {
+    const doc = await this.prisma.knowledgeDocument.findUnique({
       where: { id },
       include: {
         category: true,
-        author: { select: { displayName: true, avatarSeed: true } },
+        author: {
+          select: { id: true, displayName: true, username: true },
+        },
       },
     });
-    if (!article) throw new NotFoundException('Article not found');
 
-    // Increment view count
-    await this.prisma.knowledgeArticle.update({
+    if (!doc) throw new NotFoundException('Document not found');
+
+    // Increment view count (optional but good practice)
+    await this.prisma.knowledgeDocument.update({
       where: { id },
       data: { viewCount: { increment: 1 } },
     });
 
-    return article;
+    return doc;
   }
 
-  async updateArticle(id: string, data: Prisma.KnowledgeArticleUpdateInput) {
-    return this.prisma.knowledgeArticle.update({
+  async updateDocument(id: string, data: Prisma.KnowledgeDocumentUpdateInput) {
+    return this.prisma.knowledgeDocument.update({
       where: { id },
       data,
     });
   }
 
-  async removeArticle(id: string) {
-    return this.prisma.knowledgeArticle.delete({
+  async removeDocument(id: string) {
+    return this.prisma.knowledgeDocument.delete({
       where: { id },
     });
   }
 
-  async getRecentArticles(limit: number = 5) {
-    return this.prisma.knowledgeArticle.findMany({
+  async getRecentDocuments(limit: number = 5) {
+    return this.prisma.knowledgeDocument.findMany({
       take: limit,
       include: {
         category: true,

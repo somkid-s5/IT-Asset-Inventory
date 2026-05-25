@@ -34,8 +34,8 @@ export default function DocsPage() {
   });
 
   const { data: recentArticles = [], isLoading: recentLoading } = useQuery({
-    queryKey: ['kb-recent-articles'],
-    queryFn: () => kbService.getRecentArticles(5),
+    queryKey: ['kb-recent-documents'],
+    queryFn: () => kbService.getRecentDocuments(5),
   });
 
   const filteredCategories = categories.filter(cat => 
@@ -76,7 +76,7 @@ export default function DocsPage() {
               <CategoryManager />
               <Button onClick={() => router.push('/dashboard/docs/new')} size="sm" className="rounded-lg h-9 px-4 font-bold shadow-md shadow-primary/10">
                 <Plus className="h-3.5 w-3.5 mr-2" />
-                New Article
+                New Document
               </Button>
             </>
           )}
@@ -109,16 +109,16 @@ export default function DocsPage() {
           filteredCategories.map((cat) => (
             <Card 
               key={cat.id} 
-              className="group p-6 rounded-[24px] border-border/60 bg-card hover:border-primary/40 hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between h-full"
+              className="group p-6 rounded-xl border-border/60 bg-card hover:border-primary/40 hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between h-full"
               onClick={() => router.push(`/dashboard/docs/categories/${cat.id}`)}
             >
               <div>
                 <div className="flex justify-between items-start mb-6">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Folder className="h-6 w-6" />
                   </div>
                   <Badge variant="secondary" className="rounded-full text-[10px] font-bold uppercase tracking-tight px-3 py-0.5">
-                    {cat._count?.articles || 0} Articles
+                    {cat._count?.documents || 0} Documents
                   </Badge>
                 </div>
                 <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{cat.name}</h3>
@@ -143,21 +143,21 @@ export default function DocsPage() {
           <div className="grid grid-cols-1 gap-3">
              {recentLoading ? (
                Array.from({ length: 3 }).map((_, i) => (
-                 <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+                 <Skeleton key={i} className="h-20 w-full rounded-lg" />
                ))
              ) : filteredRecentArticles.length === 0 ? (
-               <p className="text-xs text-muted-foreground italic px-2 uppercase tracking-widest opacity-40 py-10 text-center border-2 border-dashed rounded-2xl border-border/40">
-                 {search ? `No articles match "${search}"` : 'No updates found yet.'}
+               <p className="text-xs text-muted-foreground italic px-2 uppercase tracking-widest opacity-40 py-10 text-center border-2 border-dashed rounded-lg border-border/40">
+                 {search ? `No documents match "${search}"` : 'No updates found yet.'}
                </p>
              ) : (
                filteredRecentArticles.map((art) => (
                 <div 
                   key={art.id}
                   onClick={() => router.push(`/dashboard/docs/${art.id}`)}
-                  className="p-5 rounded-2xl border bg-card/50 flex items-center justify-between group hover:bg-primary/[0.02] cursor-pointer transition-colors border-border/40"
+                  className="p-5 rounded-lg border bg-card/50 flex items-center justify-between group hover:bg-primary/[0.02] cursor-pointer transition-colors border-border/40"
                 >
                     <div className="flex items-center gap-4 overflow-hidden">
-                      <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                      <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
                         <FileText className="h-5 w-5 opacity-40 group-hover:text-primary group-hover:opacity-100 transition-all" />
                       </div>
                       <div className="overflow-hidden">

@@ -24,9 +24,9 @@ export default function ArticlePage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const { data: article, isLoading } = useQuery({
-    queryKey: ['kb-article', id],
-    queryFn: () => kbService.getArticle(id as string),
+  const { data: document, isLoading } = useQuery({
+    queryKey: ['kb-document', id],
+    queryFn: () => kbService.getDocument(id as string),
     enabled: !!id,
   });
 
@@ -51,10 +51,10 @@ export default function ArticlePage() {
     );
   }
 
-  if (!article) {
+  if (!document) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
-        <p className="text-muted-foreground font-medium uppercase tracking-widest">Article not found</p>
+        <p className="text-muted-foreground font-medium uppercase tracking-widest">Document not found</p>
         <Button onClick={() => router.push('/dashboard/docs')} variant="outline">
           Return to Library
         </Button>
@@ -64,7 +64,7 @@ export default function ArticlePage() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Article Navigation Bar */}
+      {/* Document Navigation Bar */}
       <div className="border-b border-border/40 bg-card/20 backdrop-blur-md px-8 py-3 flex items-center justify-between sticky top-0 z-10">
         <Button 
           variant="ghost" 
@@ -78,7 +78,7 @@ export default function ArticlePage() {
         
         <div className="flex items-center gap-2">
            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest bg-primary/5 text-primary border-primary/10">
-              {article.category.name}
+              {document.category.name}
            </Badge>
         </div>
       </div>
@@ -91,17 +91,17 @@ export default function ArticlePage() {
             <header className="mb-10 space-y-6">
               <div className="flex items-center gap-3">
                 <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase tracking-wider text-[10px] px-3">
-                  {article.category.name}
+                  {document.category.name}
                 </Badge>
                 <div className="h-1 w-1 rounded-full bg-border" />
                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-tight">
                   <Clock className="h-3.5 w-3.5" />
-                  {Math.ceil(article.content.split(' ').length / 200)} min read
+                  {Math.ceil(document.content.split(' ').length / 200)} min read
                 </div>
               </div>
 
               <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.1]">
-                {article.title}
+                {document.title}
               </h1>
 
               <div className="flex items-center justify-between pt-6 border-t border-border/40">
@@ -109,13 +109,13 @@ export default function ArticlePage() {
                   <div className="h-10 w-10 rounded-full bg-muted border border-border overflow-hidden">
                      {/* Avatar Placeholder */}
                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold">
-                       {article.author.displayName.charAt(0)}
+                       {document.author.displayName.charAt(0)}
                      </div>
                   </div>
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-tight">{article.author.displayName}</p>
+                    <p className="text-xs font-bold uppercase tracking-tight">{document.author.displayName}</p>
                     <p className="text-[10px] text-muted-foreground font-medium">
-                      Published on {new Date(article.createdAt).toLocaleDateString()}
+                      Published on {new Date(document.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -148,11 +148,11 @@ export default function ArticlePage() {
             </header>
 
             {/* Markdown Content */}
-            <MarkdownRenderer content={article.content} />
+            <MarkdownRenderer content={document.content} />
           </article>
         </div>
 
-        {/* Right Utility Sidebar (Article Context) */}
+        {/* Right Utility Sidebar (Document Context) */}
         <aside className="w-64 border-l border-border/40 p-6 hidden xl:block shrink-0 bg-muted/5">
           <div className="space-y-8 sticky top-0">
             <div className="space-y-4">
@@ -160,11 +160,11 @@ export default function ArticlePage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-xs">
                   <Eye className="h-4 w-4 opacity-40" />
-                  <span className="text-muted-foreground font-medium">{article.viewCount} views</span>
+                  <span className="text-muted-foreground font-medium">{document.viewCount} views</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   <Calendar className="h-4 w-4 opacity-40" />
-                  <span className="text-muted-foreground font-medium">Updated {new Date(article.updatedAt).toLocaleDateString()}</span>
+                  <span className="text-muted-foreground font-medium">Updated {new Date(document.updatedAt).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>

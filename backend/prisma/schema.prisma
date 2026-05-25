@@ -128,7 +128,7 @@ model User {
   assignedTickets  Ticket[]           @relation("AssignedTickets")
   createdTickets   Ticket[]           @relation("CreatedTickets")
   ticketComments   TicketComment[]
-  writtenArticles  KnowledgeArticle[]
+  writtenDocuments  KnowledgeDocument[]
 }
 
 model IPAllocation {
@@ -516,10 +516,10 @@ model KnowledgeCategory {
   id          String             @id @default(uuid())
   name        String             @unique
   icon        String?
-  articles    KnowledgeArticle[]
+  documents   KnowledgeDocument[]
 }
 
-model KnowledgeArticle {
+model KnowledgeDocument {
   id          String            @id @default(uuid())
   title       String
   content     String

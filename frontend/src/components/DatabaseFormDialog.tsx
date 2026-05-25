@@ -151,7 +151,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      console.error(error);
+      // Silent error handler
       const errRes = error?.response?.data;
       let message = 'Failed to save database';
       if (errRes?.message) {

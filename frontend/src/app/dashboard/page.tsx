@@ -198,8 +198,8 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-12">
         {/* CMDB Distribution (5 Cols) */}
         <motion.div variants={itemVariants} className="lg:col-span-5">
-          <Card className="h-full border-2 border-border bg-card flex flex-col rounded-[24px] overflow-hidden p-0 gap-0">
-            <CardHeader className="pb-2 border-b-2 border-border bg-muted/80 px-6 py-5">
+          <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
+            <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
               <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-5 w-5 text-primary" />CMDB Distribution</CardTitle>
               <CardDescription>Visual breakdown of Configuration Items (CIs)</CardDescription>
             </CardHeader>
@@ -231,8 +231,8 @@ export default function DashboardPage() {
 
         {/* Asset Health Index (3 Cols) */}
         <motion.div variants={itemVariants} className="lg:col-span-3">
-          <Card className="h-full border-2 border-border bg-card flex flex-col rounded-[24px] overflow-hidden p-0 gap-0">
-            <CardHeader className="pb-2 border-b-2 border-border bg-muted/80 px-6 py-5">
+          <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
+            <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Activity className="h-5 w-5 text-success" />
                 Asset Health
@@ -301,9 +301,9 @@ export default function DashboardPage() {
 
         {/* Incident Monitor (4 Cols) */}
         <motion.div variants={itemVariants} className="lg:col-span-4">
-          <Card className="h-full border-2 border-border bg-card flex flex-col rounded-[24px] overflow-hidden p-0 gap-0">
-            <CardHeader className="pb-4 border-b-2 border-border bg-muted/80 px-6 py-5">
-              <CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-warning" />Incident Monitor</CardTitle>
+          <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
+            <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
+              <CardTitle className="text-lg flex items-center justify-between"><ShieldAlert className="h-5 w-5 text-warning" />Incident Monitor</CardTitle>
               <CardDescription>Service requests and critical events</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 space-y-4 p-6 overflow-y-auto max-h-[340px]">
@@ -351,9 +351,9 @@ function StatCard({ title, value, icon: Icon, subtitle, color, onClick }: any) {
 
   return (
     <motion.div variants={itemVariants} className="h-full">
-      <Card
+      <Card 
         className={cn(
-          "group relative overflow-hidden rounded-[20px] border-2 border-border bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-0 gap-0",
+          "group relative overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-0 gap-0",
           theme.border
         )}
         onClick={onClick}

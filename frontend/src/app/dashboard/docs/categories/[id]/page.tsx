@@ -45,7 +45,7 @@ export default function CategoryPage() {
     }
   }, [category, setHeader]);
 
-  const filteredArticles = category?.articles?.filter(art => 
+  const filteredDocuments = category?.documents?.filter(art => 
     art.title.toLowerCase().includes(search.toLowerCase()) ||
     art.content.toLowerCase().includes(search.toLowerCase())
   ) || [];
@@ -90,24 +90,24 @@ export default function CategoryPage() {
         </div>
         <Button onClick={() => router.push(`/dashboard/docs/new?categoryId=${id}`)} size="sm" className="rounded-lg h-9 px-4 font-bold shadow-md shadow-primary/10">
           <Plus className="h-3.5 w-3.5 mr-2" />
-          Add Article
+          Add Document
         </Button>
       </div>
 
-      {/* Articles List - Compact Style */}
-      <div className="border border-border/40 rounded-[24px] overflow-hidden bg-card/30 backdrop-blur-sm divide-y divide-border/40">
-        {filteredArticles.length === 0 ? (
+      {/* Documents List - Compact Style */}
+      <div className="border border-border/40 rounded-xl overflow-hidden bg-card/30 backdrop-blur-sm divide-y divide-border/40">
+        {filteredDocuments.length === 0 ? (
           <div className="py-20 text-center bg-muted/5">
             <FileText className="h-12 w-12 mx-auto text-muted-foreground/20 mb-4" />
-            <h3 className="text-lg font-bold opacity-60">No articles here yet</h3>
+            <h3 className="text-lg font-bold opacity-60">No documents here yet</h3>
             <p className="text-sm text-muted-foreground">Be the first to share knowledge in this category.</p>
           </div>
         ) : (
-          filteredArticles.map((article) => (
+          filteredDocuments.map((document) => (
             <div 
-              key={article.id}
+              key={document.id}
               className="group p-3 px-6 hover:bg-primary/[0.03] transition-all cursor-pointer flex items-center justify-between gap-4"
-              onClick={() => router.push(`/dashboard/docs/${article.id}`)}
+              onClick={() => router.push(`/dashboard/docs/${document.id}`)}
             >
               <div className="flex items-center gap-4 overflow-hidden flex-1">
                 <div className="h-8 w-8 rounded-lg bg-primary/5 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -115,24 +115,24 @@ export default function CategoryPage() {
                 </div>
                 <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 overflow-hidden">
                   <h3 className="font-bold text-sm truncate group-hover:text-primary transition-colors min-w-[200px]">
-                    {article.title}
+                    {document.title}
                   </h3>
                   <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter shrink-0">
                     <div className="flex items-center gap-1">
                       <User className="h-3 w-3" />
-                      {article.author.displayName}
+                      {document.author.displayName}
                     </div>
                     <div className="h-3 w-[1px] bg-border/50 hidden md:block" />
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {new Date(article.createdAt).toLocaleDateString()}
+                      {new Date(document.createdAt).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-4 shrink-0">
                  <Badge variant="outline" className="hidden sm:inline-flex text-[9px] font-black py-0 h-5 px-2 bg-muted/20 border-border/40">
-                    {Math.ceil(article.content.length / 500)} MIN READ
+                    {Math.ceil(document.content.length / 500)} MIN READ
                  </Badge>
                  <ArrowRight className="h-3.5 w-3.5 text-primary opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
               </div>
