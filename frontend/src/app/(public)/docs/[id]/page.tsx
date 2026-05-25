@@ -20,9 +20,9 @@ export default function PublicArticlePage() {
   const { id } = useParams();
   const router = useRouter();
 
-  const { data: article, isLoading } = useQuery({
-    queryKey: ['kb-article-public', id],
-    queryFn: () => kbService.getArticle(id as string),
+  const { data: document, isLoading } = useQuery({
+    queryKey: ['kb-document-public', id],
+    queryFn: () => kbService.getDocument(id as string),
     enabled: !!id,
   });
 
@@ -41,7 +41,7 @@ export default function PublicArticlePage() {
     );
   }
 
-  if (!article) {
+  if (!document) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <BrandMark className="mb-8 scale-125" />
@@ -86,28 +86,28 @@ export default function PublicArticlePage() {
           <header className="mb-12 space-y-6 relative z-10">
             <div className="flex items-center gap-3">
               <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 font-bold uppercase tracking-wider text-[10px] px-3 py-1 rounded-full">
-                {article.category.name}
+                {document.category.name}
               </Badge>
               <div className="h-1 w-1 rounded-full bg-border" />
               <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-tight">
                 <Clock className="h-3.5 w-3.5" />
-                {Math.ceil(article.content.split(' ').length / 200)} min read
+                {Math.ceil(document.content.split(' ').length / 200)} min read
               </div>
             </div>
 
             <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.05] text-foreground">
-              {article.title}
+              {document.title}
             </h1>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-8 border-t border-border/40">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-lg shadow-inner border border-primary/10">
-                   {article.author.displayName.charAt(0)}
+                   {document.author.displayName.charAt(0)}
                 </div>
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-tight">{article.author.displayName}</p>
+                  <p className="text-sm font-bold uppercase tracking-tight">{document.author.displayName}</p>
                   <p className="text-xs text-muted-foreground font-medium">
-                    IT Infrastructure Team • {new Date(article.createdAt).toLocaleDateString()}
+                    IT Infrastructure Team • {new Date(document.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -124,7 +124,7 @@ export default function PublicArticlePage() {
           </header>
 
           {/* Content */}
-          <MarkdownRenderer content={article.content} />
+          <MarkdownRenderer content={document.content} />
 
           <footer className="mt-20 pt-10 border-t border-border/40 flex flex-col items-center gap-4 text-center">
              <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center mb-2">

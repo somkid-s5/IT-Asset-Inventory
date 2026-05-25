@@ -79,7 +79,7 @@ function getClientUserSnapshot(): User | null {
         cachedUserSnapshot = JSON.parse(storedUser) as User;
         return cachedUserSnapshot;
     } catch (e) {
-        console.error("Failed to parse stored user", e);
+        // Silent error handler
         window.localStorage.removeItem('user');
         cachedUserStorageValue = null;
         cachedUserSnapshot = null;
@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // Call backend to clear HttpOnly cookie
             await api.post('/auth/logout');
         } catch (error) {
-            console.error('Logout error:', error);
+            // Silent error handler
         } finally {
             localStorage.removeItem('user');
             emitAuthChange();

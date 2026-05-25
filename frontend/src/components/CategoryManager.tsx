@@ -150,7 +150,7 @@ export function CategoryManager() {
                     </div>
                     <div>
                       <p className="text-sm font-bold">{cat.name}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase font-medium">{cat._count?.articles || 0} Articles</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-medium">{cat._count?.documents || 0} Documents</p>
                     </div>
                   </div>
                   <Button
@@ -175,7 +175,7 @@ export function CategoryManager() {
         <DialogFooter className="sm:justify-start">
           <p className="text-[10px] text-muted-foreground leading-relaxed">
             <span className="font-bold text-primary mr-1">Note:</span> 
-            Categories with existing articles cannot be deleted. You must move or delete the articles first.
+            Categories with existing documents cannot be deleted. You must move or delete the documents first.
           </p>
         </DialogFooter>
       </DialogContent>

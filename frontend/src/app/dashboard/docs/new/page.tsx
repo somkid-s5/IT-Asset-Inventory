@@ -51,8 +51,8 @@ export default function ArticleFormPage() {
   });
 
   const { data: existingArticle } = useQuery({
-    queryKey: ['kb-article', editId],
-    queryFn: () => kbService.getArticle(editId!),
+    queryKey: ['kb-document', editId],
+    queryFn: () => kbService.getDocument(editId!),
     enabled: !!editId,
   });
 
@@ -68,7 +68,7 @@ export default function ArticleFormPage() {
 
   useEffect(() => {
     setHeader({
-      title: editId ? 'Edit Article' : 'New Knowledge Base Article',
+      title: editId ? 'Edit Document' : 'New Knowledge Base Document',
       breadcrumbs: [
         { label: 'Workspace', href: '/dashboard' },
         { label: 'Documentation', href: '/dashboard/docs' },
@@ -87,15 +87,15 @@ export default function ArticleFormPage() {
     setIsSubmitting(true);
     try {
       if (editId) {
-        await kbService.updateArticle(editId, formData);
-        toast.success('Article updated');
+        await kbService.updateDocument(editId, formData);
+        toast.success('Document updated');
       } else {
-        await kbService.createArticle(formData);
-        toast.success('Article published');
+        await kbService.createDocument(formData);
+        toast.success('Document published');
       }
       router.push('/dashboard/docs');
     } catch (error) {
-      toast.error('Failed to save article');
+      toast.error('Failed to save document');
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +108,7 @@ export default function ArticleFormPage() {
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-black">{editId ? 'Edit Article' : 'Write Documentation'}</h1>
+          <h1 className="text-3xl font-black">{editId ? 'Edit Document' : 'Write Documentation'}</h1>
         </div>
         <Button 
           onClick={handleSubmit} 
@@ -116,7 +116,7 @@ export default function ArticleFormPage() {
           className="rounded-2xl px-8 h-12 shadow-xl shadow-primary/20 font-bold"
         >
           <Save className="h-4 w-4 mr-2" />
-          {isSubmitting ? 'Saving...' : (editId ? 'Save Changes' : 'Publish Article')}
+          {isSubmitting ? 'Saving...' : (editId ? 'Save Changes' : 'Publish Document')}
         </Button>
       </div>
 
@@ -125,7 +125,7 @@ export default function ArticleFormPage() {
         <div className="lg:col-span-3 space-y-6">
            <Card className="p-6 rounded-[32px] border-2 shadow-lg space-y-6 bg-card">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Article Title</Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Document Title</Label>
                 <Input 
                   placeholder="e.g. How to configure the core switch..."
                   value={formData.title}

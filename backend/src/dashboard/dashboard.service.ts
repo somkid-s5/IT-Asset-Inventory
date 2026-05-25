@@ -157,12 +157,17 @@ export class DashboardService {
     ]);
 
     const metSlaCount = Number(metSlaCountRaw[0]?.count || 0);
-    const breachedResolvedCount = Number(breachedResolvedCountRaw[0]?.count || 0);
+    const breachedResolvedCount = Number(
+      breachedResolvedCountRaw[0]?.count || 0,
+    );
     const breachedOpenCount = Number(breachedOpenCountRaw[0]?.count || 0);
     const breachedCount = breachedResolvedCount + breachedOpenCount;
     const openCount = openTicketsCount;
 
-    const slaSuccessRate = resolvedTicketsCount > 0 ? Math.round((metSlaCount / resolvedTicketsCount) * 100) : 100;
+    const slaSuccessRate =
+      resolvedTicketsCount > 0
+        ? Math.round((metSlaCount / resolvedTicketsCount) * 100)
+        : 100;
 
     // Asset Health Score Calculation
     let healthScore = 100;

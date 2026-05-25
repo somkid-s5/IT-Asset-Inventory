@@ -347,7 +347,7 @@ export default function TicketsPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full lg:w-auto overflow-hidden">
-            <TabsList className="flex lg:grid lg:grid-cols-4 w-full lg:w-[480px] h-auto min-h-10 p-1 rounded-xl bg-muted/50 border border-border/40 overflow-x-auto custom-scrollbar">
+            <TabsList className="flex lg:grid lg:grid-cols-4 w-full lg:w-[480px] h-auto min-h-10 p-1 rounded-xl bg-muted/50 border border-border/40 overflow-x-auto overflow-y-hidden no-scrollbar">
               <TabsTrigger value="my-active" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary py-1 px-3">
                 My Tasks ({myActive.length})
               </TabsTrigger>

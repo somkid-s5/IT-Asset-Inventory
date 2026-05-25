@@ -85,57 +85,57 @@
 
 :root {
   /* ─── Base Surfaces ─── */
-  --background: 0 0% 100%;
-  --foreground: 140 20% 10%;
+  --background: 210 17% 98%;
+  --foreground: 195 7% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 140 20% 10%;
+  --card-foreground: 195 7% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 140 20% 10%;
+  --popover-foreground: 195 7% 11%;
 
-  /* ─── Primary (Neon Green) ─── */
-  --primary: 140 100% 35%;
+  /* ─── Primary (LINE Green) ─── */
+  --primary: 145 94% 40%;
   --primary-foreground: 0 0% 100%;
 
   /* ─── Secondary ─── */
-  --secondary: 140 20% 95%;
-  --secondary-foreground: 140 100% 35%;
+  --secondary: 200 6% 89%;
+  --secondary-foreground: 195 7% 11%;
 
   /* ─── Muted ─── */
-  --muted: 140 10% 95%;
-  --muted-foreground: 140 10% 45%;
+  --muted: 210 10% 95%;
+  --muted-foreground: 120 10% 26%;
 
   /* ─── Accent ─── */
-  --accent: 140 100% 90%;
-  --accent-foreground: 140 100% 30%;
+  --accent: 145 20% 92%;
+  --accent-foreground: 120 10% 26%;
 
   /* ─── Destructive ─── */
-  --destructive: 0 84% 60%;
+  --destructive: 0 75% 42%;
   --destructive-foreground: 0 0% 100%;
 
   /* ─── Semantic Status ─── */
-  --critical: 0 84% 60%;
+  --critical: 0 75% 42%;
   --high: 30 100% 50%;
   --medium: 60 100% 40%;
   --low: 200 100% 50%;
-  --success: 140 100% 35%;
+  --success: 145 94% 40%;
   --info: 190 100% 45%;
   --warning: 60 100% 40%;
 
   /* ─── Borders & Inputs ─── */
-  --border: 140 20% 85%;
-  --input: 140 20% 85%;
-  --ring: 140 100% 35%;
+  --border: 111 15% 76%;
+  --input: 111 15% 76%;
+  --ring: 145 94% 40%;
   --radius: 0.5rem;
 
   /* ─── Sidebar (Light) ─── */
-  --sidebar-background: 140 10% 98%;
-  --sidebar-foreground: 140 20% 20%;
-  --sidebar-primary: 140 100% 35%;
+  --sidebar-background: 210 10% 95%;
+  --sidebar-foreground: 195 7% 11%;
+  --sidebar-primary: 145 94% 40%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 140 100% 95%;
-  --sidebar-accent-foreground: 140 100% 30%;
-  --sidebar-border: 140 20% 85%;
-  --sidebar-ring: 140 100% 35%;
+  --sidebar-accent: 200 6% 89%;
+  --sidebar-accent-foreground: 195 7% 11%;
+  --sidebar-border: 111 15% 76%;
+  --sidebar-ring: 145 94% 40%;
 }
 
 :root.dark, .dark {
@@ -253,5 +253,15 @@
   }
   .table-head-row {
     @apply border-b-2 border-border;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
