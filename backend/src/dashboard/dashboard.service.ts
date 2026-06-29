@@ -5,6 +5,7 @@ import {
   VmDiscoveryState,
   VmLifecycleState,
   Role,
+  VmSourceStatus,
 } from '@prisma/client';
 
 @Injectable()
@@ -48,13 +49,13 @@ export class DashboardService {
       this.prisma.user.count(),
       this.prisma.vmVCenterSource.count(),
       this.prisma.vmVCenterSource.count({
-        where: { status: 'Healthy' },
+        where: { status: VmSourceStatus.HEALTHY },
       }),
       this.prisma.vmVCenterSource.count({
-        where: { status: 'Connection failed' },
+        where: { status: VmSourceStatus.CONNECTION_FAILED },
       }),
       this.prisma.vmVCenterSource.count({
-        where: { status: 'Ready to sync' },
+        where: { status: VmSourceStatus.READY_TO_SYNC },
       }),
       this.prisma.vmDiscovery.count({
         where: {

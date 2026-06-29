@@ -85,6 +85,22 @@ export class AssetAttachmentsController {
     return this.attachmentsService.deleteAttachment(assetId, attachmentId);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get(':assetId/attachments/:attachmentId/download')
+  async download(
+    @Param('assetId') assetId: string,
+    @Param('attachmentId') attachmentId: string,
+    @Res() res: Response,
+  ) {
+    const attachment = await this.attachmentsService.findOne(assetId, attachmentId);
+    const filePath = path.join(process.cwd(), attachment.storedPath);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ message: 'File not found on disk' });
+      return;
+    }
+    res.download(filePath, attachment.filename);
+  }
+
   // Serve uploaded files — Public access for <img> tags
   @Get('uploads/:filename')
   serveFile(@Param('filename') filename: string, @Res() res: Response) {

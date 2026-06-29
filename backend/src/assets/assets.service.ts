@@ -132,10 +132,11 @@ export class AssetsService {
   private toDetail(asset: AssetWithRelations) {
     return {
       ...asset,
-      credentials: asset.credentials.map((credential) => ({
-        ...credential,
-        password: this.credentialsService.decrypt(credential.encryptedPassword),
-      })),
+      credentials: asset.credentials.map((credential) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { encryptedPassword, ...rest } = credential;
+        return rest;
+      }),
     };
   }
 
@@ -209,46 +210,59 @@ export class AssetsService {
     return this.toDetail(typedCreated);
   }
 
-  async findAll() {
-    const assets = await this.prisma.asset.findMany({
-      take: 1000,
-      include: {
-        patchInfo: true,
-        ipAllocations: true,
-        parent: true,
-        children: true,
-        credentials: {
-          select: {
-            id: true,
-            username: true,
-            type: true,
-            lastChangedDate: true,
-          },
-        },
-        notes: {
-          include: {
-            createdByUser: {
-              select: { id: true, displayName: true, avatarSeed: true },
-            },
-          },
-          orderBy: [
-            { isPinned: 'desc' as const },
-            { createdAt: 'desc' as const },
-          ],
-        },
-        attachments: {
-          include: {
-            createdByUser: {
-              select: { id: true, displayName: true, avatarSeed: true },
-            },
-          },
-          orderBy: { createdAt: 'desc' as const },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(page = 1, limit = 100) {
+    const skip = (page - 1) * limit;
+    const take = Math.min(limit, 200); // limit to max 200 per page
 
-    return assets.map((asset) => this.toListItem(asset as any));
+    const [assets, total] = await Promise.all([
+      this.prisma.asset.findMany({
+        skip,
+        take,
+        include: {
+          patchInfo: true,
+          ipAllocations: true,
+          parent: true,
+          children: true,
+          credentials: {
+            select: {
+              id: true,
+              username: true,
+              type: true,
+              lastChangedDate: true,
+            },
+          },
+          notes: {
+            include: {
+              createdByUser: {
+                select: { id: true, displayName: true, avatarSeed: true },
+              },
+            },
+            orderBy: [
+              { isPinned: 'desc' as const },
+              { createdAt: 'desc' as const },
+            ],
+          },
+          attachments: {
+            include: {
+              createdByUser: {
+                select: { id: true, displayName: true, avatarSeed: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' as const },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.asset.count(),
+    ]);
+
+    return {
+      data: assets.map((asset) => this.toListItem(asset as any)),
+      total,
+      page,
+      limit: take,
+      totalPages: Math.ceil(total / take),
+    };
   }
 
   async findOne(id: string) {
@@ -294,6 +308,22 @@ export class AssetsService {
     }
 
     return this.toDetail(asset);
+  }
+
+  async getAuditLogs(assetId: string) {
+    return this.prisma.auditLog.findMany({
+      where: { targetId: assetId },
+      orderBy: { timestamp: 'desc' },
+      include: {
+        user: {
+          select: {
+            username: true,
+            displayName: true,
+            avatarSeed: true,
+          },
+        },
+      },
+    });
   }
 
   async update(id: string, updateAssetDto: UpdateAssetDto, userId: string) {

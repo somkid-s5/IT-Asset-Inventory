@@ -17,6 +17,7 @@ import {
   VmLifecycleState,
   VmPowerState,
   AuditAction,
+  VmSourceStatus,
 } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -227,26 +228,34 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return value?.trim() || null;
   }
 
-  private parseSyncIntervalMs(syncInterval?: string | null) {
+  private parseSyncIntervalMinutes(syncInterval?: string | null): number {
     const raw = syncInterval?.trim().toLowerCase();
 
     if (!raw) {
-      return 15 * 60 * 1000;
+      return 15;
+    }
+
+    if (/^\d+$/.test(raw)) {
+      return parseInt(raw, 10);
     }
 
     const match = raw.match(/^(\d+)\s*(min|mins|minute|minutes|hour|hours)$/);
     if (!match) {
-      return 15 * 60 * 1000;
+      return 15;
     }
 
     const amount = Number(match[1]);
     const unit = match[2];
 
     if (unit.startsWith('hour')) {
-      return amount * 60 * 60 * 1000;
+      return amount * 60;
     }
 
-    return amount * 60 * 1000;
+    return amount;
+  }
+
+  private parseSyncIntervalMs(syncIntervalMinutes?: number | null) {
+    return (syncIntervalMinutes || 15) * 60 * 1000;
   }
 
   private shouldAutoSyncSource(source: VmVCenterSource, now: Date) {
@@ -301,7 +310,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             await this.prisma.vmVCenterSource.update({
               where: { id: source.id },
               data: {
-                status: 'Connection failed',
+                status: VmSourceStatus.CONNECTION_FAILED,
               },
             });
           } catch {
@@ -1250,7 +1259,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         where: { id: source.id },
         data: {
           version,
-          status: 'Healthy',
+          status: VmSourceStatus.HEALTHY,
           lastSyncAt: startedAt,
         },
       });
@@ -1299,9 +1308,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         encryptedPassword: dto.password
           ? this.credentialsService.encrypt(dto.password)
           : null,
-        syncInterval: dto.syncInterval.trim(),
+        syncInterval: this.parseSyncIntervalMinutes(dto.syncInterval),
         notes: this.sanitizeText(dto.notes),
-        status: 'Ready to sync',
+        status: VmSourceStatus.READY_TO_SYNC,
         lastSyncAt: null,
         createdByUserId: userId,
       },
@@ -1360,9 +1369,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         ...(dto.password
           ? { encryptedPassword: this.credentialsService.encrypt(dto.password) }
           : {}),
-        syncInterval: dto.syncInterval.trim(),
+        syncInterval: this.parseSyncIntervalMinutes(dto.syncInterval),
         notes: this.sanitizeText(dto.notes),
-        status: 'Ready to sync',
+        status: VmSourceStatus.READY_TO_SYNC,
       },
       include: {
         discoveries: {
@@ -1424,7 +1433,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           await this.prisma.vmVCenterSource.update({
             where: { id: source.id },
             data: {
-              status: 'Connection failed',
+              status: VmSourceStatus.CONNECTION_FAILED,
             },
           });
 
@@ -1504,7 +1513,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       await this.prisma.vmVCenterSource.update({
         where: { id: source.id },
         data: {
-          status: 'Connection failed',
+          status: VmSourceStatus.CONNECTION_FAILED,
         },
       });
 
@@ -1611,41 +1620,44 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
 
   async promoteDiscovery(id: string, dto: SaveVmDraftDto, userId: string) {
     this.ensureSeedData();
-    const discovery = await this.prisma.vmDiscovery.findUnique({
-      where: { id },
-      include: {
-        source: true,
-        guestAccounts: true,
-      },
-    });
-
-    if (!discovery) {
-      throw new NotFoundException(`VM discovery ${id} not found`);
-    }
-
-    const guestAccounts = this.buildVmGuestAccounts(dto.guestAccounts);
-    const completeness = this.computeCompleteness({
-      systemName: dto.systemName,
-      environment: dto.environment,
-      serviceRole: dto.serviceRole,
-      description: dto.description,
-      guestAccountsCount: guestAccounts.length,
-    });
-
-    if (completeness.missingFields.length > 0) {
-      throw new BadRequestException(
-        `Complete required VM context before promotion: ${completeness.missingFields.join(', ')}`,
-      );
-    }
-
-    const normalizedDisks = this.normalizeDisks(dto.disks);
-    const promotedDisks =
-      normalizedDisks.length > 0
-        ? normalizedDisks
-        : ((discovery.disks ?? undefined) as Prisma.InputJsonValue | undefined);
 
     const promoted = await this.prisma.$transaction<VmInventoryWithRelations>(
       async (tx) => {
+        const discovery = await tx.vmDiscovery.findUnique({
+          where: { id },
+          include: {
+            source: true,
+            guestAccounts: true,
+          },
+        });
+
+        if (!discovery) {
+          throw new NotFoundException(`VM discovery ${id} not found`);
+        }
+
+        const guestAccounts = this.buildVmGuestAccounts(dto.guestAccounts);
+        const completeness = this.computeCompleteness({
+          systemName: dto.systemName,
+          environment: dto.environment,
+          serviceRole: dto.serviceRole,
+          description: dto.description,
+          guestAccountsCount: guestAccounts.length,
+        });
+
+        if (completeness.missingFields.length > 0) {
+          throw new BadRequestException(
+            `Complete required VM context before promotion: ${completeness.missingFields.join(', ')}`,
+          );
+        }
+
+        const normalizedDisks = this.normalizeDisks(dto.disks);
+        const promotedDisks =
+          normalizedDisks.length > 0
+            ? normalizedDisks
+            : ((discovery.disks ?? undefined) as
+                | Prisma.InputJsonValue
+                | undefined);
+
         await tx.vmDiscovery.update({
           where: { id },
           data: {
@@ -1718,18 +1730,18 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           include: VM_INVENTORY_INCLUDE,
         });
 
+        await tx.auditLog.create({
+          data: {
+            userId,
+            action: AuditAction.CREATE_VM,
+            targetId: inventory.id,
+            details: `Promoted VM to inventory: ${inventory.name} (moid: ${inventory.moid})`,
+          },
+        });
+
         return inventory;
       },
     );
-
-    await this.prisma.auditLog.create({
-      data: {
-        userId,
-        action: AuditAction.CREATE_VM,
-        targetId: promoted.id,
-        details: `Promoted VM to inventory: ${promoted.name} (moid: ${promoted.moid})`,
-      },
-    });
 
     return this.mapInventory(promoted);
   }

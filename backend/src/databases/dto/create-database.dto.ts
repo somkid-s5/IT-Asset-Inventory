@@ -2,11 +2,13 @@ import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
+import { DatabaseStatus } from '@prisma/client';
 
 class DatabaseAccountDto {
   @IsString()
@@ -83,8 +85,8 @@ export class CreateDatabaseDto {
   maintenanceWindow?: string;
 
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(DatabaseStatus)
+  status?: DatabaseStatus;
 
   @IsOptional()
   @IsString()

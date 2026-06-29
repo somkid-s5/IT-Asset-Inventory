@@ -79,10 +79,23 @@ enum TicketStatus {
   CLOSED
 }
 
+enum DatabaseStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum VmSourceStatus {
+  READY_TO_SYNC
+  HEALTHY
+  CONNECTION_FAILED
+}
+
 enum AuditAction {
   VIEW_PASSWORD
   COPY_PASSWORD
   LOGIN
+  LOGIN_FAILED
   CREATE_USER
   UPDATE_USER_ROLE
   RESET_USER_PASSWORD
@@ -102,6 +115,11 @@ enum AuditAction {
   CREATE_SOURCE
   DELETE_SOURCE
   UPDATE_SOURCE
+  EXPORT_DATA
+  CREATE_TICKET
+  UPDATE_TICKET
+  CLOSE_TICKET
+  CREATE_COMMENT
 }
 
 model User {
@@ -115,6 +133,7 @@ model User {
   role         Role     @default(VIEWER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
 
   assets              Asset[]
   databaseInventories DatabaseInventory[]
@@ -226,12 +245,14 @@ model Credential {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([assetId])
 }
 
 model AuditLog {
   id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   action    AuditAction
   targetId  String? // ID of the asset or credential interacted with
@@ -243,6 +264,7 @@ model AuditLog {
   @@index([userId])
   @@index([timestamp])
   @@index([action])
+  @@index([targetId])
 }
 
 model DatabaseInventory {
@@ -260,7 +282,7 @@ model DatabaseInventory {
   replication       String?
   linkedApps        String[]
   maintenanceWindow String?
-  status            String?
+  status            DatabaseStatus?  @default(ACTIVE)
   note              String?
 
   createdByUserId String
@@ -297,8 +319,8 @@ model VmVCenterSource {
   version           String
   username          String?
   encryptedPassword String?
-  syncInterval      String
-  status            String
+  syncInterval      Int
+  status            VmSourceStatus   @default(READY_TO_SYNC)
   lastSyncAt        DateTime?
   notes             String?
 
@@ -359,6 +381,8 @@ model VmDiscovery {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([state])
 }
 
 model VmInventory {
@@ -495,9 +519,12 @@ model Ticket {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   resolvedAt  DateTime?
+  dueAt       DateTime?
 
   @@index([status])
   @@index([priority])
+  @@index([assigneeId])
+  @@index([clientId])
 }
 
 model TicketComment {
@@ -532,4 +559,13 @@ model KnowledgeDocument {
   updatedAt   DateTime          @updatedAt
 
   @@index([categoryId])
+}
+
+model TokenBlocklist {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
 }

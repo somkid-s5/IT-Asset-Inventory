@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { sanitizeHtml } from '../utils/sanitize';
 
 @Injectable()
 export class TicketCommentsService {
@@ -31,14 +32,17 @@ export class TicketCommentsService {
       throw new NotFoundException(`Ticket with ID ${ticketId} not found`);
     }
 
+    const sanitizedContent = isSystem ? content : sanitizeHtml(content);
+
     const comment = await this.prisma.ticketComment.create({
       data: {
         ticketId,
         userId,
-        content,
+        content: sanitizedContent,
         commentType,
         isSystem,
       },
+
       include: {
         user: {
           select: { id: true, displayName: true, avatarSeed: true },

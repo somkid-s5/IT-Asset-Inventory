@@ -23,6 +23,8 @@ export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.EDITOR)
   create(
     @Body() createTicketDto: CreateTicketDto,
     @Request() req: { user: { id: string } },
@@ -41,13 +43,17 @@ export class TicketsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTicketDto: UpdateTicketDto) {
-    return this.ticketsService.update(id, updateTicketDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateTicketDto: UpdateTicketDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.ticketsService.update(id, updateTicketDto, req.user.id);
   }
 
   @Roles(Role.ADMIN)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ticketsService.remove(id);
+  remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.ticketsService.remove(id, req.user.id);
   }
 }

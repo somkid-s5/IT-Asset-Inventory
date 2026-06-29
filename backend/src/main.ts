@@ -6,6 +6,16 @@ import helmet from 'helmet';
 import { GlobalExceptionFilter } from './filters/http-exception.filter';
 
 async function bootstrap() {
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !process.env.REGISTRATION_SECRET
+  ) {
+    console.error(
+      'CRITICAL: REGISTRATION_SECRET environment variable is required in production mode',
+    );
+    process.exit(1);
+  }
+
   const app = await NestFactory.create(AppModule);
 
   // Security headers with CORS-friendly settings for assets

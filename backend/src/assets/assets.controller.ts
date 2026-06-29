@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -32,13 +33,24 @@ export class AssetsController {
   }
 
   @Get()
-  findAll() {
-    return this.assetsService.findAll();
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.assetsService.findAll(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 100,
+    );
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.assetsService.findOne(id);
+  }
+
+  @Get(':id/audit-logs')
+  getAuditLogs(@Param('id') id: string) {
+    return this.assetsService.getAuditLogs(id);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)

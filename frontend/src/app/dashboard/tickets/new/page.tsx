@@ -53,8 +53,8 @@ export default function NewTicketPage() {
   const { data: assets = [] } = useQuery({
     queryKey: ['assets-brief'],
     queryFn: async () => {
-      const res = await api.get('/assets');
-      return res.data;
+      const res = await api.get<any>('/assets');
+      return Array.isArray(res.data) ? res.data : (res.data.data || []);
     }
   });
 

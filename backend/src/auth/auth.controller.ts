@@ -12,8 +12,9 @@ import {
   Headers,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Request } from 'express';
+import * as express from 'express';
 import type { Response } from 'express';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -27,7 +28,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async me(@Req() req: Request & { user: { id: string } }) {
+  async me(@Req() req: express.Request & { user: { id: string } }) {
     return this.authService.me(req.user.id);
   }
 
@@ -55,12 +56,16 @@ export class AuthController {
   }
 
   @Post('login')
+  @SkipThrottle({ global: true })
+  @Throttle({ login: { ttl: 60000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: express.Request,
   ) {
-    const result = await this.authService.login(loginDto);
+    const ipAddress = req.ip || req.socket.remoteAddress || null;
+    const result = await this.authService.login(loginDto, ipAddress);
     this.setAuthCookie(res, result.access_token);
     return { user: result.user };
   }
@@ -79,7 +84,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
-    @Req() req: Request & { user: { id: string } },
+    @Req() req: express.Request & { user: { id: string } },
   ) {
     return this.authService.changePassword(
       req.user.id,
@@ -92,7 +97,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   updateProfile(
     @Body() updateProfileDto: UpdateProfileDto,
-    @Req() req: Request & { user: { id: string } },
+    @Req() req: express.Request & { user: { id: string } },
   ) {
     return this.authService.updateProfile(
       req.user.id,
@@ -104,7 +109,16 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  logout(@Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: express.Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token =
+      req.cookies?.access_token ||
+      req.headers.authorization?.replace('Bearer ', '');
+    if (token) {
+      await this.authService.logout(token);
+    }
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

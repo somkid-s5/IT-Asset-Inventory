@@ -22,10 +22,28 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ignoreExpiration: false,
       secretOrKey:
         configService.get<string>('JWT_SECRET') || 'super-secret-key',
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: { sub: string; username: string; role: string }) {
+  async validate(
+    req: any,
+    payload: { sub: string; username: string; role: string },
+  ) {
+    const token = ExtractJwt.fromExtractors([
+      extractJwtFromCookie,
+      ExtractJwt.fromAuthHeaderAsBearerToken(),
+    ])(req);
+
+    if (token) {
+      const isBlocked = await this.prisma.tokenBlocklist.findUnique({
+        where: { token },
+      });
+      if (isBlocked) {
+        throw new UnauthorizedException('Token is revoked');
+      }
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
     });

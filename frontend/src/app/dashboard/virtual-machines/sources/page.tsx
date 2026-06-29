@@ -35,6 +35,15 @@ const DEFAULT_SOURCE_FORM = {
 };
 const SYNC_INTERVAL_OPTIONS = ['5 min', '15 min', '30 min', '1 hour', '6 hours'];
 
+const getIntervalString = (minutes: number | string | null | undefined): string => {
+  if (!minutes) return '15 min';
+  const mins = typeof minutes === 'string' ? parseInt(minutes, 10) : minutes;
+  if (isNaN(mins)) return String(minutes);
+  if (mins === 60) return '1 hour';
+  if (mins === 360) return '6 hours';
+  return `${mins} min`;
+};
+
 export default function VmSourcesPage() {
   const router = useRouter();
   const { setHeader } = usePageHeader();
@@ -77,7 +86,7 @@ export default function VmSourcesPage() {
   const openAddDialog = useCallback(() => { resetForm(); setAddOpen(true); }, [resetForm]);
   const openEditDialog = useCallback((source: VmVCenterSource) => {
     setEditingSourceId(source.id);
-    setFormData({ name: source.name, endpoint: source.endpoint, username: '', password: '', syncInterval: source.syncInterval, notes: source.notes ?? '' });
+    setFormData({ name: source.name, endpoint: source.endpoint, username: '', password: '', syncInterval: getIntervalString(source.syncInterval), notes: source.notes ?? '' });
     setLastSuccessfulTestKey(null);
     setAddOpen(true);
   }, []);
@@ -144,15 +153,17 @@ export default function VmSourcesPage() {
     },
     { accessorKey: 'endpoint', header: "Endpoint", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
     { accessorKey: 'vmCount', header: "VM Count", cell: ({ getValue }) => <span className="font-mono text-xs">{getValue() as number}</span> },
-    { accessorKey: 'syncInterval', header: "Sync Interval", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">Every {getValue() as string}</span> },
+    { accessorKey: 'syncInterval', header: "Sync Interval", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">Every {getIntervalString(getValue() as number)}</span> },
     {
       accessorKey: 'status',
       header: "Status",
       cell: ({ row }) => {
         const s = row.original;
         const isSyncing = syncingAll || syncingSourceIds.includes(s.id);
-        const bg = isSyncing ? 'bg-sky-500/10 border-sky-500/25 text-sky-500' : s.status === 'Healthy' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500' : 'bg-amber-500/10 border-amber-500/25 text-amber-500';
-        return <Badge variant="outline" className={cn("uppercase", bg)}>{isSyncing ? 'Syncing...' : s.status}</Badge>;
+        const isHealthy = s.status === 'Healthy' || s.status === 'HEALTHY';
+        const label = isSyncing ? 'Syncing...' : (s.status === 'HEALTHY' ? 'Healthy' : s.status === 'READY_TO_SYNC' ? 'Ready to sync' : s.status === 'CONNECTION_FAILED' ? 'Connection failed' : s.status);
+        const bg = isSyncing ? 'bg-sky-500/10 border-sky-500/25 text-sky-500' : isHealthy ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500' : 'bg-amber-500/10 border-amber-500/25 text-amber-500';
+        return <Badge variant="outline" className={cn("uppercase", bg)}>{label}</Badge>;
       }
     },
     { accessorKey: 'lastSyncAt', header: "Last Sync", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },

@@ -74,6 +74,10 @@ export default function TicketDetailsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket', id] });
       toast.success('Ticket status updated');
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || error?.message || 'Failed to update ticket status';
+      toast.error(msg);
     }
   });
 
@@ -84,8 +88,13 @@ export default function TicketDetailsPage() {
       setCommentContent('');
       setCommentType('GENERAL');
       toast.success('Activity log added');
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || error?.message || 'Failed to add activity log';
+      toast.error(msg);
     }
   });
+
 
   useEffect(() => {
     if (ticket) {
@@ -127,6 +136,9 @@ export default function TicketDetailsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => updateStatusMutation.mutate('RESOLVED')} className="font-bold text-xs gap-2 text-emerald-600 focus:text-emerald-600 focus:bg-emerald-500/5">
                  <CheckCircle2 className="h-4 w-4" /> Resolve Ticket
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updateStatusMutation.mutate('CLOSED')} className="font-bold text-xs gap-2 text-slate-600 focus:text-slate-600 focus:bg-slate-500/5">
+                 <CheckCircle2 className="h-4 w-4 text-slate-500" /> Close Ticket
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -227,9 +239,7 @@ export default function TicketDetailsPage() {
                           {comment.isSystem ? (
                             <p>{comment.content}</p>
                           ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/40 prose-img:rounded-xl">
-                               <MarkdownRenderer content={comment.content} />
-                            </div>
+                             <MarkdownRenderer content={comment.content} className="prose-sm text-xs prose-p:leading-relaxed prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/40 prose-img:rounded-xl" />
                           )}
                        </div>
                     </div>

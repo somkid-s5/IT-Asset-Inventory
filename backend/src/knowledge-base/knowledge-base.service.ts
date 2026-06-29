@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { sanitizeHtml } from '../utils/sanitize';
 
 @Injectable()
 export class KnowledgeBaseService {
@@ -230,8 +231,12 @@ fi
     categoryId: string;
     authorId: string;
   }) {
+    const sanitizedContent = sanitizeHtml(data.content);
     return this.prisma.knowledgeDocument.create({
-      data,
+      data: {
+        ...data,
+        content: sanitizedContent,
+      },
       include: {
         category: true,
         author: { select: { displayName: true } },
@@ -275,9 +280,23 @@ fi
   }
 
   async updateDocument(id: string, data: Prisma.KnowledgeDocumentUpdateInput) {
+    const updateData = { ...data };
+    if (typeof updateData.content === 'string') {
+      updateData.content = sanitizeHtml(updateData.content);
+    } else if (
+      updateData.content &&
+      typeof updateData.content === 'object' &&
+      'set' in updateData.content
+    ) {
+      const setVal = updateData.content.set;
+      if (typeof setVal === 'string') {
+        updateData.content = { set: sanitizeHtml(setVal) };
+      }
+    }
+
     return this.prisma.knowledgeDocument.update({
       where: { id },
-      data,
+      data: updateData,
     });
   }
 

@@ -47,8 +47,11 @@ const DEFAULT_FORM = {
   port: '',
   serviceName: '',
   owner: '',
-  status: '',
+  status: 'ACTIVE',
   note: '',
+  backupPolicy: '',
+  replication: '',
+  maintenanceWindow: '',
 };
 
 const COMPACT_INPUT_CLASS = 'h-9 rounded-[10px] px-3 text-sm';
@@ -85,8 +88,11 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
       port: databaseToEdit.port ?? '',
       serviceName: databaseToEdit.serviceName ?? '',
       owner: databaseToEdit.owner ?? '',
-      status: databaseToEdit.status ?? '',
+      status: databaseToEdit.status ?? 'ACTIVE',
       note: databaseToEdit.note ?? '',
+      backupPolicy: databaseToEdit.backupPolicy ?? '',
+      replication: databaseToEdit.replication ?? '',
+      maintenanceWindow: databaseToEdit.maintenanceWindow ?? '',
     });
     setLinkedApps(
       databaseToEdit.linkedApps.length > 0 ? parseLinkedApps(databaseToEdit.linkedApps) : [{ ...EMPTY_LINKED_APP }],
@@ -122,12 +128,12 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
       ipAddress: formData.ipAddress.trim(),
       port: formData.port.trim() || undefined,
       serviceName: formData.serviceName.trim() || undefined,
-      owner: '',
-      backupPolicy: '',
-      replication: '',
+      owner: formData.owner.trim() || undefined,
+      backupPolicy: formData.backupPolicy.trim() || undefined,
+      replication: formData.replication.trim() || undefined,
       linkedApps: serializeLinkedApps(linkedApps),
-      maintenanceWindow: '',
-      status: '',
+      maintenanceWindow: formData.maintenanceWindow.trim() || undefined,
+      status: (formData.status || undefined) as any,
       note: formData.note.trim() || undefined,
       accounts: validAccounts.map((account) => ({
         username: account.username.trim(),
@@ -288,6 +294,69 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                   value={formData.serviceName}
                   onChange={(event) => setFormData((current) => ({ ...current, serviceName: event.target.value }))}
                   placeholder="e.g. ORCLPROD"
+                />
+              </div>
+
+              <div className="space-y-1 md:col-span-12 pt-1">
+                <h3 className="text-sm font-semibold text-foreground">Backup & Operations</h3>
+                <p className="text-[11px] text-muted-foreground">Define backup, replication, and maintenance policies</p>
+              </div>
+
+              <div className="space-y-1.5 md:col-span-4">
+                <Label>Status</Label>
+                <Select value={formData.status || undefined} onValueChange={(value) => setFormData((current) => ({ ...current, status: value }))}>
+                  <SelectTrigger id="db-status" size="sm" className={COMPACT_SELECT_TRIGGER_CLASS}>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5 md:col-span-4">
+                <Label optional>Owner</Label>
+                <Input
+                  id="db-owner"
+                  className={COMPACT_INPUT_CLASS}
+                  value={formData.owner}
+                  onChange={(event) => setFormData((current) => ({ ...current, owner: event.target.value }))}
+                  placeholder="e.g. DBA Team"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-4">
+                <Label optional>Backup Policy</Label>
+                <Input
+                  id="db-backup-policy"
+                  className={COMPACT_INPUT_CLASS}
+                  value={formData.backupPolicy}
+                  onChange={(event) => setFormData((current) => ({ ...current, backupPolicy: event.target.value }))}
+                  placeholder="e.g. Daily Incremental"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-6">
+                <Label optional>Replication Status</Label>
+                <Input
+                  id="db-replication"
+                  className={COMPACT_INPUT_CLASS}
+                  value={formData.replication}
+                  onChange={(event) => setFormData((current) => ({ ...current, replication: event.target.value }))}
+                  placeholder="e.g. Active-Passive Mirror"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-6">
+                <Label optional>Maintenance Window</Label>
+                <Input
+                  id="db-maintenance-window"
+                  className={COMPACT_INPUT_CLASS}
+                  value={formData.maintenanceWindow}
+                  onChange={(event) => setFormData((current) => ({ ...current, maintenanceWindow: event.target.value }))}
+                  placeholder="e.g. Sun 02:00 - 04:00 AM"
                 />
               </div>
 

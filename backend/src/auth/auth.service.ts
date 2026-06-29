@@ -82,7 +82,7 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, ipAddress: string | null = null) {
     const { username, password } = loginDto;
 
     const user = await this.prisma.user.findUnique({
@@ -90,12 +90,36 @@ export class AuthService {
     });
 
     if (!user) {
+      // Log failed login attempt for non-existent user
+      await this.prisma.auditLog.create({
+        data: {
+          userId: null,
+          action: AuditAction.LOGIN_FAILED,
+          ipAddress,
+          details: JSON.stringify({
+            username,
+            reason: 'User not found',
+          }),
+        },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
+      // Log failed login attempt for existing user
+      await this.prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: AuditAction.LOGIN_FAILED,
+          ipAddress,
+          details: JSON.stringify({
+            username: user.username,
+            reason: 'Incorrect password',
+          }),
+        },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -103,6 +127,7 @@ export class AuthService {
       data: {
         userId: user.id,
         action: AuditAction.LOGIN,
+        ipAddress,
         details: JSON.stringify({
           username: user.username,
           displayName: user.displayName,
@@ -155,8 +180,19 @@ export class AuthService {
     avatarSeed?: string,
     avatarImage?: string | null,
   ) {
-    if (avatarImage && !avatarImage.startsWith('data:image/')) {
-      throw new ConflictException('Avatar image format is invalid');
+    if (avatarImage) {
+      if (!avatarImage.startsWith('data:image/')) {
+        throw new ConflictException('Avatar image format is invalid');
+      }
+      if (
+        avatarImage.startsWith('data:image/svg+xml') ||
+        avatarImage.includes('image/svg+xml') ||
+        avatarImage.toLowerCase().includes('<svg')
+      ) {
+        throw new ConflictException(
+          'SVG avatars are not allowed for security reasons',
+        );
+      }
     }
 
     const user = await this.prisma.user.update({
@@ -221,5 +257,22 @@ export class AuthService {
     });
 
     return { success: true };
+  }
+
+  async logout(token: string) {
+    try {
+      const decoded = this.jwtService.decode(token);
+      const expiresAt = decoded?.exp
+        ? new Date(decoded.exp * 1000)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await this.prisma.tokenBlocklist.upsert({
+        where: { token },
+        create: { token, expiresAt },
+        update: {},
+      });
+    } catch (err) {
+      console.error('Failed to blocklist token:', err);
+    }
   }
 }

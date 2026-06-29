@@ -4,7 +4,13 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { ClientsService } from '../clients/clients.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { TicketStatus, TicketPriority, Prisma, Ticket } from '@prisma/client';
+import {
+  TicketStatus,
+  TicketPriority,
+  Prisma,
+  Ticket,
+  AuditAction,
+} from '@prisma/client';
 
 type TicketWithRelations = Ticket & {
   client?: any;
@@ -62,9 +68,9 @@ export class TicketsService {
     };
 
     const limitHours = slaLimits[ticket.priority] || 24;
-    const slaDeadline = new Date(
-      ticket.createdAt.getTime() + limitHours * 60 * 60 * 1000,
-    );
+    const slaDeadline = ticket.dueAt
+      ? new Date(ticket.dueAt)
+      : new Date(ticket.createdAt.getTime() + limitHours * 60 * 60 * 1000);
 
     let slaStatus: 'WITHIN_SLA' | 'BREACHED' = 'WITHIN_SLA';
     const resolveTime = ticket.resolvedAt || new Date();
@@ -88,6 +94,7 @@ export class TicketsService {
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
       resolvedAt: ticket.resolvedAt,
+      dueAt: ticket.dueAt,
       client: ticket.client as unknown,
       assignee: ticket.assignee as unknown,
       creator: ticket.creator as unknown,
@@ -110,12 +117,23 @@ export class TicketsService {
 
     const ticketNo = await this.generateTicketNo();
 
+    const slaLimits: Record<TicketPriority, number> = {
+      CRITICAL: 4,
+      HIGH: 12,
+      MEDIUM: 24,
+      LOW: 72,
+    };
+    const limitHours =
+      slaLimits[createTicketDto.priority || TicketPriority.MEDIUM] || 24;
+    const dueAt = new Date(Date.now() + limitHours * 60 * 60 * 1000);
+
     const ticket = await this.prisma.ticket.create({
       data: {
         ...ticketData,
         ticketNo,
         clientId: client.id,
         creatorId,
+        dueAt,
       },
       include: {
         client: true,
@@ -140,6 +158,16 @@ export class TicketsService {
       ticket.title,
       ticket.client.name,
     );
+
+    // Create Audit Log
+    await this.prisma.auditLog.create({
+      data: {
+        userId: creatorId,
+        action: AuditAction.CREATE_TICKET,
+        targetId: ticket.id,
+        details: `Created ticket ${ticket.ticketNo}: ${ticket.title}`,
+      },
+    });
 
     return this.withSla(ticket);
   }
@@ -195,9 +223,8 @@ export class TicketsService {
     return this.withSla(ticket);
   }
 
-  async update(id: string, updateTicketDto: UpdateTicketDto) {
+  async update(id: string, updateTicketDto: UpdateTicketDto, userId: string) {
     const { clientName, ...ticketData } = updateTicketDto;
-
     let clientId: string | undefined;
     if (clientName) {
       const client = await this.clientsService.findOrCreateByName(clientName);
@@ -214,6 +241,26 @@ export class TicketsService {
     // Set resolvedAt if status changes to RESOLVED
     if (updateTicketDto.status === TicketStatus.RESOLVED) {
       data.resolvedAt = new Date();
+    }
+
+    // Update dueAt if priority changes
+    if (updateTicketDto.priority) {
+      const slaLimits: Record<TicketPriority, number> = {
+        CRITICAL: 4,
+        HIGH: 12,
+        MEDIUM: 24,
+        LOW: 72,
+      };
+      const existing = await this.prisma.ticket.findUnique({
+        where: { id },
+        select: { createdAt: true },
+      });
+      if (existing) {
+        const limitHours = slaLimits[updateTicketDto.priority] || 24;
+        data.dueAt = new Date(
+          existing.createdAt.getTime() + limitHours * 60 * 60 * 1000,
+        );
+      }
     }
 
     const updated = await this.prisma.ticket.update({
@@ -253,13 +300,41 @@ export class TicketsService {
       );
     }
 
+    // Create Audit Log
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action:
+          updateTicketDto.status === TicketStatus.CLOSED
+            ? AuditAction.CLOSE_TICKET
+            : AuditAction.UPDATE_TICKET,
+        targetId: id,
+        details: `Updated ticket ${updated.ticketNo}: status=${updated.status}, assignee=${updated.assigneeId || 'None'}`,
+      },
+    });
+
     return this.withSla(updated);
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
-    return this.prisma.ticket.delete({
+  async remove(id: string, userId: string) {
+    const ticket = await this.findOne(id);
+    if (!ticket) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+    const deleted = await this.prisma.ticket.delete({
       where: { id },
     });
+
+    // Create Audit Log
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_TICKET,
+        targetId: id,
+        details: `Deleted ticket ${ticket.ticketNo}: ${ticket.title}`,
+      },
+    });
+
+    return deleted;
   }
 }

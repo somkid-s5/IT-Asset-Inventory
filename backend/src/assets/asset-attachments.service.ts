@@ -95,6 +95,16 @@ export class AssetAttachmentsService {
     return this.prisma.assetAttachment.delete({ where: { id: attachmentId } });
   }
 
+  async findOne(assetId: string, attachmentId: string) {
+    const attachment = await this.prisma.assetAttachment.findUnique({
+      where: { id: attachmentId },
+    });
+    if (!attachment || attachment.assetId !== assetId) {
+      throw new NotFoundException('Attachment not found');
+    }
+    return attachment;
+  }
+
   getUploadDir() {
     return UPLOAD_DIR;
   }

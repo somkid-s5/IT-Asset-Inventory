@@ -120,8 +120,8 @@ export default function AssetsPage() {
   const { data: assets = [], isLoading, refetch } = useQuery({
     queryKey: ['assets'],
     queryFn: async () => {
-      const response = await api.get<Asset[]>('/assets');
-      return response.data;
+      const response = await api.get<any>('/assets');
+      return (Array.isArray(response.data) ? response.data : (response.data.data || [])) as Asset[];
     },
   });
 
@@ -406,7 +406,7 @@ export default function AssetsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, IP, SN..."
+                placeholder="Search by name..."
                 value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
                 onChange={(e) => table.getColumn('name')?.setFilterValue(e.target.value)}
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"

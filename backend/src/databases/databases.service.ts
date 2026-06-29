@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AuditAction, Prisma } from '@prisma/client';
+import { AuditAction, Prisma, DatabaseStatus } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDatabaseDto } from './dto/create-database.dto';
@@ -101,7 +101,9 @@ export class DatabasesService {
         maintenanceWindow: this.sanitizeText(
           createDatabaseDto.maintenanceWindow,
         ),
-        status: this.sanitizeText(createDatabaseDto.status),
+        status: createDatabaseDto.status
+          ? (this.sanitizeText(createDatabaseDto.status) as DatabaseStatus)
+          : undefined,
         note: this.sanitizeText(createDatabaseDto.note),
         createdByUserId: userId,
         accounts: {
@@ -219,7 +221,13 @@ export class DatabasesService {
             }
           : {}),
         ...(updateDatabaseDto.status !== undefined
-          ? { status: this.sanitizeText(updateDatabaseDto.status) }
+          ? {
+              status: updateDatabaseDto.status
+                ? (this.sanitizeText(
+                    updateDatabaseDto.status,
+                  ) as DatabaseStatus)
+                : null,
+            }
           : {}),
         ...(updateDatabaseDto.note !== undefined
           ? { note: this.sanitizeText(updateDatabaseDto.note) }

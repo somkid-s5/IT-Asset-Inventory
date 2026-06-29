@@ -82,45 +82,52 @@ export class UsersService {
   }
 
   async updateRole(userId: string, role: Role, currentUserId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        role: true,
-      },
-    });
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      // Lock admin rows to prevent TOCTOU race condition
+      await tx.$queryRaw`SELECT id FROM "User" WHERE role = 'ADMIN'::"Role" FOR UPDATE`;
 
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    if (user.id === currentUserId && role !== Role.ADMIN) {
-      throw new BadRequestException('You cannot remove your own admin role');
-    }
-
-    if (user.role === Role.ADMIN && role !== Role.ADMIN) {
-      const adminCount = await this.prisma.user.count({
-        where: { role: Role.ADMIN },
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          role: true,
+        },
       });
 
-      if (adminCount <= 1) {
-        throw new BadRequestException('At least one admin account must remain');
+      if (!user) {
+        throw new NotFoundException('User not found');
       }
-    }
 
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: { role },
-      select: {
-        id: true,
-        username: true,
-        displayName: true,
-        avatarSeed: true,
-        avatarImage: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      if (user.id === currentUserId && role !== Role.ADMIN) {
+        throw new BadRequestException('You cannot remove your own admin role');
+      }
+
+      if (user.role === Role.ADMIN && role !== Role.ADMIN) {
+        const adminCount = await tx.user.count({
+          where: { role: Role.ADMIN },
+        });
+
+        if (adminCount <= 1) {
+          throw new BadRequestException(
+            'At least one admin account must remain',
+          );
+        }
+      }
+
+      return tx.user.update({
+        where: { id: userId },
+        data: { role },
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          avatarSeed: true,
+          avatarImage: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
     });
 
     await this.prisma.auditLog.create({

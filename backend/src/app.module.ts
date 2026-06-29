@@ -18,21 +18,22 @@ import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module';
 import { ClientsModule } from './clients/clients.module';
 import { TicketCommentsModule } from './ticket-comments/ticket-comments.module';
 import { NotificationsModule } from './notifications/notifications.module';
-
-import { join } from 'path';
-import { ServeStaticModule } from '@nestjs/serve-static';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'uploads'),
-      serveRoot: '/uploads',
-    }),
+    UploadsModule,
     ThrottlerModule.forRoot([
       {
+        name: 'global',
         ttl: 60000,
         limit: 100,
+      },
+      {
+        name: 'login',
+        ttl: 60000,
+        limit: 10,
       },
     ]),
     PrismaModule,
