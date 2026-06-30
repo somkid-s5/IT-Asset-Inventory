@@ -151,9 +151,26 @@ export default function DbPage() {
       cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
     },
     {
-      accessorKey: 'ipAddress',
-      header: "IP Address",
-      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
+      id: 'connection',
+      header: "IP & Port",
+      cell: ({ row }) => {
+        const ip = row.original.ipAddress || '--';
+        const port = row.original.port;
+        return <span className="font-mono text-[11px] text-muted-foreground">{port ? `${ip}:${port}` : ip}</span>;
+      }
+    },
+    {
+      accessorKey: 'status',
+      header: "Status",
+      cell: ({ getValue }) => {
+        const status = (getValue() as string) || 'ACTIVE';
+        const active = status === 'ACTIVE';
+        return (
+          <Badge variant="outline" className={cn("text-[10px] font-semibold px-1.5 py-0", active ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : "bg-slate-500/10 text-slate-500 border-slate-500/20")}>
+            {status}
+          </Badge>
+        );
+      }
     },
     {
       accessorKey: 'accountsCount',
@@ -386,7 +403,7 @@ export default function DbPage() {
               {table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
                   {headerGroup.headers.map(header => (
-                    <TableHead key={header.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4 border-b-2 border-border">
+                    <TableHead key={header.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3 border-b-2 border-border">
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -411,7 +428,7 @@ export default function DbPage() {
                     onClick={() => router.push(`/dashboard/databases/${row.original.id}`)}
                   >
                     {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id} className="py-3 px-4">
+                      <TableCell key={cell.id} className="py-1.5 px-3">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
