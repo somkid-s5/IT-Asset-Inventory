@@ -83,11 +83,11 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         className={cn(
           'group flex items-center rounded-lg transition-all duration-200 py-1.5',
           collapsed ? 'justify-center px-1' : 'gap-2.5 px-3',
-          active ? 'active-nav-item' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+          active ? 'active-nav-item' : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-white',
           isChild && !collapsed && 'ml-4',
         )}
       >
-        <item.icon className={cn("shrink-0 h-4 w-4", active ? "text-primary" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70")} />
+        <item.icon className={cn("shrink-0 h-4 w-4", active ? "text-sidebar-primary" : "text-sidebar-foreground/75 group-hover:text-white")} />
         {!collapsed && <span className="truncate text-xs font-semibold">{item.title}</span>}
       </NavLink>
     );
@@ -101,7 +101,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         <button
           onClick={() => toggleSection(title)}
           className={cn(
-            "flex w-full items-center justify-between px-3.5 py-2 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors",
+            "flex w-full items-center justify-between px-3.5 py-2 text-sidebar-foreground/80 hover:text-white transition-colors",
             collapsed && "justify-center px-0"
           )}
         >
@@ -147,7 +147,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
           collapsed && 'justify-center px-0'
         )}
       >
-        <BrandMark compact={collapsed} className="scale-90 origin-left" />
+        <BrandMark compact={collapsed} tone="inverse" className="scale-90 origin-left" />
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto py-4 px-3 custom-scrollbar">

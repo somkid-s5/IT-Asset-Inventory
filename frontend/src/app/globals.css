@@ -114,27 +114,27 @@
 
   /* ─── Semantic Status ─── */
   --critical: 0 75% 42%;
-  --high: 30 100% 50%;
-  --medium: 60 100% 40%;
-  --low: 200 100% 50%;
+  --high: 25 85% 35%;
+  --medium: 35 85% 32%;
+  --low: 215 80% 38%;
   --success: 145 94% 40%;
-  --info: 190 100% 45%;
-  --warning: 60 100% 40%;
+  --info: 195 85% 32%;
+  --warning: 35 85% 32%;
 
   /* ─── Borders & Inputs ─── */
-  --border: 111 15% 76%;
-  --input: 111 15% 76%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
   --ring: 145 94% 40%;
   --radius: 0.5rem;
 
   /* ─── Sidebar (Light) ─── */
-  --sidebar-background: 210 10% 95%;
-  --sidebar-foreground: 195 7% 11%;
+  --sidebar-background: 145 35% 8%;
+  --sidebar-foreground: 0 0% 100%;
   --sidebar-primary: 145 94% 40%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 200 6% 89%;
-  --sidebar-accent-foreground: 195 7% 11%;
-  --sidebar-border: 111 15% 76%;
+  --sidebar-accent: 145 25% 15%;
+  --sidebar-accent-foreground: 145 94% 40%;
+  --sidebar-border: 145 20% 15%;
   --sidebar-ring: 145 94% 40%;
 }
 
@@ -149,13 +149,13 @@
   --popover: 0 0% 4%;
   --popover-foreground: 0 0% 90%;
 
-  /* ─── Primary (Vibrant LED Green) ─── */
-  --primary: 140 100% 50%;
-  --primary-foreground: 0 0% 0%;
+  /* ─── Primary (Vibrant LINE Green) ─── */
+  --primary: 145 94% 40%;
+  --primary-foreground: 0 0% 100%;
 
   /* ─── Secondary ─── */
   --secondary: 0 0% 10%;
-  --secondary-foreground: 140 100% 50%;
+  --secondary-foreground: 145 94% 40%;
 
   /* ─── Muted ─── */
   --muted: 0 0% 10%;
@@ -163,7 +163,7 @@
 
   /* ─── Accent ─── */
   --accent: 140 100% 15%;
-  --accent-foreground: 140 100% 50%;
+  --accent-foreground: 145 94% 40%;
 
   /* ─── Destructive (LED Red) ─── */
   --destructive: 0 100% 60%;
@@ -174,24 +174,24 @@
   --high: 30 100% 55%;
   --medium: 60 100% 50%;
   --low: 210 100% 60%;
-  --success: 140 100% 50%;
+  --success: 145 94% 40%;
   --info: 190 100% 50%;
   --warning: 60 100% 50%;
 
   /* ─── Borders & Inputs ─── */
   --border: 0 0% 15%;
   --input: 0 0% 15%;
-  --ring: 140 100% 50%;
+  --ring: 145 94% 40%;
 
   /* ─── Sidebar ─── */
   --sidebar-background: 140 10% 4%;
-  --sidebar-foreground: 140 20% 70%;
-  --sidebar-primary: 140 100% 50%;
-  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 145 94% 40%;
+  --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 140 50% 10%;
-  --sidebar-accent-foreground: 140 100% 50%;
+  --sidebar-accent-foreground: 145 94% 40%;
   --sidebar-border: 140 50% 15%;
-  --sidebar-ring: 140 100% 50%;
+  --sidebar-ring: 145 94% 40%;
 }
 
 @layer base {
@@ -227,7 +227,7 @@
     background: linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, color-mix(in oklab, hsl(var(--sidebar-background)) 96%, hsl(var(--primary))) 100%);
   }
   .active-nav-item {
-    @apply bg-primary/10 text-primary font-bold shadow-[inset_3px_0_0_0_hsl(var(--primary))];
+    @apply bg-sidebar-primary/15 text-sidebar-primary font-bold shadow-[inset_3px_0_0_0_hsl(var(--sidebar-primary))];
   }
 
   /* ─── Standard Card ─── */
@@ -237,13 +237,13 @@
 
   /* ─── Table Styles ─── */
   .table-shell { @apply overflow-hidden rounded-xl border border-border bg-card shadow-sm p-0; }
-  .table-frame { @apply w-full text-left text-[13px]; }
+  .table-frame { @apply w-full text-left text-[12px]; }
   .table-frame thead { @apply bg-muted/50; }
   .table-frame thead th {
-    @apply px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border;
+    @apply px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border;
   }
   .table-frame tbody td {
-    @apply px-4 py-2.5 text-[13px] text-foreground font-medium;
+    @apply px-2.5 py-1 text-[12px] text-foreground font-medium;
   }
   .table-frame tbody tr {
     @apply border-b border-border transition-colors hover:bg-muted/30;
