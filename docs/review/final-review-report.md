@@ -1,181 +1,90 @@
-# 📋 FINAL REVIEW REPORT — IT Asset Inventory System
+## 📋 FINAL REVIEW REPORT — IT Asset Inventory System
 
-> Generated: 2026-06-27  
-> Agents: UX Analyst · Business Analyst · QA Engineer · Security Auditor · Data Integrity Inspector
-
----
-
-## Executive Summary
-
-| Metric | Value |
-|--------|-------|
-| Total issues found (deduplicated) | **52** |
-| Critical | **14** |
-| High | **20** |
-| Nice-to-have | **12** |
-| Remove / Descope | **2** |
-| **Overall Readiness** | 🔴 **NOT READY FOR PRODUCTION** |
-
-**Top risk areas:** Sensitive data exposure (plaintext passwords in API), unauthenticated file access, 4 XSS vectors, zero test coverage confirmed, and 7 OWASP Top 10 categories violated.
+### Executive Summary
+- Total issues found: 21
+- Critical: 6 | High: 7 | Nice-to-have: 5 | Remove: 3
+- Overall readiness: 🔴 NOT READY
+- Generated: 2026-06-30T22:10:10+07:00
 
 ---
 
-## Top 5 Must-Fix Before Go-Live
-
-1. **Plaintext password returned in `assets findOne()` response** — Any authenticated user calling `GET /api/assets/:id` receives decrypted credentials. Immediate data breach risk. _Reported by: Security_
-2. **JWT not revoked on logout** — Stolen session cookie remains valid for up to 24 hours after logout. Combined with public `/uploads/` access, attacker can exfiltrate data long after user logs out. _Reported by: QA, Security_
-3. **`/uploads/` unauthenticated public access** — All file attachments publicly accessible by URL with no auth check. Sensitive attachments (contracts, configs) exposed to the internet. _Reported by: Security_
-4. **4 XSS vectors** — `KnowledgeDocument.content`, `TicketComment.content`, SVG avatar upload, and `customMetadata` all accept unsanitized input that can execute JavaScript in other users' browsers. _Reported by: QA, Security_
-5. **Admin demotion TOCTOU race** — Concurrent demotion of two admins can produce a zero-admin state, permanently locking all users out of admin functions. _Reported by: QA_
-
----
-
-## Consolidated Issue List
-
-| # | Issue | Found by | Priority | Effort | Action |
-|---|-------|----------|----------|--------|--------|
-| 1 | Plaintext password returned in `assets findOne()` response | Security | CRITICAL | S | Strip credential fields from toDetail() response |
-| 2 | `/uploads/` publicly accessible without auth | Security | CRITICAL | S | Add auth guard to static file serving |
-| 3 | No server-side JWT revocation on logout | QA, Security | CRITICAL | M | Implement token blocklist (Redis or DB) |
-| 4 | SVG avatar upload bypasses MIME check — XSS vector | QA, Security | CRITICAL | S | Validate MIME server-side; block SVG data-URIs |
-| 5 | `KnowledgeDocument.content` no sanitization — stored XSS | QA, Security | CRITICAL | S | Run DOMPurify server-side on save |
-| 6 | Admin demotion TOCTOU race — zero-admin state possible | QA | CRITICAL | M | Wrap count()+update() in atomic transaction |
-| 7 | `VmGuestAccount`: both FKs nullable — orphan records | Data | CRITICAL | S | Add NOT NULL constraint + migration |
-| 8 | Missing transaction on VM promotion (Discovery to Inventory) | Data | CRITICAL | M | Wrap promotion in Prisma $transaction |
-| 9 | No asset assignment/return tracking | BA | CRITICAL | L | Add ASSIGNED/RETURNED states + audit events |
-| 10 | TICKET actions absent from AuditLog | BA, Security | CRITICAL | M | Extend AuditAction enum; log all ticket mutations |
-| 11 | LOGIN_FAILED not tracked in audit log | BA, Security | CRITICAL | S | Log failed login attempts with IP |
-| 12 | Ticket status/comment mutations have no `onError` — silent failure | UX, QA | CRITICAL | S | Add onError handlers; surface error toast |
-| 13 | No SLA deadline on tickets | BA | CRITICAL | M | Add `dueAt` field + enforcement logic |
-| 14 | `DatabaseInventory.status` is plain String (no enum) | BA, Data | CRITICAL | S | Convert to Prisma enum + migration |
-| 15 | Login brute-force: only global throttle, not per-IP/user | QA, Security | HIGH | M | Implement per-IP + per-username rate limiting |
-| 16 | Open registration if `REGISTRATION_SECRET` not set | BA, Security | HIGH | S | Enforce required env var; fail startup if missing |
-| 17 | XSS via unsanitized `TicketComment.content` | QA, Security | HIGH | S | Sanitize on save and on render |
-| 18 | `customMetadata` JSON — XSS if rendered | QA, Security | HIGH | S | Sanitize or JSON-encode before render |
-| 19 | `IPAllocation.address`: plain String, no IP format validation | QA, Data | HIGH | S | Add IP format validator in DTO |
-| 20 | `DatabaseInventory.port`: String, no numeric range validation | QA, Data | HIGH | S | Convert to Int; validate 0-65535 |
-| 21 | `VmVCenterSource.syncInterval` stored as String | QA, Data | HIGH | S | Convert to Int; fix arithmetic operations |
-| 22 | `AssetAttachment`: no server-side file type or size validation | QA, Security | HIGH | S | Add allowlist MIME check + max size |
-| 23 | `findAll()` hard-coded `take:1000` — no pagination | QA | HIGH | M | Implement cursor/offset pagination |
-| 24 | No optimistic locking on concurrent asset update | QA, Data | HIGH | M | Add version field; implement optimistic lock |
-| 25 | VIEWER over-privilege — can create tickets, may access audit logs | Security | HIGH | M | Audit and tighten RBAC guards per role |
-| 26 | "New Ticket" button not role-guarded — VIEWER gets 403 with no explanation | UX | HIGH | S | Hide button from VIEWER; show permission tooltip |
-| 27 | User hard-delete breaks audit trail (no soft-delete) | Data | HIGH | M | Add `deletedAt`; change onDelete to soft-delete |
-| 28 | Missing index on `AuditLog.targetId` | Data | HIGH | S | Add DB index via Prisma migration |
-| 29 | Missing index on `VmDiscovery.state` | Data | HIGH | S | Add DB index via Prisma migration |
-| 30 | `Asset.environment` is free-form String | QA, BA, Data | HIGH | S | Convert to enum; validate in DTO |
-| 31 | No depreciation / asset value fields (TCO blocked) | BA | HIGH | L | Add financial fields to Asset model |
-| 32 | No notification rules implemented | BA | HIGH | L | Design + implement notification engine |
-| 33 | Ticket cannot be CLOSED via UI — status orphaned | UX | HIGH | S | Wire CLOSED transition in UI state machine |
-| 34 | Asset search placeholder misleads ("IP, SN") but only name searched | UX | HIGH | S | Fix placeholder or expand search scope |
-| 35 | No field-level change history | BA, Data | HIGH | XL | Implement change log table |
-| 36 | No refresh token — session silently dies on expiry | QA | HIGH | M | Add refresh token flow |
-| 37 | Missing index on `Ticket.assigneeId` and `Ticket.clientId` | Data | HIGH | S | Add DB indexes via migration |
-| 38 | Ticket duplicate submission — no idempotency guard | QA | HIGH | M | Add idempotency key or duplicate check |
-| 39 | Ticket not found — raw unstyled div, no CTA | UX | NICE-TO-HAVE | S | Add styled 404 state with back CTA |
-| 40 | VM PENDING empty state missing | UX | NICE-TO-HAVE | S | Add empty-state component |
-| 41 | No "last synced" timestamp on dashboard sync button | UX | NICE-TO-HAVE | S | Display `lastSyncedAt` from sync response |
-| 42 | Back button uses `router.back()` — breaks on direct link | UX | NICE-TO-HAVE | S | Replace with explicit route push |
-| 43 | Breadcrumb "Compute" vs sidebar "Inventory" label mismatch | UX | NICE-TO-HAVE | S | Align labels |
-| 44 | New Ticket form: toast-only validation, no inline field errors | UX | NICE-TO-HAVE | S | Add react-hook-form field-level errors |
-| 45 | `TicketComment` missing `updatedAt` field | Data | NICE-TO-HAVE | S | Add updatedAt to schema |
-| 46 | `KnowledgeCategory` missing timestamps entirely | Data | NICE-TO-HAVE | S | Add createdAt/updatedAt |
-| 47 | No knowledge base approval/versioning | BA | NICE-TO-HAVE | L | Add draft/publish states + version history |
-| 48 | Asset request/approval workflow | BA | NICE-TO-HAVE | XL | New feature — backlog |
-| 49 | Bulk operations (status change, delete, assign) | BA | NICE-TO-HAVE | L | New feature — backlog |
-| 50 | Escalation rules for CRITICAL tickets | BA | NICE-TO-HAVE | L | New feature — backlog |
-| 51 | Redundant "View Details" in Asset dropdown + row-click | UX | REMOVE | S | Remove dropdown item; keep row-click |
-| 52 | Redundant "Manage" button on Ticket rows + row-click | UX | REMOVE | S | Remove button; keep row-click |
+### Consolidated Issue List
+| # | Issue | Found by | Priority | Effort (S/M/L) | Action |
+|---|-------|----------|----------|----------------|--------|
+| 1 | Plaintext Guest Password Exposure in VM API | Agent 2 (BA), Agent 4 (Security) | CRITICAL | S | ถอดฟิลด์ `guestAccounts.password` ออกจาก API response ทั่วไป และบังคับใช้ Role Guard พร้อมบันทึก Audit Log เมื่อกด Reveal |
+| 2 | Cascading Asset Deletion & Hard Delete Data Loss | Agent 2 (BA), Agent 5 (Data) | CRITICAL | M | ปรับ `onDelete` ใน Prisma Schema ไม่ให้ลบ Asset ลูกอัตโนมัติ (เปลี่ยนเป็น Restrict/SetNull) และแก้ `users.service.ts` ให้ใช้ Soft Delete (`deletedAt`) |
+| 3 | Unhandled Prisma Exception API Crashes (HTTP 500) | Agent 3 (QA), Agent 5 (Data) | CRITICAL | M | อัปเดต `GlobalExceptionFilter` ดักจับ Prisma Error (`P2002`, `P2025`, `P2003`) แปลงเป็น HTTP 400/404/409 แทน HTTP 500 |
+| 4 | Missing Role Guards on Sensitive API Endpoints | Agent 4 (Security) | CRITICAL | S | เพิ่ม `@UseGuards(RolesGuard)` และ `@Roles` ใน `ClientsController`, `PATCH /api/tickets/:id` และ `GET /api/credentials/asset/:assetId` |
+| 5 | Blank Screen Traps & Missing Route Error/403 Boundaries | Agent 1 (UX) | CRITICAL | M | สร้าง `error.tsx` ป้องกัน Layout ล่ม และสร้าง Component `AccessDenied` แสดงผลแทนการ return `null` ในหน้า Admin (/users, /audit-logs) |
+| 6 | Hardcoded JWT Secret Fallback Vulnerability | Agent 4 (Security) | CRITICAL | S | ถอดค่า fallback `'super-secret-key'` ออกจาก `jwt.strategy.ts` และตั้งให้ระบบ throw error ทันทีหากไม่พบ `JWT_SECRET` ใน ENV |
+| 7 | Missing DTO Validation Boundaries & XSS Risks | Agent 3 (QA) | HIGH | M | เพิ่ม `@MaxLength`, `@IsIP()`, ตรวจสอบ Port Range (1-65535) ใน DTO และเพิ่มการทำ Sanitization สำหรับข้อความ Input |
+| 8 | Race Conditions & Missing Transactions in Core Mutations | Agent 3 (QA), Agent 5 (Data) | HIGH | M | ครอบ Database Transaction และทำ Optimistic Locking (`@updatedAt`) ใน `AssetsService.update`, `TicketsService.generateTicketNo` และ `ClientsService` |
+| 9 | Service Desk Accessibility Restriction for VIEWER Role | Agent 2 (BA) | HIGH | S | ปรับสิทธิ์ใน `TicketsController` อนุญาตให้ผู้ใช้งานทุก Role ที่ล็อกอินสามารถเปิด Ticket แจ้งปัญหา IT ได้ |
+| 10 | Unbounded Query Limit & Missing Pagination | Agent 2 (BA), Agent 5 (Data) | HIGH | M | บังคับใช้ Pagination และจำกัด Limit สูงสุดต่อรีเควสต์ (เช่น Max 200) ในตาราง Tickets, VMs, Databases และ Audit Logs |
+| 11 | Missing Foreign Key Indexes Causing Query Bottlenecks | Agent 5 (Data) | HIGH | S | เพิ่ม Index ใน Prisma Schema สำหรับ `Ticket.assetId`, `Ticket.vmId`, `TicketComment.ticketId` และปรับปรุง Composite index ของ `IPAllocation` |
+| 12 | Form Validation Feedback & Unhandled List Error States | Agent 1 (UX) | HIGH | M | ปรับฟอร์ม `VmFormDialog`, `DatabaseFormDialog`, `Ticket` ให้ใช้ Zod + React Hook Form แสดงข้อความใต้ Input และเพิ่ม Error state ในตาราง |
+| 13 | Unauthenticated Public File Attachment Access | Agent 4 (Security) | HIGH | S | เพิ่ม Auth Guard สำหรับ endpoint ดาวน์โหลดหรือเปิดดูไฟล์แนบใน `/api/assets/uploads/:filename` |
+| 14 | Axios Interceptor Timeout Retry & Token Expiration Handling | Agent 3 (QA) | HIGH | M | ปิดออโต้ retry สำหรับ non-idempotent request (`PATCH`/`DELETE`) และแจ้งเตือนผู้ใช้ก่อน redirect ไปหน้า login เมื่อ token หมดอายุ |
+| 15 | Inconsistent Route Loading Skeletons (`loading.tsx`) | Agent 1 (UX) | NICE-TO-HAVE | S | เพิ่มไฟล์ `loading.tsx` พร้อม Skeleton ในโฟลเดอร์ `/dashboard/tickets`, `/dashboard/docs` และ `/dashboard/profile` |
+| 16 | Sidebar Active Item Collapse Behavior | Agent 1 (UX) | NICE-TO-HAVE | S | ปรับพฤติกรรมใน `AppSidebar.tsx` เมื่อคลิกเมนูที่ active อยู่ให้ Scroll to top หรือไม่ทำอะไร แทนการย่อเมนูด้านข้าง |
+| 17 | Automated Expiration & Warranty Alerting Cron Job | Agent 2 (BA) | NICE-TO-HAVE | L | สร้าง Cron Job ตรวจสอบ `warrantyExpiration` และ `eolDate` เพื่อส่งการแจ้งเตือนล่วงหน้าให้ผู้ดูแลระบบ |
+| 18 | Database Schema Enum Standardization | Agent 5 (Data) | NICE-TO-HAVE | M | ปรับฟิลด์ `environment`, `status` และ `syncState` จาก `String?` ให้ใช้ Enum มาตรฐานกลาง |
+| 19 | Comprehensive E2E & Integration Test Suite | Agent 3 (QA) | NICE-TO-HAVE | L | เขียน Integration และ E2E Tests ครอบคลุม Core API Flows และ RBAC ใน CI/CD Pipeline |
+| 20 | Complex Asset Request & Approval Workflows | Agent 2 (BA) | REMOVE | L | ตัดออกจาก Scope (Descope) ของ Release แรก เพื่อมุ่งเน้น Core Asset & Inventory Tracking ไม่ให้โครงการบานปลาย |
+| 21 | Redundant CSV Export DOM Manipulation Code | Agent 1 (UX) | REMOVE | S | ลบโค้ดสร้างและแทรก DOM ปลอมใน `handleExport` ออก และเปลี่ยนไปใช้ Web API หรือ Utility ทางตรง |
 
 ---
 
-## Cross-Agent Insights
-
-| Issue | Agents | Combined Risk |
-|-------|--------|---------------|
-| JWT not revoked on logout | QA + Security | Critical: token reuse undetectable in audit log (OWASP A09); attacker persists access silently |
-| XSS in KnowledgeDoc/TicketComment | QA + Security | Critical compounded: stored XSS persists across all sessions |
-| SVG avatar MIME bypass | QA + Security | Critical: client-side check only; server accepts malicious SVG payload |
-| Login brute-force (no per-IP throttle) | QA + Security | High: one IP consumes shared quota + no lockout = password spray viable |
-| Ticket onError missing | UX + QA | High: silent mutation failures cause data inconsistency with no user feedback |
-| `DatabaseInventory.status` / `Asset.environment` as String | BA + QA + Data | High: 3 agents flagged — corrupted data reaches production |
-| TICKET actions not in AuditLog | BA + Security | Critical compliance: ITSM SOC 2 / ISO 27001 requires ticket mutation audit |
-| LOGIN_FAILED not tracked | BA + Security | High: brute-force attempts invisible in audit trail |
-| Concurrent race conditions | QA + Data | High: asset update last-write-wins + VM promotion P2002 unhandled |
-| `findAll()` take:1000 + missing indexes | QA + Data | High: memory spike risk + slow queries = combined OOM + performance failure |
-| No EXPORT_DATA audit action | BA + Security | High: data exfiltration via CSV export completely undetectable |
-| Open registration without REGISTRATION_SECRET | BA + Security | High: on public deployment without env var, anyone can self-register |
+### Top 5 Must-Fix Before Go-Live
+1. **Plaintext Guest Account Password Exposure in VM API** — ข้อมูลรหัสผ่านของ VM Guest Accounts (`guestAccounts.password`) ถูกส่งกลับมาใน API (`GET /api/vm/discoveries/:id`, `inventory/:id`) เป็นข้อความธรรมดาโดยไม่มี `@Roles` guard ป้องกัน ทำให้ผู้ใช้ทุกระดับรวมถึง VIEWER สามารถดูรหัสผ่านเซิร์ฟเวอร์ได้ทันที — Reported by: Agent 2 (BA), Agent 4 (Security)
+2. **Cascading Asset Deletion & Hard Delete Data Loss** — ความสัมพันธ์ `Asset.parent` ตั้งค่า `onDelete: Cascade` ทำให้การลบสินทรัพย์หลัก (เช่น Rack หรือ Host Server) จะลบสินทรัพย์ย่อยทั้งหมดในระบบทิ้งทันที และ `users.service.ts` ลบข้อมูลผู้ใช้แบบ Hard Delete ขัดแย้งกับ Schema ที่มี `deletedAt` — Reported by: Agent 2 (BA), Agent 5 (Data)
+3. **Unhandled Prisma Exception API Crashes (HTTP 500)** — ระบบไม่มีการแปลงข้อผิดพลาดจากฐานข้อมูล Prisma (`P2002` Duplicate, `P2025` Not Found, `P2003` FK Violation) ทำให้เมื่อผู้ใช้กรอกข้อมูลซ้ำหรือลบข้อมูลที่ผูกสัมพันธ์อยู่ API จะล่มและคืนค่า HTTP 500 แทนที่จะแจ้งเตือนผู้ใช้ด้วย HTTP 400/409 — Reported by: Agent 3 (QA), Agent 5 (Data)
+4. **Missing Role Guards on Sensitive API Endpoints** — Endpoints สำคัญเช่น `ClientsController` (CRUD ลูกค้า), `PATCH /api/tickets/:id` (แก้ไขตั๋ว) และ `GET /api/credentials/asset/:assetId` ขาด `@Roles` decorator ทำให้ผู้ใช้ระดับ VIEWER สามารถแก้ไขข้อมูลระบบและดูรายการ Credential ได้ — Reported by: Agent 4 (Security)
+5. **Blank Screen Traps & Missing Route Error/403 Boundaries** — หน้า App ไม่มี `error.tsx` ป้องกันความผิดพลาด ทำให้เมื่อเกิด Runtime error หรือเข้าถึงหน้า Admin (`/users`, `/audit-logs`) โดยไม่มีสิทธิ์ หน้าเว็บจะแสดงจอขาวโล่ง (Blank Screen) โดยไม่มีเมนูด้านข้างหรือปุ่มนำทางกลับ — Reported by: Agent 1 (UX)
 
 ---
 
-## Recommended Sprint Plan
+### Cross-Agent Insights
+(ปัญหาที่หลาย agent เจอพร้อมกัน = critical signal)
 
-### Sprint 1 — Pre-deploy Blockers (fix before ANY production deploy)
-- [ ] Strip credential fields from `toDetail()` response — prevent plaintext password leak
-- [ ] Auth-guard `/uploads/` route — deny unauthenticated file access
-- [ ] Implement JWT blocklist on logout (Redis preferred) — stop post-logout token reuse
-- [ ] Add server-side MIME validation for avatar uploads — block SVG XSS vector
-- [ ] Sanitize `KnowledgeDocument.content` and `TicketComment.content` on save
-- [ ] Wrap admin demotion count+update in atomic transaction
-- [ ] Add `onError` handlers to `updateStatusMutation` and `commentMutation`
-- [ ] Log `LOGIN_FAILED` events with IP address to AuditLog
-- [ ] Extend `AuditAction` enum to include all TICKET mutations
-- [ ] Enforce `REGISTRATION_SECRET` as required env var; fail startup if missing in production
-- [ ] Add NOT NULL constraint to `VmGuestAccount.discoveryId` / `inventoryId`
-- [ ] Wrap VM promotion (Discovery to Inventory) in Prisma `$transaction`
-
-### Sprint 2 — High Priority (fix within 2 weeks of go-live)
-- [ ] Implement per-IP + per-username rate limiting on login endpoint
-- [ ] Sanitize `customMetadata` before render; restrict schema at API boundary
-- [ ] Convert `DatabaseInventory.port`, `syncInterval` to Int with validation
-- [ ] Convert `Asset.environment`, `DatabaseInventory.status`, `VmVCenterSource.status` to enums
-- [ ] Add IP format validation to `IPAllocation.address` DTO
-- [ ] Replace `findAll()` take:1000 with cursor-based pagination
-- [ ] Add optimistic locking (version field) to Asset updates
-- [ ] Add idempotency check to ticket creation
-- [ ] Add refresh token flow; replace silent JWT expiry
-- [ ] Add DB indexes: `AuditLog.targetId`, `VmDiscovery.state`, `Ticket.assigneeId`, `Ticket.clientId`
-- [ ] Tighten VIEWER role RBAC — remove ticket creation and audit log read access
-- [ ] Implement soft-delete (`deletedAt`) for User model
-- [ ] Wire CLOSED status transition in ticket UI
-- [ ] Fix asset search placeholder to match actual search scope
-- [ ] Add server-side file type allowlist + size limit to AssetAttachment upload
-- [ ] Add `EXPORT_DATA` action to AuditLog
-- [ ] Add SLA `dueAt` field to Ticket model + basic enforcement
-
-### Backlog — Nice-to-have
-- [ ] Asset assignment/return tracking (ASSIGNED, RETURNED states)
-- [ ] Field-level change history (delta log table)
-- [ ] Depreciation / asset value financial fields
-- [ ] Notification rules engine
-- [ ] Knowledge base draft/publish + version history
-- [ ] Asset request/approval workflow
-- [ ] Bulk operations (status change, delete, assign)
-- [ ] Ticket escalation rules
-- [ ] Server-side report engine (beyond CSV export)
-- [ ] Auto-assignment rules for tickets
-- [ ] Full-text search in knowledge base
-- [ ] Styled 404 empty states (Ticket not found, VM Pending)
-- [ ] Inline field validation on New Ticket form
-- [ ] Breadcrumb/sidebar label alignment
-- [ ] "Last synced" timestamp on dashboard sync button
-- [ ] `TicketComment.updatedAt` + `KnowledgeCategory` timestamps
+| Issue | Agents that found it | Combined Risk |
+|-------|---------------------|---------------|
+| Plaintext Password & Credential Leakage | Agent 2 (BA), Agent 4 (Security) | **High Security Risk**: การขาด Masking/Role checks ใน API ชั้น Service ทำให้ข้อมูลความลับทางโครงสร้างพื้นฐานรั่วไหลสู่ผู้ใช้งานทั่วไป |
+| Cascading Deletes & Inconsistent Soft Deletes | Agent 2 (BA), Agent 5 (Data) | **Severe Data Loss**: การตั้งค่า Cascade deletion ในฐานข้อมูลร่วมกับการลบข้อมูลแบบ Hard Delete ใน Service เสี่ยงต่อการสูญหายของประวัติสินทรัพย์และข้อมูลอ้างอิงที่ไม่สามารถกู้คืนได้ |
+| Unhandled Database Constraints Crashes | Agent 3 (QA), Agent 5 (Data) | **System Instability & UX Failure**: ขาดชั้นแปลผล Exception (Global Error Mapping) ระหว่าง Database layer และ Controller ทำให้ผู้ใช้เจอข้อผิดพลาด HTTP 500 เมื่อเกิด FK violation หรือ Duplicate keys |
+| Unbounded API Queries & Performance Bottlenecks | Agent 2 (BA), Agent 5 (Data) | **DoS & Slowdown Risk**: การไม่จำกัดเพดาน Pagination ใน API ผนวกกับการขาด Indexes ในฟิลด์ Foreign Key ของตาราง Ticket/Asset ทำให้เกิด Full Table Scan และระบบหน่วงเมื่อข้อมูลเติบโต |
 
 ---
 
-## Items to Remove / Descope
+### Recommended Sprint Plan
+**Sprint 1 (Pre-deploy blockers):**
+- [ ] ถอดฟิลด์รหัสผ่าน (`guestAccounts.password`, `encryptedPassword`) ออกจาก API response ปกติทั้งหมด และบังคับใช้ `@Roles(Role.ADMIN, Role.EDITOR)` ใน VM และ Credential endpoints
+- [ ] แก้ไข Prisma Schema เปลี่ยน `onDelete: Cascade` ของ `Asset.parent`, `VmGuestAccount` และ `Ticket` เป็น `Restrict` หรือ `SetNull` และทำ Migration
+- [ ] ปรับแก้ `users.service.ts` ให้ใช้ Soft Delete (`update({ where: { id }, data: { deletedAt: new Date() } })`) แทนการใช้ `.delete()`
+- [ ] อัปเดต `GlobalExceptionFilter` ให้ดักจับ Prisma Errors (`P2002`, `P2025`, `P2003`) และคืนค่า HTTP Status 400, 404, 409 พร้อมข้อความที่เข้าใจง่าย
+- [ ] เพิ่ม `@UseGuards(RolesGuard)` และ `@Roles` ใน `ClientsController`, `PATCH /api/tickets/:id` และ Credential endpoints
+- [ ] สร้างไฟล์ `app/error.tsx` ป้องกัน Root Layout ล่ม และสร้าง Component `AccessDenied` แสดงผลแทนหน้าจอขาวโล่งใน `/dashboard/users` และ `/dashboard/audit-logs`
+- [ ] ถอดค่า fallback `'super-secret-key'` ใน `jwt.strategy.ts` ออก และกำหนดให้ระบบ throw error ทันทีตอนบูตหากไม่พบ `JWT_SECRET` ใน Environment Variables
 
-- **Dropdown "View Details" on Asset rows** — Redundant with row-click navigation; remove to simplify interaction model
-- **"Manage" button on Ticket rows** — Redundant with row-click; consolidate to single interaction pattern
+**Sprint 2 (High priority):**
+- [ ] ปรับสิทธิ์ `TicketsController` ให้ผู้ใช้งานทุก Role (รวมถึง VIEWER) สามารถเปิด Ticket แจ้งปัญหา IT Service Desk ได้
+- [ ] เพิ่ม Validation DTO (`@MaxLength`, `@IsIP()`, ตรวจสอบ Port Range 1-65535) และป้องกัน XSS ในฟิลด์รับข้อความ
+- [ ] เพิ่ม Database Transaction และ Optimistic Locking (`@updatedAt`) ใน `AssetsService.update`, `ClientsService` และ `TicketsService.generateTicketNo`
+- [ ] บังคับใช้ Pagination และจำกัด Limit สูงสุดต่อรีเควสต์ (Max 200 รายการ) ในตาราง Tickets, VMs, Databases และ Audit Logs
+- [ ] เพิ่ม Database Indexes สำหรับ `Ticket.assetId`, `Ticket.vmId`, `TicketComment.ticketId` และปรับปรุง Composite Index ของ `IPAllocation`
+- [ ] ปรับฟอร์ม `VmFormDialog`, `DatabaseFormDialog` และ `Ticket` ให้ใช้ Zod + React Hook Form แสดงข้อความแจ้งเตือนสีแดงใต้ช่อง Input
+- [ ] เพิ่ม Authentication Guard ป้องกันการเข้าถึงไฟล์แนบใน `/api/assets/uploads/:filename` จากภายนอกโดยไม่ล็อกอิน
+
+**Backlog:**
+- [ ] เพิ่มไฟล์ `loading.tsx` และ Skeleton Skeletons ในเส้นทาง `/dashboard/tickets`, `/dashboard/docs` และ `/dashboard/profile`
+- [ ] ปรับพฤติกรรมเมนูด้านข้างใน `AppSidebar.tsx` ไม่ให้ยุบตัว (Collapse) เมื่อคลิกซ้ำที่เมนูเดิมที่ Active อยู่
+- [ ] ปรับฟิลด์ `environment`, `status` และ `syncState` ในตาราง `Asset`, `DatabaseInventory` ให้ใช้ Enum มาตรฐานกลางแทน String
+- [ ] พัฒนาระบบ Cron Job แจ้งเตือนล่วงหน้าเมื่อสินทรัพย์ใกล้หมดประกัน (`warrantyExpiration`) หรือถึงกำหนด End of Life (`eolDate`)
+- [ ] เขียนชุดทดสอบ Integration Tests และ E2E Tests ครอบคลุม Core API Flows และ RBAC Permissions ใน CI/CD Pipeline
 
 ---
 
-## Individual Agent Reports
-
-| Agent | File |
-|-------|------|
-| Agent 1 - UX Analyst | [agent1-ux-report.md](./agent1-ux-report.md) |
-| Agent 2 - Business Analyst | [agent2-ba-report.md](./agent2-ba-report.md) |
-| Agent 3 - QA Engineer | [agent3-qa-report.md](./agent3-qa-report.md) |
-| Agent 4 - Security Auditor | [agent4-security-report.md](./agent4-security-report.md) |
-| Agent 5 - Data Integrity Inspector | [agent5-data-report.md](./agent5-data-report.md) |
+### Items to Remove / Descope
+- [Asset Lifecycle Request & Approval Workflow] → [ระบบคำขอเบิกใช้และการอนุมัติสินทรัพย์มีความซับซ้อนเกินไปสำหรับ MVP (Scope Creep) ควรตัดออกใน Release แรกเพื่อเร่งขึ้นระบบ Core Inventory]
+- [CSV Export DOM Manipulation Code] → [ลบโค้ดสร้างแท็ก `<a download>` ปลอมแทรกลงใน `document.body` ของฟังก์ชัน Export ออก เนื่องจากซ้ำซ้อน เสี่ยงต่อ Popup Blockers และควรแทนที่ด้วย Utility Function กลางที่กระชับกว่า]
+- [Hardcoded JWT Secret Fallback String (`'super-secret-key'`)] → [ลบข้อความ Fallback ลับในโค้ดออกทันที เพื่อป้องกันความหละหลวมด้านความปลอดภัยในกรณีที่ลืมตั้งค่า Environment Variables บนเซิร์ฟเวอร์ Production]

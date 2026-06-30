@@ -3,90 +3,46 @@
 ### Validation Coverage
 | Field/Input | Required | Format Check | Boundary | XSS Safe | Status |
 |-------------|----------|--------------|----------|----------|--------|
-| Auth — username | Yes | None | None | N/A | WARN |
-| Auth — password | Yes | Minimal (policy unclear) | No min/max enforced | N/A | FAIL |
-| Asset.name | Yes | None | None | Yes | WARN |
-| Asset.environment | No | None (free-form string) | None | Yes | FAIL |
-| Asset.customMetadata (JSON) | No | None — raw JSON accepted | None | FAIL (no sanitization) | FAIL |
-| IPAllocation.address | Yes | None — plain String | None | Yes | FAIL |
-| DatabaseInventory.port | Yes | None — String, not numeric | 0-65535 not enforced | Yes | FAIL |
-| VmVCenterSource.syncInterval | Yes | None — String | None | Yes | FAIL |
-| KnowledgeDocument.content | Yes | None | None | FAIL (raw HTML/MD render) | FAIL |
-| AssetNote.content | Yes | None — no maxLength | Unbounded | Yes | FAIL |
-| AssetAttachment — file type | Yes | None server-side | No size limit visible | N/A | FAIL |
-| AssetAttachment — file size | Yes | None server-side | Unbounded | N/A | FAIL |
-| AvatarImage — content type | Yes | Only startsWith('data:image/') | None | FAIL (SVG allows JS) | FAIL |
-| TicketComment.commentType | No | None (no DB enum) | None | Yes | FAIL |
-| Ticket.ticketNo | Yes | None in DTOs | None | Yes | WARN |
-| X-Registration-Key header | Yes | Existence check only | None | N/A | WARN |
-| CSRF protection | N/A | SameSite=strict only | N/A | Partial | WARN |
-
----
+| `CreateAssetDto.name` | Yes (`@IsNotEmpty`) | No | No (`@MaxLength` missing) | No (No HTML sanitization) | ❌ Missing max length boundary & XSS protection |
+| `CreateAssetDto.ips[].address` | Yes | No (`@IsIP()` missing) | No | No | ❌ Missing valid IP address format check |
+| `CreateAssetDto.purchaseDate` / `warrantyExpiration` | No (`@IsOptional`) | No (`@IsDateString` missing) | N/A | Yes | ❌ Missing date format validation |
+| `CreateAssetDto.customMetadata` | No (`@IsOptional`) | No (`@IsObject`) | No (Unbounded JSON size) | No | ⚠️ Risk of oversized payload injection |
+| `RegisterDto.username` | Yes (`@MinLength(3)`) | No (Alphanumeric missing) | No (`@MaxLength` missing) | No | ❌ Missing max length (`@MaxLength(50)`) check |
+| `RegisterDto.password` | Yes | Yes (`@Matches` regex) | Yes (`MinLength`) | Yes | ✅ Pass (Complies with password policy) |
+| `CreateTicketDto.title` & `clientName` | Yes (`@IsNotEmpty`) | No | No (`@MaxLength` missing) | No | ❌ Missing string length boundary check |
+| `CreateDatabaseDto.port` | No | No (Accepts raw string) | No (No 1-65535 range check) | Yes | ❌ Missing integer port range validation |
+| `KnowledgeDocument.content` | Yes | N/A | No | Yes (`sanitizeHtml()` applied) | ✅ Pass (Sanitized via service utility) |
 
 ### Error Handling Matrix
 | Scenario | Handled | User Feedback | Risk |
 |----------|---------|---------------|------|
-| Login — invalid credentials | Unknown (filter catches) | Generic message assumed | Medium |
-| JWT expiry (no refresh token) | Cookie maxAge 24h only | Session silently ends | High |
-| Logout — JWT still valid in-memory | No server-side revocation | Token reuse after logout | Critical |
-| Prisma unique constraint violation | Partial (global filter) | No user-friendly message | High |
-| Prisma connection failure | Global filter only | Raw/internal message risk | High |
-| Concurrent delete+read on asset | No guard | Unhandled 404 or crash | High |
-| File upload — network failure mid-stream | Unknown | No documented fallback | High |
-| updateStatusMutation failure (frontend) | No onError handler | Silent failure, stale UI | High |
-| commentMutation failure (frontend) | No onError handler | Silent failure | Medium |
-| Admin demote — TOCTOU race | Partial (count+update not atomic) | No feedback on race loss | High |
-| VmInventory duplicate on concurrent promote | DB @unique catches it | Unhandled DB error thrown | Medium |
-| Rate limit exceeded (ThrottlerModule) | Yes | 429 returned | Low |
-| change-password — brute force | No lockout | Unlimited retries | Critical |
-| KnowledgeDocument XSS render | No sanitization | Script execution in browser | Critical |
-| SVG avatar XSS | No MIME deep-check | Script execution in browser | Critical |
-
----
+| **Duplicate Entry** (e.g. Username / Client Name / Database Name - Prisma `P2002`) | Partial | ❌ "Internal server error" (HTTP 500) | **Critical**: `GlobalExceptionFilter` does not map Prisma `P2002` to HTTP 409 Conflict, returning opaque 500 error. |
+| **Record Not Found on Update/Delete** (Prisma `P2025`) | Partial | ❌ "Internal server error" (HTTP 500) | **High**: Direct Prisma updates/deletes without prior `findOne` throw `P2025`, causing HTTP 500 instead of HTTP 404. |
+| **Foreign Key Constraint Violation** (`assetId`, `clientId`, `vmId` - Prisma `P2003`) | No | ❌ "Internal server error" (HTTP 500) | **High**: Client passing invalid relations crashes endpoint with HTTP 500 instead of HTTP 400 Bad Request. |
+| **Network Timeout Mid-Process** (Frontend Axios Interceptor) | Partial | ⚠️ Toast error or infinite loading | **High**: Axios interceptor retries `PATCH` and `DELETE` requests up to 3 times on timeout, risking non-idempotent duplicate mutations. |
+| **Session / Token Expiration Mid-Form** (HTTP 401/403 response) | Yes | ❌ Immediate redirect to `/login` | **High**: User loses all unsaved form data immediately upon token expiration without a warning or refresh token mechanism. |
+| **Business Logic Errors** (e.g. `KnowledgeBaseService.deleteCategory`) | No | ❌ "Internal server error" (HTTP 500) | **Medium**: Service throws generic `new Error(...)` which is caught as HTTP 500 instead of HTTP 400 BadRequestException. |
 
 ### Race Condition Risks
-- **Admin demotion** → count() then update() not atomic — two concurrent demotions can both pass, leaving zero admins → Wrap in $transaction with SELECT FOR UPDATE
-- **VM Promotion** → Two users promoting same moid simultaneously can both pass app-level check before DB @unique fires → Catch P2002 explicitly and return 409; wrap in transaction
-- **Asset Concurrent Update** → No optimistic locking — last-write wins silently → Add version field; throw 409 on mismatch
-- **Ticket Duplicate Submission** → No idempotency key — double-click creates duplicate tickets → Debounce frontend + idempotency token
-
----
+- `AssetsService.update` (Concurrent Asset Modification) → Last-Write-Wins Race Condition: 2 users edit the same asset concurrently; `findOne` reads data outside transaction without Optimistic Locking (`version` or `@updatedAt` check). User B's save completely overwrites User A's changes, including replacing nested `ips` and `credentials`. → Recommendation: Implement Optimistic Locking using an `@updatedAt` version check or database row locking (`FOR UPDATE`), and use delta updates for relations.
+- `ClientsService.findOrCreateByName` (Concurrent Client Creation) → TOCTOU (Time-Of-Check to Time-Of-Use) Race Condition: 2 concurrent requests check `findUnique({ where: { name } })`, both receive `null`, and both invoke `create()`, causing a Prisma `P2002` Unique Constraint violation. → Recommendation: Replace `findUnique` + `create` with atomic `prisma.client.upsert()`.
+- `TicketsService.generateTicketNo` (Concurrent Ticket Generation) → Duplicate Ticket Number Generation: 2 concurrent requests query `findFirst` for the latest ticket number outside a transaction, compute the exact same sequence number (e.g., `SD-2606-001`), resulting in P2002 constraint errors or duplicate tickets. → Recommendation: Use a dedicated atomic database sequence table or generate ticket sequence inside a serializable transaction.
+- `UsersService.create` (Concurrent User Registration) → TOCTOU Race Condition: Checking `findUnique` outside transaction before `create` leaves a race window for duplicate username creation. → Recommendation: Rely on database unique constraint catch or wrap inside transaction.
 
 ### Missing Test Cases
-- Auth: brute-force login after N attempts → Account takeover via password enumeration → Critical
-- Auth: JWT token reuse after logout → Compromised token remains valid for 24h → Critical
-- Auth: concurrent admin demotion (2 simultaneous requests) → Zero-admin state possible → Critical
-- File upload: malicious SVG with embedded script tag → XSS via avatar/attachment → Critical
-- KnowledgeDocument: HTML/script injection in content field → Stored XSS → Critical
-- Asset: customMetadata deeply nested JSON payload (DoS) → CPU/memory spike → High
-- IPAllocation: invalid IP string (e.g. 999.999.999.999) → Bad data persisted → High
-- DatabaseInventory: port > 65535 or negative → Invalid data in DB → High
-- AssetAttachment: upload file exceeding expected size limit → No server-side rejection → High
-- AssetAttachment: upload executable disguised as image → Malicious file stored → High
-- findAll(): 1000-asset load performance test → UI freeze / timeout at scale → High
-- Ticket: VIEWER role submitting new ticket via direct API call → Role bypass → High
-- VM Promotion: two concurrent users on same VM moid → Duplicate or unhandled error → High
-- Asset update: concurrent edits from two users → Silent data loss → Medium
-- AssetNote.content: max length boundary → Unbounded DB write → Medium
-- Rate limiter: single-bucket exhaustion from one user blocking others → Shared bucket DoS → Medium
-
----
+- [Backend Unit & Integration Tests for Core Services (`AssetsService`, `TicketsService`, `DatabasesService`)] → Risk if not handled: Refactoring DTOs or Prisma relation replacement logic can break core inventory operations silently without detection. → Priority: Critical
+- [Prisma Exception Mapping Integration Tests (`P2002`, `P2025`, `P2003`)] → Risk if not handled: Unhandled database errors leak HTTP 500 status code to frontend, degrading user experience and complicating debugging. → Priority: High
+- [Concurrent Update / Optimistic Locking Simulation Tests] → Risk if not handled: High data loss risk when IT admins concurrently update server details, IP allocations, or credentials. → Priority: High
+- [Frontend Network Failure & Idempotency E2E Tests] → Risk if not handled: Double-clicking submit or network jitter can trigger duplicate assets/tickets or unintended retry mutations. → Priority: Medium
+- [RBAC & Endpoint Authorization Boundary Tests] → Risk if not handled: Privilege escalation risk if role-based guards on sensitive endpoints (`DELETE /databases/:id`, `PATCH /users/:id/role`) regress. → Priority: High
 
 ### Existing Test Coverage Assessment
-- [ ] Unit tests present — directory exists but no file list confirmed; coverage level unknown
-- [ ] Integration tests present — no evidence of DB-level integration tests observed
-- [ ] E2E tests present — no frontend test directory observed; no E2E framework detected
-- [ ] API contract tests present — no OpenAPI/Pact test evidence observed
-
----
+- [ ] Unit tests present (ไม่มี Unit tests ใน `backend/src` และ `frontend/src`)
+- [ ] Integration tests present (ไม่มี Integration tests สำหรับ API endpoints และ Service logic)
+- [x] E2E tests present (มีเพียง 1 basic health check test ใน `backend/test/app.e2e-spec.ts` ทดสอบเฉพาะ `GET /`)
+- [ ] API contract tests present (ไม่มี API contract tests ระหว่าง Frontend และ Backend)
 
 ### Severity Summary
-- Critical: 6 items
-  1. JWT reuse after logout (no server-side revocation)
-  2. change-password has no brute-force protection / account lockout
-  3. SVG avatar upload bypasses MIME check — XSS vector
-  4. KnowledgeDocument.content rendered without sanitization — stored XSS
-  5. Admin demotion TOCTOU race — zero-admin state possible
-  6. customMetadata JSON no sanitization — XSS if rendered
-- High: 11 items
-- Medium: 8 items
+- Critical: 3 items
+- High: 5 items
+- Medium: 3 items
