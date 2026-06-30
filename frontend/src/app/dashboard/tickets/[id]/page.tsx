@@ -40,18 +40,18 @@ const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
 });
 
 const priorityColors: Record<TicketPriority, string> = {
-  LOW: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
-  MEDIUM: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-  HIGH: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
-  CRITICAL: 'text-rose-500 bg-rose-500/10 border-rose-500/20 animate-pulse',
+  LOW: 'text-slate-600 dark:text-slate-400 bg-slate-500/10 border-slate-500/20',
+  MEDIUM: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20',
+  HIGH: 'text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/20',
+  CRITICAL: 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20 animate-pulse',
 };
 
 const statusColors: Record<TicketStatus, string> = {
-  OPEN: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
-  IN_PROGRESS: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-  WAITING_FOR_CLIENT: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
-  RESOLVED: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-  CLOSED: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
+  OPEN: 'text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20',
+  IN_PROGRESS: 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+  WAITING_FOR_CLIENT: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20',
+  RESOLVED: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  CLOSED: 'text-slate-600 dark:text-slate-400 bg-slate-500/10 border-slate-500/20',
 };
 
 export default function TicketDetailsPage() {
