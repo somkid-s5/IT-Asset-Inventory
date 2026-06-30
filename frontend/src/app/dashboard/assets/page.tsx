@@ -197,14 +197,6 @@ export default function AssetsPage() {
       }
     },
     {
-      id: 'ipAddress',
-      header: "IP Address",
-      cell: ({ row }) => {
-        const ips = row.original.ipAllocations?.map(ip => ip.address).join(', ');
-        return <span className="font-mono text-[11px] text-muted-foreground">{ips || '--'}</span>;
-      }
-    },
-    {
       accessorKey: 'environment',
       header: "Env",
       cell: ({ getValue }) => {
