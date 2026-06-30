@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Prompt, Inter } from 'next/font/google';
+import { Prompt, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
@@ -20,6 +20,11 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+});
+
 export const metadata: Metadata = {
   title: 'SysOps | IT Service Management',
   description: 'Enterprise IT Service Management (ITSM) for managing assets, tickets, and infrastructure efficiently.',
@@ -28,7 +33,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className={`${inter.variable} ${prompt.variable} font-sans subpixel-antialiased selection:bg-primary/30`}>
+      <body className={`${inter.variable} ${prompt.variable} ${jetbrainsMono.variable} font-sans subpixel-antialiased selection:bg-primary/30`}>
         {/* Skip Link for Accessibility */}
         <a
           href="#main-content"
