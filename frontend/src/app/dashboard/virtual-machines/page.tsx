@@ -437,14 +437,14 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
           <TableHeader className="bg-transparent">
             {table.getHeaderGroups().map((hg: any) => (
               <TableRow key={hg.id} className="border-border hover:bg-transparent">
-                {hg.headers.map((h: any) => <TableHead key={h.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4 border-b-2 border-border">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
+                {hg.headers.map((h: any) => <TableHead key={h.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3 border-b-2 border-border">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.length ? table.getRowModel().rows.map((row: any) => (
-              <TableRow key={row.id} className="border-b border-border hover:bg-muted/50 transition-colors h-14">
-                {row.getVisibleCells().map((cell: any) => <TableCell key={cell.id} className="py-2.5 px-4 text-sm text-foreground align-middle">
+              <TableRow key={row.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                {row.getVisibleCells().map((cell: any) => <TableCell key={cell.id} className="py-1.5 px-3 text-[12px] text-foreground align-middle">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>)}
               </TableRow>
@@ -488,13 +488,37 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
     },
     { accessorKey: 'name', header: "VM Name", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
     { accessorKey: 'primaryIp', header: "IP Address", cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{getValue() as string}</span> },
+    {
+      id: 'specs',
+      header: "Specs (CPU/RAM/Storage)",
+      cell: ({ row }) => (
+        <span className="font-mono text-xs opacity-75">
+          {row.original.cpuCores} vCPU / {row.original.memoryGb} GB / {row.original.storageGb} GB
+        </span>
+      )
+    },
+    {
+      accessorKey: 'environment',
+      header: "Env",
+      cell: ({ getValue }) => {
+        const env = getValue() as string;
+        if (!env) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
+        const variants: Record<string, string> = { PROD: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', UAT: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20', DEV: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' };
+        return <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", variants[env] || "bg-slate-500/10 text-slate-500")}>{env}</Badge>;
+      }
+    },
+    {
+      accessorKey: 'guestOs',
+      header: "Guest OS",
+      cell: ({ getValue }) => <span className="text-xs text-muted-foreground truncate max-w-[120px] block" title={getValue() as string}>{getValue() as string}</span>
+    },
     { accessorKey: 'vcenterName', header: "Source", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
     { accessorKey: 'powerState', header: "Power Status", cell: ({ getValue }) => getPowerStateBadge(getValue() as string) },
     {
       id: 'actions',
       cell: ({ row }) => (
         <div className="text-right">
-          <Button size="sm" variant="ghost" className="h-8" onClick={(e) => { e.stopPropagation(); onOpen(row.original.id); }}>Details</Button>
+          <Button size="sm" variant="ghost" className="h-8 shadow-none" onClick={(e) => { e.stopPropagation(); onOpen(row.original.id); }}>Details</Button>
         </div>
       )
     }
@@ -516,7 +540,7 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map(hg => (
               <TableRow key={hg.id} className="border-border/50 hover:bg-transparent">
-                {hg.headers.map(h => <TableHead key={h.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
+                {hg.headers.map(h => <TableHead key={h.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
               </TableRow>
             ))}
           </TableHeader>
@@ -527,11 +551,11 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
                 className="group border-border/40 hover:bg-muted/30 transition-colors cursor-pointer"
                 onClick={() => onOpen(row.original.id)}
               >
-                {row.getVisibleCells().map(cell => <TableCell key={cell.id} className="py-3 px-4">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
+                {row.getVisibleCells().map(cell => <TableCell key={cell.id} className="py-1.5 px-3 text-[12px]">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <Box className="h-8 w-8 opacity-20 mx-auto" />
                     <p>No active virtual machines</p>
@@ -597,7 +621,7 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map(hg => (
               <TableRow key={hg.id} className="border-border/50 hover:bg-transparent">
-                {hg.headers.map(h => <TableHead key={h.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
+                {hg.headers.map(h => <TableHead key={h.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
               </TableRow>
             ))}
           </TableHeader>
@@ -608,11 +632,11 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
                 className="group border-border/40 hover:bg-rose-500/5 transition-colors cursor-pointer"
                 onClick={() => onOpen(row.original.id)}
               >
-                {row.getVisibleCells().map(cell => <TableCell key={cell.id} className="py-3 px-4">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
+                {row.getVisibleCells().map(cell => <TableCell key={cell.id} className="py-1.5 px-3 text-[12px]">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <Box className="h-8 w-8 opacity-20 mx-auto" />
                     <p>No orphaned records found</p>
