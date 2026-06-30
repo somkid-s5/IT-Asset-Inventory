@@ -214,10 +214,15 @@ function extractMethods(...values: Array<string | null | undefined>) {
 
 function getStatusBadge(status?: AssetStatus | null) {
   switch (status) {
+    case "ACTIVE":
+      return {
+        label: "Under MA",
+        class: "border-success/30 bg-success/10 text-success",
+      };
     case "INACTIVE":
       return {
-        label: "Inactive",
-        class: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
+        label: "MA Expired",
+        class: "border-destructive/30 bg-destructive/10 text-destructive",
       };
     case "MAINTENANCE":
       return {
@@ -225,13 +230,14 @@ function getStatusBadge(status?: AssetStatus | null) {
         class: "border-warning/30 bg-warning/10 text-warning",
       };
     case "RETIRED":
+    case "DECOMMISSIONED" as any:
       return {
-        label: "Retired",
-        class: "border-destructive/30 bg-destructive/10 text-destructive",
+        label: "Decommissioned",
+        class: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
       };
     default:
       return {
-        label: "Online",
+        label: "Under MA",
         class: "border-success/30 bg-success/10 text-success",
       };
   }

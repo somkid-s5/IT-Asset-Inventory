@@ -118,6 +118,10 @@ export class CreateAssetDto {
 
   @IsOptional()
   @IsString()
+  environment?: string;
+
+  @IsOptional()
+  @IsString()
   owner?: string;
 
   @IsOptional()

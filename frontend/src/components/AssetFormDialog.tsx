@@ -483,7 +483,7 @@ export function AssetFormDialog({
           })),
       );
 
-      const { environment, ...cleanedFormData } = formData;
+      const { environment: _env, ...cleanedFormData } = formData;
       const payload = {
         ...cleanedFormData,
         assetId: formData.assetId.trim() || undefined,
@@ -493,6 +493,7 @@ export function AssetFormDialog({
         sn: formData.sn.trim() || undefined,
         parentId: formData.parentId ? formData.parentId : null,
         status: formData.status || undefined,
+        environment: formData.environment || undefined,
         owner: formData.owner?.trim() || undefined,
         department: formData.department?.trim() || undefined,
         vendor: formData.vendor?.trim() || undefined,
@@ -680,6 +681,39 @@ export function AssetFormDialog({
                   onChange={(event) => setFormData({ ...formData, rack: event.target.value })}
                   placeholder="e.g. Rack A1"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select
+                  value={formData.status || "ACTIVE"}
+                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                >
+                  <SelectTrigger className="bg-card/50">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Under MA (อยู่ในสัญญา MA)</SelectItem>
+                    <SelectItem value="INACTIVE">MA Expired (หมดสัญญา MA)</SelectItem>
+                    <SelectItem value="MAINTENANCE">Under Maintenance (อยู่ระหว่างซ่อมบำรุง)</SelectItem>
+                    <SelectItem value="DECOMMISSIONED">Decommissioned (จำหน่ายออก/เลิกใช้งาน)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Environment (Env)</Label>
+                <Select
+                  value={formData.environment || "DEV"}
+                  onValueChange={(value) => setFormData({ ...formData, environment: value })}
+                >
+                  <SelectTrigger className="bg-card/50">
+                    <SelectValue placeholder="Select env" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PROD">PROD</SelectItem>
+                    <SelectItem value="UAT">UAT</SelectItem>
+                    <SelectItem value="DEV">DEV</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label optional>Parent Asset</Label>

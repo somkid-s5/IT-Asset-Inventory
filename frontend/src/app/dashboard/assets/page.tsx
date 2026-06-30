@@ -222,10 +222,19 @@ export default function AssetsPage() {
       cell: ({ getValue }) => {
         const status = getValue() as string;
         if (!status) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
-        const active = status === 'ACTIVE';
+        
+        const config: Record<string, { label: string; className: string }> = {
+          ACTIVE: { label: 'Under MA', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
+          INACTIVE: { label: 'MA Expired', className: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' },
+          MAINTENANCE: { label: 'Maintenance', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
+          DECOMMISSIONED: { label: 'Decommissioned', className: 'bg-slate-500/10 text-slate-500 border-slate-500/20' }
+        };
+
+        const item = config[status] || { label: status, className: 'bg-slate-500/10 text-slate-500 border-slate-500/20' };
+
         return (
-          <Badge variant="outline" className={cn("text-[10px] font-semibold px-1.5 py-0", active ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : "bg-slate-500/10 text-slate-500 border-slate-500/20")}>
-            {status}
+          <Badge variant="outline" className={cn("text-[10px] font-semibold px-1.5 py-0", item.className)}>
+            {item.label}
           </Badge>
         );
       }
