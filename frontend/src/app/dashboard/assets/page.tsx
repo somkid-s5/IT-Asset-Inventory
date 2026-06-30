@@ -193,18 +193,50 @@ export default function AssetsPage() {
       cell: ({ getValue }) => {
         const type = getValue() as AssetType;
         const labels: Record<AssetType, string> = { SERVER: 'Server', STORAGE: 'Storage', SWITCH: 'Switch', SP: 'SP', NETWORK: 'Network' };
-        return <Badge variant="outline" className="font-medium bg-muted/20">{labels[type]}</Badge>;
+        return <Badge variant="outline" className="font-medium bg-muted/20 text-[11px] px-1.5 py-0">{labels[type]}</Badge>;
+      }
+    },
+    {
+      id: 'ipAddress',
+      header: "IP Address",
+      cell: ({ row }) => {
+        const ips = row.original.ipAllocations?.map(ip => ip.address).join(', ');
+        return <span className="font-mono text-[11px] text-muted-foreground">{ips || '--'}</span>;
+      }
+    },
+    {
+      accessorKey: 'environment',
+      header: "Env",
+      cell: ({ getValue }) => {
+        const env = getValue() as string;
+        if (!env) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
+        const variants: Record<string, string> = { PROD: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', UAT: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20', DEV: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' };
+        return <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", variants[env] || "bg-slate-500/10 text-slate-500")}>{env}</Badge>;
       }
     },
     {
       accessorKey: 'rack',
       header: "Rack",
-      cell: ({ getValue }) => <span className="font-mono text-xs opacity-70">{(getValue() as string) || '--'}</span>
+      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
     },
     {
       accessorKey: 'sn',
       header: "Serial Number",
       cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
+    },
+    {
+      accessorKey: 'status',
+      header: "Status",
+      cell: ({ getValue }) => {
+        const status = getValue() as string;
+        if (!status) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
+        const active = status === 'ACTIVE';
+        return (
+          <Badge variant="outline" className={cn("text-[10px] font-semibold px-1.5 py-0", active ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : "bg-slate-500/10 text-slate-500 border-slate-500/20")}>
+            {status}
+          </Badge>
+        );
+      }
     },
     {
       id: 'actions',
@@ -443,7 +475,7 @@ export default function AssetsPage() {
               {table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
                   {headerGroup.headers.map(header => (
-                    <TableHead key={header.id} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-4 px-4 border-b-2 border-border">
+                    <TableHead key={header.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3 border-b-2 border-border">
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -459,7 +491,7 @@ export default function AssetsPage() {
                     onClick={() => router.push(`/dashboard/assets/${row.original.id}`)}
                   >
                     {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id} className="py-3 px-4">
+                      <TableCell key={cell.id} className="py-1.5 px-3">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
