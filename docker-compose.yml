@@ -41,11 +41,12 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       - JWT_SECRET=${JWT_SECRET}
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      - REGISTRATION_SECRET=${REGISTRATION_SECRET}
       - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}
       - DEFAULT_EDITOR_PASSWORD=${DEFAULT_EDITOR_PASSWORD}
       - FRONTEND_URL=${FRONTEND_URL}
       - PORT=3001
-    command: sh -c "npx prisma migrate deploy && npm run start:prod"
+    command: sh -c "npx prisma migrate deploy && node dist/main"
     networks:
       - infrapilot_network
     depends_on:
