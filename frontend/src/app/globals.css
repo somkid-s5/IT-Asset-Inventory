@@ -45,7 +45,7 @@
   --radius-sm: calc(var(--radius) - 6px);
   
   /* Typography - Cyber Terminal */
-  --font-sans: var(--font-inter), var(--font-prompt), sans-serif;
+  --font-sans: var(--font-google-sans), sans-serif;
   --font-display: var(--font-mono), ui-monospace, monospace;
   --font-mono: var(--font-mono), ui-monospace, monospace;
   

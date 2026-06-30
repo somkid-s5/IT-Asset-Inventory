@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Prompt, Inter, JetBrains_Mono } from 'next/font/google';
+import { JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
@@ -9,15 +10,25 @@ import { ReactQueryProvider } from '@/components/ReactQueryProvider';
 
 export const dynamic = 'force-dynamic';
 
-const prompt = Prompt({
-  subsets: ['thai', 'latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-prompt',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
+const googleSans = localFont({
+  src: [
+    {
+      path: './fonts/GoogleSans-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: './fonts/GoogleSans-Medium.ttf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: './fonts/GoogleSans-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-google-sans',
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -33,7 +44,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className={`${inter.variable} ${prompt.variable} ${jetbrainsMono.variable} font-sans subpixel-antialiased selection:bg-primary/30`}>
+      <body className={`${googleSans.variable} ${jetbrainsMono.variable} font-sans subpixel-antialiased selection:bg-primary/30`}>
         {/* Skip Link for Accessibility */}
         <a
           href="#main-content"
