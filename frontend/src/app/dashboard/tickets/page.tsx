@@ -74,10 +74,10 @@ export default function TicketsPage() {
   }, [setHeader]);
 
   const priorityColors: Record<TicketPriority, string> = {
-    LOW: 'bg-slate-500/10 text-slate-500 border-slate-500/20',
-    MEDIUM: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    HIGH: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-    CRITICAL: 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse',
+    LOW: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+    MEDIUM: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+    HIGH: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+    CRITICAL: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 animate-pulse',
   };
 
   const statusIcons: Record<TicketStatus, any> = {
@@ -152,6 +152,22 @@ export default function TicketsPage() {
           </Badge>
         );
       },
+    },
+    {
+      id: 'linkedAsset',
+      header: 'Linked Asset',
+      cell: ({ row }) => {
+        const assetName = row.original.asset?.name || row.original.vm?.name;
+        return <span className="text-[11px] text-muted-foreground truncate max-w-[120px] block">{assetName || '--'}</span>;
+      }
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created',
+      cell: ({ getValue }) => {
+        const date = new Date(getValue() as string);
+        return <span className="text-[11px] text-muted-foreground font-mono">{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+      }
     },
     {
       accessorKey: 'status',
