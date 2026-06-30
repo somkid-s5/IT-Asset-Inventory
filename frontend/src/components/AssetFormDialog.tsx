@@ -483,8 +483,9 @@ export function AssetFormDialog({
           })),
       );
 
+      const { environment, ...cleanedFormData } = formData;
       const payload = {
-        ...formData,
+        ...cleanedFormData,
         assetId: formData.assetId.trim() || undefined,
         rack: formData.rack.trim() || undefined,
         location: formData.location.trim() || undefined,
@@ -492,14 +493,13 @@ export function AssetFormDialog({
         sn: formData.sn.trim() || undefined,
         parentId: formData.parentId ? formData.parentId : null,
         status: formData.status || undefined,
-        owner: formData.owner.trim() || undefined,
-        department: formData.department.trim() || undefined,
-        vendor: formData.vendor.trim() || undefined,
+        owner: formData.owner?.trim() || undefined,
+        department: formData.department?.trim() || undefined,
+        vendor: formData.vendor?.trim() || undefined,
         purchaseDate: formData.purchaseDate ? new Date(formData.purchaseDate) : undefined,
         warrantyExpiration: formData.warrantyExpiration ? new Date(formData.warrantyExpiration) : undefined,
-        environment: formData.environment || undefined,
-        dependencies: formData.dependencies.trim() || undefined,
-        osVersion: formData.osVersion.trim() || undefined,
+        dependencies: formData.dependencies?.trim() || undefined,
+        osVersion: formData.osVersion?.trim() || undefined,
         ips: finalIps,
         credentials: finalCredentials,
         customMetadata: Object.keys(customMetadata).length > 0 ? customMetadata : undefined,
@@ -709,85 +709,6 @@ export function AssetFormDialog({
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          </section>
-
-          <section className="muted-panel p-4">
-            <div className="flex items-center gap-2 border-b border-border/70 pb-3 mb-4">
-              <p className="workspace-subtle">Lifecycle, Environment & Ownership</p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ACTIVE">Active</SelectItem>
-                    <SelectItem value="INACTIVE">Inactive</SelectItem>
-                    <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-                    <SelectItem value="DECOMMISSIONED">Decommissioned</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Environment</Label>
-                <Select value={formData.environment} onValueChange={(value) => setFormData({ ...formData, environment: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PROD">Production (PROD)</SelectItem>
-                    <SelectItem value="UAT">UAT</SelectItem>
-                    <SelectItem value="TEST">Testing (TEST)</SelectItem>
-                    <SelectItem value="DEV">Development (DEV)</SelectItem>
-                    <SelectItem value="STAGING">Staging</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label optional>OS Version</Label>
-                <Input
-                  autoComplete="off"
-                  value={formData.osVersion}
-                  onChange={(event) => setFormData({ ...formData, osVersion: event.target.value })}
-                  placeholder="e.g. Ubuntu 22.04"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label optional>Owner</Label>
-                <Input
-                  autoComplete="off"
-                  value={formData.owner}
-                  onChange={(event) => setFormData({ ...formData, owner: event.target.value })}
-                  placeholder="e.g. John Doe"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label optional>Department</Label>
-                <Input
-                  autoComplete="off"
-                  value={formData.department}
-                  onChange={(event) => setFormData({ ...formData, department: event.target.value })}
-                  placeholder="e.g. IT Operations"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label optional>Vendor</Label>
-                <Input
-                  autoComplete="off"
-                  value={formData.vendor}
-                  onChange={(event) => setFormData({ ...formData, vendor: event.target.value })}
-                  placeholder="e.g. Dell"
-                />
-              </div>
 
               <div className="space-y-1.5">
                 <Label optional>Purchase Date</Label>
@@ -804,16 +725,6 @@ export function AssetFormDialog({
                   type="date"
                   value={formData.warrantyExpiration}
                   onChange={(event) => setFormData({ ...formData, warrantyExpiration: event.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label optional>Dependencies</Label>
-                <Input
-                  autoComplete="off"
-                  value={formData.dependencies}
-                  onChange={(event) => setFormData({ ...formData, dependencies: event.target.value })}
-                  placeholder="e.g. DB-01, VM-Web"
                 />
               </div>
             </div>

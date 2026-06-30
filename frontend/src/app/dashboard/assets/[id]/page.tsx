@@ -1817,7 +1817,6 @@ export default function AssetDetailsPage() {
   if (!asset) return null;
 
   const style = getAssetStyle(asset.type);
-  const status = getStatusBadge(asset.status);
 
   return (
     <motion.div
@@ -1853,23 +1852,6 @@ export default function AssetDetailsPage() {
                 <h1 className="text-2xl font-bold tracking-tight text-foreground truncate max-w-[400px]">
                   {asset.name}
                 </h1>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider shrink-0",
-                    status.class,
-                  )}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-current opacity-90" />{" "}
-                  {status.label}
-                </span>
-                {asset.environment && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-primary/5 text-primary border-primary/20 text-[10px] font-bold uppercase"
-                  >
-                    {asset.environment}
-                  </Badge>
-                )}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground min-w-0">
                 <span className="font-semibold text-foreground/80 truncate">
@@ -1888,12 +1870,6 @@ export default function AssetDetailsPage() {
                 {asset.sn && (
                   <span className="flex items-center gap-1.5 font-mono text-[11px]">
                     <Hash className="h-3.5 w-3.5" /> {asset.sn}
-                  </span>
-                )}
-                {asset.osVersion && (
-                  <span className="flex items-center gap-1.5">
-                    <LaptopMinimal className="h-3.5 w-3.5" /> OS:{" "}
-                    {asset.osVersion}
                   </span>
                 )}
               </div>
@@ -1966,37 +1942,61 @@ export default function AssetDetailsPage() {
               </div>
             </div>
 
-            {/* Ownership & Maintenance */}
+            {/* Asset Properties */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1">
                 <Info className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-bold tracking-tight text-foreground">
-                  Lifecycle & Ownership
+                  Asset Properties
                 </h2>
               </div>
               <div className="glass-card divide-y divide-border/40 overflow-hidden">
                 <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Owner
+                    Type
                   </span>
                   <span className="text-xs font-semibold text-foreground">
-                    {asset.owner || "--"}
+                    {asset.type || "--"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Department
+                    Asset ID
                   </span>
                   <span className="text-xs font-semibold text-foreground">
-                    {asset.department || "--"}
+                    {asset.assetId || "--"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Vendor
+                    Brand / Model
                   </span>
                   <span className="text-xs font-semibold text-foreground">
-                    {asset.vendor || "--"}
+                    {asset.brandModel || "--"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Serial Number
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {asset.sn || "--"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Location
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {asset.location || "--"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Rack
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {asset.rack || "--"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
@@ -2017,14 +2017,6 @@ export default function AssetDetailsPage() {
                     {asset.warrantyExpiration
                       ? new Date(asset.warrantyExpiration).toLocaleDateString()
                       : "--"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Dependencies
-                  </span>
-                  <span className="text-xs font-semibold text-foreground text-right truncate max-w-[180px]">
-                    {asset.dependencies || "--"}
                   </span>
                 </div>
               </div>
