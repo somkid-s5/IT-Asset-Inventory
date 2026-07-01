@@ -16,6 +16,16 @@ async function bootstrap() {
     process.exit(1);
   }
 
+  // SECURITY: refuse to boot without an explicit JWT signing secret. The old
+  // code silently fell back to a hardcoded 'super-secret-key', which let
+  // anyone with source access forge tokens. See src/auth/constants.ts.
+  if (!process.env.JWT_SECRET) {
+    console.error(
+      'CRITICAL: JWT_SECRET environment variable is not set. Refusing to start with an insecure signing secret.',
+    );
+    process.exit(1);
+  }
+
   const app = await NestFactory.create(AppModule);
 
   // Security headers with CORS-friendly settings for assets
