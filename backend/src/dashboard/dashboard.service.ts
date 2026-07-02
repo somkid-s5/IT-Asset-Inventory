@@ -46,7 +46,9 @@ export class DashboardService {
         where: { environment: 'PROD' },
       }),
       this.prisma.databaseAccount.count(),
-      this.prisma.user.count(),
+      this.prisma.user.count({
+        where: { deletedAt: null },
+      }),
       this.prisma.vmVCenterSource.count(),
       this.prisma.vmVCenterSource.count({
         where: { status: VmSourceStatus.HEALTHY },
@@ -89,7 +91,7 @@ export class DashboardService {
         },
       }),
       this.prisma.user.count({
-        where: { role: Role.ADMIN },
+        where: { role: Role.ADMIN, deletedAt: null },
       }),
     ]);
 

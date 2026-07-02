@@ -22,9 +22,10 @@ import { Role } from '@prisma/client';
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
+  // Service Desk access for all roles: any authenticated user (incl. VIEWER)
+  // can open an IT ticket. Editing ticket state (priority/status/assignment)
+  // remains ADMIN/EDITOR below.
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.EDITOR)
   create(
     @Body() createTicketDto: CreateTicketDto,
     @Request() req: { user: { id: string } },
@@ -43,6 +44,7 @@ export class TicketsController {
   }
 
   @Patch(':id')
+  @Roles(Role.ADMIN, Role.EDITOR)
   update(
     @Param('id') id: string,
     @Body() updateTicketDto: UpdateTicketDto,

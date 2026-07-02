@@ -3,7 +3,6 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { resolveJwtSecret } from '../constants';
 
 function extractJwtFromCookie(req: { cookies?: Record<string, string> }) {
   return req?.cookies?.access_token ?? null;
@@ -21,7 +20,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
       ignoreExpiration: false,
-      secretOrKey: resolveJwtSecret(configService),
+      secretOrKey: (() => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('JWT_SECRET environment variable is missing. Application cannot start.');
+        }
+        return secret;
+      })(),
       passReqToCallback: true,
     });
   }
@@ -48,8 +53,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       where: { id: payload.sub },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('User not found');
+    if (!user || user.deletedAt) {
+      throw new UnauthorizedException('User not found or deactivated');
     }
 
     return user;

@@ -16,6 +16,7 @@ export class UsersService {
 
   async findAll() {
     const users = await this.prisma.user.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -91,10 +92,11 @@ export class UsersService {
         select: {
           id: true,
           role: true,
+          deletedAt: true,
         },
       });
 
-      if (!user) {
+      if (!user || user.deletedAt) {
         throw new NotFoundException('User not found');
       }
 
@@ -150,10 +152,13 @@ export class UsersService {
       select: {
         id: true,
         role: true,
+        username: true,
+        email: true,
+        deletedAt: true,
       },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt) {
       throw new NotFoundException('User not found');
     }
 
@@ -163,7 +168,7 @@ export class UsersService {
 
     if (user.role === Role.ADMIN) {
       const adminCount = await this.prisma.user.count({
-        where: { role: Role.ADMIN },
+        where: { role: Role.ADMIN, deletedAt: null },
       });
 
       if (adminCount <= 1) {
@@ -171,8 +176,13 @@ export class UsersService {
       }
     }
 
-    await this.prisma.user.delete({
+    await this.prisma.user.update({
       where: { id: userId },
+      data: {
+        deletedAt: new Date(),
+        username: `${user.username}_deleted_${Date.now()}`,
+        ...(user.email && { email: `${user.email}_deleted_${Date.now()}` }),
+      },
     });
 
     return { success: true };
@@ -181,10 +191,10 @@ export class UsersService {
   async resetPassword(userId: string, password: string, actorUserId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true, displayName: true },
+      select: { id: true, username: true, displayName: true, deletedAt: true },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt) {
       throw new NotFoundException('User not found');
     }
 

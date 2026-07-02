@@ -15,7 +15,7 @@ export type SaveVmDraftPayload = {
   tags?: string;
   guestAccounts?: Array<{
     username: string;
-    password: string;
+    password?: string;
     accessMethod: string;
     role: string;
     note?: string;
@@ -125,4 +125,9 @@ export async function updateVmInventory(id: string, payload: SaveVmDraftPayload)
 
 export async function archiveVmInventory(id: string) {
   await api.post(`/vm/inventory/${id}/archive`);
+}
+
+export async function revealVmGuestAccountPassword(id: string) {
+  const response = await api.get<{ password: string }>(`/vm/guest-accounts/${id}/reveal`);
+  return response.data;
 }

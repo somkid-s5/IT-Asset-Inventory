@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import api from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/UserAvatar';
+import { AccessDenied } from '@/components/access-denied';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -340,7 +341,7 @@ export default function UsersPage() {
     }
   };
 
-  if (!user || user.role !== 'ADMIN') return null;
+  if (!user || user.role !== 'ADMIN') return <AccessDenied />;
 
   return (
     <motion.div 

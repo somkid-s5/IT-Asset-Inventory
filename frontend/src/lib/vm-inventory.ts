@@ -7,8 +7,9 @@ export type VmSyncState = 'Synced' | 'Missing from source' | 'Ready to sync' | '
 export type VmPlacementResolution = 'DIRECT_VM' | 'SOURCE_SINGLE_HOST' | 'SOURCE_SINGLE_CLUSTER' | 'UNKNOWN';
 
 export interface VmGuestAccount {
+  id?: string;
   username: string;
-  password: string;
+  password?: string;
   accessMethod: string;
   role: string;
   note?: string | null;

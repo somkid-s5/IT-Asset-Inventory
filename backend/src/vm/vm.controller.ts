@@ -142,4 +142,13 @@ export class VmController {
   ) {
     return this.vmService.archiveInventory(id, req.user.id, lifecycleState);
   }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Get('guest-accounts/:id/reveal')
+  revealGuestAccountPassword(
+    @Param('id') id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.vmService.revealGuestAccountPassword(id, req.user.id);
+  }
 }

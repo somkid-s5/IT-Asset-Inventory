@@ -158,7 +158,7 @@ export class CredentialsService {
     await this.prisma.auditLog.create({
       data: {
         userId,
-        action: 'DELETE_ASSET', // Reusing action or should I use a generic one? enum doesn't have DELETE_CREDENTIAL
+        action: AuditAction.DELETE_CREDENTIAL,
         targetId: id,
         details: `Deleted credential ${credential.username} from asset ${credential.assetId}`,
       },

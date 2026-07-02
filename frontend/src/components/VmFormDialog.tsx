@@ -135,7 +135,7 @@ function buildAccounts(vmToEdit?: VmInventoryDetail | null) {
   return vmToEdit.guestAccounts.length > 0
     ? vmToEdit.guestAccounts.map((account) => ({
       username: account.username,
-      password: account.password,
+      password: account.password ?? '',
       accessMethod: account.accessMethod,
       role: account.role,
       note: account.note ?? '',
@@ -167,7 +167,7 @@ export function VmFormDialog({
         : discoveryVm?.guestAccounts?.length
           ? discoveryVm.guestAccounts.map((account) => ({
             username: account.username,
-            password: account.password,
+            password: account.password ?? '',
             accessMethod: account.accessMethod,
             role: account.role,
             note: account.note ?? '',

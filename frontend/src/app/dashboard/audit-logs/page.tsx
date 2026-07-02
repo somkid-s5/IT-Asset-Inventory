@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import { toast } from 'sonner';
+import { AccessDenied } from '@/components/access-denied';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -217,7 +218,7 @@ export default function AuditLogsPage() {
     }
   });
 
-  if (!user || user.role !== 'ADMIN') return null;
+  if (!user || user.role !== 'ADMIN') return <AccessDenied />;
 
   return (
     <motion.div 

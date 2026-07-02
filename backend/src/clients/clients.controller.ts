@@ -8,20 +8,30 @@ import {
   Delete,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Role } from '@prisma/client';
 
 @Controller('api/clients')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 
+  // Any authenticated user (incl. VIEWER) can read/lookup clients — needed for
+  // the ticket form's client autocomplete. Mutations require ADMIN/EDITOR.
   @Post()
-  create(@Body() createClientDto: CreateClientDto) {
-    return this.clientsService.create(createClientDto);
+  @Roles(Role.ADMIN, Role.EDITOR)
+  create(
+    @Body() createClientDto: CreateClientDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.clientsService.create(createClientDto, req.user.id);
   }
 
   @Get()
@@ -40,12 +50,21 @@ export class ClientsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClientDto: UpdateClientDto) {
-    return this.clientsService.update(id, updateClientDto);
+  @Roles(Role.ADMIN, Role.EDITOR)
+  update(
+    @Param('id') id: string,
+    @Body() updateClientDto: UpdateClientDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.clientsService.update(id, updateClientDto, req.user.id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.clientsService.remove(id);
+  @Roles(Role.ADMIN)
+  remove(
+    @Param('id') id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.clientsService.remove(id, req.user.id);
   }
 }

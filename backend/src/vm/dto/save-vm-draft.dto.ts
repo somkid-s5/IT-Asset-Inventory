@@ -26,11 +26,16 @@ class VmDiskDto {
 }
 
 class VmGuestAccountDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   username: string;
 
+  @IsOptional()
   @IsString()
-  password: string;
+  password?: string;
 
   @IsString()
   accessMethod: string;

@@ -120,6 +120,10 @@ enum AuditAction {
   UPDATE_TICKET
   CLOSE_TICKET
   CREATE_COMMENT
+  CREATE_CLIENT
+  UPDATE_CLIENT
+  DELETE_CLIENT
+  DELETE_CREDENTIAL
 }
 
 model User {
@@ -191,7 +195,7 @@ model Asset {
 
   // Hierarchical Relationship (Parent-Child)
   parentId String?
-  parent   Asset?  @relation("AssetHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  parent   Asset?  @relation("AssetHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children Asset[] @relation("AssetHierarchy")
 
   // IP Management
@@ -444,9 +448,9 @@ model VmGuestAccount {
   role              String
   note              String?
   discoveryId       String?
-  discovery         VmDiscovery? @relation(fields: [discoveryId], references: [id], onDelete: Cascade)
+  discovery         VmDiscovery? @relation(fields: [discoveryId], references: [id], onDelete: SetNull)
   inventoryId       String?
-  inventory         VmInventory? @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventory         VmInventory? @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

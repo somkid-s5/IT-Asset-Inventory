@@ -89,8 +89,8 @@ export class AuthService {
       where: { username },
     });
 
-    if (!user) {
-      // Log failed login attempt for non-existent user
+    if (!user || user.deletedAt) {
+      // Log failed login attempt for non-existent or deleted user
       await this.prisma.auditLog.create({
         data: {
           userId: null,
@@ -98,7 +98,7 @@ export class AuthService {
           ipAddress,
           details: JSON.stringify({
             username,
-            reason: 'User not found',
+            reason: user ? 'User deactivated' : 'User not found',
           }),
         },
       });

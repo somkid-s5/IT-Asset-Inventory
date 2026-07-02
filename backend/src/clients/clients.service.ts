@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { AuditAction } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
@@ -7,10 +8,23 @@ import { UpdateClientDto } from './dto/update-client.dto';
 export class ClientsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createClientDto: CreateClientDto) {
-    return this.prisma.client.create({
+  async create(createClientDto: CreateClientDto, userId?: string) {
+    const created = await this.prisma.client.create({
       data: createClientDto,
     });
+
+    if (userId) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.CREATE_CLIENT,
+          targetId: created.id,
+          details: JSON.stringify({ name: created.name }),
+        },
+      });
+    }
+
+    return created;
   }
 
   async findAll() {
@@ -42,26 +56,54 @@ export class ClientsService {
     return client;
   }
 
-  async update(id: string, updateClientDto: UpdateClientDto) {
+  async update(id: string, updateClientDto: UpdateClientDto, userId?: string) {
     await this.findOne(id);
-    return this.prisma.client.update({
+    const updated = await this.prisma.client.update({
       where: { id },
       data: updateClientDto,
     });
+
+    if (userId) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.UPDATE_CLIENT,
+          targetId: id,
+          details: JSON.stringify({ name: updated.name }),
+        },
+      });
+    }
+
+    return updated;
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
-    return this.prisma.client.delete({
+  async remove(id: string, userId?: string) {
+    const client = await this.findOne(id);
+    const deleted = await this.prisma.client.delete({
       where: { id },
     });
+
+    if (userId) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.DELETE_CLIENT,
+          targetId: id,
+          details: JSON.stringify({ name: client.name }),
+        },
+      });
+    }
+
+    return deleted;
   }
 
+  // Internal helper used by the ticket flow. Auto-created clients during
+  // ticket submission are not audited per-user (created by the system).
   async findOrCreateByName(name: string) {
     const existing = await this.prisma.client.findUnique({
       where: { name },
     });
     if (existing) return existing;
-    return this.create({ name });
+    return this.prisma.client.create({ data: { name } });
   }
 }

@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VmFormDialog } from '@/components/VmFormDialog';
 import type { VmInventoryDetail } from '@/lib/vm-inventory';
-import { archiveVmInventory, getVmInventoryById } from '@/services/vm';
+import { archiveVmInventory, getVmInventoryById, revealVmGuestAccountPassword } from '@/services/vm';
 import type { Ticket } from '@/services/tickets';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -66,7 +66,8 @@ export default function VmDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { setHeader } = usePageHeader();
-  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [vm, setVm] = useState<VmInventoryDetail | null>(null);
@@ -111,6 +112,47 @@ export default function VmDetailPage() {
     } catch {
       toast.error(`Failed to copy ${label.toLowerCase()}`);
     }
+  };
+
+  const handleRevealPassword = async (accountId: string) => {
+    if (revealed.has(accountId)) {
+      setRevealed(prev => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+      return;
+    }
+
+    try {
+      if (!passwords[accountId]) {
+        const res = await revealVmGuestAccountPassword(accountId);
+        setPasswords(prev => ({ ...prev, [accountId]: res.password }));
+      }
+      setRevealed(prev => {
+        const next = new Set(prev);
+        next.add(accountId);
+        return next;
+      });
+    } catch {
+      toast.error('Failed to reveal password');
+    }
+  };
+
+  const handleCopyPassword = async (account: VmInventoryDetail['guestAccounts'][number]) => {
+    const accountId = account.id || '';
+    let pwd = passwords[accountId];
+    if (!pwd) {
+      try {
+        const res = await revealVmGuestAccountPassword(accountId);
+        pwd = res.password;
+        setPasswords(prev => ({ ...prev, [accountId]: pwd }));
+      } catch {
+        toast.error('Failed to copy password');
+        return;
+      }
+    }
+    void copyValue(pwd, 'Password');
   };
 
   if (loading) {
@@ -346,7 +388,9 @@ export default function VmDetailPage() {
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {vm.guestAccounts.map(account => {
-                      const isRev = revealedPasswords[account.username];
+                      const accountId = account.id || '';
+                      const isRev = revealed.has(accountId);
+                      const pwdText = passwords[accountId] || '••••••••••••';
                       return (
                         <tr key={account.username} className="hover:bg-muted/20 transition-colors">
                           <td className="px-6 py-4">
@@ -358,12 +402,12 @@ export default function VmDetailPage() {
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
                                <div className="font-mono bg-muted/50 px-2 py-1 rounded-md min-w-[160px] text-center font-semibold tabular-nums transition-all">
-                                 {isRev ? account.password : '••••••••••••'}
+                                 {isRev ? pwdText : '••••••••••••'}
                                </div>
-                               <button onClick={() => setRevealedPasswords(c => ({...c, [account.username]: !isRev}))} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                               <button onClick={() => { void handleRevealPassword(accountId); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
                                  {isRev ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                </button>
-                               <button onClick={() => { void copyValue(account.password, 'Password'); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                               <button onClick={() => { void handleCopyPassword(account); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
                                  <Copy className="h-4 w-4" />
                                </button>
                             </div>
