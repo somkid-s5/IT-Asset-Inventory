@@ -4,8 +4,10 @@
 .env.development.local
 .env.test.local
 .env.production.local
-backend/.env
-frontend/.env.local
+.env.*
+*.env
+**/*.env
+**/.*.env
 
 # Dependency directories
 node_modules/
@@ -42,3 +44,14 @@ todos/
 lint_results.txt
 lint_report.json
 backend/uploads/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Cache and build tools
+.turbo/
+.eslintcache
+.vercel/
+.npm/
+.yarn/

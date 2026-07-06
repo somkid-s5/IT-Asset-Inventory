@@ -11,6 +11,7 @@ interface User {
     avatarSeed: string;
     avatarImage?: string | null;
     role: 'ADMIN' | 'EDITOR' | 'VIEWER';
+    mustChangePassword?: boolean;
 }
 
 interface AuthContextType {
@@ -134,12 +135,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, [pathname, hydrated]);
 
+    useEffect(() => {
+        if (user && user.mustChangePassword && pathname !== '/dashboard/profile' && pathname !== '/login') {
+            router.push('/dashboard/profile?forceChangePassword=true');
+        }
+    }, [user, pathname, router]);
+
     const login = (userData: User) => {
         // Token is stored in HttpOnly cookie on backend
         // Only store user data in localStorage for display purposes
         localStorage.setItem('user', JSON.stringify(userData));
         emitAuthChange();
-        router.push('/dashboard');
+        if (userData.mustChangePassword) {
+            router.push('/dashboard/profile?forceChangePassword=true');
+        } else {
+            router.push('/dashboard');
+        }
     };
 
     const updateUser = (userData: User) => {

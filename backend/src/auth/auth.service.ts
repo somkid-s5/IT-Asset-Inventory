@@ -70,6 +70,7 @@ export class AuthService {
         sub: user.id,
         username: user.username,
         role: user.role,
+        mustChangePassword: false,
       }),
       user: {
         id: user.id,
@@ -78,6 +79,7 @@ export class AuthService {
         avatarSeed: user.avatarSeed,
         avatarImage: user.avatarImage,
         role: user.role,
+        mustChangePassword: false,
       },
     };
   }
@@ -141,6 +143,7 @@ export class AuthService {
         sub: user.id,
         username: user.username,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       }),
       user: {
         id: user.id,
@@ -149,6 +152,7 @@ export class AuthService {
         avatarSeed: user.avatarSeed,
         avatarImage: user.avatarImage,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -170,6 +174,7 @@ export class AuthService {
         avatarSeed: user.avatarSeed,
         avatarImage: user.avatarImage,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -212,6 +217,7 @@ export class AuthService {
         avatarSeed: user.avatarSeed,
         avatarImage: user.avatarImage,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -242,7 +248,10 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: { 
+        passwordHash,
+        mustChangePassword: false,
+      },
     });
 
     await this.prisma.auditLog.create({

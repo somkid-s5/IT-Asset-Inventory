@@ -137,6 +137,12 @@ export default function ProfilePage() {
       setNewPassword('');
       setConfirmPassword('');
       toast.success('Password updated successfully');
+      if (user) {
+        updateUser({
+          ...user,
+          mustChangePassword: false,
+        });
+      }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Failed to update password'));
     } finally {
@@ -176,6 +182,18 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {user?.mustChangePassword && (
+        <div className="rounded-xl border border-destructive/35 bg-destructive/10 p-4 text-destructive">
+          <div className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <Shield className="h-4 w-4" />
+            <span>Action Required: Default Password Detected</span>
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-normal">
+            You are using a default administrative password. To secure this workspace, you must change your password before you can use any other platform features.
+          </p>
+        </div>
+      )}
+
       <section className="grid gap-4 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <div className="surface-panel p-4">
           <div className="flex items-center gap-2">
@@ -193,6 +211,7 @@ export default function ProfilePage() {
                 autoComplete="name"
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
+                disabled={user?.mustChangePassword}
                 required
               />
             </div>
@@ -207,7 +226,7 @@ export default function ProfilePage() {
                   label={displayName || user?.displayName || 'Infra Pilot'}
                   className="h-12 w-12"
                 />
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={user?.mustChangePassword}>
                   Upload Photo
                 </Button>
                 <Button
@@ -217,11 +236,12 @@ export default function ProfilePage() {
                     setAvatarImage(null);
                     setAvatarSeed(createClientAvatarSeed());
                   }}
+                  disabled={user?.mustChangePassword}
                 >
                   Randomize
                 </Button>
                 {avatarImage ? (
-                  <Button type="button" variant="ghost" onClick={() => setAvatarImage(null)}>
+                  <Button type="button" variant="ghost" onClick={() => setAvatarImage(null)} disabled={user?.mustChangePassword}>
                     Remove
                   </Button>
                 ) : null}
@@ -229,7 +249,7 @@ export default function ProfilePage() {
               <p className="text-[11px] text-muted-foreground">Upload JPG, PNG, or WebP (max 1 MB). If empty, DiceBear avatar will be used.</p>
             </div>
 
-            <Button type="submit" variant="outline" disabled={profileSaving}>
+            <Button type="submit" variant="outline" disabled={profileSaving || user?.mustChangePassword}>
               {profileSaving ? 'Saving profile...' : 'Save Profile'}
             </Button>
           </form>

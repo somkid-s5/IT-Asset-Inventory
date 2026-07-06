@@ -13,7 +13,7 @@ export class CredentialsService {
     process.env.ENCRYPTION_KEY) as string;
 
   constructor(private prisma: PrismaService) {
-    if (!this.secretKey || Buffer.from(this.secretKey, 'hex').length !== 32) {
+    if (!this.secretKey || !/^[0-9a-fA-F]{64}$/.test(this.secretKey)) {
       throw new Error(
         'CRITICAL: CREDENTIAL_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)',
       );
@@ -168,10 +168,6 @@ export class CredentialsService {
   }
 
   private getKeyBuffer(): Buffer {
-    if (/^[0-9a-fA-F]{64}$/.test(this.secretKey)) {
-      return Buffer.from(this.secretKey, 'hex');
-    }
-
-    return Buffer.from(this.secretKey);
+    return Buffer.from(this.secretKey, 'hex');
   }
 }

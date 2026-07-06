@@ -57,6 +57,7 @@ async function main() {
             avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'admin@infrapilot.local',
             passwordHash: adminPasswordHash,
+            mustChangePassword: true,
             role: Role.ADMIN,
         },
     });
@@ -69,6 +70,7 @@ async function main() {
             avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'soc-analyst@infrapilot.local',
             passwordHash: editorPasswordHash,
+            mustChangePassword: true,
             role: Role.EDITOR,
         }
     });
