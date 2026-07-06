@@ -31,3 +31,14 @@ Thumbs.db
 *.xlsx
 *.xls
 *.csv
+
+# AI Workflow
+.agents/
+.superpowers/
+todos/
+.antigravitycli/
+
+# Lint & build artifacts
+lint_results.txt
+lint_report.json
+backend/uploads/
