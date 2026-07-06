@@ -80,8 +80,8 @@ To get a local instance of SysOps up and running, follow these simple steps.
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-org/SysOps.git
-cd SysOps
+git clone https://github.com/somkid-s5/IT-Asset-Inventory.git
+cd IT-Asset-Inventory
 ```
 
 ### 2. Environment Setup
