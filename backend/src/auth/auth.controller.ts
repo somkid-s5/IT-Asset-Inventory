@@ -73,7 +73,7 @@ export class AuthController {
   private setAuthCookie(res: Response, token: string) {
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.COOKIE_SECURE === 'true',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 1 day
       path: '/',
@@ -121,7 +121,7 @@ export class AuthController {
     }
     res.clearCookie('access_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.COOKIE_SECURE === 'true',
       sameSite: 'lax',
       path: '/',
     });
