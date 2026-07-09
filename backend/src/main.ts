@@ -28,6 +28,9 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  // Trust proxy (necessary when behind Nginx reverse proxy to get correct protocol/IP)
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   // Security headers with CORS-friendly settings for assets
   app.use(
     helmet({
@@ -38,9 +41,7 @@ async function bootstrap() {
 
   // Enable CORS with credentials support
   app.enableCors({
-    origin:
-      process.env.FRONTEND_URL ||
-      (process.env.NODE_ENV === 'production' ? false : 'http://localhost:3000'),
+    origin: true, // Dynamically reflect origin to prevent CORS blocks in IP-based/LAN deployments
     credentials: true, // Allow cookies
     exposedHeaders: ['set-cookie'],
   });

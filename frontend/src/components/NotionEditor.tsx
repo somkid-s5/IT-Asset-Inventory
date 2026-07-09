@@ -17,10 +17,8 @@ export default function NotionEditor({ initialContent, onChange }: NotionEditorP
     uploadFile: async (file: File) => {
       try {
         const url = await kbService.uploadImage(file);
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 
-                       (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3001` : '');
         const filename = url.split('/').pop();
-        return `${baseUrl}/uploads/kb/${filename}`;
+        return `/uploads/kb/${filename}`;
       } catch (err) {
         toast.error("Failed to upload image");
         return "";

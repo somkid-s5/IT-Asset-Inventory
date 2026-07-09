@@ -1,16 +1,16 @@
 import axios from 'axios';
 
 const getBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+        if (process.env.NODE_ENV === 'production') {
+            return '/api';
+        }
+        return `${window.location.protocol}//${window.location.hostname}:3001/api`;
+    }
     if (process.env.NEXT_PUBLIC_API_URL) {
         return process.env.NEXT_PUBLIC_API_URL;
     }
-    if (process.env.NODE_ENV === 'production') {
-        return '/api';
-    }
-    if (typeof window !== 'undefined') {
-        return `${window.location.protocol}//${window.location.hostname}:3001/api`;
-    }
-    return 'http://localhost:3001/api';
+    return 'http://backend:3001/api';
 };
 
 const api = axios.create({
