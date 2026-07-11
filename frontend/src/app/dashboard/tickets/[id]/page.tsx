@@ -29,6 +29,8 @@ import {
 } from '@/components/ui/select';
 import dynamic from 'next/dynamic';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { motion } from 'framer-motion';
+import { containerVariants, itemVariants } from '@/lib/animations';
 
 const NotionEditor = dynamic(() => import('@/components/NotionEditor'), { 
   ssr: false,
@@ -40,18 +42,18 @@ const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
 });
 
 const priorityColors: Record<TicketPriority, string> = {
-  LOW: 'text-slate-600 dark:text-slate-400 bg-slate-500/10 border-slate-500/20',
-  MEDIUM: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20',
-  HIGH: 'text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/20',
-  CRITICAL: 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20 animate-pulse',
+  LOW: 'text-low bg-low/10 border-low/20',
+  MEDIUM: 'text-medium bg-medium/10 border-medium/20',
+  HIGH: 'text-high bg-high/10 border-high/20',
+  CRITICAL: 'text-critical bg-critical/10 border-critical/20 animate-pulse',
 };
 
 const statusColors: Record<TicketStatus, string> = {
-  OPEN: 'text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20',
-  IN_PROGRESS: 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+  OPEN: 'text-info bg-info/10 border-info/20',
+  IN_PROGRESS: 'text-warning bg-warning/10 border-warning/20',
   WAITING_FOR_CLIENT: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20',
-  RESOLVED: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-  CLOSED: 'text-slate-600 dark:text-slate-400 bg-slate-500/10 border-slate-500/20',
+  RESOLVED: 'text-success bg-success/10 border-success/20',
+  CLOSED: 'text-muted-foreground bg-muted/50 border-muted-foreground/20',
 };
 
 export default function TicketDetailsPage() {
@@ -113,9 +115,14 @@ export default function TicketDetailsPage() {
   if (!ticket) return <div>Ticket not found</div>;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-6xl mx-auto space-y-6 pb-20"
+    >
       {/* Top Action Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()} className="rounded-xl font-bold text-xs w-fit">
           <ChevronLeft className="h-4 w-4 mr-1" /> Back to Workspace
         </Button>
@@ -129,25 +136,25 @@ export default function TicketDetailsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl border-2">
               <DropdownMenuItem onClick={() => updateStatusMutation.mutate('IN_PROGRESS')} className="font-bold text-xs gap-2">
-                 <PlayCircle className="h-4 w-4 text-amber-500" /> Start Working
+                 <PlayCircle className="h-4 w-4 text-warning" /> Start Working
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => updateStatusMutation.mutate('WAITING_FOR_CLIENT')} className="font-bold text-xs gap-2">
                  <Clock className="h-4 w-4 text-purple-500" /> Waiting for Client
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => updateStatusMutation.mutate('RESOLVED')} className="font-bold text-xs gap-2 text-emerald-600 focus:text-emerald-600 focus:bg-emerald-500/5">
+              <DropdownMenuItem onClick={() => updateStatusMutation.mutate('RESOLVED')} className="font-bold text-xs gap-2 text-success focus:text-success focus:bg-success/5">
                  <CheckCircle2 className="h-4 w-4" /> Resolve Ticket
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => updateStatusMutation.mutate('CLOSED')} className="font-bold text-xs gap-2 text-slate-600 focus:text-slate-600 focus:bg-slate-500/5">
-                 <CheckCircle2 className="h-4 w-4 text-slate-500" /> Close Ticket
+              <DropdownMenuItem onClick={() => updateStatusMutation.mutate('CLOSED')} className="font-bold text-xs gap-2 text-muted-foreground focus:text-muted-foreground focus:bg-muted/5">
+                 <CheckCircle2 className="h-4 w-4 text-muted-foreground" /> Close Ticket
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content (Left) */}
-        <div className="lg:col-span-2 space-y-6">
+        <motion.div variants={itemVariants} className="lg:col-span-2 space-y-6">
           <Card className="p-8 rounded-[32px] border-2 shadow-xl bg-card/50 backdrop-blur-sm space-y-8 relative overflow-hidden">
              <div className="absolute top-0 right-0 p-8 opacity-5">
                 <ShieldAlert className="h-40 w-40 rotate-12" />
@@ -205,9 +212,9 @@ export default function TicketDetailsPage() {
                       "flex flex-col gap-4 p-5 rounded-[24px] border-2 group transition-all",
                       comment.isSystem ? "bg-muted/30 border-border/40" : cn(
                         "bg-card border-border/60 hover:border-primary/20",
-                        comment.commentType === 'INVESTIGATION' && "border-amber-500/30 bg-amber-500/[0.03]",
-                        comment.commentType === 'ACTION' && "border-blue-500/30 bg-blue-500/[0.03]",
-                        comment.commentType === 'RESOLUTION' && "border-emerald-500/30 bg-emerald-500/[0.03]"
+                        comment.commentType === 'INVESTIGATION' && "border-warning/30 bg-warning/[0.03]",
+                        comment.commentType === 'ACTION' && "border-low/30 bg-low/[0.03]",
+                        comment.commentType === 'RESOLUTION' && "border-success/30 bg-success/[0.03]"
                       )
                     )}>
                        <div className="flex items-center justify-between border-b border-border/40 pb-3">
@@ -221,13 +228,13 @@ export default function TicketDetailsPage() {
                            </div>
                          </div>
                          {!comment.isSystem && (
-                           <Badge variant="outline" className={cn(
-                             "text-[9px] font-black uppercase tracking-widest px-2 py-0 h-5 border-2",
-                             comment.commentType === 'INVESTIGATION' && "text-amber-500 border-amber-500/20 bg-amber-500/5",
-                             comment.commentType === 'ACTION' && "text-blue-500 border-blue-500/20 bg-blue-500/5",
-                             comment.commentType === 'RESOLUTION' && "text-emerald-500 border-emerald-500/20 bg-emerald-500/5",
-                             comment.commentType === 'GENERAL' && "text-muted-foreground border-border/40"
-                           )}>
+                            <Badge variant="outline" className={cn(
+                              "text-[9px] font-black uppercase tracking-widest px-2 py-0 h-5 border-2",
+                              comment.commentType === 'INVESTIGATION' && "text-warning border-warning/20 bg-warning/5",
+                              comment.commentType === 'ACTION' && "text-low border-low/20 bg-low/5",
+                              comment.commentType === 'RESOLUTION' && "text-success border-success/20 bg-success/5",
+                              comment.commentType === 'GENERAL' && "text-muted-foreground border-border/40"
+                            )}>
                              {comment.commentType === 'INVESTIGATION' && <Search className="w-3 h-3 mr-1" />}
                              {comment.commentType === 'ACTION' && <Shield className="w-3 h-3 mr-1" />}
                              {comment.commentType === 'RESOLUTION' && <CheckCircle className="w-3 h-3 mr-1" />}
@@ -247,11 +254,10 @@ export default function TicketDetailsPage() {
                 )}
              </div>
 
-             {/* Add Work Log */}
              <div className="p-6 rounded-[32px] border-2 bg-card/30 backdrop-blur-md shadow-lg space-y-4 border-primary/10">
                 <div className="flex items-center justify-between mb-2">
                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Add Work Log</Label>
-                   <Select value={commentType} onValueChange={(val: TicketCommentType) => setCommentType(val)}>
+                   <Select value={commentType} onValueChange={(val: string) => setCommentType(val as TicketCommentType)}>
                       <SelectTrigger className="w-[180px] h-8 text-xs font-bold rounded-lg border-2">
                         <SelectValue />
                       </SelectTrigger>
@@ -283,11 +289,9 @@ export default function TicketDetailsPage() {
                 </div>
              </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Sidebar (Right) */}
-        <div className="space-y-6">
-           {/* SLA Tracker Card */}
+        <motion.div variants={itemVariants} className="space-y-6">
            {(ticket as any).slaDeadline && (
              <Card className="p-6 rounded-[32px] border-2 bg-muted/30 border-border/50 space-y-4">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
@@ -312,24 +316,24 @@ export default function TicketDetailsPage() {
                    let textClass = 'text-success';
 
                    if (isBreached) {
-                     colorClass = 'bg-destructive';
-                     borderClass = 'border-destructive/10 bg-destructive/[0.01]';
-                     textClass = 'text-destructive';
+                     colorClass = 'bg-critical';
+                     borderClass = 'border-critical/10 bg-critical/[0.01]';
+                     textClass = 'text-critical';
                    } else if (percent > 75) {
                      colorClass = 'bg-warning animate-pulse';
                      borderClass = 'border-warning/10 bg-warning/[0.01]';
                      textClass = 'text-warning';
                    } else if (percent > 50) {
-                     colorClass = 'bg-orange-500';
-                     borderClass = 'border-orange-500/10 bg-orange-500/[0.01]';
-                     textClass = 'text-orange-500';
+                     colorClass = 'bg-high';
+                     borderClass = 'border-high/10 bg-high/[0.01]';
+                     textClass = 'text-high';
                    }
 
                    return (
                      <div className={cn("rounded-2xl border p-4 space-y-3", borderClass)}>
                         <div className="flex items-center justify-between">
                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Status</span>
-                           <Badge className={cn("text-[9px] font-black tracking-widest uppercase border-2", isBreached ? "bg-destructive/10 text-destructive border-destructive/20" : isCompleted ? "bg-success/10 text-success border-success/20" : "bg-primary/10 text-primary border-primary/20")}>
+                           <Badge className={cn("text-[9px] font-black tracking-widest uppercase border-2", isBreached ? "bg-critical/10 text-critical border-critical/20" : isCompleted ? "bg-success/10 text-success border-success/20" : "bg-primary/10 text-primary border-primary/20")}>
                               {isBreached ? 'SLA Breached' : isCompleted ? 'Met SLA' : 'Active SLA'}
                            </Badge>
                         </div>
@@ -363,7 +367,6 @@ export default function TicketDetailsPage() {
              </Card>
            )}
 
-           {/* Asset Connection Card */}
            <Card className="p-6 rounded-[32px] border-2 bg-primary/[0.02] border-primary/10 space-y-4">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 flex items-center gap-2">
                  <Box className="h-3 w-3" /> Related Asset
@@ -397,7 +400,6 @@ export default function TicketDetailsPage() {
               )}
            </Card>
 
-           {/* VM Connection Card */}
            {ticket.vm && (
              <Card className="p-6 rounded-[32px] border-2 bg-indigo-500/[0.02] border-indigo-500/10 space-y-4">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500/60 flex items-center gap-2">
@@ -424,21 +426,20 @@ export default function TicketDetailsPage() {
              </Card>
            )}
 
-           {/* Quick Actions / Audit Card */}
            <Card className="p-6 rounded-[32px] border-2 space-y-4 bg-muted/20">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Management</h3>
               <div className="grid grid-cols-1 gap-2">
                  <Button variant="outline" className="w-full justify-start rounded-xl text-[11px] font-bold h-10 border-2">
                     <History className="h-3.5 w-3.5 mr-2 opacity-60" /> View History
                  </Button>
-                 <Button variant="outline" className="w-full justify-start rounded-xl text-[11px] font-bold h-10 border-2 text-rose-500 hover:text-rose-600 hover:bg-rose-500/5 border-rose-500/10">
+                 <Button variant="outline" className="w-full justify-start rounded-xl text-[11px] font-bold h-10 border-2 text-critical hover:text-critical/90 hover:bg-critical/5 border-critical/10">
                     <Trash2 className="h-3.5 w-3.5 mr-2 opacity-60" /> Delete Ticket
                  </Button>
               </div>
            </Card>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

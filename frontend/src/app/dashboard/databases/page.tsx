@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { EmptyState } from '@/components/EmptyState';
 import { DatabaseFormDialog } from '@/components/LazyLoadedDialogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
@@ -436,8 +437,22 @@ export default function DbPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                     No database records found
+                  <TableCell colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
+                    <div className="flex items-center justify-center h-full">
+                      <EmptyState
+                        icon={Database}
+                        title="No databases found"
+                        description={databases.length === 0
+                          ? "You haven't added any database records yet. Start by adding your first database."
+                          : "No databases match your current search or filter criteria."
+                        }
+                        action={databases.length === 0 ? {
+                          label: "Add Your First Database",
+                          onClick: () => { setDatabaseToEdit(null); setDialogOpen(true); }
+                        } : undefined}
+                        className="w-full max-w-md border-none bg-transparent"
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

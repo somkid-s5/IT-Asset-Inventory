@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { usePageHeader } from "@/contexts/PageHeaderContext";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -29,26 +30,24 @@ export default function DatabaseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { setHeader } = usePageHeader();
-  const [database, setDatabase] = useState<DatabaseInventoryDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({});
 
-  const loadDatabase = useCallback(async (id: string) => {
-    try {
-      setLoading(true);
-      const response = await api.get<DatabaseInventoryDetail>(`/databases/${id}`);
-      setDatabase(response.data);
-    } catch {
-      toast.error("Failed to load database details");
-      router.push("/dashboard/databases");
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
+  const { data: database, isLoading: loading, error, isError } = useQuery({
+    queryKey: ["database", params?.id],
+    queryFn: async () => {
+      if (typeof params?.id !== "string") throw new Error("Invalid ID");
+      const response = await api.get<DatabaseInventoryDetail>(`/databases/${params.id}`);
+      return response.data;
+    },
+    enabled: typeof params?.id === "string",
+  });
 
   useEffect(() => {
-    if (typeof params.id === "string") void loadDatabase(params.id);
-  }, [loadDatabase, params.id]);
+    if (isError) {
+      toast.error("Failed to load database details");
+      router.push("/dashboard/databases");
+    }
+  }, [isError, router]);
 
   useEffect(() => {
     if (!database) return;
@@ -104,17 +103,15 @@ export default function DatabaseDetailPage() {
     if (!database) return;
     try {
       if (revealedPasswords[accountId]) {
-        setRevealedPasswords(c => ({...c, [accountId]: false}));
+        setRevealedPasswords(c => {
+          const next = { ...c };
+          delete next[accountId];
+          return next;
+        });
         return;
       }
       const res = await api.get<{password: string}>(`/databases/${database.id}/accounts/${accountId}/password`);
-      setDatabase({
-        ...database,
-        accounts: database.accounts.map(a => 
-          a.id === accountId ? { ...a, password: res.data.password } : a
-        )
-      });
-      setRevealedPasswords(c => ({...c, [accountId]: true}));
+      setRevealedPasswords(c => ({...c, [accountId]: res.data.password}));
     } catch (err) {
       toast.error("Failed to reveal password");
     }
@@ -124,6 +121,9 @@ export default function DatabaseDetailPage() {
     if (!database) return;
     try {
       let pwdToCopy = currentPassword;
+      if (!pwdToCopy) {
+        pwdToCopy = revealedPasswords[accountId];
+      }
       if (!pwdToCopy) {
         const res = await api.get<{password: string}>(`/databases/${database.id}/accounts/${accountId}/password`);
         pwdToCopy = res.data.password;
@@ -282,7 +282,7 @@ export default function DatabaseDetailPage() {
               </thead>
               <tbody className="divide-y divide-border/50">
                 {database.accounts.map(account => {
-                  const isRev = revealedPasswords[account.id];
+                  const isRev = !!revealedPasswords[account.id];
                   return (
                     <tr key={account.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-6 py-4">
@@ -294,12 +294,12 @@ export default function DatabaseDetailPage() {
                        <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                            <div className="font-mono bg-muted/50 px-2 py-1 rounded-md min-w-[160px] text-center font-semibold tabular-nums transition-all">
-                             {isRev ? account.password : '••••••••••••'}
+                             {isRev ? revealedPasswords[account.id] : '••••••••••••'}
                            </div>
                            <button onClick={() => handleRevealPassword(account.id)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
                              {isRev ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                            </button>
-                           <button onClick={() => { void copyPassword(account.id, account.password); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                           <button onClick={() => { void copyPassword(account.id, isRev ? revealedPasswords[account.id] : undefined); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
                              <Copy className="h-4 w-4" />
                            </button>
                         </div>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { VmFormDialog } from '@/components/LazyLoadedDialogs';
+import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -450,10 +451,17 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <Box className="h-8 w-8 opacity-20 mx-auto" />
-                    <p>No pending virtual machines</p>
+                <TableCell colSpan={6} className="h-96 p-0 border-none bg-transparent">
+                  <div className="flex items-center justify-center h-full">
+                    <EmptyState
+                      icon={Server}
+                      title="No pending VMs"
+                      description={data.length === 0
+                        ? "There are no pending virtual machines discovered on your vCenter sources."
+                        : "No pending virtual machines match your current search criteria."
+                      }
+                      className="w-full max-w-md border-none bg-transparent"
+                    />
                   </div>
                 </TableCell>
               </TableRow>
@@ -555,10 +563,17 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <Box className="h-8 w-8 opacity-20 mx-auto" />
-                    <p>No active virtual machines</p>
+                <TableCell colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
+                  <div className="flex items-center justify-center h-full">
+                    <EmptyState
+                      icon={Server}
+                      title="No active VMs found"
+                      description={data.length === 0
+                        ? "You haven't promoted any virtual machines to active inventory yet."
+                        : "No active virtual machines match your current search criteria."
+                      }
+                      className="w-full max-w-md border-none bg-transparent"
+                    />
                   </div>
                 </TableCell>
               </TableRow>
@@ -636,10 +651,17 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <Box className="h-8 w-8 opacity-20 mx-auto" />
-                    <p>No orphaned records found</p>
+                <TableCell colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
+                  <div className="flex items-center justify-center h-full">
+                    <EmptyState
+                      icon={Server}
+                      title="No orphaned VMs found"
+                      description={data.length === 0
+                        ? "No orphaned or missing virtual machines detected in your sources."
+                        : "No orphaned virtual machines match your current search criteria."
+                      }
+                      className="w-full max-w-md border-none bg-transparent"
+                    />
                   </div>
                 </TableCell>
               </TableRow>

@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { EmptyState } from '@/components/EmptyState';
 import { 
   ArrowDown, ArrowUp, ChevronsUpDown, Eye, KeyRound, 
   LoaderCircle, PencilLine, Plus, Search, Shield, 
@@ -81,13 +83,11 @@ export default function UsersPage() {
   const router = useRouter();
   const { setHeader } = usePageHeader();
   const { user } = useAuth();
-  const [users, setUsers] = useState<UserRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [activeRole, setActiveRole] = useState<'ALL' | Role>('ALL');
 
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
@@ -96,10 +96,8 @@ export default function UsersPage() {
   const [resetTarget, setResetTarget] = useState<UserRecord | null>(null);
   const [resetPassword, setResetPassword] = useState('');
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState('');
-  const [resetSubmitting, setResetSubmitting] = useState(false);
   
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   // TanStack Table State
   const [sorting, setSorting] = useState<SortingState>([{ id: 'displayName', desc: false }]);
@@ -107,17 +105,75 @@ export default function UsersPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  async function loadUsers() {
-    try {
-      setLoading(true);
+  // React Query Queries & Mutations
+  const { data: users = [], isLoading: loading } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
       const response = await api.get<UserRecord[]>('/users');
-      setUsers(response.data);
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to load users'));
-    } finally {
-      setLoading(false);
-    }
-  }
+      return response.data;
+    },
+    enabled: !!user && user.role === 'ADMIN',
+  });
+
+  const roleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: Role }) => {
+      await api.patch(`/users/${userId}/role`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Role updated');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error, 'Failed to update role'));
+    },
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (newData: any) => {
+      await api.post('/users', newData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User created successfully');
+      setUsername(''); setDisplayName(''); setPassword(''); setRole('VIEWER');
+      setCreateOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error(getErrorMessage(err, 'Failed to create user'));
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: any) => {
+      await api.patch(`/users/${userId}/reset-password`, { password });
+    },
+    onSuccess: () => {
+      toast.success('Password reset successfully');
+      setResetPassword('');
+      setResetTarget(null);
+    },
+    onError: (err: any) => {
+      toast.error(getErrorMessage(err, 'Failed to reset password'));
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setDeleteTarget(null);
+      toast.success('User deleted');
+    },
+    onError: (err: any) => {
+      toast.error(getErrorMessage(err, 'Failed to delete user'));
+    },
+  });
+
+  const submitting = createUserMutation.isPending;
+  const resetSubmitting = resetPasswordMutation.isPending;
+  const deleteSubmitting = deleteUserMutation.isPending;
 
   useEffect(() => {
     if (!user) return;
@@ -125,7 +181,6 @@ export default function UsersPage() {
       router.replace('/dashboard');
       return;
     }
-    void loadUsers();
   }, [router, user]);
 
   useEffect(() => {
@@ -151,15 +206,8 @@ export default function UsersPage() {
     VIEWER: users.filter((item) => item.role === 'VIEWER').length,
   }), [users]);
 
-  const handleRoleChange = async (userId: string, nextRole: Role) => {
-    try {
-      await api.patch(`/users/${userId}/role`, { role: nextRole });
-      setUsers((current) => current.map((item) => (item.id === userId ? { ...item, role: nextRole } : item)));
-      toast.success('Role updated');
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to update role'));
-      await loadUsers();
-    }
+  const handleRoleChange = (userId: string, nextRole: Role) => {
+    roleMutation.mutate({ userId, role: nextRole });
   };
 
   const columns = useMemo<ColumnDef<UserRecord>[]>(() => [
@@ -289,56 +337,23 @@ export default function UsersPage() {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const handleCreateUser = async (e: FormEvent) => {
+  const handleCreateUser = (e: FormEvent) => {
     e.preventDefault();
     if (!isPasswordValid(password)) return toast.error(PASSWORD_POLICY_MESSAGE);
-    
-    setSubmitting(true);
-    try {
-      await api.post('/users', { username, displayName, password, role });
-      toast.success('User created successfully');
-      setUsername(''); setDisplayName(''); setPassword(''); setRole('VIEWER');
-      setCreateOpen(false);
-      void loadUsers();
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to create user'));
-    } finally {
-      setSubmitting(false);
-    }
+    createUserMutation.mutate({ username, displayName, password, role });
   };
 
-  const handleResetPassword = async (e: FormEvent) => {
+  const handleResetPassword = (e: FormEvent) => {
     e.preventDefault();
     if (!resetTarget) return;
     if (resetPassword !== resetPasswordConfirm) return toast.error('Passwords do not match');
     if (!isPasswordValid(resetPassword)) return toast.error(PASSWORD_POLICY_MESSAGE);
-
-    setResetSubmitting(true);
-    try {
-      await api.patch(`/users/${resetTarget.id}/reset-password`, { password: resetPassword });
-      toast.success('Password reset successfully');
-      setResetPassword('');
-      setResetTarget(null);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to reset password'));
-    } finally {
-      setResetSubmitting(false);
-    }
+    resetPasswordMutation.mutate({ userId: resetTarget.id, password: resetPassword });
   };
 
-  const handleDeleteUser = async () => {
+  const handleDeleteUser = () => {
     if (!deleteTarget) return;
-    setDeleteSubmitting(true);
-    try {
-      await api.delete(`/users/${deleteTarget.id}`);
-      setUsers(current => current.filter(item => item.id !== deleteTarget.id));
-      setDeleteTarget(null);
-      toast.success('User deleted');
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to delete user'));
-    } finally {
-      setDeleteSubmitting(false);
-    }
+    deleteUserMutation.mutate(deleteTarget.id);
   };
 
   if (!user || user.role !== 'ADMIN') return <AccessDenied />;
@@ -439,8 +454,22 @@ export default function UsersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                     No users found
+                  <TableCell colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
+                    <div className="flex items-center justify-center h-full">
+                      <EmptyState
+                        icon={Users}
+                        title="No users found"
+                        description={users.length === 0
+                          ? "There are no users registered in the system yet. Start by adding a user account."
+                          : "No users match your current search or role filter criteria."
+                        }
+                        action={users.length === 0 ? {
+                          label: "Add Your First User",
+                          onClick: () => setCreateOpen(true)
+                        } : undefined}
+                        className="w-full max-w-md border-none bg-transparent"
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

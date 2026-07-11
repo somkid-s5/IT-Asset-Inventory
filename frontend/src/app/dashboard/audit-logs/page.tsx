@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
+import { EmptyState } from '@/components/EmptyState';
 import { AccessDenied } from '@/components/access-denied';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
@@ -22,7 +24,7 @@ import {
 } from '@tanstack/react-table';
 import {
   Activity, ArrowDown, ArrowUp, ChevronsUpDown, LoaderCircle,
-  Search, ChevronLeft, ChevronRight
+  Search, ChevronLeft, ChevronRight, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -58,13 +60,21 @@ export default function AuditLogsPage() {
   const { setHeader } = usePageHeader();
   const { user } = useAuth();
   
-  const [logs, setLogs] = useState<AuditLogRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-
   // TanStack Table State
   const [sorting, setSorting] = useState<SortingState>([{ id: 'timestamp', desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
+
+  // React Query query
+  const { data: logs = [], isLoading: loading } = useQuery({
+    queryKey: ['audit-logs'],
+    queryFn: async () => {
+      const response = await api.get('/audit-logs');
+      const responseData = response.data as any;
+      return (responseData.data || responseData) as AuditLogRecord[];
+    },
+    enabled: !!user && user.role === 'ADMIN',
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -72,20 +82,6 @@ export default function AuditLogsPage() {
       router.replace('/dashboard');
       return;
     }
-    
-    const loadLogs = async () => {
-      try {
-        const response = await api.get('/audit-logs');
-        const responseData = response.data as any;
-        setLogs(responseData.data || responseData);
-      } catch (error) {
-        toast.error('Failed to load audit logs');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    void loadLogs();
   }, [user, router]);
 
   useEffect(() => {
@@ -287,8 +283,18 @@ export default function AuditLogsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                     No logs match your search criteria.
+                  <TableCell colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
+                    <div className="flex items-center justify-center h-full">
+                      <EmptyState
+                        icon={ShieldAlert}
+                        title="No audit logs found"
+                        description={logs.length === 0
+                          ? "No system audit logs have been recorded yet."
+                          : "No audit logs match your current search or filter criteria."
+                        }
+                        className="w-full max-w-md border-none bg-transparent"
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

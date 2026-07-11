@@ -1,7 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Copy, Eye, EyeOff, ShieldCheck, Sparkles, Monitor, Cpu, Server, HardDrive, Network, Tag, Clock, Globe, LoaderCircle, Database, History, User } from 'lucide-react';
@@ -70,27 +71,23 @@ export default function VmDetailPage() {
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [vm, setVm] = useState<VmInventoryDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'RESOURCES' | 'CONTEXT'>('OVERVIEW');
 
-  const loadVm = useCallback(async () => {
-    if (typeof params.id !== 'string') {
-      setVm(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setVm(await getVmInventoryById(params.id));
-    } catch {
-      setVm(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id]);
+  const { data: vm, isLoading: loading, isError, refetch: loadVm } = useQuery({
+    queryKey: ['vm-inventory-detail', params?.id],
+    queryFn: async () => {
+      if (typeof params?.id !== 'string') throw new Error('Invalid ID');
+      return await getVmInventoryById(params.id);
+    },
+    enabled: typeof params?.id === 'string',
+  });
 
-  useEffect(() => { void loadVm(); }, [loadVm]);
+  useEffect(() => {
+    if (isError) {
+      toast.error('Failed to load virtual machine details');
+      router.push('/dashboard/virtual-machines');
+    }
+  }, [isError, router]);
 
   useEffect(() => {
     if (!vm) return;

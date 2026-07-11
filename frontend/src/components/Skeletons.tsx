@@ -77,7 +77,7 @@ export function DashboardSkeleton() {
   );
 }
 
-export function AssetsTableSkeleton() {
+export function DataTableSkeleton() {
   return (
     <div className="workspace-page">
       <section className="workspace-hero">
@@ -154,16 +154,4 @@ export function AssetsTableSkeleton() {
       </section>
     </div>
   );
-}
-
-export function VmTableSkeleton() {
-  return <AssetsTableSkeleton />;
-}
-
-export function DatabaseTableSkeleton() {
-  return <AssetsTableSkeleton />;
-}
-
-export function UsersTableSkeleton() {
-  return <AssetsTableSkeleton />;
 }

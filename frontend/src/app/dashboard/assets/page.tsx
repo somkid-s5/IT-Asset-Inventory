@@ -22,20 +22,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-const containerVariants: any = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 }
-  }
-};
+import { containerVariants, itemVariants } from '@/lib/animations';
 
-const itemVariants: any = {
-  hidden: { y: 15, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.4, ease: "easeOut" } }
-};
-
-import { AssetsTableSkeleton } from '@/components/Skeletons';
+import { DataTableSkeleton } from '@/components/Skeletons';
 import {
   DropdownMenu, DropdownMenuCheckboxItem,
   DropdownMenuContent, DropdownMenuItem,
@@ -382,7 +371,7 @@ export default function AssetsPage() {
     toast.success('Exported all items in current view');
   };
 
-  if (isLoading && assets.length === 0) return <AssetsTableSkeleton />;
+  if (isLoading && assets.length === 0) return <DataTableSkeleton />;
 
   return (
     <motion.div

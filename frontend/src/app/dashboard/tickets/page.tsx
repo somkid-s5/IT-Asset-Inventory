@@ -34,21 +34,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { AssetsTableSkeleton } from '@/components/Skeletons';
+import { DataTableSkeleton } from '@/components/Skeletons';
 import { EmptyState } from '@/components/EmptyState';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 }
-  }
-};
-
-const itemVariants = {
-  hidden: { y: 10, opacity: 0 },
-  visible: { y: 0, opacity: 1 }
-};
+import { containerVariants, itemVariants } from '@/lib/animations';
 
 export default function TicketsPage() {
   const router = useRouter();
@@ -286,7 +275,7 @@ export default function TicketsPage() {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  if (isLoading) return <AssetsTableSkeleton />;
+  if (isLoading) return <DataTableSkeleton />;
 
   const isActive = (status: TicketStatus) => !['RESOLVED', 'CLOSED'].includes(status);
   const myActive = tickets.filter(t => t.assigneeId === user?.id && isActive(t.status));

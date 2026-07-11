@@ -1,5 +1,5 @@
-import { VmTableSkeleton } from '@/components/Skeletons';
+import { DataTableSkeleton } from '@/components/Skeletons';
 
 export default function Loading() {
-  return <VmTableSkeleton />;
+  return <DataTableSkeleton />;
 }

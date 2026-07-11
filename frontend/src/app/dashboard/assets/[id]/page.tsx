@@ -50,6 +50,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { containerVariants, itemVariants } from "@/lib/animations";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
@@ -682,7 +683,7 @@ function AttachmentsSection({
                             e.stopPropagation();
                             void handleDelete(photo.id);
                           }}
-                          className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-500/80 text-white backdrop-blur-sm transition-all hover:bg-red-600"
+                          className="flex h-6 w-6 items-center justify-center rounded-lg bg-destructive/80 text-white backdrop-blur-sm transition-all hover:bg-destructive"
                           title="Delete"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -771,7 +772,7 @@ function AttachmentsSection({
                     </button>
                     <button
                       onClick={() => void handleDelete(doc.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-colors"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-destructive/5 hover:text-destructive transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -1829,8 +1830,9 @@ export default function AssetDetailsPage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
       className="workspace-page space-y-6 pt-2"
     >
       <div className="flex justify-between items-center">
@@ -1897,7 +1899,7 @@ export default function AssetDetailsPage() {
               <span className="text-[10px] font-bold uppercase text-muted-foreground">
                 Accounts
               </span>
-              <span className="text-lg font-bold text-amber-500">
+              <span className="text-lg font-bold text-warning">
                 {asset.credentials?.length ?? 0}
               </span>
             </div>
@@ -1905,7 +1907,7 @@ export default function AssetDetailsPage() {
               <span className="text-[10px] font-bold uppercase text-muted-foreground">
                 Notes
               </span>
-              <span className="text-lg font-bold text-violet-500">
+              <span className="text-lg font-bold text-low">
                 {asset.notes?.length ?? 0}
               </span>
             </div>
