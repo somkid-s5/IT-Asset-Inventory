@@ -33,10 +33,7 @@ export class AssetsController {
   }
 
   @Get()
-  async findAll(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
     return this.assetsService.findAll(
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 100,

@@ -144,7 +144,9 @@ export class DatabasesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return databases.map((database) => this.toListItem(database as any));
+    return databases.map((database) =>
+      this.toListItem(database as unknown as DatabaseWithAccounts),
+    );
   }
 
   async findOne(id: string) {

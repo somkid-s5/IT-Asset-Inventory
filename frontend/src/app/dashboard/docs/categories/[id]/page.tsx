@@ -25,16 +25,6 @@ import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 
-// Helper to assign mock tags based on document title
-const getDocumentTag = (title: string) => {
-  const t = title.toLowerCase();
-  if (t.includes('azure') || t.includes('cloud') || t.includes('storage')) return 'Cloud';
-  if (t.includes('vpn') || t.includes('network') || t.includes('latency')) return 'Networking';
-  if (t.includes('backup') || t.includes('policy') || t.includes('นโยบาย')) return 'Security';
-  if (t.includes('mfa') || t.includes('authenticator')) return 'Auth';
-  return 'Guides';
-};
-
 // Helper to get initials from author display name
 const getInitials = (name: string) => {
   if (!name) return 'IT';
@@ -139,11 +129,11 @@ export default function CategoryPage() {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full text-xs font-medium text-primary">
                 <FileText className="h-3.5 w-3.5" />
-                {category.documents?.length || 0} บทความ
+                {category.documents?.length || 0} Documents
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full text-xs font-medium text-accent-purple">
                 <Eye className="h-3.5 w-3.5 text-[#a855f7]" />
-                {totalViews} การเข้าชม
+                {totalViews} Views
               </div>
             </div>
           </div>
@@ -152,7 +142,7 @@ export default function CategoryPage() {
             className="bg-primary text-primary-foreground rounded-full hover:bg-primary/95 font-bold px-6 shadow-lg shadow-primary/20 shrink-0 self-start md:self-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
-            สร้างบทความใหม่
+            Create New Document
           </Button>
         </div>
       </div>
@@ -165,7 +155,7 @@ export default function CategoryPage() {
           
           {/* Subcategory List */}
           <div className="bg-card p-5 rounded-xl border border-border/60 shadow-sm">
-            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">หมวดหมู่ทั้งหมด</h4>
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">All Categories</h4>
             <div className="space-y-1">
               {categories.map((cat) => {
                 const isActive = cat.id === id;
@@ -188,18 +178,6 @@ export default function CategoryPage() {
               })}
             </div>
           </div>
-
-          {/* Popular Tags */}
-          <div className="bg-card p-5 rounded-xl border border-border/60 shadow-sm">
-            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">แท็กยอดนิยม</h4>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="text-[10px] font-bold border-accent-purple/20 bg-accent-purple/5 text-[#a855f7] rounded-full px-2.5 py-0.5">AZURE</Badge>
-              <Badge variant="outline" className="text-[10px] font-bold border-orange-500/20 bg-orange-500/5 text-orange-600 rounded-full px-2.5 py-0.5">FIREWALL</Badge>
-              <Badge variant="outline" className="text-[10px] font-bold border-teal-500/20 bg-teal-500/5 text-teal-600 rounded-full px-2.5 py-0.5">CISCO</Badge>
-              <Badge variant="outline" className="text-[10px] font-bold border-blue-500/20 bg-blue-500/5 text-blue-600 rounded-full px-2.5 py-0.5">VMWARE</Badge>
-              <Badge variant="outline" className="text-[10px] font-bold border-primary/20 bg-primary/5 text-primary rounded-full px-2.5 py-0.5">DOCKER</Badge>
-            </div>
-          </div>
         </aside>
 
         {/* Right Articles Grid */}
@@ -210,7 +188,7 @@ export default function CategoryPage() {
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder={`ค้นหาใน ${category.name}...`} 
+                placeholder={`Search in ${category.name}...`} 
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -220,15 +198,15 @@ export default function CategoryPage() {
               />
             </div>
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-              <span className="text-xs text-muted-foreground font-semibold">เรียงตาม:</span>
+              <span className="text-xs text-muted-foreground font-semibold">Sort by:</span>
               <select 
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="bg-background border border-border/60 rounded-lg px-3 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary outline-none"
               >
-                <option value="latest">ล่าสุด</option>
-                <option value="popular">ยอดนิยม</option>
-                <option value="az">ชื่อ (A-Z)</option>
+                <option value="latest">Latest</option>
+                <option value="popular">Popular</option>
+                <option value="az">A-Z</option>
               </select>
             </div>
           </div>
@@ -237,15 +215,14 @@ export default function CategoryPage() {
           {paginatedDocuments.length === 0 ? (
             <div className="py-20 text-center border-2 border-dashed rounded-2xl border-border/40 bg-muted/5">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground/20 mb-4" />
-              <h3 className="text-base font-bold opacity-60">ไม่พบเอกสารในหมวดหมู่นี้</h3>
-              <p className="text-xs text-muted-foreground mt-1">เริ่มแบ่งปันความรู้โดยการสร้างบทความใหม่</p>
+              <h3 className="text-base font-bold opacity-60">No documents found in this category</h3>
+              <p className="text-xs text-muted-foreground mt-1">Start sharing knowledge by creating a new document.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {paginatedDocuments.map((doc, idx) => {
-                const tag = getDocumentTag(doc.title);
                 const initials = getInitials(doc.author.displayName);
-                const isFeatured = idx === 0 && currentPage === 1 && (doc.title.includes('Policy') || doc.title.includes('สำคัญ') || tag === 'Security');
+                const isFeatured = idx === 0 && currentPage === 1 && (doc.title.toLowerCase().includes('policy') || doc.title.toLowerCase().includes('important'));
                 const plainTextSnippet = doc.content
                   .replace(/[#*`>_\-]/g, '') // remove markdown syntax
                   .replace(/\[.*?\]\(.*?\)/g, '') // remove links
@@ -263,20 +240,12 @@ export default function CategoryPage() {
                   >
                     {isFeatured && (
                       <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-[9px] uppercase tracking-widest font-black rounded-bl-xl">
-                        สำคัญมาก
+                        Featured
                       </div>
                     )}
                     <div>
                       <div className="flex justify-between items-start mb-4">
-                        <Badge variant="outline" className={`text-[9px] font-black uppercase rounded-full px-2.5 py-0.5 ${
-                          tag === 'Security' ? 'border-[#ef4444]/20 bg-[#ef4444]/5 text-[#ef4444]' :
-                          tag === 'Cloud' ? 'border-[#a855f7]/20 bg-[#a855f7]/5 text-[#a855f7]' :
-                          tag === 'Networking' ? 'border-orange-500/20 bg-orange-500/5 text-orange-600' :
-                          'border-primary/20 bg-primary/5 text-primary'
-                        }`}>
-                          {tag}
-                        </Badge>
-                        <Bookmark className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                        <Bookmark className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-colors ml-auto" />
                       </div>
                       <h4 className="text-base font-bold mb-2 group-hover:text-primary transition-colors duration-200 leading-snug line-clamp-2">
                         {doc.title}
@@ -293,11 +262,11 @@ export default function CategoryPage() {
                         </div>
                         <div>
                           <p className="text-[11px] font-bold text-foreground leading-tight">{doc.author.displayName}</p>
-                          <p className="text-[10px] text-muted-foreground">อัปเดต {formatDistanceToNow(new Date(doc.updatedAt), { addSuffix: true })}</p>
+                          <p className="text-[10px] text-muted-foreground">Updated {formatDistanceToNow(new Date(doc.updatedAt), { addSuffix: true })}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 text-xs font-bold text-primary group-hover:text-primary/80 transition-colors">
-                        <span>อ่านเพิ่มเติม</span>
+                        <span>Read More</span>
                         <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>

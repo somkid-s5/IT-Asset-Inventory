@@ -113,9 +113,9 @@ export class AuthController {
     @Req() req: express.Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const token =
-      req.cookies?.access_token ||
-      req.headers.authorization?.replace('Bearer ', '');
+    const cookies = req.cookies as Record<string, string> | undefined;
+    const authHeader = req.headers.authorization;
+    const token = cookies?.access_token || authHeader?.replace('Bearer ', '');
     if (token) {
       await this.authService.logout(token);
     }

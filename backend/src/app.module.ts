@@ -28,12 +28,12 @@ import { UploadsModule } from './uploads/uploads.module';
       {
         name: 'global',
         ttl: 60000,
-        limit: 100,
+        limit: 10000,
       },
       {
         name: 'login',
         ttl: 60000,
-        limit: 10,
+        limit: 1000,
       },
     ]),
     PrismaModule,

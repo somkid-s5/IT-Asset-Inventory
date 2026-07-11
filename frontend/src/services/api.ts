@@ -1,14 +1,14 @@
 import axios from 'axios';
 
 const getBaseUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL;
+    }
     if (typeof window !== 'undefined') {
         if (process.env.NODE_ENV === 'production') {
             return '/api';
         }
         return `${window.location.protocol}//${window.location.hostname}:3001/api`;
-    }
-    if (process.env.NEXT_PUBLIC_API_URL) {
-        return process.env.NEXT_PUBLIC_API_URL;
     }
     return 'http://backend:3001/api';
 };
@@ -33,9 +33,16 @@ api.interceptors.response.use(
         // Don't retry on 401/403 errors (auth issues)
         if (error.response?.status === 401 || error.response?.status === 403) {
             if (typeof window !== 'undefined') {
-                localStorage.removeItem('user');
-                if (window.location.pathname !== '/login') {
-                    window.location.href = '/login';
+                const errCode = error.response?.data?.message?.code;
+                if (errCode === 'PASSWORD_CHANGE_REQUIRED') {
+                    if (window.location.pathname !== '/dashboard/profile') {
+                        window.location.href = '/dashboard/profile?forceChangePassword=true';
+                    }
+                } else {
+                    localStorage.removeItem('user');
+                    if (window.location.pathname !== '/login') {
+                        window.location.href = '/login';
+                    }
                 }
             }
             return Promise.reject(error);

@@ -29,6 +29,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Trust proxy (necessary when behind Nginx reverse proxy to get correct protocol/IP)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   // Security headers with CORS-friendly settings for assets

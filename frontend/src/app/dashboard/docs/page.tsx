@@ -49,28 +49,28 @@ const getCategoryIcon = (iconName?: string) => {
   }
 };
 
-// Map descriptions to Thai translations based on category names
+// Map descriptions based on category names
 const getCategoryDescription = (name: string) => {
   const nameLower = name.toLowerCase();
-  if (nameLower.includes('infra') || nameLower.includes('โครงสร้างพื้นฐาน')) {
-    return 'ข้อมูลเกี่ยวกับระบบเซิร์ฟเวอร์ Cloud Computing (AWS/Azure) และระบบเครือข่ายภายในองค์กร รวมถึงการตั้งค่า VPN และ Firewall';
+  if (nameLower.includes('infra') || nameLower.includes('infrastructure')) {
+    return 'Information about cloud computing systems (AWS/Azure), internal networks, VPN, and firewall configurations.';
   }
-  if (nameLower.includes('secu') || nameLower.includes('ความปลอดภัย')) {
-    return 'แนวทางปฏิบัติเพื่อความปลอดภัยทางไซเบอร์ การจัดการสิทธิ์การเข้าถึง (IAM) และนโยบายการเข้ารหัสข้อมูลที่สำคัญ';
+  if (nameLower.includes('secu') || nameLower.includes('security')) {
+    return 'Cybersecurity guidelines, Identity & Access Management (IAM), and critical data encryption policies.';
   }
-  if (nameLower.includes('guide') || nameLower.includes('คู่มือ')) {
-    return 'คู่มือการเริ่มต้นใช้งานระบบสำหรับพนักงานใหม่ วิธีการแจ้งซ่อม และการใช้งานฟังก์ชันต่างๆ ขององค์กร';
+  if (nameLower.includes('guide') || nameLower.includes('user guides')) {
+    return 'Onboarding guides for new employees, maintenance requests, and general system tutorials.';
   }
-  if (nameLower.includes('trouble') || nameLower.includes('แก้ปัญหา')) {
-    return 'รวบรวมวิธีแก้ไขปัญหาที่พบบ่อย (FAQ) และแนวทางการวินิจฉัยข้อผิดพลาดเบื้องต้นสำหรับเจ้าหน้าที่ไอที';
+  if (nameLower.includes('trouble') || nameLower.includes('troubleshooting')) {
+    return 'A collection of frequently asked questions (FAQs) and diagnostic guides for IT support.';
   }
   if (nameLower.includes('compli') || nameLower.includes('standard')) {
-    return 'เอกสารอ้างอิงมาตรฐาน ISO/IEC 27001 และนโยบาย PDPA ขององค์กร เพื่อการปฏิบัติตามกฎระเบียบที่ถูกต้อง';
+    return 'Reference documentation for ISO/IEC 27001 standard and corporate data protection compliance (PDPA).';
   }
-  if (nameLower.includes('release') || nameLower.includes('อัปเดต')) {
-    return 'ติดตามข่าวสารการอัปเดตซอฟต์แวร์ ฟีเจอร์ใหม่ที่เพิ่มเข้ามา และการแก้ไขข้อบกพร่องในระบบเวอร์ชั่นล่าสุด';
+  if (nameLower.includes('release') || nameLower.includes('updates')) {
+    return 'Track software updates, new features, and bug fixes for the latest version.';
   }
-  return `คู่มือและขั้นตอนการดำเนินงานที่เกี่ยวข้องกับ ${name}`;
+  return `Guides and operational procedures related to ${name}.`;
 };
 
 export default function DocsPage() {
@@ -123,7 +123,7 @@ export default function DocsPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="ค้นหาข้อมูลความรู้ แมนนวล หรือหัวข้อที่ต้องการ..." 
+            placeholder="Search knowledge base, manuals, or topics..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 h-11 rounded-xl bg-card border-border/60"
@@ -146,10 +146,10 @@ export default function DocsPage() {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#05160e] to-[#0e3b26] text-white p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between border-b-4 border-primary shadow-xl">
         <div className="relative z-10 space-y-4 max-w-xl text-center md:text-left">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-display">
-            คลังความรู้ <span className="text-primary">SysOps</span>
+            SysOps <span className="text-primary">Knowledge Base</span>
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground/90 leading-relaxed font-medium">
-            เข้าถึงข้อมูลเชิงเทคนิค คู่มือการใช้งาน และมาตรฐานความปลอดภัยสำหรับระบบโครงสร้างพื้นฐานระดับองค์กรได้ในที่เดียว
+            Access technical documentation, user manuals, and security standards for enterprise infrastructure in one place.
           </p>
           <div className="flex flex-wrap gap-3 pt-2 justify-center md:justify-start">
             {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
@@ -158,7 +158,7 @@ export default function DocsPage() {
                 className="bg-primary text-primary-foreground rounded-full hover:bg-primary/90 font-bold px-6"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                สร้างบทความใหม่
+                Create New Document
               </Button>
             )}
             {categories.length === 0 && user?.role === 'ADMIN' && (
@@ -180,11 +180,11 @@ export default function DocsPage() {
         <div className="relative z-10 grid grid-cols-2 gap-4 mt-6 md:mt-0 shrink-0 w-full md:w-auto">
           <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-white/10 text-center px-8">
             <div className="text-primary text-3xl font-bold font-display">{catsLoading ? '...' : totalDocs}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">บทความทั้งหมด</div>
+            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Total Documents</div>
           </div>
           <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-white/10 text-center px-8">
             <div className="text-primary text-3xl font-bold font-display">{catsLoading ? '...' : updatedThisWeek}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">อัปเดตสัปดาห์นี้</div>
+            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Updated This Week</div>
           </div>
         </div>
       </div>
@@ -193,7 +193,7 @@ export default function DocsPage() {
       <div className="flex items-center justify-between border-b border-border/40 pb-3">
         <div className="flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-bold text-foreground">หมวดหมู่เอกสาร</h3>
+          <h3 className="text-lg font-bold text-foreground">Document Categories</h3>
         </div>
       </div>
 
@@ -217,7 +217,7 @@ export default function DocsPage() {
         ) : filteredCategories.length === 0 ? (
           <div className="col-span-full py-20 text-center">
             <Search className="h-12 w-12 mx-auto text-muted-foreground/20 mb-4" />
-            <h3 className="text-base font-bold opacity-60">ไม่พบหมวดหมู่ที่ค้นหา &quot;{search}&quot;</h3>
+            <h3 className="text-base font-bold opacity-60">No categories found for &quot;{search}&quot;</h3>
           </div>
         ) : (
           filteredCategories.map((cat) => {
@@ -235,7 +235,7 @@ export default function DocsPage() {
                       <IconComponent className="h-7 w-7 text-primary group-hover:text-white transition-colors duration-300" />
                     </div>
                     <Badge variant="secondary" className="rounded-full text-[10px] font-bold uppercase tracking-tight px-3 py-0.5">
-                      {cat._count?.documents || 0} บทความ
+                      {cat._count?.documents || 0} Documents
                     </Badge>
                   </div>
                   <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors duration-200">{cat.name}</h3>
@@ -244,7 +244,7 @@ export default function DocsPage() {
                   </p>
                 </div>
                 <div className="mt-8 flex items-center justify-between text-xs font-bold text-primary uppercase tracking-wider">
-                  <span>ดูเอกสารทั้งหมด</span>
+                  <span>View All Documents</span>
                   <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-1 transition-transform duration-300" />
                 </div>
               </Card>
@@ -257,7 +257,7 @@ export default function DocsPage() {
       {!catsLoading && categories.length > 0 && (
         <section className="space-y-6 pt-10">
           <h2 className="text-lg font-bold flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" /> {search ? 'ผลการค้นหาเอกสาร' : 'เอกสารอัปเดตล่าสุด'}
+            <FileText className="h-5 w-5 text-primary" /> {search ? 'Search Results' : 'Recently Updated Documents'}
           </h2>
           <div className="grid grid-cols-1 gap-3">
              {recentLoading ? (
@@ -266,7 +266,7 @@ export default function DocsPage() {
                ))
              ) : filteredRecentArticles.length === 0 ? (
                <p className="text-xs text-muted-foreground italic px-2 uppercase tracking-widest opacity-40 py-10 text-center border-2 border-dashed rounded-lg border-border/40">
-                 {search ? `ไม่พบข้อมูลที่ตรงกับ "${search}"` : 'ยังไม่มีบทความอัปเดตล่าสุด'}
+                 {search ? `No documents found matching "${search}"` : 'No recently updated documents'}
                </p>
              ) : (
                filteredRecentArticles.map((art) => (
@@ -282,7 +282,7 @@ export default function DocsPage() {
                        <div className="overflow-hidden">
                          <h4 className="text-sm font-bold group-hover:text-primary transition-colors truncate">{art.title}</h4>
                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
-                           {art.category.name} • อัปเดตเมื่อ {formatDistanceToNow(new Date(art.updatedAt), { addSuffix: true })}
+                           {art.category.name} • Updated {formatDistanceToNow(new Date(art.updatedAt), { addSuffix: true })}
                          </p>
                        </div>
                      </div>
@@ -293,34 +293,6 @@ export default function DocsPage() {
           </div>
         </section>
       )}
-
-      {/* Support / Help Section Footer */}
-      <div className="bg-[#f0f9f4] dark:bg-primary/[0.03] border border-primary/20 dark:border-primary/10 rounded-xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-        <div className="flex items-center gap-4 text-center md:text-left flex-col md:flex-row">
-          <div className="w-12 h-12 bg-white dark:bg-card rounded-full flex items-center justify-center text-primary border border-primary/20 shrink-0 shadow-sm">
-            <HelpCircle className="h-6 w-6" />
-          </div>
-          <div>
-            <h5 className="text-base font-bold text-foreground">ไม่พบสิ่งที่ต้องการค้นหา?</h5>
-            <p className="text-xs text-muted-foreground">ทีมซัพพอร์ตของเราพร้อมช่วยเหลือคุณตลอด 24 ชั่วโมง</p>
-          </div>
-        </div>
-        <div className="flex gap-3 shrink-0 w-full sm:w-auto justify-center">
-          <Button 
-            variant="outline"
-            onClick={() => router.push('/dashboard/tickets')}
-            className="border-border/60 bg-white hover:bg-muted text-foreground text-xs"
-          >
-            ติดต่อสอบถาม
-          </Button>
-          <Button 
-            onClick={() => router.push('/dashboard/tickets/new')}
-            className="bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-bold"
-          >
-            เปิดตั๋วปัญหาใหม่
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

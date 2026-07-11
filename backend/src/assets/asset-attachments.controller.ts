@@ -92,7 +92,10 @@ export class AssetAttachmentsController {
     @Param('attachmentId') attachmentId: string,
     @Res() res: Response,
   ) {
-    const attachment = await this.attachmentsService.findOne(assetId, attachmentId);
+    const attachment = await this.attachmentsService.findOne(
+      assetId,
+      attachmentId,
+    );
     const filePath = path.join(process.cwd(), attachment.storedPath);
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ message: 'File not found on disk' });

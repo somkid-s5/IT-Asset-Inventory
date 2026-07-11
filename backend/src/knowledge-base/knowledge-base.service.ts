@@ -17,89 +17,89 @@ export class KnowledgeBaseService {
   async initializeDefaults(authorId: string) {
     const defaults = [
       {
-        name: 'Infrastructure (โครงสร้างพื้นฐาน)',
+        name: 'Infrastructure',
         icon: 'cloud',
         documents: [
           {
-            title: 'ขั้นตอนการขยายขนาด Storage บน Azure Managed Disks',
-            content: `## ขั้นตอนการขยายขนาด Storage บน Azure Managed Disks
-คู่มือฉบับสมบูรณ์สำหรับการปรับขนาด Disk ของ Virtual Machine บนระบบ Azure โดยไม่ทำให้เกิด Downtime
+            title: 'How to Resize Storage on Azure Managed Disks',
+            content: `## How to Resize Storage on Azure Managed Disks
+A complete guide to resizing virtual machine disks on Azure without causing downtime.
 
-### 1. การเตรียมความพร้อมก่อนดำเนินการ
-* ตรวจสอบว่า VM อยู่ในสถานะที่เหมาะสม
-* ทำการ Snapshot ข้อมูลหรือสำรองข้อมูลก่อนเริ่มดำเนินการเสมอ
+### 1. Prerequisites
+* Verify that the VM is in a healthy state.
+* Always take a snapshot or back up your data before proceeding.
 
-### 2. ขั้นตอนการขยายขนาดใน Azure Portal
-1. เข้าไปที่ Resource Group ของ VM
-2. เลือก Disks จากเมนูด้านซ้าย
-3. คลิกเลือก disk ที่ต้องการปรับขนาด
-4. ไปที่ Size + Performance แล้วใส่ขนาดใหม่ที่ต้องการ
-5. กด Save เพื่อบันทึกการเปลี่ยนแปลง
+### 2. Steps in the Azure Portal
+1. Navigate to the VM's Resource Group.
+2. Select **Disks** from the left-hand menu.
+3. Click on the disk you wish to resize.
+4. Go to **Size + Performance** and enter the desired size.
+5. Click **Save** to apply changes.
 
-### 3. การขยาย Volume ในระดับ OS
-* สำหรับ Windows: ใช้ Disk Management หรือคำสั่ง PowerShell \`Resize-Partition\`
-* สำหรับ Linux: ใช้คำสั่ง \`resize2fs\` หรือ \`xfs_growfs\` ตามประเภทของ Filesystem`,
+### 3. Expanding the Volume at the OS Level
+* **Windows:** Use Disk Management or the PowerShell command \`Resize-Partition\`.
+* **Linux:** Use the command \`resize2fs\` or \`xfs_growfs\` depending on the filesystem type.`,
           },
           {
-            title: 'วิธีการตรวจสอบสาเหตุ Network Latency ภายในสาขา',
-            content: `## วิธีการตรวจสอบสาเหตุ Network Latency ภายในสาขา
-Troubleshooting guide สำหรับฝ่าย IT ประจำสาขา ในการใช้คำสั่ง mtr และ traceroute เพื่อวิเคราะห์จุดที่มีปัญหาใน MPLS Tunnel
+            title: 'Troubleshooting Network Latency in Branches',
+            content: `## Troubleshooting Network Latency in Branches
+Troubleshooting guide for branch IT staff to diagnose network latency using MTR and Traceroute.
 
-### 1. การทดสอบด้วยคำสั่ง ping
+### 1. Basic Ping Test
 \`\`\`bash
 ping -c 50 gateway.branch.local
 \`\`\`
 
-### 2. การใช้เครื่องมือ MTR (My Traceroute)
-เพื่อดูความล่าช้า (latency) และอัตราการสูญเสียของแพ็กเกจ (packet loss) ตลอดเส้นทาง:
+### 2. Using MTR (My Traceroute)
+Identify packet loss and latency across the network path:
 \`\`\`bash
 mtr -c 100 -r destination.ip
 \`\`\``,
-          }
-        ]
+          },
+        ],
       },
       {
-        name: 'Security (ความปลอดภัย)',
+        name: 'Security',
         icon: 'admin_panel_settings',
         documents: [
           {
-            title: 'นโยบายการสำรองข้อมูล (Backup Policy) ประจำปี 2024',
-            content: `## นโยบายการสำรองข้อมูล (Backup Policy) ประจำปี 2024
-เอกสารทางการกำหนดความถี่ในการทำ Backup (RPO/RTO) สำหรับเซิร์ฟเวอร์ทุกตัวในระบบ Infrastructure ขององค์กร
+            title: 'Annual Backup Policy 2024',
+            content: `## Annual Backup Policy 2024
+Official policy defining backup frequency (RPO/RTO) for all infrastructure servers.
 
-### 1. ความถี่ในการสำรองข้อมูล (Backup Frequency)
-* **Production Database:** สำรองข้อมูลทุกๆ 4 ชั่วโมง (RPO = 4 ชั่วโมง)
-* **Application Config & Server Image:** สำรองข้อมูลทุกวันเวลา 01:00 น.
+### 1. Backup Frequency
+* **Production Database:** Backup every 4 hours (RPO = 4 hours).
+* **Application Config & Server Image:** Backup daily at 01:00 AM.
 
-### 2. สถานที่จัดเก็บข้อมูลสำรอง (Storage Targets)
-* **Local Storage:** จัดเก็บไว้ที่ NAS ภายในสาขาเป็นเวลา 7 วัน
-* **Cloud Storage:** จัดเก็บไว้ที่ Azure Blob/AWS S3 Cold Storage เป็นเวลา 30 วัน`,
-          }
-        ]
+### 2. Storage Targets
+* **Local Storage:** Stored on the branch NAS for 7 days.
+* **Cloud Storage:** Archived in Azure Blob or AWS S3 Cold Storage for 30 days.`,
+          },
+        ],
       },
       {
-        name: 'User Guides (คู่มือการใช้งาน)',
+        name: 'User Guides',
         icon: 'library_books',
         documents: [
           {
-            title: 'การตั้งค่า VPN สำหรับพนักงานใหม่ (macOS & Windows 11)',
-            content: `## การตั้งค่า VPN สำหรับพนักงานใหม่ (macOS & Windows 11)
-รายละเอียดขั้นตอนการติดตั้ง GlobalProtect VPN และการลงทะเบียน MFA ผ่านแอปพลิเคชัน Microsoft Authenticator
+            title: 'VPN Configuration for Onboarding (macOS & Windows 11)',
+            content: `## VPN Configuration Guide (macOS & Windows 11)
+Step-by-step instructions for installing GlobalProtect VPN and registering MFA via Microsoft Authenticator.
 
-### 1. การติดตั้ง GlobalProtect VPN Client
-* **Windows 11:** ดาวน์โหลดตัวติดตั้งจาก IT Portal แล้วดับเบิลคลิกไฟล์ \`.msi\` เพื่อเริ่มติดตั้ง
-* **macOS:** ดาวน์โหลดเวอร์ชัน macOS ติดตั้งผ่านไฟล์ \`.pkg\` และให้สิทธิ์ System Extension ใน System Settings
+### 1. GlobalProtect VPN Client Installation
+* **Windows 11:** Download the installer from the IT Portal and double-click the \`.msi\` file.
+* **macOS:** Download the macOS version, install via the \`.pkg\` file, and allow System Extension in System Settings.
 
-### 2. การลงทะเบียน Multi-Factor Authentication (MFA)
-1. เปิดแอป **Microsoft Authenticator** บนสมาร์ทโฟน
-2. เลือกเพิ่มบัญชี Work or School
-3. สแกน QR Code ที่แสดงบนหน้าจอคอมพิวเตอร์ของคุณเพื่อจับคู่บัญชี`,
-          }
-        ]
+### 2. Multi-Factor Authentication (MFA) Registration
+1. Open the **Microsoft Authenticator** app on your mobile device.
+2. Add a **Work or School** account.
+3. Scan the QR code displayed on your computer screen to pair your account.`,
+          },
+        ],
       },
-      { name: 'Troubleshooting (การแก้ปัญหา)', icon: 'build' },
+      { name: 'Troubleshooting', icon: 'build' },
       { name: 'Compliance & Standards', icon: 'verified_user' },
-      { name: 'Release Notes (อัปเดตระบบ)', icon: 'new_releases' },
+      { name: 'Release Notes', icon: 'new_releases' },
     ];
 
     for (const item of defaults) {

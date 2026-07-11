@@ -350,7 +350,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     accounts?: SaveVmDraftDto['guestAccounts'],
     target?: { discoveryId?: string; inventoryId?: string },
   ) {
-    const activeAccounts = (accounts ?? []).filter((account) => account.username.trim());
+    const activeAccounts = (accounts ?? []).filter((account) =>
+      account.username.trim(),
+    );
     if (activeAccounts.length === 0) return [];
 
     const existing = await this.prisma.vmGuestAccount.findMany({
@@ -366,7 +368,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       let encryptedPassword = '';
 
       if (account.password && account.password.trim() !== '') {
-        encryptedPassword = this.credentialsService.encrypt(account.password.trim());
+        encryptedPassword = this.credentialsService.encrypt(
+          account.password.trim(),
+        );
       } else {
         const match = existing.find(
           (ex) =>
@@ -579,7 +583,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     const timeoutMs = options.timeoutMs ?? 8000;
 
     return new Promise<RequestResult<T>>((resolve, reject) => {
-      if (url.hostname.includes('mock') || url.hostname.includes('infrapilot.local')) {
+      if (
+        url.hostname.includes('mock') ||
+        url.hostname.includes('infrapilot.local')
+      ) {
         let responseData: any = null;
         const path = url.pathname;
 
@@ -588,7 +595,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         } else if (path.endsWith('/system/version')) {
           responseData = { version: '7.0.3' };
         } else if (path.endsWith('/vcenter/host')) {
-          responseData = [{ host: 'host-1', name: 'esxi-mock-01.infrapilot.local' }];
+          responseData = [
+            { host: 'host-1', name: 'esxi-mock-01.infrapilot.local' },
+          ];
         } else if (path.endsWith('/vcenter/cluster')) {
           responseData = [{ cluster: 'domain-c1', name: 'Cluster-Mock-01' }];
         } else if (path.endsWith('/vcenter/vm')) {
@@ -606,7 +615,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
               power_state: 'POWERED_OFF',
               cpu_count: 4,
               memory_size_MiB: 8192,
-            }
+            },
           ];
         } else if (path.includes('/vcenter/vm/vm-101')) {
           if (path.endsWith('/identity')) {
@@ -622,8 +631,8 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
               guest_OS: 'Ubuntu Linux (64-bit)',
               hardware: {
                 cpu: { count: 2 },
-                memory: { size_MiB: 4096 }
-              }
+                memory: { size_MiB: 4096 },
+              },
             };
           }
         } else if (path.includes('/vcenter/vm/vm-102')) {
@@ -631,7 +640,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             responseData = {
               host_name: 'mock-db-srv-01.local',
               ip_address: '192.168.20.102',
-              full_name: { default_message: 'Microsoft Windows Server 2022 (64-bit)' },
+              full_name: {
+                default_message: 'Microsoft Windows Server 2022 (64-bit)',
+              },
             };
           } else {
             responseData = {
@@ -640,8 +651,8 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
               guest_OS: 'Microsoft Windows Server 2022 (64-bit)',
               hardware: {
                 cpu: { count: 4 },
-                memory: { size_MiB: 8192 }
-              }
+                memory: { size_MiB: 8192 },
+              },
             };
           }
         }
@@ -1641,7 +1652,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       orderBy: { updatedAt: 'desc' },
     });
 
-    return discoveries.map((discovery) => this.mapDiscovery(discovery as any));
+    return discoveries.map((discovery) =>
+      this.mapDiscovery(discovery as unknown as VmDiscoveryWithRelations),
+    );
   }
 
   async findDiscovery(id: string) {
@@ -1665,7 +1678,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     this.ensureSeedData();
     await this.findDiscovery(id);
 
-    const guestAccounts = await this.buildVmGuestAccounts(dto.guestAccounts, { discoveryId: id });
+    const guestAccounts = await this.buildVmGuestAccounts(dto.guestAccounts, {
+      discoveryId: id,
+    });
     const completeness = this.computeCompleteness({
       systemName: dto.systemName,
       environment: dto.environment,
@@ -1733,7 +1748,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           throw new NotFoundException(`VM discovery ${id} not found`);
         }
 
-        const guestAccounts = await this.buildVmGuestAccounts(dto.guestAccounts, { discoveryId: id });
+        const guestAccounts = await this.buildVmGuestAccounts(
+          dto.guestAccounts,
+          { discoveryId: id },
+        );
         const completeness = this.computeCompleteness({
           systemName: dto.systemName,
           environment: dto.environment,
@@ -1866,7 +1884,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       orderBy: { updatedAt: 'desc' },
     });
 
-    return inventories.map((inventory) => this.mapInventory(inventory as any));
+    return inventories.map((inventory) =>
+      this.mapInventory(inventory as unknown as VmInventoryWithRelations),
+    );
   }
 
   async findInventoryById(id: string) {
@@ -1897,7 +1917,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     this.ensureSeedData();
     await this.findInventoryById(id);
 
-    const guestAccounts = await this.buildVmGuestAccounts(dto.guestAccounts, { inventoryId: id });
+    const guestAccounts = await this.buildVmGuestAccounts(dto.guestAccounts, {
+      inventoryId: id,
+    });
     const updated = await this.prisma.vmInventory.update({
       where: { id },
       data: {

@@ -8,7 +8,8 @@ describe('CredentialsService', () => {
   let prisma: PrismaService;
 
   // 32-byte key (64 hex chars)
-  const validHexKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  const validHexKey =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
   const mockCredentialRecord = {
     id: 'cred-1',
@@ -60,12 +61,13 @@ describe('CredentialsService', () => {
     it('should throw error if key is not hex 64 characters', () => {
       process.env.CREDENTIAL_ENCRYPTION_KEY = 'shortkey123';
       expect(() => new CredentialsService(prisma)).toThrow(
-        'CRITICAL: CREDENTIAL_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)'
+        'CRITICAL: CREDENTIAL_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)',
       );
     });
 
     it('should throw error if key contains non-hex characters', () => {
-      process.env.CREDENTIAL_ENCRYPTION_KEY = 'g123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      process.env.CREDENTIAL_ENCRYPTION_KEY =
+        'g123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
       expect(() => new CredentialsService(prisma)).toThrow();
     });
 
@@ -80,7 +82,7 @@ describe('CredentialsService', () => {
     it('should correctly encrypt and decrypt text', () => {
       const plaintext = 'SuperSecretP@ssword123';
       const encrypted = service.encrypt(plaintext);
-      
+
       expect(encrypted).not.toBe(plaintext);
       expect(encrypted.split(':')).toHaveLength(3); // iv:ciphertext:tag
 
@@ -93,12 +95,15 @@ describe('CredentialsService', () => {
     it('should encrypt password and save credential record', async () => {
       mockPrisma.credential.create.mockResolvedValue(mockCredentialRecord);
 
-      const result = await service.create({
-        username: 'admin',
-        password: 'mypassword',
-        assetId: 'asset-1',
-        type: 'SSH',
-      }, 'user-1');
+      const result = await service.create(
+        {
+          username: 'admin',
+          password: 'mypassword',
+          assetId: 'asset-1',
+          type: 'SSH',
+        },
+        'user-1',
+      );
 
       expect(result.username).toBe('admin');
       expect(mockPrisma.credential.create).toHaveBeenCalled();
@@ -109,7 +114,7 @@ describe('CredentialsService', () => {
   describe('findByAsset', () => {
     it('should return credential records for an asset without passwords', async () => {
       mockPrisma.credential.findMany.mockResolvedValue([
-        { id: 'cred-1', username: 'admin', assetId: 'asset-1' }
+        { id: 'cred-1', username: 'admin', assetId: 'asset-1' },
       ]);
 
       const result = await service.findByAsset('asset-1');
@@ -123,9 +128,9 @@ describe('CredentialsService', () => {
   describe('revealPassword', () => {
     it('should throw NotFoundException if credential is not found', async () => {
       mockPrisma.credential.findUnique.mockResolvedValue(null);
-      await expect(service.revealPassword('nonexistent', 'user-1')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        service.revealPassword('nonexistent', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should decrypt password and write audit log on success', async () => {
@@ -151,7 +156,11 @@ describe('CredentialsService', () => {
     it('should update other fields without encrypting password if password not provided', async () => {
       mockPrisma.credential.update.mockResolvedValue(mockCredentialRecord);
 
-      const result = await service.update('cred-1', { username: 'new-admin' }, 'user-1');
+      const result = await service.update(
+        'cred-1',
+        { username: 'new-admin' },
+        'user-1',
+      );
 
       expect(result.username).toBe('admin');
       expect(mockPrisma.credential.update).toHaveBeenCalled();
@@ -165,11 +174,12 @@ describe('CredentialsService', () => {
       expect(mockPrisma.credential.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'cred-1' },
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({
-            encryptedPassword: expect.any(String),
-            lastChangedDate: expect.any(Date),
+            encryptedPassword: expect.any(String) as unknown as string,
+            lastChangedDate: expect.any(Date) as unknown as Date,
           }),
-        })
+        }),
       );
     });
   });
@@ -178,7 +188,7 @@ describe('CredentialsService', () => {
     it('should throw NotFoundException if credential is not found', async () => {
       mockPrisma.credential.findUnique.mockResolvedValue(null);
       await expect(service.remove('nonexistent', 'user-1')).rejects.toThrow(
-        NotFoundException
+        NotFoundException,
       );
     });
 

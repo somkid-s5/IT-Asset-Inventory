@@ -257,7 +257,9 @@ export class AssetsService {
     ]);
 
     return {
-      data: assets.map((asset) => this.toListItem(asset as any)),
+      data: assets.map((asset) =>
+        this.toListItem(asset as unknown as AssetWithRelations),
+      ),
       total,
       page,
       limit: take,

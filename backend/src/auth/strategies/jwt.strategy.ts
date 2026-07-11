@@ -4,8 +4,14 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 
-function extractJwtFromCookie(req: { cookies?: Record<string, string> }) {
-  return req?.cookies?.access_token ?? null;
+function extractJwtFromCookie(req: unknown) {
+  if (req && typeof req === 'object' && 'cookies' in req) {
+    const cookies = (req as { cookies?: Record<string, unknown> }).cookies;
+    if (cookies && typeof cookies === 'object' && 'access_token' in cookies) {
+      return String(cookies.access_token);
+    }
+  }
+  return null;
 }
 
 @Injectable()
@@ -23,7 +29,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: (() => {
         const secret = configService.get<string>('JWT_SECRET');
         if (!secret) {
-          throw new Error('JWT_SECRET environment variable is missing. Application cannot start.');
+          throw new Error(
+            'JWT_SECRET environment variable is missing. Application cannot start.',
+          );
         }
         return secret;
       })(),

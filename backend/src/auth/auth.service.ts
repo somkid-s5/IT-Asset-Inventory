@@ -248,7 +248,7 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { 
+      data: {
         passwordHash,
         mustChangePassword: false,
       },
@@ -270,7 +270,7 @@ export class AuthService {
 
   async logout(token: string) {
     try {
-      const decoded = this.jwtService.decode(token);
+      const decoded: { exp?: number } | null = this.jwtService.decode(token);
       const expiresAt = decoded?.exp
         ? new Date(decoded.exp * 1000)
         : new Date(Date.now() + 24 * 60 * 60 * 1000);

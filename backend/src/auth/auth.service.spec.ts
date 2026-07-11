@@ -13,8 +13,6 @@ jest.mock('bcrypt', () => ({
 
 describe('AuthService', () => {
   let service: AuthService;
-  let prisma: PrismaService;
-  let jwt: JwtService;
 
   const mockUser = {
     id: 'user-id-1',
@@ -23,7 +21,7 @@ describe('AuthService', () => {
     avatarSeed: 'seed',
     avatarImage: null,
     passwordHash: 'hashedpassword',
-    role: 'VIEWER' as any,
+    role: 'VIEWER',
     mustChangePassword: true,
   };
 
@@ -57,8 +55,6 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    prisma = module.get<PrismaService>(PrismaService);
-    jwt = module.get<JwtService>(JwtService);
   });
 
   afterEach(() => {
@@ -80,25 +76,28 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should throw UnauthorizedException if user not found', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      await expect(service.login({ username: 'nonexistent', password: 'password' })).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.login({ username: 'nonexistent', password: 'password' }),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if password is invalid', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.login({ username: 'testuser', password: 'wrongpassword' })).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.login({ username: 'testuser', password: 'wrongpassword' }),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should return token and user details if login is successful', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const result = await service.login({ username: 'testuser', password: 'correctpassword' });
+      const result = await service.login({
+        username: 'testuser',
+        password: 'correctpassword',
+      });
 
       expect(result).toHaveProperty('access_token');
       expect(result.user.mustChangePassword).toBe(true);
@@ -114,25 +113,27 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException if user not found', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      await expect(service.me('invalid-id')).rejects.toThrow(UnauthorizedException);
+      await expect(service.me('invalid-id')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
   describe('changePassword', () => {
     it('should throw UnauthorizedException if user not found', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      await expect(service.changePassword('nonexistent', 'oldpass', 'newpass')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.changePassword('nonexistent', 'oldpass', 'newpass'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if current password is wrong', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.changePassword('user-id-1', 'wrongpass', 'newpass')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.changePassword('user-id-1', 'wrongpass', 'newpass'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should change password and update mustChangePassword to false', async () => {
@@ -140,7 +141,11 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (bcrypt.hash as jest.Mock).mockResolvedValue('newhash');
 
-      await service.changePassword('user-id-1', 'correctpassword', 'newpassword');
+      await service.changePassword(
+        'user-id-1',
+        'correctpassword',
+        'newpassword',
+      );
 
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-id-1' },
@@ -155,9 +160,13 @@ describe('AuthService', () => {
   describe('register', () => {
     it('should throw ConflictException if username already exists', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      await expect(service.register({ username: 'testuser', displayName: 'Test', password: 'password' })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.register({
+          username: 'testuser',
+          displayName: 'Test',
+          password: 'password',
+        }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should register a new user as ADMIN if it is the first user', async () => {
@@ -171,7 +180,11 @@ describe('AuthService', () => {
       (bcrypt.genSalt as jest.Mock).mockResolvedValue('salt');
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
 
-      const result = await service.register({ username: 'newadmin', displayName: 'Admin', password: 'password' });
+      const result = await service.register({
+        username: 'newadmin',
+        displayName: 'Admin',
+        password: 'password',
+      });
 
       expect(result.user.role).toBe('ADMIN');
       expect(result.user.mustChangePassword).toBe(false);
@@ -180,14 +193,19 @@ describe('AuthService', () => {
 
   describe('updateProfile', () => {
     it('should throw ConflictException if avatar image is not valid data url', async () => {
-      await expect(service.updateProfile('user-id-1', 'Name', 'seed', 'badimage')).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.updateProfile('user-id-1', 'Name', 'seed', 'badimage'),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw ConflictException if avatar image is SVG', async () => {
       await expect(
-        service.updateProfile('user-id-1', 'Name', 'seed', 'data:image/svg+xml;base64,123')
+        service.updateProfile(
+          'user-id-1',
+          'Name',
+          'seed',
+          'data:image/svg+xml;base64,123',
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -204,8 +222,12 @@ describe('AuthService', () => {
 
   describe('logout', () => {
     it('should add token to blocklist', async () => {
-      mockJwt.decode.mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 3600 });
-      mockPrisma.tokenBlocklist.upsert.mockResolvedValue({ token: 'jwt-token' });
+      mockJwt.decode.mockReturnValue({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      });
+      mockPrisma.tokenBlocklist.upsert.mockResolvedValue({
+        token: 'jwt-token',
+      });
 
       await service.logout('jwt-token');
 

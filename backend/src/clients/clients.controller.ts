@@ -61,10 +61,7 @@ export class ClientsController {
 
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(
-    @Param('id') id: string,
-    @Request() req: { user: { id: string } },
-  ) {
+  remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
     return this.clientsService.remove(id, req.user.id);
   }
 }

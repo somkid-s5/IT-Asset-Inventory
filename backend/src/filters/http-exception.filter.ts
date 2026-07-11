@@ -36,14 +36,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           'Cannot reach database server. Please check your network or database status.';
       } else if (exception.code === 'P2002') {
         status = HttpStatus.CONFLICT;
-        const target = (exception.meta?.target as string[])?.join(', ') || 'fields';
+        const target =
+          (exception.meta?.target as string[])?.join(', ') || 'fields';
         message = `Unique constraint failed. A record with this value already exists on: ${target}`;
       } else if (exception.code === 'P2025') {
         status = HttpStatus.NOT_FOUND;
         message = (exception.meta?.cause as string) || 'Record not found.';
       } else if (exception.code === 'P2003') {
         status = HttpStatus.BAD_REQUEST;
-        message = 'Foreign key constraint failed. Check referenced or related records.';
+        message =
+          'Foreign key constraint failed. Check referenced or related records.';
       }
       this.logger.error(
         `Prisma Known Request Error [${exception.code}]: ${exception.message}`,
