@@ -180,8 +180,8 @@ export default function VmPage() {
 // -------------------------------------------------------------
 
 function getPowerStateBadge(state: string) {
-  if (state === 'RUNNING') return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 uppercase text-[10px] font-bold">Running</Badge>;
-  if (state === 'SUSPENDED') return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 uppercase text-[10px] font-bold">Suspended</Badge>;
+  if (state === 'RUNNING') return <Badge variant="outline" className="bg-success/10 text-success border-success/20 uppercase text-[10px] font-bold">Running</Badge>;
+  if (state === 'SUSPENDED') return <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 uppercase text-[10px] font-bold">Suspended</Badge>;
   return <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 uppercase text-[10px] font-bold">{state || 'Unknown'}</Badge>;
 }
 
@@ -283,9 +283,9 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
       <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit shrink-0">
         {(
           [
-            { key: 'ACTIVE', label: VIEW_COPY.ACTIVE.shortLabel, icon: CheckCircle2, iconClassName: 'text-emerald-500' },
-            { key: 'PENDING', label: VIEW_COPY.PENDING.shortLabel, icon: Clock3, iconClassName: 'text-amber-500' },
-            { key: 'ORPHANED', label: VIEW_COPY.ORPHANED.shortLabel, icon: AlertTriangle, iconClassName: 'text-rose-500' },
+            { key: 'ACTIVE', label: VIEW_COPY.ACTIVE.shortLabel, icon: CheckCircle2, iconClassName: 'text-success' },
+            { key: 'PENDING', label: VIEW_COPY.PENDING.shortLabel, icon: Clock3, iconClassName: 'text-warning' },
+            { key: 'ORPHANED', label: VIEW_COPY.ORPHANED.shortLabel, icon: AlertTriangle, iconClassName: 'text-critical' },
           ] as const
         ).map((tab) => (
           <button
@@ -398,7 +398,7 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
       header: "Discovered VM Name",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-emerald-500">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-success">
             <Monitor className="h-4 w-4" />
           </div>
           <span className="font-semibold text-foreground">{row.original.name}</span>
@@ -487,7 +487,7 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
       header: "System Name",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-500">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-success/20 bg-success/10 text-success">
             <Monitor className="h-4 w-4" />
           </div>
           <span className="font-semibold text-foreground group-hover:text-primary transition-colors">{row.original.systemName}</span>
@@ -511,8 +511,8 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
       cell: ({ getValue }) => {
         const env = getValue() as string;
         if (!env) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
-        const variants: Record<string, string> = { PROD: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', UAT: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20', DEV: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' };
-        return <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", variants[env] || "bg-slate-500/10 text-slate-500")}>{env}</Badge>;
+        const variants: Record<string, string> = { PROD: 'bg-critical/10 text-critical border-critical/20', UAT: 'bg-warning/10 text-warning border-warning/20', DEV: 'bg-muted/10 text-muted-foreground border-border/20' };
+        return <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", variants[env] || "bg-muted/10 text-muted-foreground")}>{env}</Badge>;
       }
     },
     {
@@ -599,7 +599,7 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
       header: "System Name",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-500">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-critical/20 bg-critical/10 text-critical">
             <ShieldAlert className="h-4 w-4" />
           </div>
           <span className="font-semibold text-foreground line-through opacity-60 group-hover:opacity-100 transition-opacity">{row.original.displayName || row.original.name}</span>
@@ -614,7 +614,7 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
       id: 'actions',
       cell: ({ row }) => (
         <div className="text-right">
-          <Button size="sm" variant="ghost" className="h-8 text-rose-500" onClick={(e) => { e.stopPropagation(); onOpen(row.original.id); }}>Review</Button>
+          <Button size="sm" variant="ghost" className="h-8 text-critical" onClick={(e) => { e.stopPropagation(); onOpen(row.original.id); }}>Review</Button>
         </div>
       )
     }

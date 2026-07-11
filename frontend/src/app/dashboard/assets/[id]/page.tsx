@@ -50,7 +50,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { containerVariants, itemVariants } from "@/lib/animations";
+
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
@@ -1830,9 +1830,9 @@ export default function AssetDetailsPage() {
 
   return (
     <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
       className="workspace-page space-y-6 pt-2"
     >
       <div className="flex justify-between items-center">

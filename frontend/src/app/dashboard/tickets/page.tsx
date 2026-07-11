@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils';
 import { DataTableSkeleton } from '@/components/Skeletons';
 import { EmptyState } from '@/components/EmptyState';
 
-import { containerVariants, itemVariants } from '@/lib/animations';
+
 
 export default function TicketsPage() {
   const router = useRouter();
@@ -321,15 +321,15 @@ export default function TicketsPage() {
 
   return (
     <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
       className="space-y-4"
     >
       {/* Stats Cards - Compact */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, i) => (
-          <motion.div key={i} variants={itemVariants}>
+          <div key={i}>
             <Card className={cn("p-4 border border-border/50 bg-card relative overflow-hidden group hover:border-primary/20 transition-all shadow-sm rounded-xl", stat.bg)}>
               <div className="flex justify-between items-start relative z-10">
                 <div className="space-y-0.5">
@@ -344,7 +344,7 @@ export default function TicketsPage() {
                 </div>
               </div>
             </Card>
-          </motion.div>
+          </div>
         ))}
       </div>
 
@@ -423,10 +423,17 @@ export default function TicketsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length} className="h-48 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-2 opacity-30 uppercase tracking-widest font-black text-[10px]">
-                      <TicketIcon className="h-8 w-8" />
-                      <span>No matching records found</span>
+                  <td colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
+                    <div className="flex items-center justify-center h-full">
+                      <EmptyState
+                        icon={TicketIcon}
+                        title="No tickets found"
+                        description={tickets.length === 0
+                          ? "No tickets have been created in the system yet."
+                          : "No tickets match your current search or filter criteria."
+                        }
+                        className="w-full max-w-md border-none bg-transparent"
+                      />
                     </div>
                   </td>
                 </tr>

@@ -168,16 +168,16 @@ export default function VmDetailPage() {
   }
 
   const getLifecycleBadge = (state: VmInventoryDetail['lifecycleState']) => {
-    if (state === 'ACTIVE') return { label: 'Active', class: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500' };
-    if (state === 'DRAFT') return { label: 'Draft', class: 'border-violet-500/25 bg-violet-500/10 text-violet-500' };
-    return { label: 'Archived', class: 'border-rose-500/25 bg-rose-500/10 text-rose-500' };
+    if (state === 'ACTIVE') return { label: 'Active', class: 'border-success/25 bg-success/10 text-success' };
+    if (state === 'DRAFT') return { label: 'Draft', class: 'border-low/25 bg-low/10 text-low' };
+    return { label: 'Archived', class: 'border-critical/25 bg-critical/10 text-critical' };
   };
   const lifecycleBadge = getLifecycleBadge(vm.lifecycleState);
 
   const getSyncBadge = (state: VmInventoryDetail['syncState']) => {
-    if (state === 'Synced') return { label: 'Synced', class: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500' };
-    if (state === 'Ready to sync') return { label: 'Ready to Sync', class: 'border-sky-500/25 bg-sky-500/10 text-sky-500' };
-    return { label: 'Missing', class: 'border-amber-500/25 bg-amber-500/10 text-amber-500' };
+    if (state === 'Synced') return { label: 'Synced', class: 'border-success/25 bg-success/10 text-success' };
+    if (state === 'Ready to sync') return { label: 'Ready to Sync', class: 'border-info/25 bg-info/10 text-info' };
+    return { label: 'Missing', class: 'border-warning/25 bg-warning/10 text-warning' };
   };
   const syncBadge = getSyncBadge(vm.syncState);
 
@@ -194,7 +194,7 @@ export default function VmDetailPage() {
       </div>
 
       {vm.lifecycleState !== 'ACTIVE' || vm.syncState !== 'Synced' ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-700 dark:text-amber-300">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 px-5 py-4 text-sm text-warning">
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
@@ -214,7 +214,7 @@ export default function VmDetailPage() {
               <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none"></div>
               
               <div className="flex items-start gap-5 relative z-10">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-low to-primary text-white shadow-xl">
                   <Monitor className="h-7 w-7" />
                 </div>
 
@@ -367,7 +367,7 @@ export default function VmDetailPage() {
           {/* Guest Accounts Table */}
           <section className="glass-card overflow-hidden">
             <div className="p-6 border-b border-border/50">
-               <h2 className="text-lg font-bold tracking-tight flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-500"/> Guest OS Accounts</h2>
+               <h2 className="text-lg font-bold tracking-tight flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-success"/> Guest OS Accounts</h2>
             </div>
             <div className="p-0 overflow-x-auto">
               {vm.guestAccounts.length === 0 ? (

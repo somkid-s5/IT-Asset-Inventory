@@ -162,7 +162,7 @@ export default function VmSourcesPage() {
         const isSyncing = syncingAll || syncingSourceIds.includes(s.id);
         const isHealthy = s.status === 'Healthy' || s.status === 'HEALTHY';
         const label = isSyncing ? 'Syncing...' : (s.status === 'HEALTHY' ? 'Healthy' : s.status === 'READY_TO_SYNC' ? 'Ready to sync' : s.status === 'CONNECTION_FAILED' ? 'Connection failed' : s.status);
-        const bg = isSyncing ? 'bg-sky-500/10 border-sky-500/25 text-sky-500' : isHealthy ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500' : 'bg-amber-500/10 border-amber-500/25 text-amber-500';
+        const bg = isSyncing ? 'bg-info/10 border-info/25 text-info' : isHealthy ? 'bg-success/10 border-success/25 text-success' : 'bg-warning/10 border-warning/25 text-warning';
         return <Badge variant="outline" className={cn("uppercase", bg)}>{label}</Badge>;
       }
     },
@@ -298,7 +298,7 @@ export default function VmSourcesPage() {
               <div className="space-y-1.5"><Label required>Password</Label><Input type="password" value={formData.password} onChange={(e) => setFormData(c => ({...c, password: e.target.value}))} /></div>
               
               <div className="md:col-span-2">
-                <div className={cn('rounded-xl border px-4 py-3 text-sm', isConnectionVerified ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-500' : 'border-amber-500/30 bg-amber-500/5 text-amber-500')}>
+                <div className={cn('rounded-xl border px-4 py-3 text-sm', isConnectionVerified ? 'border-success/30 bg-success/5 text-success' : 'border-warning/30 bg-warning/5 text-warning')}>
                   <div className="flex items-center gap-2 font-medium">
                     {isConnectionVerified ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
                     {isConnectionVerified ? 'Connection Verified' : 'Connection Test Required'}

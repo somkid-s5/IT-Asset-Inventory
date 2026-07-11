@@ -30,7 +30,7 @@ import {
 import dynamic from 'next/dynamic';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { motion } from 'framer-motion';
-import { containerVariants, itemVariants } from '@/lib/animations';
+
 
 const NotionEditor = dynamic(() => import('@/components/NotionEditor'), { 
   ssr: false,
@@ -116,13 +116,13 @@ export default function TicketDetailsPage() {
 
   return (
     <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
       className="max-w-6xl mx-auto space-y-6 pb-20"
     >
       {/* Top Action Bar */}
-      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()} className="rounded-xl font-bold text-xs w-fit">
           <ChevronLeft className="h-4 w-4 mr-1" /> Back to Workspace
         </Button>
@@ -150,11 +150,11 @@ export default function TicketDetailsPage() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </motion.div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content (Left) */}
-        <motion.div variants={itemVariants} className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           <Card className="p-8 rounded-[32px] border-2 shadow-xl bg-card/50 backdrop-blur-sm space-y-8 relative overflow-hidden">
              <div className="absolute top-0 right-0 p-8 opacity-5">
                 <ShieldAlert className="h-40 w-40 rotate-12" />
@@ -289,9 +289,9 @@ export default function TicketDetailsPage() {
                 </div>
              </div>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div variants={itemVariants} className="space-y-6">
+        <div className="space-y-6">
            {(ticket as any).slaDeadline && (
              <Card className="p-6 rounded-[32px] border-2 bg-muted/30 border-border/50 space-y-4">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
@@ -437,7 +437,7 @@ export default function TicketDetailsPage() {
                  </Button>
               </div>
            </Card>
-        </motion.div>
+        </div>
       </div>
     </motion.div>
   );

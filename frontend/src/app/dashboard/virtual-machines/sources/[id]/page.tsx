@@ -92,10 +92,10 @@ export default function VmSourceDetailPage() {
 
   const stateClassName =
     draft.state === 'READY_TO_PROMOTE'
-      ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+      ? 'border-success/25 bg-success/10 text-success'
       : draft.state === 'DRIFTED'
-        ? 'border-amber-500/25 bg-amber-500/10 text-amber-300'
-        : 'border-violet-500/25 bg-violet-500/10 text-violet-300';
+        ? 'border-warning/25 bg-warning/10 text-warning'
+        : 'border-low/25 bg-low/10 text-low';
   const suggestedCriticalityLabel =
     VM_CRITICALITY_OPTIONS.find(
       (item) => item.value === draft.suggestedCriticality,

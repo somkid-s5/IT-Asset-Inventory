@@ -70,9 +70,9 @@ const ROLE_TABS: Array<{
   iconClassName: string;
 }> = [
     { label: 'All', value: 'ALL', icon: Users, iconClassName: 'text-primary' },
-    { label: 'Admins', value: 'ADMIN', icon: Shield, iconClassName: 'text-emerald-500' },
-    { label: 'Editors', value: 'EDITOR', icon: PencilLine, iconClassName: 'text-sky-500' },
-    { label: 'Viewers', value: 'VIEWER', icon: Eye, iconClassName: 'text-amber-500' },
+    { label: 'Admins', value: 'ADMIN', icon: Shield, iconClassName: 'text-success' },
+    { label: 'Editors', value: 'EDITOR', icon: PencilLine, iconClassName: 'text-info' },
+    { label: 'Viewers', value: 'VIEWER', icon: Eye, iconClassName: 'text-warning' },
   ];
 
 function getErrorMessage(error: any, fallback: string) {

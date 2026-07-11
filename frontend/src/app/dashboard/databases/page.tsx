@@ -60,9 +60,9 @@ const ENVIRONMENT_TABS: Array<{
   iconClassName: string;
 }> = [
     { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
-    { label: 'Production', value: 'PROD', icon: ShieldCheck, iconClassName: 'text-emerald-500' },
-    { label: 'Testing', value: 'TEST', icon: FlaskConical, iconClassName: 'text-amber-500' },
-    { label: 'Development', value: 'DEV', icon: Code2, iconClassName: 'text-sky-500' },
+    { label: 'Production', value: 'PROD', icon: ShieldCheck, iconClassName: 'text-success' },
+    { label: 'Testing', value: 'TEST', icon: FlaskConical, iconClassName: 'text-warning' },
+    { label: 'Development', value: 'DEV', icon: Code2, iconClassName: 'text-info' },
   ];
 
 export default function DbPage() {
@@ -167,7 +167,7 @@ export default function DbPage() {
         const status = (getValue() as string) || 'ACTIVE';
         const active = status === 'ACTIVE';
         return (
-          <Badge variant="outline" className={cn("text-[10px] font-semibold px-1.5 py-0", active ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : "bg-slate-500/10 text-slate-500 border-slate-500/20")}>
+          <Badge variant="outline" className={cn("text-[10px] font-semibold px-1.5 py-0", active ? "bg-success/10 text-success border-success/20" : "bg-muted/10 text-muted-foreground border-border/20")}>
             {status}
           </Badge>
         );

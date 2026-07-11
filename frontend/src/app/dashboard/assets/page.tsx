@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { containerVariants, itemVariants } from '@/lib/animations';
+
 
 import { DataTableSkeleton } from '@/components/Skeletons';
 import {
@@ -375,12 +375,12 @@ export default function AssetsPage() {
 
   return (
     <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
       className="space-y-6 pt-0"
     >
-      <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <HardDrive className="h-3.5 w-3.5" />
@@ -400,9 +400,9 @@ export default function AssetsPage() {
             </Button>
           )}
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariants}>
+      <div>
         <Card className="border-2 border-border gap-0 shadow-md bg-card overflow-hidden p-0 rounded-[24px]">
         <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           {/* Tabs */}
@@ -554,7 +554,7 @@ export default function AssetsPage() {
           </div>
         </div>
       </Card>
-      </motion.div>
+      </div>
 
       {/* Asset Form Dialog */}
       <AssetFormDialog
