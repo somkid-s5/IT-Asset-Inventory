@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import {
   AssetStatus,
+  Role,
   VmDiscoveryState,
   VmLifecycleState,
-  Role,
   VmSourceStatus,
 } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
@@ -30,25 +30,15 @@ export class DashboardService {
       orphanedVmInventory,
       latestVmSync,
       adminUsers,
+      eolAssets,
     ] = await Promise.all([
       this.prisma.asset.count(),
-      this.prisma.asset.count({
-        where: { status: AssetStatus.ACTIVE },
-      }),
-      this.prisma.asset.groupBy({
-        by: ['type'],
-        _count: {
-          _all: true,
-        },
-      }),
+      this.prisma.asset.count({ where: { status: AssetStatus.ACTIVE } }),
+      this.prisma.asset.groupBy({ by: ['type'], _count: { _all: true } }),
       this.prisma.databaseInventory.count(),
-      this.prisma.databaseInventory.count({
-        where: { environment: 'PROD' },
-      }),
+      this.prisma.databaseInventory.count({ where: { environment: 'PROD' } }),
       this.prisma.databaseAccount.count(),
-      this.prisma.user.count({
-        where: { deletedAt: null },
-      }),
+      this.prisma.user.count({ where: { deletedAt: null } }),
       this.prisma.vmVCenterSource.count(),
       this.prisma.vmVCenterSource.count({
         where: { status: VmSourceStatus.HEALTHY },
@@ -72,9 +62,7 @@ export class DashboardService {
       this.prisma.vmInventory.count({
         where: {
           lifecycleState: VmLifecycleState.ACTIVE,
-          syncState: {
-            not: 'Missing from source',
-          },
+          syncState: { not: 'Missing from source' },
         },
       }),
       this.prisma.vmInventory.count({
@@ -85,127 +73,21 @@ export class DashboardService {
           ],
         },
       }),
-      this.prisma.vmVCenterSource.aggregate({
-        _max: {
-          lastSyncAt: true,
-        },
-      }),
-      this.prisma.user.count({
-        where: { role: Role.ADMIN, deletedAt: null },
-      }),
+      this.prisma.vmVCenterSource.aggregate({ _max: { lastSyncAt: true } }),
+      this.prisma.user.count({ where: { role: Role.ADMIN, deletedAt: null } }),
+      this.prisma.patchInfo.count({ where: { eolDate: { lt: new Date() } } }),
     ]);
-
-    const assetBreakdown = assetTypeGroups.map((group) => ({
-      label: group.type,
-      count: group._count._all,
-    }));
-
-    const [
-      totalTicketsCount,
-      openTicketsCount,
-      resolvedTicketsCount,
-      metSlaCountRaw,
-      breachedResolvedCountRaw,
-      breachedOpenCountRaw,
-    ] = await Promise.all([
-      this.prisma.ticket.count(),
-      this.prisma.ticket.count({
-        where: { status: { notIn: ['RESOLVED', 'CLOSED'] } },
-      }),
-      this.prisma.ticket.count({
-        where: { status: { in: ['RESOLVED', 'CLOSED'] } },
-      }),
-      this.prisma.$queryRaw<{ count: number }[]>`
-        SELECT COUNT(*)::int as count 
-        FROM "Ticket" 
-        WHERE ("status" = 'RESOLVED' OR "status" = 'CLOSED')
-          AND "resolvedAt" <= "createdAt" + (
-            CASE "priority"::text
-              WHEN 'CRITICAL' THEN 4
-              WHEN 'HIGH' THEN 12
-              WHEN 'MEDIUM' THEN 24
-              WHEN 'LOW' THEN 72
-              ELSE 24
-            END * interval '1 hour'
-          )
-      `,
-      this.prisma.$queryRaw<{ count: number }[]>`
-        SELECT COUNT(*)::int as count 
-        FROM "Ticket" 
-        WHERE ("status" = 'RESOLVED' OR "status" = 'CLOSED')
-          AND "resolvedAt" > "createdAt" + (
-            CASE "priority"::text
-              WHEN 'CRITICAL' THEN 4
-              WHEN 'HIGH' THEN 12
-              WHEN 'MEDIUM' THEN 24
-              WHEN 'LOW' THEN 72
-              ELSE 24
-            END * interval '1 hour'
-          )
-      `,
-      this.prisma.$queryRaw<{ count: number }[]>`
-        SELECT COUNT(*)::int as count 
-        FROM "Ticket" 
-        WHERE "status" NOT IN ('RESOLVED', 'CLOSED')
-          AND NOW() > "createdAt" + (
-            CASE "priority"::text
-              WHEN 'CRITICAL' THEN 4
-              WHEN 'HIGH' THEN 12
-              WHEN 'MEDIUM' THEN 24
-              WHEN 'LOW' THEN 72
-              ELSE 24
-            END * interval '1 hour'
-          )
-      `,
-    ]);
-
-    const metSlaCount = Number(metSlaCountRaw[0]?.count || 0);
-    const breachedResolvedCount = Number(
-      breachedResolvedCountRaw[0]?.count || 0,
-    );
-    const breachedOpenCount = Number(breachedOpenCountRaw[0]?.count || 0);
-    const breachedCount = breachedResolvedCount + breachedOpenCount;
-    const openCount = openTicketsCount;
-
-    const slaSuccessRate =
-      resolvedTicketsCount > 0
-        ? Math.round((metSlaCount / resolvedTicketsCount) * 100)
-        : 100;
-
-    // Asset Health Score Calculation
-    let healthScore = 100;
-
-    if (totalAssets > 0) {
-      const offlineRatio = (totalAssets - activeAssets) / totalAssets;
-      healthScore -= Math.round(offlineRatio * 30);
-    }
-
-    if (totalSources > 0) {
-      const failedRatio = connectionFailedSources / totalSources;
-      healthScore -= Math.round(failedRatio * 40);
-    }
-
-    const eolAssetsCount = await this.prisma.patchInfo.count({
-      where: {
-        eolDate: {
-          lt: new Date(),
-        },
-      },
-    });
-
-    if (totalAssets > 0) {
-      const eolRatio = eolAssetsCount / totalAssets;
-      healthScore -= Math.round(eolRatio * 30);
-    }
-
-    const assetHealthScore = Math.max(0, Math.min(100, healthScore));
 
     return {
       assets: {
         total: totalAssets,
         active: activeAssets,
-        inactive: Math.max(0, totalAssets - activeAssets),
-        breakdown: assetBreakdown,
+        nonActive: Math.max(0, totalAssets - activeAssets),
+        breakdown: assetTypeGroups.map((group) => ({
+          label: group.type,
+          count: group._count._all,
+        })),
+        eolCount: eolAssets,
       },
       vm: {
         sources: totalSources,
@@ -226,18 +108,6 @@ export class DashboardService {
         total: totalUsers,
         admins: adminUsers,
         nonAdmins: Math.max(0, totalUsers - adminUsers),
-      },
-      tickets: {
-        total: totalTicketsCount,
-        open: openCount,
-        resolved: resolvedTicketsCount,
-        metSla: metSlaCount,
-        breached: breachedCount,
-        slaSuccessRate,
-      },
-      assetHealth: {
-        score: assetHealthScore,
-        eolCount: eolAssetsCount,
       },
     };
   }

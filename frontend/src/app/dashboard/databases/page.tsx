@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2, 
   Database, FlaskConical, LoaderCircle, Pencil, Plus, 
@@ -48,6 +48,7 @@ import {
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { fadeInUp } from '@/lib/animations';
 import { type DatabaseEnvironment, type DatabaseInventoryDetail, type DatabaseInventoryItem } from '@/lib/database-inventory';
 import api from '@/services/api';
 import { toast } from 'sonner';
@@ -67,8 +68,10 @@ const ENVIRONMENT_TABS: Array<{
 
 export default function DbPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setHeader } = usePageHeader();
-  const [activeEnvironment, setActiveEnvironment] = useState<'ALL' | DatabaseEnvironment>('ALL');
+  const initialEnvironment = searchParams.get('environment') as DatabaseEnvironment | null;
+  const [activeEnvironment, setActiveEnvironment] = useState<'ALL' | DatabaseEnvironment>(initialEnvironment && ['PROD', 'TEST', 'DEV'].includes(initialEnvironment) ? initialEnvironment : 'ALL');
   
   const { data: databases = [], isLoading, refetch } = useQuery({
     queryKey: ['databases'],
@@ -90,6 +93,14 @@ export default function DbPage() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set('q', searchTerm);
+    if (activeEnvironment !== 'ALL') params.set('environment', activeEnvironment);
+    router.replace(params.size ? `/dashboard/databases?${params.toString()}` : '/dashboard/databases', { scroll: false });
+  }, [activeEnvironment, router, searchTerm]);
 
   useEffect(() => {
     setHeader({
@@ -102,9 +113,38 @@ export default function DbPage() {
   }, [setHeader]);
 
   const filteredData = useMemo(() => {
-    if (activeEnvironment === 'ALL') return databases;
-    return databases.filter(d => d.environment === activeEnvironment);
-  }, [databases, activeEnvironment]);
+    let result = databases;
+    if (activeEnvironment !== 'ALL') {
+      result = databases.filter(d => d.environment === activeEnvironment);
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(d => {
+        const matchesName = d.name?.toLowerCase().includes(term);
+        const matchesEngine = d.engine?.toLowerCase().includes(term);
+        const matchesVersion = d.version?.toLowerCase().includes(term);
+        const matchesEnv = d.environment?.toLowerCase().includes(term);
+        const matchesHost = d.host?.toLowerCase().includes(term);
+        const matchesIp = d.ipAddress?.toLowerCase().includes(term);
+        const matchesPort = d.port?.toString().includes(term);
+        const matchesStatus = d.status?.toLowerCase().includes(term);
+
+        return (
+          matchesName ||
+          matchesEngine ||
+          matchesVersion ||
+          matchesEnv ||
+          matchesHost ||
+          matchesIp ||
+          matchesPort ||
+          matchesStatus
+        );
+      });
+    }
+
+    return result;
+  }, [databases, activeEnvironment, searchTerm]);
 
   const countsByEnvironment = useMemo<Record<'ALL' | DatabaseEnvironment, number>>(() => ({
     ALL: databases.length,
@@ -149,7 +189,7 @@ export default function DbPage() {
     {
       accessorKey: 'host',
       header: ({ column }) => <SortableHeader column={column} title="Host" />,
-      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
+      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70 tabular-nums">{(getValue() as string) || '--'}</span>
     },
     {
       id: 'connection',
@@ -157,7 +197,7 @@ export default function DbPage() {
       cell: ({ row }) => {
         const ip = row.original.ipAddress || '--';
         const port = row.original.port;
-        return <span className="font-mono text-[11px] text-muted-foreground">{port ? `${ip}:${port}` : ip}</span>;
+        return <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{port ? `${ip}:${port}` : ip}</span>;
       }
     },
     {
@@ -176,7 +216,7 @@ export default function DbPage() {
     {
       accessorKey: 'accountsCount',
       header: "Accounts",
-      cell: ({ getValue }) => <span className="text-[12px] font-semibold pl-2">{getValue() as number}</span>
+      cell: ({ getValue }) => <span className="text-[12px] font-semibold pl-2 tabular-nums">{getValue() as number}</span>
     },
     {
       id: 'actions',
@@ -316,17 +356,18 @@ export default function DbPage() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
       className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2 text-balance">
             <Database className="h-3.5 w-3.5" />
             Relational Database Inventory
           </h2>
-          <p className="text-xs text-muted-foreground">Monitor and manage all database instances</p>
+          <p className="text-xs text-muted-foreground text-pretty">Monitor and manage all database instances</p>
         </div>
         <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
@@ -367,9 +408,9 @@ export default function DbPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search name, host, IP..."
-                value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-                onChange={(e) => table.getColumn('name')?.setFilterValue(e.target.value)}
+                placeholder="Search databases..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
               />
             </div>

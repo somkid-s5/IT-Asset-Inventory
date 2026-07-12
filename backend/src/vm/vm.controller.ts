@@ -82,6 +82,11 @@ export class VmController {
     return this.vmService.findDiscoveries();
   }
 
+  @Get('data-quality/summary')
+  getDataQualitySummary() {
+    return this.vmService.getDataQualitySummary();
+  }
+
   @Get('discoveries/:id')
   findDiscovery(@Param('id') id: string) {
     return this.vmService.findDiscovery(id);

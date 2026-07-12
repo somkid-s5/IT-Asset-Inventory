@@ -38,6 +38,7 @@ describe('AuthService', () => {
     tokenBlocklist: {
       upsert: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const mockJwt = {
@@ -46,6 +47,13 @@ describe('AuthService', () => {
   };
 
   beforeEach(async () => {
+    mockPrisma.$transaction.mockImplementation(async (callback) =>
+      callback({
+        user: mockPrisma.user,
+        auditLog: mockPrisma.auditLog,
+        $executeRawUnsafe: jest.fn(),
+      }),
+    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,

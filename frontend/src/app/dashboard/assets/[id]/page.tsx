@@ -139,7 +139,6 @@ interface Asset {
   children?: { id: string; name: string; type: AssetType }[];
   notes?: AssetNote[];
   attachments?: AssetAttachment[];
-  tickets?: any[];
 }
 
 interface AccessRow {
@@ -1535,81 +1534,6 @@ function NotesSection({
   );
 }
 
-interface TicketSummary {
-  id: string;
-  ticketNo: string;
-  title: string;
-  status: string;
-  createdAt: string;
-  assignee?: { displayName: string } | null;
-  client: { name: string };
-}
-
-// ─── Ticket History Section ────────────────────────────────────────────────
-function TicketHistorySection({ tickets }: { tickets: TicketSummary[] }) {
-  const router = useRouter();
-
-  return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-2 px-1">
-        <History className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-bold tracking-tight text-foreground">
-          Maintenance & Support History
-        </h2>
-        {tickets.length > 0 && (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
-            {tickets.length}
-          </span>
-        )}
-      </div>
-
-      <div className="glass-card divide-y divide-border/40 overflow-hidden">
-        {tickets.length === 0 ? (
-          <div className="p-8 text-center text-xs text-muted-foreground italic">
-            No maintenance tickets recorded for this asset
-          </div>
-        ) : (
-          tickets.map((ticket) => (
-            <div
-              key={ticket.id}
-              className="group p-4 hover:bg-muted/30 transition-colors cursor-pointer"
-              onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold text-primary">
-                    {ticket.ticketNo}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="text-[9px] h-4.5 font-bold uppercase"
-                  >
-                    {ticket.status.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-                <span className="text-[10px] text-muted-foreground">
-                  {new Date(ticket.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                {ticket.title}
-              </h4>
-              <div className="flex items-center gap-4 mt-2 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <User className="h-3 w-3" />{" "}
-                  {ticket.assignee?.displayName || "Unassigned"}
-                </span>
-                <span>•</span>
-                <span>Client: {ticket.client.name}</span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
-
 function AssetChangelogSection({ assetId }: { assetId: string }) {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["asset-logs", assetId],
@@ -1841,7 +1765,7 @@ export default function AssetDetailsPage() {
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />{" "}
-          {returnTo ? "Back to Ticket" : "Back to Assets"}
+          Back to Assets
         </button>
       </div>
 
@@ -2328,7 +2252,6 @@ export default function AssetDetailsPage() {
         {/* Sidebar Components (Notes, Timeline) */}
         <div className="space-y-6">
           <NotesSection assetId={assetId} initialNotes={asset.notes ?? []} />
-          <TicketHistorySection tickets={asset.tickets ?? []} />
           <AssetChangelogSection assetId={assetId} />
         </div>
       </div>

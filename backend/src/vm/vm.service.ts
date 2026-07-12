@@ -40,13 +40,6 @@ type VmSourceWithCounts = Prisma.VmVCenterSourceGetPayload<{
 const VM_INVENTORY_INCLUDE = {
   source: true,
   guestAccounts: true,
-  tickets: {
-    include: {
-      client: { select: { name: true } },
-      assignee: { select: { displayName: true } },
-    },
-    orderBy: { createdAt: 'desc' as Prisma.SortOrder },
-  },
 };
 
 type VmInventoryWithRelations = Prisma.VmInventoryGetPayload<{
@@ -541,25 +534,37 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             },
           ]
         : [],
-      tickets: (inventory.tickets ?? []).map((ticket) => ({
-        id: ticket.id,
-        ticketNo: ticket.ticketNo,
-        title: ticket.title,
-        status: ticket.status,
-        priority: ticket.priority,
-        clientName: ticket.client?.name,
-        assigneeName: ticket.assignee?.displayName,
-        createdAt: ticket.createdAt,
-      })),
     };
   }
 
   private normalizeEndpoint(endpoint: string) {
     const trimmed = endpoint.trim();
-    const withProtocol = /^https?:\/\//i.test(trimmed)
+    const withProtocol = /^https:\/\//i.test(trimmed)
       ? trimmed
-      : `https://${trimmed}`;
+      : `https://${trimmed.replace(/^http:\/\//i, '')}`;
     const url = new URL(withProtocol);
+    if (url.protocol !== 'https:' || url.username || url.password) {
+      throw new BadRequestException(
+        'vCenter endpoint must be an HTTPS URL without embedded credentials.',
+      );
+    }
+    const allowedHosts = (process.env.VCENTER_ALLOWED_HOSTS ?? '')
+      .split(',')
+      .map((host) => host.trim().toLowerCase())
+      .filter(Boolean);
+    if (process.env.NODE_ENV === 'production' && allowedHosts.length === 0) {
+      throw new BadRequestException(
+        'VCENTER_ALLOWED_HOSTS must be configured in production.',
+      );
+    }
+    if (
+      allowedHosts.length > 0 &&
+      !allowedHosts.includes(url.hostname.toLowerCase())
+    ) {
+      throw new BadRequestException(
+        'vCenter endpoint host is not on the approved allow-list.',
+      );
+    }
     if (!url.pathname || url.pathname === '/') {
       url.pathname = '/ui';
     }
@@ -672,7 +677,6 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           path: `${url.pathname}${url.search}`,
           method: options.method ?? 'GET',
           headers: options.headers,
-          rejectUnauthorized: false,
         },
         (response) => {
           const chunks: Buffer[] = [];
@@ -1889,6 +1893,59 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  async getDataQualitySummary() {
+    const [discoveries, inventory] = await Promise.all([
+      this.prisma.vmDiscovery.findMany({
+        select: {
+          id: true,
+          name: true,
+          state: true,
+          completeness: true,
+          missingFields: true,
+        },
+        where: { state: { not: VmDiscoveryState.ARCHIVED } },
+      }),
+      this.prisma.vmInventory.findMany({
+        select: {
+          id: true,
+          name: true,
+          syncState: true,
+          lifecycleState: true,
+          owner: true,
+          businessUnit: true,
+          serviceRole: true,
+          criticality: true,
+        },
+      }),
+    ]);
+    const discoveryIssues = discoveries.flatMap((vm) => {
+      const issues = [...vm.missingFields];
+      if (vm.state === VmDiscoveryState.NEEDS_CONTEXT)
+        issues.unshift('business context');
+      return issues.length
+        ? [{ id: vm.id, name: vm.name, kind: 'discovery', issues }]
+        : [];
+    });
+    const inventoryIssues = inventory.flatMap((vm) => {
+      const issues = [
+        !vm.owner && 'owner',
+        !vm.businessUnit && 'business unit',
+        !vm.serviceRole && 'service role',
+        !vm.criticality && 'criticality',
+        vm.syncState === 'Missing from source' && 'missing from source',
+      ].filter(Boolean) as string[];
+      return issues.length
+        ? [{ id: vm.id, name: vm.name, kind: 'inventory', issues }]
+        : [];
+    });
+    const issues = [...discoveryIssues, ...inventoryIssues];
+    return {
+      totalVms: discoveries.length + inventory.length,
+      issueCount: issues.length,
+      issues,
+    };
+  }
+
   async findInventoryById(id: string) {
     this.ensureSeedData();
     const inventory = await this.prisma.vmInventory.findUnique({
@@ -1896,13 +1953,6 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       include: {
         source: true,
         guestAccounts: true,
-        tickets: {
-          include: {
-            client: { select: { name: true } },
-            assignee: { select: { displayName: true } },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
       },
     });
 

@@ -1,4 +1,4 @@
-import { PrismaClient, Role, AssetType, AssetStatus, TicketStatus, TicketPriority } from '@prisma/client';
+import { PrismaClient, Role, AssetType, AssetStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -19,17 +19,18 @@ function encryptPasswordForSeed(password: string, hexKey: string): string {
 }
 
 async function main() {
-    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'AssetOpsAdmin2026!';
-    const defaultEditorPassword = process.env.DEFAULT_EDITOR_PASSWORD || 'AssetOpsEditor2026!';
+    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
+    const defaultEditorPassword = process.env.DEFAULT_EDITOR_PASSWORD;
     const encryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
+
+    if (!defaultAdminPassword || !defaultEditorPassword) {
+        throw new Error('DEFAULT_ADMIN_PASSWORD and DEFAULT_EDITOR_PASSWORD must be set before seeding.');
+    }
 
     console.log('--- Database Seeding Started ---');
     
     console.log('Step 1: Clearing existing data...');
     // Delete in reverse dependency order
-    await prisma.ticketComment.deleteMany();
-    await prisma.ticket.deleteMany();
-    await prisma.client.deleteMany();
     await prisma.knowledgeDocument.deleteMany();
     await prisma.knowledgeCategory.deleteMany();
     await prisma.auditLog.deleteMany();
@@ -76,11 +77,7 @@ async function main() {
     });
     console.log(`✅ Users created (admin, soc_analyst).`);
 
-    console.log('Step 3: Creating sample clients and categories...');
-    const client = await prisma.client.create({
-        data: { name: 'Internal IT' }
-    });
-
+    console.log('Step 3: Creating sample categories...');
     const category = await prisma.knowledgeCategory.create({
         data: { name: 'General', icon: 'Book' }
     });
@@ -128,19 +125,7 @@ async function main() {
     }
     console.log(`✅ Sample assets created.`);
 
-    console.log('Step 5: Creating sample ticket and KB document...');
-    await prisma.ticket.create({
-        data: {
-            ticketNo: 'TKT-2026-0001',
-            title: 'Initial System Audit',
-            description: 'Perform full audit of production assets.',
-            clientId: client.id,
-            creatorId: adminUser.id,
-            status: TicketStatus.OPEN,
-            priority: TicketPriority.MEDIUM
-        }
-    });
-
+    console.log('Step 5: Creating sample KB document...');
     await prisma.knowledgeDocument.create({
         data: {
             title: 'Getting Started',
@@ -149,7 +134,7 @@ async function main() {
             authorId: adminUser.id
         }
     });
-    console.log(`✅ Sample ticket and KB document created.`);
+    console.log(`✅ Sample KB document created.`);
 
     if (encryptionKey && Buffer.from(encryptionKey, 'hex').length === 32) {
         console.log('Step 6: Seeding credentials...');

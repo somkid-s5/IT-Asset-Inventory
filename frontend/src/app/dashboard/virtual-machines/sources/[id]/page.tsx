@@ -72,7 +72,7 @@ export default function VmSourceDetailPage() {
     return (
       <div className="space-y-4 pb-8">
         <button
-          onClick={() => router.push('/dashboard/vm/sources')}
+          onClick={() => router.push('/dashboard/virtual-machines/sources')}
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -125,7 +125,7 @@ export default function VmSourceDetailPage() {
   return (
     <div className="space-y-4 pb-8">
       <button
-        onClick={() => router.push('/dashboard/vm/sources')}
+        onClick={() => router.push('/dashboard/virtual-machines/sources')}
         className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -197,7 +197,7 @@ export default function VmSourceDetailPage() {
               try {
                 const inventory = await promoteVmDiscovery(draft.id, buildPromotePayload());
                 toast.success('VM promoted to active inventory');
-                router.push(`/dashboard/vm/${inventory.id}`);
+                router.push(`/dashboard/virtual-machines/${inventory.id}`);
               } catch {
                 toast.error('Failed to promote VM');
               }
@@ -463,7 +463,7 @@ export default function VmSourceDetailPage() {
                     await archiveVmDiscovery(draft.id);
                     setArchiveOpen(false);
                     toast.success('Discovery item archived');
-                    router.push('/dashboard/vm/sources');
+                    router.push('/dashboard/virtual-machines/sources');
                   } catch {
                     toast.error('Failed to archive discovery item');
                   }

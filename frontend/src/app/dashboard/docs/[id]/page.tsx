@@ -18,6 +18,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { motion } from 'framer-motion';
+import { fadeInUp } from '@/lib/animations';
 
 export default function ArticlePage() {
   const { id } = useParams();
@@ -63,7 +65,12 @@ export default function ArticlePage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <motion.div
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
+      className="flex h-full flex-col"
+    >
       {/* Document Navigation Bar */}
       <div className="border-b border-border/40 bg-card/20 backdrop-blur-md px-8 py-3 flex items-center justify-between sticky top-0 z-10">
         <Button 
@@ -187,6 +194,6 @@ export default function ArticlePage() {
           </div>
         </aside>
       </div>
-    </div>
+    </motion.div>
   );
 }

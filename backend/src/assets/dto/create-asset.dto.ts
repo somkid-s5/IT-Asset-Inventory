@@ -1,6 +1,8 @@
 import { AssetStatus, AssetType } from '@prisma/client';
 import {
   IsArray,
+  IsIP,
+  MaxLength,
   IsEnum,
   IsNotEmpty,
   IsObject,
@@ -12,6 +14,8 @@ import { Type } from 'class-transformer';
 
 class IpAllocationDto {
   @IsString()
+  @IsIP(undefined, { message: 'address must be a valid IPv4 or IPv6 address.' })
+  @IsNotEmpty()
   address: string;
 
   @IsOptional()
@@ -59,6 +63,7 @@ class AssetCredentialDto {
 export class CreateAssetDto {
   @IsNotEmpty()
   @IsString()
+  @MaxLength(200)
   name: string;
 
   @IsOptional()

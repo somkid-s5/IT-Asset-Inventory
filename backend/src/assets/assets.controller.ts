@@ -17,6 +17,8 @@ import { Roles } from '../auth/roles.decorator';
 import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
+import { BulkImportAssetsDto } from './dto/bulk-import-assets.dto';
+import { BulkUpdateAssetsDto } from './dto/bulk-update-assets.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/assets')
@@ -32,12 +34,45 @@ export class AssetsController {
     return this.assetsService.create(createAssetDto, req.user.id);
   }
 
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Post('bulk-import')
+  bulkImport(
+    @Body() dto: BulkImportAssetsDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.assetsService.bulkImport(dto.rows, req.user.id);
+  }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Patch('bulk-update')
+  bulkUpdate(
+    @Body() dto: BulkUpdateAssetsDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.assetsService.bulkUpdate(dto, req.user.id);
+  }
+
   @Get()
-  async findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+    @Query('type') type?: string,
+    @Query('status') status?: string,
+    @Query('environment') environment?: string,
+    @Query('owner') owner?: string,
+    @Query('location') location?: string,
+  ) {
     return this.assetsService.findAll(
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 100,
+      { q, type, status, environment, owner, location },
     );
+  }
+
+  @Get('data-quality/summary')
+  getDataQualitySummary() {
+    return this.assetsService.getDataQualitySummary();
   }
 
   @Get(':id')

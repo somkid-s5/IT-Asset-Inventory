@@ -122,7 +122,6 @@ export interface VmInventoryDetail extends VmInventoryItem {
   notes: string;
   sourceHistory: VmSourceHistoryItem[];
   guestAccounts: VmGuestAccount[];
-  tickets: any[];
 }
 
 export const VM_ENVIRONMENT_FILTERS: Array<{ label: string; value: 'ALL' | VmInventoryEnvironment }> = [

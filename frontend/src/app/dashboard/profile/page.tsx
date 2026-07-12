@@ -11,6 +11,8 @@ import api from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { motion } from 'framer-motion';
+import { fadeInUp } from '@/lib/animations';
 
 function createClientAvatarSeed() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -165,7 +167,12 @@ export default function ProfilePage() {
   }, [setHeader]);
 
   return (
-    <div className="workspace-page">
+    <motion.div
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
+      className="workspace-page"
+    >
       <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-2.5">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-2">
@@ -326,6 +333,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </section>
-    </div>
+    </motion.div>
   );
 }

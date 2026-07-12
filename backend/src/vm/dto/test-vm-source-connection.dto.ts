@@ -1,8 +1,9 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class TestVmSourceConnectionDto {
   @IsString()
   @IsNotEmpty()
+  @IsUrl({ protocols: ['https'], require_protocol: false })
   endpoint: string;
 
   @IsOptional()

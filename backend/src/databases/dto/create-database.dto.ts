@@ -5,6 +5,8 @@ import {
   IsEnum,
   IsNotEmpty,
   IsOptional,
+  IsIP,
+  IsPort,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -53,10 +55,12 @@ export class CreateDatabaseDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsIP()
   ipAddress: string;
 
   @IsOptional()
   @IsString()
+  @IsPort()
   port?: string;
 
   @IsOptional()

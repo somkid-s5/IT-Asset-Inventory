@@ -28,6 +28,8 @@ import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { CategoryManager } from '@/components/CategoryManager';
+import { motion } from 'framer-motion';
+import { fadeInUp } from '@/lib/animations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -117,13 +119,56 @@ export default function DocsPage() {
   }).length;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-20 px-4 sm:px-6">
-      {/* Header with Search and Actions */}
+    <motion.div
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 max-w-7xl mx-auto pb-20 px-4 sm:px-6"
+    >
+      {/* Hero Banner Section (Moved to Top) */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#05160e] to-[#0e3b26] text-white p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between border-b-4 border-primary shadow-xl">
+        <div className="relative z-10 space-y-4 max-w-xl text-center md:text-left">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-display">
+            SysOps <span className="text-primary">Knowledge Base</span>
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground/90 leading-relaxed font-medium">
+            Access technical documentation, user manuals, and security standards for enterprise infrastructure in one place.
+          </p>
+          {categories.length === 0 && user?.role === 'ADMIN' && (
+            <div className="flex flex-wrap gap-3 pt-2 justify-center md:justify-start">
+              <Button 
+                variant="outline" 
+                onClick={async () => {
+                  await kbService.initializeCategories();
+                  window.location.reload();
+                }} 
+                className="border-white/20 text-white hover:bg-white/10 rounded-full"
+              >
+                Initialize Standard Library
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Hero Stats */}
+        <div className="relative z-10 grid grid-cols-2 gap-4 mt-6 md:mt-0 shrink-0 w-full md:w-auto">
+          <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-white/10 text-center px-8">
+            <div className="text-primary text-3xl font-bold font-display">{catsLoading ? '...' : totalDocs}</div>
+            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Total Documents</div>
+          </div>
+          <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-white/10 text-center px-8">
+            <div className="text-primary text-3xl font-bold font-display">{catsLoading ? '...' : updatedThisWeek}</div>
+            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Updated This Week</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Header with Search and Actions (Moved under Hero) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search knowledge base, manuals, or topics..." 
+          <Input
+            placeholder="Search knowledge base, manuals, or topics..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 h-11 rounded-xl bg-card border-border/60"
@@ -139,53 +184,6 @@ export default function DocsPage() {
               </Button>
             </>
           )}
-        </div>
-      </div>
-
-      {/* Hero Banner Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#05160e] to-[#0e3b26] text-white p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between border-b-4 border-primary shadow-xl">
-        <div className="relative z-10 space-y-4 max-w-xl text-center md:text-left">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-display">
-            SysOps <span className="text-primary">Knowledge Base</span>
-          </h2>
-          <p className="text-sm sm:text-base text-muted-foreground/90 leading-relaxed font-medium">
-            Access technical documentation, user manuals, and security standards for enterprise infrastructure in one place.
-          </p>
-          <div className="flex flex-wrap gap-3 pt-2 justify-center md:justify-start">
-            {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
-              <Button 
-                onClick={() => router.push('/dashboard/docs/new')} 
-                className="bg-primary text-primary-foreground rounded-full hover:bg-primary/90 font-bold px-6"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Document
-              </Button>
-            )}
-            {categories.length === 0 && user?.role === 'ADMIN' && (
-              <Button 
-                variant="outline" 
-                onClick={async () => {
-                  await kbService.initializeCategories();
-                  window.location.reload();
-                }} 
-                className="border-white/20 text-white hover:bg-white/10 rounded-full"
-              >
-                Initialize Standard Library
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Hero Stats */}
-        <div className="relative z-10 grid grid-cols-2 gap-4 mt-6 md:mt-0 shrink-0 w-full md:w-auto">
-          <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-white/10 text-center px-8">
-            <div className="text-primary text-3xl font-bold font-display">{catsLoading ? '...' : totalDocs}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Total Documents</div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-white/10 text-center px-8">
-            <div className="text-primary text-3xl font-bold font-display">{catsLoading ? '...' : updatedThisWeek}</div>
-            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Updated This Week</div>
-          </div>
         </div>
       </div>
 
@@ -252,47 +250,6 @@ export default function DocsPage() {
           })
         )}
       </div>
-
-      {/* Recently Updated Section */}
-      {!catsLoading && categories.length > 0 && (
-        <section className="space-y-6 pt-10">
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" /> {search ? 'Search Results' : 'Recently Updated Documents'}
-          </h2>
-          <div className="grid grid-cols-1 gap-3">
-             {recentLoading ? (
-               Array.from({ length: 3 }).map((_, i) => (
-                 <Skeleton key={i} className="h-20 w-full rounded-lg" />
-               ))
-             ) : filteredRecentArticles.length === 0 ? (
-               <p className="text-xs text-muted-foreground italic px-2 uppercase tracking-widest opacity-40 py-10 text-center border-2 border-dashed rounded-lg border-border/40">
-                 {search ? `No documents found matching "${search}"` : 'No recently updated documents'}
-               </p>
-             ) : (
-               filteredRecentArticles.map((art) => (
-                 <div 
-                   key={art.id}
-                   onClick={() => router.push(`/dashboard/docs/${art.id}`)}
-                   className="p-5 rounded-lg border bg-card/50 flex items-center justify-between group hover:bg-primary/[0.02] cursor-pointer transition-colors border-border/40"
-                 >
-                     <div className="flex items-center gap-4 overflow-hidden">
-                       <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                         <FileText className="h-5 w-5 opacity-40 group-hover:text-primary group-hover:opacity-100 transition-all" />
-                       </div>
-                       <div className="overflow-hidden">
-                         <h4 className="text-sm font-bold group-hover:text-primary transition-colors truncate">{art.title}</h4>
-                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
-                           {art.category.name} • Updated {formatDistanceToNow(new Date(art.updatedAt), { addSuffix: true })}
-                         </p>
-                       </div>
-                     </div>
-                     <ChevronRight className="h-4 w-4 opacity-20 group-hover:opacity-100 transition-opacity" />
-                 </div>
-               ))
-             )}
-          </div>
-        </section>
-      )}
-    </div>
+    </motion.div>
   );
 }

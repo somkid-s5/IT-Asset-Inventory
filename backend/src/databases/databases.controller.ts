@@ -36,6 +36,11 @@ export class DatabasesController {
     return this.databasesService.findAll();
   }
 
+  @Get('data-quality/summary')
+  getDataQualitySummary() {
+    return this.databasesService.getDataQualitySummary();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.databasesService.findOne(id);

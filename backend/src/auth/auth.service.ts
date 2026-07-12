@@ -25,44 +25,40 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const { username, displayName, password } = registerDto;
 
-    const existingUser = await this.prisma.user.findUnique({
-      where: { username },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Username already exists');
-    }
-
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
+    const user = await this.prisma.$transaction(async (tx) => {
+      // Serializes the bootstrap decision so two first registrations cannot
+      // both receive ADMIN. The key is a fixed application-level lock ID.
+      await tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(812734)');
+      const existingUser = await tx.user.findUnique({ where: { username } });
+      if (existingUser) throw new ConflictException('Username already exists');
 
-    // Provide ADMIN role to the first user created, others get viewer or default.
-    const userCount = await this.prisma.user.count();
-    const role = userCount === 0 ? 'ADMIN' : 'VIEWER';
-
-    const user = await this.prisma.user.create({
-      data: {
-        username,
-        displayName,
-        avatarSeed: createAvatarSeed(),
-        email: null,
-        passwordHash,
-        role,
-      },
-    });
-
-    await this.prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: AuditAction.CREATE_USER,
-        targetId: user.id,
-        details: JSON.stringify({
-          username: user.username,
-          displayName: user.displayName,
-          role: user.role,
-          source: 'self-register',
-        }),
-      },
+      const userCount = await tx.user.count();
+      const created = await tx.user.create({
+        data: {
+          username,
+          displayName,
+          avatarSeed: createAvatarSeed(),
+          email: null,
+          passwordHash,
+          role: userCount === 0 ? 'ADMIN' : 'VIEWER',
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          userId: created.id,
+          action: AuditAction.CREATE_USER,
+          targetId: created.id,
+          details: JSON.stringify({
+            username: created.username,
+            displayName: created.displayName,
+            role: created.role,
+            source: 'self-register',
+          }),
+        },
+      });
+      return created;
     });
 
     return {

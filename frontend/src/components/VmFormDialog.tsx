@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState, useCallback } from 'react';
 import { Monitor, Plus, Trash2, Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -154,6 +155,11 @@ export function VmFormDialog({
 }: VmFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(() => buildFormData(vmToEdit, discoveryVm));
+  const { confirmDiscard } = useUnsavedChanges(open, formData);
+  const requestClose = () => {
+    if (loading || !confirmDiscard()) return;
+    onOpenChange(false);
+  };
   const [accounts, setAccounts] = useState<VmAccountFormValue[]>(() => buildAccounts(vmToEdit));
   const [lockedFields, setLockedFields] = useState<string[]>(() => {
     return vmToEdit?.managedFields || [];
@@ -235,10 +241,10 @@ export function VmFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => nextOpen ? onOpenChange(true) : requestClose()}>
       <DialogContent className="max-h-[88vh] overflow-y-auto border-border bg-card sm:max-w-5xl">
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
             <Monitor className="h-5 w-5 text-primary" />
             {vmToEdit ? 'Edit Virtual Machine' : discoveryVm && submitMode === 'promote' ? 'Complete VM Setup' : discoveryVm ? 'VM Details' : 'Create New VM'}
           </DialogTitle>
@@ -572,7 +578,7 @@ export function VmFormDialog({
                   id="vm-description"
                   value={formData.description}
                   onChange={(event) => setFormData((current) => ({ ...current, description: event.target.value }))}
-                  className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-4 py-3 text-sm text-foreground shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)] outline-none transition-[color,box-shadow,border-color,background-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35"
+                  className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-4 py-3 text-sm text-foreground shadow-sm outline-none transition-[color,box-shadow,border-color,background-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35"
                   placeholder="Describe the business purpose of this VM"
                 />
               </div>
@@ -582,7 +588,7 @@ export function VmFormDialog({
                   id="vm-notes"
                   value={formData.notes}
                   onChange={(event) => setFormData((current) => ({ ...current, notes: event.target.value }))}
-                  className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-4 py-3 text-sm text-foreground shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)] outline-none transition-[color,box-shadow,border-color,background-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35"
+                  className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-4 py-3 text-sm text-foreground shadow-sm outline-none transition-[color,box-shadow,border-color,background-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35"
                   placeholder="Additional operational notes"
                 />
               </div>
@@ -667,7 +673,7 @@ export function VmFormDialog({
           </section>
 
           <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button type="button" variant="outline" onClick={requestClose} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

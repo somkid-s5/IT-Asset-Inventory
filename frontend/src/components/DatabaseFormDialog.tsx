@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Database, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import api from '@/services/api';
 import { toast } from 'sonner';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,6 +63,11 @@ const DATABASE_ENVIRONMENT_OPTIONS = ['PROD', 'UAT', 'TEST', 'DEV', 'DR'];
 export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSuccess }: DatabaseFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(DEFAULT_FORM);
+  const { confirmDiscard } = useUnsavedChanges(open, formData);
+  const requestClose = () => {
+    if (loading || !confirmDiscard()) return;
+    onOpenChange(false);
+  };
   const [accounts, setAccounts] = useState<DatabaseAccountFormValue[]>([{ ...EMPTY_ACCOUNT }]);
   const [linkedApps, setLinkedApps] = useState<DatabaseLinkedAppFormValue[]>([{ ...EMPTY_LINKED_APP }]);
   const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
@@ -172,10 +178,10 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => nextOpen ? onOpenChange(true) : requestClose()}>
       <DialogContent className="max-h-[88vh] overflow-y-auto bg-card border-border sm:max-w-4xl rounded-xl shadow-2xl p-0">
         <DialogHeader className="border-b border-border px-6 py-5 bg-muted">
-          <DialogTitle className="text-xl font-bold flex items-center gap-3 font-display">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-3 font-display">
             <Database className="h-5 w-5 text-primary" />
             {databaseToEdit ? 'Update Database Details' : 'Register New Database'}
           </DialogTitle>
@@ -491,7 +497,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button type="button" variant="outline" onClick={requestClose} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

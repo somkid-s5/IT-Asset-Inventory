@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Database, Eye, EyeOff, FolderTree, HardDrive, Plus, Shield, Trash2, UserRound } from 'lucide-react';
 import api from '@/services/api';
 import { toast } from 'sonner';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -183,6 +184,11 @@ export function AssetFormDialog({
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const { confirmDiscard } = useUnsavedChanges(open, { formData, accessPoints, metadataPairs, assetMode });
+  const requestClose = () => {
+    if (loading || !confirmDiscard()) return;
+    onOpenChange(false);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -571,7 +577,7 @@ export function AssetFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => nextOpen ? onOpenChange(true) : requestClose()}>
       <DialogContent
         key={assetToEdit?.id ?? 'new-asset'}
         className="max-h-[92vh] overflow-y-auto bg-card border-border p-0 sm:max-w-4xl rounded-xl shadow-2xl"
@@ -594,8 +600,8 @@ export function AssetFormDialog({
               <p className="workspace-subtle">Asset Properties</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-1.5 md:col-span-2">
                 <Label required>Asset Name / Hostname</Label>
                 <Input
                   required
@@ -1051,7 +1057,7 @@ export function AssetFormDialog({
           </section>
 
           <div className="flex flex-col-reverse gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button type="button" variant="outline" onClick={requestClose} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
