@@ -26,11 +26,6 @@ import { UploadsModule } from './uploads/uploads.module';
         ttl: 60000,
         limit: 300,
       },
-      {
-        name: 'login',
-        ttl: 60000,
-        limit: 10,
-      },
     ]),
     PrismaModule,
     AuthModule,
