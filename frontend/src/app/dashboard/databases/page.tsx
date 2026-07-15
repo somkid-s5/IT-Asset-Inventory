@@ -3,12 +3,13 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-  ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2, 
-  Database, FlaskConical, LoaderCircle, Pencil, Plus, 
-  Search, ShieldCheck, Trash2, Columns, ChevronLeft, 
+import {
+  ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2,
+  Database, FlaskConical, LoaderCircle, Pencil, Plus,
+  Search, ShieldCheck, Trash2, Columns, ChevronLeft,
   ChevronRight, MoreHorizontal, Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,11 +27,11 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { DatabaseFormDialog } from '@/components/LazyLoadedDialogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  DropdownMenu, DropdownMenuCheckboxItem, 
-  DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu, DropdownMenuCheckboxItem,
+  DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -67,12 +68,18 @@ const ENVIRONMENT_TABS: Array<{
   ];
 
 export default function DbPage() {
+  const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setHeader } = usePageHeader();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const initialEnvironment = searchParams.get('environment') as DatabaseEnvironment | null;
   const [activeEnvironment, setActiveEnvironment] = useState<'ALL' | DatabaseEnvironment>(initialEnvironment && ['PROD', 'TEST', 'DEV'].includes(initialEnvironment) ? initialEnvironment : 'ALL');
-  
+
   const { data: databases = [], isLoading, refetch } = useQuery({
     queryKey: ['databases'],
     queryFn: async () => {
@@ -222,19 +229,23 @@ export default function DbPage() {
       id: 'actions',
       cell: ({ row }) => {
         const db = row.original;
+        const isWritable = mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR');
         return (
           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
-              onClick={() => handleEdit(db.id)}
-            >
-              {loadingEditId === db.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
-            </Button>
+            {isWritable && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
+                onClick={() => handleEdit(db.id)}
+                aria-label="Edit Database"
+              >
+                {loadingEditId === db.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="Database Actions">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -242,20 +253,24 @@ export default function DbPage() {
                 <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(`/dashboard/databases/${db.id}`)}>
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                   className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
-                   onClick={() => setDeleteTarget(db)}
-                >
-                  Delete Database
-                </DropdownMenuItem>
+                {isWritable && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                       className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
+                       onClick={() => setDeleteTarget(db)}
+                    >
+                      Delete Database
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         );
       }
     }
-  ], [loadingEditId, router]);
+  ], [loadingEditId, router, user, loading, mounted]);
 
   const table = useReactTable({
     data: filteredData,
@@ -321,31 +336,31 @@ export default function DbPage() {
     }
 
     const headers = Object.keys(exportData[0]).join(',');
-    const csvRows = exportData.map(row => 
+    const csvRows = exportData.map(row =>
       Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
     );
-    
+
     const BOM = "\uFEFF";
     const csvString = BOM + [headers, ...csvRows].join('\n');
     const blob = new Blob([csvString], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     const fileName = `Databases_Export_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.csv`;
-    
+
     link.href = url;
     link.setAttribute('download', fileName);
     link.download = fileName;
-    
+
     document.body.appendChild(link);
-    
+
     const event = new MouseEvent('click', {
       bubbles: true,
       cancelable: true,
       view: window
     });
     link.dispatchEvent(event);
-    
+
     setTimeout(() => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
@@ -355,7 +370,7 @@ export default function DbPage() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
@@ -374,10 +389,12 @@ export default function DbPage() {
              <Download className="h-4 w-4 mr-2" />
              Export
            </Button>
-           <Button onClick={() => { setDatabaseToEdit(null); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
-             <Plus className="h-4 w-4 mr-2" />
-             Add Database
-           </Button>
+           {mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+             <Button onClick={() => { setDatabaseToEdit(null); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
+               <Plus className="h-4 w-4 mr-2" />
+               Add Database
+             </Button>
+           )}
         </div>
       </div>
 
@@ -390,8 +407,8 @@ export default function DbPage() {
                 onClick={() => setActiveEnvironment(tab.value)}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
-                  activeEnvironment === tab.value 
-                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/50" 
+                  activeEnvironment === tab.value
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/50"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/50"
                 )}
               >
@@ -414,7 +431,7 @@ export default function DbPage() {
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
               />
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-9 w-9 bg-card">
@@ -464,8 +481,8 @@ export default function DbPage() {
                 </TableRow>
               ) : table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map(row => (
-                  <TableRow 
-                    key={row.id} 
+                  <TableRow
+                    key={row.id}
                     className="group border-b border-border hover:bg-muted/50 transition-colors cursor-pointer data-[state=selected]:bg-muted"
                     onClick={() => router.push(`/dashboard/databases/${row.original.id}`)}
                   >
@@ -487,7 +504,7 @@ export default function DbPage() {
                           ? "You haven't added any database records yet. Start by adding your first database."
                           : "No databases match your current search or filter criteria."
                         }
-                        action={databases.length === 0 ? {
+                        action={databases.length === 0 && mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR') ? {
                           label: "Add Your First Database",
                           onClick: () => { setDatabaseToEdit(null); setDialogOpen(true); }
                         } : undefined}

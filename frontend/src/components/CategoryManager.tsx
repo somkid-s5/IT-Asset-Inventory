@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { kbService } from '@/services/kb';
-import { 
-  Trash2, 
-  Settings2, 
+import {
+  Trash2,
+  Settings2,
   Plus,
   Loader2,
   FolderOpen,
@@ -102,9 +102,9 @@ export function CategoryManager() {
                 <p className="text-xs font-bold text-primary uppercase">Quick Start</p>
                 <p className="text-[10px] text-muted-foreground leading-tight">Setup standard categories and expert samples.</p>
              </div>
-             <Button 
-                variant="outline" 
-                size="sm" 
+             <Button
+                variant="outline"
+                size="sm"
                 onClick={handleInitialize}
                 disabled={isInitializing}
                 className="rounded-xl h-8 text-[9px] font-black uppercase bg-card border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
@@ -124,10 +124,11 @@ export function CategoryManager() {
                 className="h-10 rounded-xl bg-muted/50 border-border/40 text-sm"
               />
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={createMutation.isPending || !newCategoryName.trim()}
               className="rounded-xl px-4 font-bold h-10 shadow-lg shadow-primary/10"
+              aria-label="Add Category"
             >
               {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </Button>
@@ -163,6 +164,7 @@ export function CategoryManager() {
                     }}
                     className="h-8 w-8 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
                     disabled={deleteMutation.isPending}
+                    aria-label={`Delete ${cat.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -171,10 +173,10 @@ export function CategoryManager() {
             )}
           </div>
         </div>
-        
+
         <DialogFooter className="sm:justify-start">
           <p className="text-[10px] text-muted-foreground leading-relaxed">
-            <span className="font-bold text-primary mr-1">Note:</span> 
+            <span className="font-bold text-primary mr-1">Note:</span>
             Categories with existing documents cannot be deleted. You must move or delete the documents first.
           </p>
         </DialogFooter>

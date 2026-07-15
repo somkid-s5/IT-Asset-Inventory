@@ -137,6 +137,7 @@ export default function AssetsPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [expanded, setExpanded] = useState({});
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     const params = new URLSearchParams();
     if (searchTerm) params.set('q', searchTerm);
@@ -251,7 +252,28 @@ export default function AssetsPage() {
   }, [assets, activeTab, searchTerm]);
 
   const columns = useMemo<ColumnDef<Asset>[]>(() => [
-
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+          className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          onClick={(e) => e.stopPropagation()}
+          className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: 'assetId',
       header: ({ column }) => <SortableHeader column={column} title="Asset ID" />,
@@ -279,7 +301,7 @@ export default function AssetsPage() {
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground">
             {getAssetIcon(row.original.type)}
           </div>
-          <span className="truncate font-semibold text-foreground">{row.original.name}</span>
+          <span data-testid="asset-name" className="truncate font-semibold text-foreground">{row.original.name}</span>
         </div>
       )
     },
@@ -318,7 +340,7 @@ export default function AssetsPage() {
       cell: ({ getValue }) => {
         const status = getValue() as string;
         if (!status) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
-        
+
         const config: Record<string, { label: string; className: string }> = {
           ACTIVE: { label: 'Under MA', className: 'bg-success/10 text-success border-success/20' },
           INACTIVE: { label: 'MA Expired', className: 'bg-critical/10 text-critical border-critical/20' },
@@ -346,12 +368,13 @@ export default function AssetsPage() {
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
               onClick={() => openEditDialog(asset.id)}
+              aria-label="Edit Asset"
             >
               {loadingEditId === asset.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="Asset Actions">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -504,7 +527,7 @@ export default function AssetsPage() {
           </Button>
           {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
             <>
-            <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void selectImportFile(event)} />
+            <input data-testid="file-import-input" ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void selectImportFile(event)} />
             <Button variant="outline" size="sm" className="h-9" onClick={() => fileInputRef.current?.click()}>
               <Download className="mr-2 h-4 w-4 rotate-180" />Import CSV
             </Button>
@@ -558,9 +581,9 @@ export default function AssetsPage() {
               />
             </div>
 
-            <DropdownMenu>
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 bg-card">
+                <Button variant="outline" size="icon" className="h-9 w-9 bg-card" aria-label="Toggle Columns">
                   <Columns className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -573,6 +596,7 @@ export default function AssetsPage() {
                     className="capitalize cursor-pointer"
                     checked={column.getIsVisible()}
                     onCheckedChange={(val) => column.toggleVisibility(!!val)}
+                    onSelect={(e) => e.preventDefault()}
                   >
                     {column.id === 'assetId' ? 'Asset ID' : column.id}
                   </DropdownMenuCheckboxItem>
@@ -706,12 +730,12 @@ export default function AssetsPage() {
               You are about to delete asset <span className="font-bold underline">{assetPendingDelete?.name}</span>
             </AlertDescription>
           </Alert>
-          
+
           <div className="p-6 pt-2 space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">
               This action cannot be undone and all related data will be permanently removed from the infrastructure database.
             </p>
-            
+
             <div className="flex justify-end gap-3 pt-2">
               <Button variant="ghost" onClick={() => setAssetPendingDelete(null)} className="rounded-xl">Cancel</Button>
               <Button variant="destructive" onClick={confirmDeleteAsset} disabled={!!deletingId} className="rounded-xl shadow-lg shadow-destructive/20">

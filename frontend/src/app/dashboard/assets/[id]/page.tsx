@@ -1262,6 +1262,7 @@ function NotesSection({
           {sortedNotes.map((note) => (
             <motion.div
               key={note.id}
+              role="article"
               layout
               className={cn(
                 "group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all",
@@ -1315,6 +1316,7 @@ function NotesSection({
                   <button
                     onClick={() => void handleDelete(note.id)}
                     className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Delete Note"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>

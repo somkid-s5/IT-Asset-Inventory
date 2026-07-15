@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { kbService } from '@/services/kb';
-import { useQuery } from '@tanstack/react-query';
-import { 
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
   ChevronLeft, Eye, Layout, FileText, Save, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 
-const NotionEditor = dynamic(() => import('@/components/NotionEditor'), { 
+const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
   ssr: false,
   loading: () => (
     <div className="min-h-[600px] w-full bg-muted/20 animate-pulse rounded-[24px] border-2 border-dashed border-border/40 flex items-center justify-center">
@@ -37,6 +37,7 @@ export default function EditArticlePage() {
   const { id } = useParams();
   const { setHeader } = usePageHeader();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -86,6 +87,9 @@ export default function EditArticlePage() {
     setIsSubmitting(true);
     try {
       await kbService.updateDocument(id as string, formData);
+      queryClient.invalidateQueries({ queryKey: ['kb-document', id] });
+      queryClient.invalidateQueries({ queryKey: ['kb-recent-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['kb-category'] });
       toast.success('Document updated successfully');
       router.push(`/dashboard/docs/${id}`);
     } catch (error) {
@@ -113,15 +117,15 @@ export default function EditArticlePage() {
           <h1 className="text-3xl font-black tracking-tight">Edit Document</h1>
         </div>
         <div className="flex items-center gap-3">
-            <Button 
+            <Button
                 variant="outline"
-                onClick={() => router.back()} 
+                onClick={() => router.back()}
                 className="rounded-2xl px-6 h-12 border-2 font-bold"
             >
                 Cancel
             </Button>
-            <Button 
-                onClick={handleSubmit} 
+            <Button
+                onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="rounded-2xl px-8 h-12 shadow-xl shadow-primary/20 font-bold"
             >
@@ -136,7 +140,7 @@ export default function EditArticlePage() {
            <Card className="p-6 rounded-[32px] border-2 shadow-lg space-y-6 bg-card">
               <div className="space-y-2 px-1">
                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Document Title</Label>
-                <Input 
+                <Input
                   placeholder="Enter title..."
                   value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
@@ -158,9 +162,9 @@ export default function EditArticlePage() {
 
                 <TabsContent value="write" className="mt-0">
                    {document && (
-                    <NotionEditor 
+                    <NotionEditor
                       initialContent={document.content}
-                      onChange={(markdown) => setFormData(prev => ({ ...prev, content: markdown }))} 
+                      onChange={(markdown) => setFormData(prev => ({ ...prev, content: markdown }))}
                     />
                    )}
                 </TabsContent>
@@ -181,14 +185,14 @@ export default function EditArticlePage() {
         <div className="space-y-6">
            <Card className="p-6 rounded-[32px] border-2 shadow-md space-y-6 bg-muted/20 border-border/40">
               <div className="space-y-3">
-                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                 <Label htmlFor="select-category" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                     <FileText className="h-3 w-3" /> Category
                  </Label>
-                 <Select 
-                    value={formData.categoryId} 
+                 <Select
+                    value={formData.categoryId}
                     onValueChange={(val) => setFormData({ ...formData, categoryId: val })}
                  >
-                    <SelectTrigger className="rounded-xl h-12 bg-card border-2 border-border/60 font-bold text-sm">
+                    <SelectTrigger id="select-category" className="rounded-xl h-12 bg-card border-2 border-border/60 font-bold text-sm">
                        <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-2">

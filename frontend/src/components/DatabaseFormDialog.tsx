@@ -199,7 +199,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
             <div className="grid gap-3 md:grid-cols-12">
               <div className="space-y-1.5 md:col-span-12">
-                <Label optional>Purpose / Description</Label>
+                <Label htmlFor="db-note" optional>Purpose / Description</Label>
                 <Input
                   id="db-note"
                   className={COMPACT_INPUT_CLASS}
@@ -209,7 +209,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-5">
-                <Label required>Database Name</Label>
+                <Label htmlFor="db-name" required>Database Name</Label>
                 <Input
                   id="db-name"
                   className={COMPACT_INPUT_CLASS}
@@ -219,7 +219,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label required>Engine</Label>
+                <Label htmlFor="db-engine" required>Engine</Label>
                 <Select value={formData.engine || undefined} onValueChange={(value) => setFormData((current) => ({ ...current, engine: value }))}>
                   <SelectTrigger id="db-engine" size="sm" className={COMPACT_SELECT_TRIGGER_CLASS}>
                     <SelectValue placeholder="Select type" />
@@ -234,7 +234,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 </Select>
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label optional>Version</Label>
+                <Label htmlFor="db-version" optional>Version</Label>
                 <Input
                   id="db-version"
                   className={COMPACT_INPUT_CLASS}
@@ -243,7 +243,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label required>Environment</Label>
+                <Label htmlFor="db-environment" required>Environment</Label>
                 <Select value={formData.environment || undefined} onValueChange={(value) => setFormData((current) => ({ ...current, environment: value }))}>
                   <SelectTrigger id="db-environment" size="sm" className={COMPACT_SELECT_TRIGGER_CLASS}>
                     <SelectValue placeholder="Select environment" />
@@ -264,7 +264,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               </div>
 
               <div className="space-y-1.5 md:col-span-4">
-                <Label required>Host</Label>
+                <Label htmlFor="db-host" required>Host</Label>
                 <Input
                   id="db-host"
                   className={COMPACT_INPUT_CLASS}
@@ -274,7 +274,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label optional>IP Address</Label>
+                <Label htmlFor="db-ip" optional>IP Address</Label>
                 <Input
                   id="db-ip"
                   className={COMPACT_INPUT_CLASS}
@@ -283,7 +283,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label optional>Port</Label>
+                <Label htmlFor="db-port" optional>Port</Label>
                 <Input
                   id="db-port"
                   className={COMPACT_INPUT_CLASS}
@@ -293,7 +293,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                 />
               </div>
               <div className="space-y-1.5 md:col-span-3">
-                <Label optional>Service Name</Label>
+                <Label htmlFor="db-service-name" optional>Service Name</Label>
                 <Input
                   id="db-service-name"
                   className={COMPACT_INPUT_CLASS}
@@ -309,7 +309,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               </div>
 
               <div className="space-y-1.5 md:col-span-4">
-                <Label>Status</Label>
+                <Label htmlFor="db-status">Status</Label>
                 <Select value={formData.status || undefined} onValueChange={(value) => setFormData((current) => ({ ...current, status: value }))}>
                   <SelectTrigger id="db-status" size="sm" className={COMPACT_SELECT_TRIGGER_CLASS}>
                     <SelectValue placeholder="Select status" />
@@ -323,7 +323,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               </div>
 
               <div className="space-y-1.5 md:col-span-4">
-                <Label optional>Owner</Label>
+                <Label htmlFor="db-owner" optional>Owner</Label>
                 <Input
                   id="db-owner"
                   className={COMPACT_INPUT_CLASS}
@@ -334,7 +334,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               </div>
 
               <div className="space-y-1.5 md:col-span-4">
-                <Label optional>Backup Policy</Label>
+                <Label htmlFor="db-backup-policy" optional>Backup Policy</Label>
                 <Input
                   id="db-backup-policy"
                   className={COMPACT_INPUT_CLASS}
@@ -345,7 +345,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               </div>
 
               <div className="space-y-1.5 md:col-span-6">
-                <Label optional>Replication Status</Label>
+                <Label htmlFor="db-replication" optional>Replication Status</Label>
                 <Input
                   id="db-replication"
                   className={COMPACT_INPUT_CLASS}
@@ -356,7 +356,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               </div>
 
               <div className="space-y-1.5 md:col-span-6">
-                <Label optional>Maintenance Window</Label>
+                <Label htmlFor="db-maintenance-window" optional>Maintenance Window</Label>
                 <Input
                   id="db-maintenance-window"
                   className={COMPACT_INPUT_CLASS}
@@ -451,13 +451,14 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label required>Username</Label>
-                      <Input className={COMPACT_INPUT_CLASS} value={account.username} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, username: event.target.value } : item))} />
+                      <Label htmlFor={`db-account-username-${index}`} required>Username</Label>
+                      <Input id={`db-account-username-${index}`} className={COMPACT_INPUT_CLASS} value={account.username} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, username: event.target.value } : item))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label required>Password</Label>
+                      <Label htmlFor={`db-account-password-${index}`} required>Password</Label>
                       <div className="relative">
                         <Input
+                          id={`db-account-password-${index}`}
                           className={COMPACT_INPUT_CLASS}
                           type={showPasswords[index] ? 'text' : 'password'}
                           value={account.password}
@@ -479,16 +480,16 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>Role</Label>
-                      <Input className={COMPACT_INPUT_CLASS} value={account.role} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, role: event.target.value } : item))} placeholder="e.g. DBA, Application, Reporting" />
+                      <Label htmlFor={`db-account-role-${index}`} optional>Role</Label>
+                      <Input id={`db-account-role-${index}`} className={COMPACT_INPUT_CLASS} value={account.role} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, role: event.target.value } : item))} placeholder="e.g. DBA, Application, Reporting" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>Privileges</Label>
-                      <Input className={COMPACT_INPUT_CLASS} value={account.privileges} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, privileges: event.target.value } : item))} placeholder="e.g. SELECT, INSERT, UPDATE" />
+                      <Label htmlFor={`db-account-privileges-${index}`} optional>Privileges</Label>
+                      <Input id={`db-account-privileges-${index}`} className={COMPACT_INPUT_CLASS} value={account.privileges} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, privileges: event.target.value } : item))} placeholder="e.g. SELECT, INSERT, UPDATE" />
                     </div>
                     <div className="space-y-1.5 md:col-span-2">
-                      <Label optional>Notes</Label>
-                      <Input className={COMPACT_INPUT_CLASS} value={account.note} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, note: event.target.value } : item))} />
+                      <Label htmlFor={`db-account-note-${index}`} optional>Notes</Label>
+                      <Input id={`db-account-note-${index}`} className={COMPACT_INPUT_CLASS} value={account.note} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, note: event.target.value } : item))} />
                     </div>
                   </div>
                 </div>

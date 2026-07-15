@@ -164,14 +164,14 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-12">
         {/* CMDB Distribution (5 Cols) */}
         <motion.div variants={itemVariants} className="lg:col-span-5">
-          <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
+          <Card role="region" aria-label="CMDB Distribution" className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
             <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
               <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-5 w-5 text-primary" />CMDB Distribution</CardTitle>
               <CardDescription>Visual breakdown of Configuration Items (CIs)</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-[320px] relative p-6">
               {mounted && assetChartData.length > 0 ? (
-                <div className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center pt-8">
+                <div role="img" aria-label="CMDB Distribution Chart" className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center pt-8">
                   <ChartContainer config={chartConfig} className="w-full max-w-[320px] h-full aspect-square">
                     <PieChart>
                       <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
@@ -267,7 +267,7 @@ export default function DashboardPage() {
 
         {/* Inventory attention (4 Cols) */}
         <motion.div variants={itemVariants} className="lg:col-span-4">
-          <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
+          <Card role="region" aria-label="Inventory attention" className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
             <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
               <CardTitle className="text-lg flex items-center justify-between"><ShieldAlert className="h-5 w-5 text-warning" />Inventory attention</CardTitle>
               <CardDescription>Records that need review</CardDescription>
@@ -275,9 +275,9 @@ export default function DashboardPage() {
             <CardContent className="flex-1 space-y-4 p-6 overflow-y-auto max-h-[340px]">
               {attentionItems.length > 0 ? (
                 attentionItems.map((item: any) => (
-                  <Alert 
-                    key={item.id} 
-                    variant={item.variant || "warning"} 
+                  <Alert
+                    key={item.id}
+                    variant={item.variant || "warning"}
                     className="cursor-pointer hover:bg-muted/10 transition-all group"
                     onClick={() => router.push(item.route)}
                   >
@@ -317,7 +317,7 @@ function StatCard({ title, value, icon: Icon, subtitle, color, onClick }: any) {
 
   return (
     <motion.div variants={itemVariants} className="h-full">
-      <Card 
+      <Card
         className={cn(
           "group relative overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-0 gap-0",
           theme.border

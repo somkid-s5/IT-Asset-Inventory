@@ -230,7 +230,7 @@ export default function ProfilePage() {
                 <UserAvatar
                   seed={avatarSeed}
                   imageUrl={avatarImage}
-                  label={displayName || user?.displayName || 'Infra Pilot'}
+                  label="Profile Preview Avatar"
                   className="h-12 w-12"
                 />
                 <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={user?.mustChangePassword}>

@@ -3,10 +3,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { kbService } from '@/services/kb';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  Calendar, 
-  Eye, 
-  Edit, 
+import {
+  Calendar,
+  Eye,
+  Edit,
   ChevronLeft,
   Clock,
   Share2,
@@ -73,16 +73,16 @@ export default function ArticlePage() {
     >
       {/* Document Navigation Bar */}
       <div className="border-b border-border/40 bg-card/20 backdrop-blur-md px-8 py-3 flex items-center justify-between sticky top-0 z-10">
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => router.back()}
           className="rounded-xl font-bold text-xs hover:bg-primary/10 hover:text-primary transition-colors"
         >
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back to List
         </Button>
-        
+
         <div className="flex items-center gap-2">
            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest bg-primary/5 text-primary border-primary/10">
               {document.category.name}
@@ -128,9 +128,9 @@ export default function ArticlePage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-9 w-9 rounded-xl hover:bg-primary/5 text-muted-foreground hover:text-primary"
                     onClick={handleCopyLink}
                     title="Copy Public Link"
@@ -141,11 +141,12 @@ export default function ArticlePage() {
                     <Bookmark className="h-4 w-4" />
                   </Button>
                   {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 ml-2"
                       onClick={() => router.push(`/dashboard/docs/${id}/edit`)}
+                      aria-label="Edit Document"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -179,8 +180,8 @@ export default function ArticlePage() {
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Actions</h4>
               <div className="grid grid-cols-1 gap-2">
-                 <Button 
-                  variant="outline" 
+                 <Button
+                  variant="outline"
                   className="w-full justify-start rounded-xl text-[11px] font-bold h-9 border-2"
                   onClick={handleCopyLink}
                  >
@@ -189,6 +190,25 @@ export default function ArticlePage() {
                  <Button variant="outline" className="w-full justify-start rounded-xl text-[11px] font-bold h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-500/5 border-rose-500/10">
                    Report Outdated
                  </Button>
+                 {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+                   <Button
+                     variant="outline"
+                     className="w-full justify-start rounded-xl text-[11px] font-bold h-9 text-rose-500 hover:text-white hover:bg-rose-600 border-rose-500/20"
+                     onClick={async () => {
+                       if (window.confirm('Are you sure you want to delete this document?')) {
+                         try {
+                           await kbService.deleteDocument(id as string);
+                           toast.success('Document deleted successfully');
+                           router.push('/dashboard/docs');
+                         } catch {
+                           toast.error('Failed to delete document');
+                         }
+                       }
+                     }}
+                   >
+                     Delete Document
+                   </Button>
+                 )}
               </div>
             </div>
           </div>
