@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { kbService } from '@/services/kb';
 import { useQuery } from '@tanstack/react-query';
-import { 
+import {
   ChevronLeft, Eye, Layout, Save, Loader2, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 
-const NotionEditor = dynamic(() => import('@/components/NotionEditor'), { 
+const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
   ssr: false,
   loading: () => (
     <div className="min-h-[600px] w-full bg-muted/20 animate-pulse rounded-[24px] border-2 border-dashed border-border/40 flex items-center justify-center">
@@ -110,8 +110,8 @@ export default function ArticleFormPage() {
           </Button>
           <h1 className="text-3xl font-black">{editId ? 'Edit Document' : 'Write Documentation'}</h1>
         </div>
-        <Button 
-          onClick={handleSubmit} 
+        <Button
+          onClick={handleSubmit}
           disabled={isSubmitting}
           className="rounded-2xl px-8 h-12 shadow-xl shadow-primary/20 font-bold"
         >
@@ -126,7 +126,7 @@ export default function ArticleFormPage() {
            <Card className="p-6 rounded-[32px] border-2 shadow-lg space-y-6 bg-card">
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Document Title</Label>
-                <Input 
+                <Input
                   placeholder="e.g. How to configure the core switch..."
                   value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
@@ -143,8 +143,8 @@ export default function ArticleFormPage() {
                 </div>
 
                 <TabsContent value="write" className="mt-0">
-                   <NotionEditor 
-                     onChange={(markdown) => setFormData(prev => ({ ...prev, content: markdown }))} 
+                   <NotionEditor
+                     onChange={(markdown) => setFormData(prev => ({ ...prev, content: markdown }))}
                    />
                 </TabsContent>
 
@@ -164,14 +164,14 @@ export default function ArticleFormPage() {
         <div className="space-y-6">
            <Card className="p-6 rounded-[32px] border-2 shadow-md space-y-6 bg-muted/20">
               <div className="space-y-3">
-                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-2">
+                 <Label htmlFor="select-category" className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-2">
                     <FileText className="h-3 w-3" /> Category
                  </Label>
-                 <Select 
-                    value={formData.categoryId} 
+                 <Select
+                    value={formData.categoryId}
                     onValueChange={(val) => setFormData({ ...formData, categoryId: val })}
                  >
-                    <SelectTrigger className="rounded-xl h-12 bg-card border-2 border-border/60 font-bold text-sm shadow-sm">
+                    <SelectTrigger id="select-category" className="rounded-xl h-12 bg-card border-2 border-border/60 font-bold text-sm shadow-sm">
                        <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-2">

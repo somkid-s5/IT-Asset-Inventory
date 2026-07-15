@@ -70,7 +70,7 @@ export class CredentialsService {
       },
     });
 
-    return created;
+    return this.toSafeCredential(created);
   }
 
   async findByAsset(assetId: string) {
@@ -142,7 +142,7 @@ export class CredentialsService {
       },
     });
 
-    return updated;
+    return this.toSafeCredential(updated);
   }
 
   async remove(id: string, userId: string) {
@@ -164,7 +164,22 @@ export class CredentialsService {
       },
     });
 
-    return deleted;
+    return this.toSafeCredential(deleted);
+  }
+
+  private toSafeCredential(credential: {
+    id: string;
+    assetId: string;
+    username: string;
+    type: string | null;
+    nodeLabel: string | null;
+    manageType: string | null;
+    version: string | null;
+    lastChangedDate: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    return credential;
   }
 
   private getKeyBuffer(): Buffer {

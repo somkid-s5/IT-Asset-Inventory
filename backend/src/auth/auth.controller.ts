@@ -38,16 +38,11 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Headers('x-registration-key') registrationKey?: string,
   ) {
-    const userCount = await this.authService.getUserCount();
     const secret = process.env.REGISTRATION_SECRET;
-
-    // Only enforce secret if at least one user exists
-    if (userCount > 0) {
-      if (!secret || registrationKey !== secret) {
-        throw new UnauthorizedException(
-          'Registration is restricted. Valid registration key required.',
-        );
-      }
+    if (!secret || registrationKey !== secret) {
+      throw new UnauthorizedException(
+        'Registration is restricted. Valid registration key required.',
+      );
     }
 
     const result = await this.authService.register(registerDto);
@@ -56,8 +51,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @SkipThrottle({ global: true })
-  @Throttle({ login: { ttl: 60000, limit: 10 } })
+  @Throttle({ global: { ttl: 60000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() loginDto: LoginDto,

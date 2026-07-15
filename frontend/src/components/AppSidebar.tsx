@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { 
   Database, LayoutDashboard, Monitor, 
   Server, Users, Workflow, ChevronLeft, Activity,
-  Ticket, BookOpen, ChevronDown
+  BookOpen, ChevronDown, ClipboardCheck
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -22,7 +22,6 @@ type NavItem = {
 
 const operationsNavItems: NavItem[] = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Tickets', url: '/dashboard/tickets', icon: Ticket },
   { title: 'Knowledge Base', url: '/dashboard/docs', icon: BookOpen },
 ];
 
@@ -30,6 +29,7 @@ const inventoryNavItems: NavItem[] = [
   { title: 'Assets', url: '/dashboard/assets', icon: Server },
   { title: 'Virtual Machines', url: '/dashboard/virtual-machines', icon: Monitor },
   { title: 'Databases', url: '/dashboard/databases', icon: Database },
+  { title: 'Data Quality', url: '/dashboard/data-quality', icon: ClipboardCheck },
 ];
 
 const systemNavItems: NavItem[] = [
@@ -46,7 +46,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
   const pathname = usePathname();
   const currentPath = pathname || '/';
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    Operations: true,
+    Workspace: true,
     Inventory: true,
     System: true,
   });
@@ -73,10 +73,6 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         onClick={(e) => {
           if (collapsed) {
             // If collapsed, clicking any item expands the sidebar
-            onToggleCollapsed();
-          } else if (active) {
-            // If already active and expanded, clicking it again collapses the sidebar
-            e.preventDefault();
             onToggleCollapsed();
           }
         }}
@@ -151,7 +147,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto py-4 px-3 custom-scrollbar">
-        {renderSection('Operations', operationsNavItems)}
+        {renderSection('Workspace', operationsNavItems)}
         {renderSection('Inventory', inventoryNavItems)}
         {renderSection('System', systemNavItems, user?.role === 'ADMIN' && (
           <>

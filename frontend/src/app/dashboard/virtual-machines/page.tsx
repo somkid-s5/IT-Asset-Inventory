@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle, CheckCircle2, Clock3, Monitor, RefreshCw, Search, Server, 
   ChevronLeft, ChevronRight, Columns, Download, ShieldAlert,
@@ -35,6 +35,7 @@ import {
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { fadeInUp } from '@/lib/animations';
 
 type InventoryView = 'PENDING' | 'ACTIVE' | 'ORPHANED';
 
@@ -61,9 +62,11 @@ const VIEW_COPY: Record<InventoryView, { title: string; shortLabel: string; desc
 
 export default function VmPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setHeader } = usePageHeader();
-  const [activeView, setActiveView] = useState<InventoryView>('ACTIVE');
-  const [searchTerm, setSearchTerm] = useState('');
+  const initialView = searchParams.get('view') as InventoryView | null;
+  const [activeView, setActiveView] = useState<InventoryView>(initialView && ['PENDING', 'ACTIVE', 'ORPHANED'].includes(initialView) ? initialView : 'ACTIVE');
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
   
   // Dialog functionality state
   const [selectedDiscovery, setSelectedDiscovery] = useState<VmDiscoveryItem | null>(null);
@@ -95,6 +98,13 @@ export default function VmPage() {
     });
   }, [setHeader]);
 
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set('q', searchTerm);
+    if (activeView !== 'ACTIVE') params.set('view', activeView);
+    router.replace(params.size ? `/dashboard/virtual-machines?${params.toString()}` : '/dashboard/virtual-machines', { scroll: false });
+  }, [activeView, router, searchTerm]);
+
   const openPendingSetup = useCallback(async (id: string) => {
     try {
       setOpeningPendingId(id);
@@ -124,17 +134,18 @@ export default function VmPage() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
       className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2 text-balance">
             <Monitor className="h-3.5 w-3.5" />
             Compute & Virtualization Inventory
           </h2>
-          <p className="text-xs text-muted-foreground">Manage virtual instances across vCenter sources</p>
+          <p className="text-xs text-muted-foreground text-pretty">Manage virtual instances across vCenter sources</p>
         </div>
         <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={() => router.push('/dashboard/virtual-machines/sources')}>
@@ -405,7 +416,7 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
         </div>
       )
     },
-    { accessorKey: 'primaryIp', header: "IP Address", cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{getValue() as string}</span> },
+    { accessorKey: 'primaryIp', header: "IP Address", cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70 tabular-nums">{getValue() as string}</span> },
     { accessorKey: 'sourceName', header: "Source", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
     { accessorKey: 'host', header: "Host", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
     { accessorKey: 'powerState', header: "Power Status", cell: ({ getValue }) => getPowerStateBadge(getValue() as string) },
@@ -495,12 +506,12 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
       )
     },
     { accessorKey: 'name', header: "VM Name", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
-    { accessorKey: 'primaryIp', header: "IP Address", cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{getValue() as string}</span> },
+    { accessorKey: 'primaryIp', header: "IP Address", cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70 tabular-nums">{getValue() as string}</span> },
     {
       id: 'specs',
       header: "Specs (CPU/RAM/Storage)",
       cell: ({ row }) => (
-        <span className="font-mono text-xs opacity-75">
+        <span className="font-mono text-xs opacity-75 tabular-nums">
           {row.original.cpuCores} vCPU / {row.original.memoryGb} GB / {row.original.storageGb} GB
         </span>
       )
@@ -607,7 +618,7 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
       )
     },
     { accessorKey: 'name', header: "VM Name", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
-    { accessorKey: 'primaryIp', header: "IP Address", cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{getValue() as string}</span> },
+    { accessorKey: 'primaryIp', header: "IP Address", cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70 tabular-nums">{getValue() as string}</span> },
     { accessorKey: 'sourceName', header: "Source", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
     { accessorKey: 'lastSeen', header: "Last Seen", cell: ({ getValue }) => <span className="text-xs text-muted-foreground whitespace-nowrap">{getValue() as string}</span> },
     {

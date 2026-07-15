@@ -44,6 +44,7 @@ todos/
 lint_results.txt
 lint_report.json
 backend/uploads/
+backups/
 
 # Test coverage
 coverage/

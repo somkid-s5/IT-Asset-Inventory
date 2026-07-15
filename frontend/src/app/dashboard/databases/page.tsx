@@ -3,12 +3,13 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
-import { useRouter } from 'next/navigation';
-import { 
-  ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2, 
-  Database, FlaskConical, LoaderCircle, Pencil, Plus, 
-  Search, ShieldCheck, Trash2, Columns, ChevronLeft, 
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2,
+  Database, FlaskConical, LoaderCircle, Pencil, Plus,
+  Search, ShieldCheck, Trash2, Columns, ChevronLeft,
   ChevronRight, MoreHorizontal, Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,11 +27,11 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { DatabaseFormDialog } from '@/components/LazyLoadedDialogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  DropdownMenu, DropdownMenuCheckboxItem, 
-  DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu, DropdownMenuCheckboxItem,
+  DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -48,6 +49,7 @@ import {
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { fadeInUp } from '@/lib/animations';
 import { type DatabaseEnvironment, type DatabaseInventoryDetail, type DatabaseInventoryItem } from '@/lib/database-inventory';
 import api from '@/services/api';
 import { toast } from 'sonner';
@@ -66,10 +68,18 @@ const ENVIRONMENT_TABS: Array<{
   ];
 
 export default function DbPage() {
+  const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setHeader } = usePageHeader();
-  const [activeEnvironment, setActiveEnvironment] = useState<'ALL' | DatabaseEnvironment>('ALL');
-  
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const initialEnvironment = searchParams.get('environment') as DatabaseEnvironment | null;
+  const [activeEnvironment, setActiveEnvironment] = useState<'ALL' | DatabaseEnvironment>(initialEnvironment && ['PROD', 'TEST', 'DEV'].includes(initialEnvironment) ? initialEnvironment : 'ALL');
+
   const { data: databases = [], isLoading, refetch } = useQuery({
     queryKey: ['databases'],
     queryFn: async () => {
@@ -90,6 +100,14 @@ export default function DbPage() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set('q', searchTerm);
+    if (activeEnvironment !== 'ALL') params.set('environment', activeEnvironment);
+    router.replace(params.size ? `/dashboard/databases?${params.toString()}` : '/dashboard/databases', { scroll: false });
+  }, [activeEnvironment, router, searchTerm]);
 
   useEffect(() => {
     setHeader({
@@ -102,9 +120,38 @@ export default function DbPage() {
   }, [setHeader]);
 
   const filteredData = useMemo(() => {
-    if (activeEnvironment === 'ALL') return databases;
-    return databases.filter(d => d.environment === activeEnvironment);
-  }, [databases, activeEnvironment]);
+    let result = databases;
+    if (activeEnvironment !== 'ALL') {
+      result = databases.filter(d => d.environment === activeEnvironment);
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(d => {
+        const matchesName = d.name?.toLowerCase().includes(term);
+        const matchesEngine = d.engine?.toLowerCase().includes(term);
+        const matchesVersion = d.version?.toLowerCase().includes(term);
+        const matchesEnv = d.environment?.toLowerCase().includes(term);
+        const matchesHost = d.host?.toLowerCase().includes(term);
+        const matchesIp = d.ipAddress?.toLowerCase().includes(term);
+        const matchesPort = d.port?.toString().includes(term);
+        const matchesStatus = d.status?.toLowerCase().includes(term);
+
+        return (
+          matchesName ||
+          matchesEngine ||
+          matchesVersion ||
+          matchesEnv ||
+          matchesHost ||
+          matchesIp ||
+          matchesPort ||
+          matchesStatus
+        );
+      });
+    }
+
+    return result;
+  }, [databases, activeEnvironment, searchTerm]);
 
   const countsByEnvironment = useMemo<Record<'ALL' | DatabaseEnvironment, number>>(() => ({
     ALL: databases.length,
@@ -149,7 +196,7 @@ export default function DbPage() {
     {
       accessorKey: 'host',
       header: ({ column }) => <SortableHeader column={column} title="Host" />,
-      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
+      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70 tabular-nums">{(getValue() as string) || '--'}</span>
     },
     {
       id: 'connection',
@@ -157,7 +204,7 @@ export default function DbPage() {
       cell: ({ row }) => {
         const ip = row.original.ipAddress || '--';
         const port = row.original.port;
-        return <span className="font-mono text-[11px] text-muted-foreground">{port ? `${ip}:${port}` : ip}</span>;
+        return <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{port ? `${ip}:${port}` : ip}</span>;
       }
     },
     {
@@ -176,25 +223,29 @@ export default function DbPage() {
     {
       accessorKey: 'accountsCount',
       header: "Accounts",
-      cell: ({ getValue }) => <span className="text-[12px] font-semibold pl-2">{getValue() as number}</span>
+      cell: ({ getValue }) => <span className="text-[12px] font-semibold pl-2 tabular-nums">{getValue() as number}</span>
     },
     {
       id: 'actions',
       cell: ({ row }) => {
         const db = row.original;
+        const isWritable = mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR');
         return (
           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
-              onClick={() => handleEdit(db.id)}
-            >
-              {loadingEditId === db.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
-            </Button>
+            {isWritable && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
+                onClick={() => handleEdit(db.id)}
+                aria-label="Edit Database"
+              >
+                {loadingEditId === db.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="Database Actions">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -202,20 +253,24 @@ export default function DbPage() {
                 <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(`/dashboard/databases/${db.id}`)}>
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                   className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
-                   onClick={() => setDeleteTarget(db)}
-                >
-                  Delete Database
-                </DropdownMenuItem>
+                {isWritable && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                       className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
+                       onClick={() => setDeleteTarget(db)}
+                    >
+                      Delete Database
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         );
       }
     }
-  ], [loadingEditId, router]);
+  ], [loadingEditId, router, user, loading, mounted]);
 
   const table = useReactTable({
     data: filteredData,
@@ -281,31 +336,31 @@ export default function DbPage() {
     }
 
     const headers = Object.keys(exportData[0]).join(',');
-    const csvRows = exportData.map(row => 
+    const csvRows = exportData.map(row =>
       Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
     );
-    
+
     const BOM = "\uFEFF";
     const csvString = BOM + [headers, ...csvRows].join('\n');
     const blob = new Blob([csvString], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     const fileName = `Databases_Export_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.csv`;
-    
+
     link.href = url;
     link.setAttribute('download', fileName);
     link.download = fileName;
-    
+
     document.body.appendChild(link);
-    
+
     const event = new MouseEvent('click', {
       bubbles: true,
       cancelable: true,
       view: window
     });
     link.dispatchEvent(event);
-    
+
     setTimeout(() => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
@@ -315,28 +370,31 @@ export default function DbPage() {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+    <motion.div
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
       className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2 text-balance">
             <Database className="h-3.5 w-3.5" />
             Relational Database Inventory
           </h2>
-          <p className="text-xs text-muted-foreground">Monitor and manage all database instances</p>
+          <p className="text-xs text-muted-foreground text-pretty">Monitor and manage all database instances</p>
         </div>
         <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
              <Download className="h-4 w-4 mr-2" />
              Export
            </Button>
-           <Button onClick={() => { setDatabaseToEdit(null); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
-             <Plus className="h-4 w-4 mr-2" />
-             Add Database
-           </Button>
+           {mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+             <Button onClick={() => { setDatabaseToEdit(null); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
+               <Plus className="h-4 w-4 mr-2" />
+               Add Database
+             </Button>
+           )}
         </div>
       </div>
 
@@ -349,8 +407,8 @@ export default function DbPage() {
                 onClick={() => setActiveEnvironment(tab.value)}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
-                  activeEnvironment === tab.value 
-                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/50" 
+                  activeEnvironment === tab.value
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/50"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/50"
                 )}
               >
@@ -367,13 +425,13 @@ export default function DbPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search name, host, IP..."
-                value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-                onChange={(e) => table.getColumn('name')?.setFilterValue(e.target.value)}
+                placeholder="Search databases..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
               />
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-9 w-9 bg-card">
@@ -423,8 +481,8 @@ export default function DbPage() {
                 </TableRow>
               ) : table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map(row => (
-                  <TableRow 
-                    key={row.id} 
+                  <TableRow
+                    key={row.id}
                     className="group border-b border-border hover:bg-muted/50 transition-colors cursor-pointer data-[state=selected]:bg-muted"
                     onClick={() => router.push(`/dashboard/databases/${row.original.id}`)}
                   >
@@ -446,7 +504,7 @@ export default function DbPage() {
                           ? "You haven't added any database records yet. Start by adding your first database."
                           : "No databases match your current search or filter criteria."
                         }
-                        action={databases.length === 0 ? {
+                        action={databases.length === 0 && mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR') ? {
                           label: "Add Your First Database",
                           onClick: () => { setDatabaseToEdit(null); setDialogOpen(true); }
                         } : undefined}

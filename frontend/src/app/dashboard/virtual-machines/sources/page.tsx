@@ -21,6 +21,7 @@ import type { VmVCenterSource } from '@/lib/vm-inventory';
 import { createVmSource, deleteVmSource, getVmSources, syncAllVmSources, syncVmSource, testVmSourceConnection, updateVmSource } from '@/services/vm';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { fadeInUp } from '@/lib/animations';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -152,7 +153,7 @@ export default function VmSourcesPage() {
       )
     },
     { accessorKey: 'endpoint', header: "Endpoint", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{getValue() as string}</span> },
-    { accessorKey: 'vmCount', header: "VM Count", cell: ({ getValue }) => <span className="font-mono text-xs">{getValue() as number}</span> },
+    { accessorKey: 'vmCount', header: "VM Count", cell: ({ getValue }) => <span className="font-mono text-xs tabular-nums">{getValue() as number}</span> },
     { accessorKey: 'syncInterval', header: "Sync Interval", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">Every {getIntervalString(getValue() as number)}</span> },
     {
       accessorKey: 'status',
@@ -198,8 +199,9 @@ export default function VmSourcesPage() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
       className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

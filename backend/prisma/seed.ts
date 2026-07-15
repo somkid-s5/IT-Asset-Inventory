@@ -1,4 +1,4 @@
-import { PrismaClient, Role, AssetType, AssetStatus, TicketStatus, TicketPriority } from '@prisma/client';
+import { PrismaClient, Role, AssetType, AssetStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -19,17 +19,18 @@ function encryptPasswordForSeed(password: string, hexKey: string): string {
 }
 
 async function main() {
-    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'AssetOpsAdmin2026!';
-    const defaultEditorPassword = process.env.DEFAULT_EDITOR_PASSWORD || 'AssetOpsEditor2026!';
+    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
+    const defaultEditorPassword = process.env.DEFAULT_EDITOR_PASSWORD;
     const encryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
 
+    if (!defaultAdminPassword || !defaultEditorPassword) {
+        throw new Error('DEFAULT_ADMIN_PASSWORD and DEFAULT_EDITOR_PASSWORD must be set before seeding.');
+    }
+
     console.log('--- Database Seeding Started ---');
-    
+
     console.log('Step 1: Clearing existing data...');
     // Delete in reverse dependency order
-    await prisma.ticketComment.deleteMany();
-    await prisma.ticket.deleteMany();
-    await prisma.client.deleteMany();
     await prisma.knowledgeDocument.deleteMany();
     await prisma.knowledgeCategory.deleteMany();
     await prisma.auditLog.deleteMany();
@@ -49,38 +50,54 @@ async function main() {
     console.log('✅ Old data cleared.');
 
     console.log('Step 2: Creating users...');
-    const adminPasswordHash = await bcrypt.hash(defaultAdminPassword, 10);
+    const fixedPasswordHash = await bcrypt.hash('AssetOpsNewPass2026!!', 10);
+
     const adminUser = await prisma.user.create({
         data: {
             username: 'admin',
             displayName: 'Infra Admin',
             avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'admin@infrapilot.local',
-            passwordHash: adminPasswordHash,
-            mustChangePassword: true,
+            passwordHash: fixedPasswordHash,
+            mustChangePassword: false,
             role: Role.ADMIN,
         },
     });
 
-    const editorPasswordHash = await bcrypt.hash(defaultEditorPassword, 10);
     const editorUser = await prisma.user.create({
         data: {
             username: 'soc_analyst',
             displayName: 'SOC Analyst',
             avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'soc-analyst@infrapilot.local',
-            passwordHash: editorPasswordHash,
-            mustChangePassword: true,
+            passwordHash: fixedPasswordHash,
+            mustChangePassword: false,
             role: Role.EDITOR,
         }
     });
-    console.log(`✅ Users created (admin, soc_analyst).`);
 
-    console.log('Step 3: Creating sample clients and categories...');
-    const client = await prisma.client.create({
-        data: { name: 'Internal IT' }
+    const viewerUser = await prisma.user.upsert({
+        where: { username: 'test_viewer' },
+        create: {
+            username: 'test_viewer',
+            displayName: 'Test Viewer',
+            avatarSeed: crypto.randomBytes(8).toString('hex'),
+            email: 'viewer@infrapilot.local',
+            passwordHash: fixedPasswordHash,
+            mustChangePassword: false,
+            role: Role.VIEWER,
+        },
+        update: {
+            displayName: 'Test Viewer',
+            email: 'viewer@infrapilot.local',
+            passwordHash: fixedPasswordHash,
+            mustChangePassword: false,
+            role: Role.VIEWER,
+        }
     });
+    console.log(`✅ Users created (admin, soc_analyst, test_viewer).`);
 
+    console.log('Step 3: Creating sample categories...');
     const category = await prisma.knowledgeCategory.create({
         data: { name: 'General', icon: 'Book' }
     });
@@ -113,6 +130,19 @@ async function main() {
                     { address: '10.0.2.12', type: 'VIP', nodeLabel: 'FRONTEND' }
                 ]
             }
+        },
+        {
+            name: 'switch-core-01',
+            type: AssetType.SWITCH,
+            osVersion: 'Cisco IOS-XE',
+            status: AssetStatus.ACTIVE,
+            department: 'Network Operations',
+            owner: 'net-team',
+            ipAllocations: {
+                create: [
+                    { address: '10.0.9.1', type: 'Management', nodeLabel: 'MGMT' }
+                ]
+            }
         }
     ];
 
@@ -128,19 +158,38 @@ async function main() {
     }
     console.log(`✅ Sample assets created.`);
 
-    console.log('Step 5: Creating sample ticket and KB document...');
-    await prisma.ticket.create({
+    console.log('Step 4.5: Creating sample virtual machines...');
+    await prisma.vmInventory.create({
         data: {
-            ticketNo: 'TKT-2026-0001',
-            title: 'Initial System Audit',
-            description: 'Perform full audit of production assets.',
-            clientId: client.id,
-            creatorId: adminUser.id,
-            status: TicketStatus.OPEN,
-            priority: TicketPriority.MEDIUM
+            name: 'vm-prod-01',
+            systemName: 'VM-PROD-01.infrapilot.local',
+            moid: 'vm-12345',
+            environment: 'PROD',
+            cluster: 'Cluster-01',
+            host: 'esxi-01.infrapilot.local',
+            guestOs: 'Ubuntu Linux (64-bit)',
+            primaryIp: '10.0.1.100',
+            cpuCores: 4,
+            memoryGb: 16,
+            storageGb: 100,
+            networkLabel: 'VM Network',
+            powerState: 'RUNNING',
+            lifecycleState: 'ACTIVE',
+            syncState: 'SYNCED',
+            owner: 'infra-team',
+            businessUnit: 'Infrastructure',
+            slaTier: 'Tier-1',
+            serviceRole: 'Web Server',
+            criticality: 'BUSINESS_CRITICAL',
+            description: 'Core production web application host VM',
+            notes: 'Managed by terraform',
+            lastSyncAt: new Date(),
+            createdByUser: { connect: { id: adminUser.id } }
         }
     });
+    console.log(`✅ Sample VMs created.`);
 
+    console.log('Step 5: Creating sample KB document...');
     await prisma.knowledgeDocument.create({
         data: {
             title: 'Getting Started',
@@ -149,7 +198,7 @@ async function main() {
             authorId: adminUser.id
         }
     });
-    console.log(`✅ Sample ticket and KB document created.`);
+    console.log(`✅ Sample KB document created.`);
 
     if (encryptionKey && Buffer.from(encryptionKey, 'hex').length === 32) {
         console.log('Step 6: Seeding credentials...');

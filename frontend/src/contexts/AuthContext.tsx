@@ -65,7 +65,7 @@ function getClientUserSnapshot(): User | null {
 
     const storedUser = window.localStorage.getItem('user');
 
-    if (!storedUser) {
+    if (!storedUser || storedUser === 'undefined') {
         cachedUserStorageValue = null;
         cachedUserSnapshot = null;
         return null;

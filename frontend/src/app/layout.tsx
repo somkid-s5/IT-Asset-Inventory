@@ -38,7 +38,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'SysOps | IT Service Management',
-  description: 'Enterprise IT Service Management (ITSM) for managing assets, tickets, and infrastructure efficiently.',
+  description: 'A secure IT inventory registry for assets, virtual machines, databases, and technical documentation.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

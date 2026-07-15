@@ -2,7 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
-import { AssetStatus, AuditAction, Prisma } from '@prisma/client';
+import { ImportAssetRowDto } from './dto/bulk-import-assets.dto';
+import { BulkUpdateAssetsDto } from './dto/bulk-update-assets.dto';
+import { AssetStatus, AssetType, AuditAction, Prisma } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 
 type AssetWithRelations = Prisma.AssetGetPayload<{
@@ -25,13 +27,6 @@ type AssetWithRelations = Prisma.AssetGetPayload<{
           select: { id: true; displayName: true; avatarSeed: true };
         };
       };
-    };
-    tickets: {
-      include: {
-        client: true;
-        assignee: { select: { displayName: true } };
-      };
-      orderBy: { createdAt: 'desc' };
     };
   };
 }>;
@@ -182,13 +177,6 @@ export class AssetsService {
           },
           orderBy: { createdAt: 'desc' as const },
         },
-        tickets: {
-          include: {
-            client: true,
-            assignee: { select: { displayName: true } },
-          },
-          orderBy: { createdAt: 'desc' as const },
-        },
       },
     });
 
@@ -210,14 +198,53 @@ export class AssetsService {
     return this.toDetail(typedCreated);
   }
 
-  async findAll(page = 1, limit = 100) {
+  async findAll(
+    page = 1,
+    limit = 100,
+    filters: {
+      q?: string;
+      type?: string;
+      status?: string;
+      environment?: string;
+      owner?: string;
+      location?: string;
+    } = {},
+  ) {
     const skip = (page - 1) * limit;
     const take = Math.min(limit, 200); // limit to max 200 per page
+    const q = filters.q?.trim();
+    const where: Prisma.AssetWhereInput = {
+      ...(filters.type ? { type: filters.type as AssetType } : {}),
+      ...(filters.status ? { status: filters.status as AssetStatus } : {}),
+      ...(filters.environment ? { environment: filters.environment } : {}),
+      ...(filters.owner
+        ? { owner: { equals: filters.owner, mode: 'insensitive' } }
+        : {}),
+      ...(filters.location
+        ? { location: { equals: filters.location, mode: 'insensitive' } }
+        : {}),
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { assetId: { contains: q, mode: 'insensitive' } },
+              { sn: { contains: q, mode: 'insensitive' } },
+              { owner: { contains: q, mode: 'insensitive' } },
+              {
+                ipAllocations: {
+                  some: { address: { contains: q, mode: 'insensitive' } },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
 
     const [assets, total] = await Promise.all([
       this.prisma.asset.findMany({
         skip,
         take,
+        where,
         include: {
           patchInfo: true,
           ipAllocations: true,
@@ -253,7 +280,7 @@ export class AssetsService {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.asset.count(),
+      this.prisma.asset.count({ where }),
     ]);
 
     return {
@@ -265,6 +292,148 @@ export class AssetsService {
       limit: take,
       totalPages: Math.ceil(total / take),
     };
+  }
+
+  async getDataQualitySummary() {
+    const assets = await this.prisma.asset.findMany({
+      select: {
+        id: true,
+        assetId: true,
+        name: true,
+        type: true,
+        owner: true,
+        location: true,
+        sn: true,
+        warrantyExpiration: true,
+        ipAllocations: { select: { id: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const today = new Date();
+    const issues = assets.flatMap((asset) => {
+      const missing = [
+        !asset.owner && 'owner',
+        !asset.location && 'location',
+        !asset.sn && 'serial number',
+        asset.ipAllocations.length === 0 && 'IP address',
+      ].filter(Boolean) as string[];
+      if (asset.warrantyExpiration && asset.warrantyExpiration < today) {
+        missing.push('expired warranty');
+      }
+      return missing.length
+        ? [
+            {
+              id: asset.id,
+              assetId: asset.assetId,
+              name: asset.name,
+              type: asset.type,
+              issues: missing,
+            },
+          ]
+        : [];
+    });
+    return {
+      totalAssets: assets.length,
+      completeAssets: assets.length - issues.length,
+      issues,
+      issueCount: issues.length,
+    };
+  }
+
+  async bulkImport(rows: ImportAssetRowDto[], userId: string) {
+    const seenAssetIds = new Set<string>();
+    const errors: Array<{ row: number; message: string }> = [];
+    rows.forEach((row, index) => {
+      const assetId = row.assetId?.trim();
+      if (assetId && (seenAssetIds.has(assetId) || !assetId)) {
+        errors.push({
+          row: index + 2,
+          message: `Duplicate Asset ID: ${assetId}`,
+        });
+      }
+      if (assetId) seenAssetIds.add(assetId);
+    });
+    if (errors.length) return { created: 0, errors };
+
+    const existing = await this.prisma.asset.findMany({
+      where: { assetId: { in: [...seenAssetIds] } },
+      select: { assetId: true },
+    });
+    if (existing.length) {
+      return {
+        created: 0,
+        errors: existing.map((asset) => ({
+          row: 0,
+          message: `Asset ID already exists: ${asset.assetId}`,
+        })),
+      };
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const records = await Promise.all(
+        rows.map((row) =>
+          tx.asset.create({
+            data: {
+              name: row.name.trim(),
+              type: row.type,
+              assetId: row.assetId?.trim() || null,
+              status: row.status ?? AssetStatus.ACTIVE,
+              environment: row.environment?.trim() || null,
+              owner: row.owner?.trim() || null,
+              department: row.department?.trim() || null,
+              location: row.location?.trim() || null,
+              rack: row.rack?.trim() || null,
+              brandModel: row.brandModel?.trim() || null,
+              sn: row.sn?.trim() || null,
+              createdByUserId: userId,
+            },
+          }),
+        ),
+      );
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.CREATE_ASSET,
+          details: JSON.stringify({
+            source: 'csv-import',
+            count: records.length,
+          }),
+        },
+      });
+      return records;
+    });
+    return { created: created.length, errors: [] };
+  }
+
+  async bulkUpdate(dto: BulkUpdateAssetsDto, userId: string) {
+    if (dto.status === undefined && dto.owner === undefined) {
+      throw new NotFoundException('Choose an owner or status to update.');
+    }
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.asset.updateMany({
+        where: { id: { in: dto.ids } },
+        data: {
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(dto.owner !== undefined
+            ? { owner: dto.owner.trim() || null }
+            : {}),
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.UPDATE_ASSET,
+          details: JSON.stringify({
+            source: 'bulk-update',
+            count: updated.count,
+            status: dto.status,
+            owner: dto.owner,
+          }),
+        },
+      });
+      return updated;
+    });
+    return { updated: result.count };
   }
 
   async findOne(id: string) {
@@ -292,13 +461,6 @@ export class AssetsService {
             createdByUser: {
               select: { id: true, displayName: true, avatarSeed: true },
             },
-          },
-          orderBy: { createdAt: 'desc' as const },
-        },
-        tickets: {
-          include: {
-            client: true,
-            assignee: { select: { displayName: true } },
           },
           orderBy: { createdAt: 'desc' as const },
         },
@@ -375,13 +537,6 @@ export class AssetsService {
               createdByUser: {
                 select: { id: true, displayName: true, avatarSeed: true },
               },
-            },
-            orderBy: { createdAt: 'desc' as const },
-          },
-          tickets: {
-            include: {
-              client: true,
-              assignee: { select: { displayName: true } },
             },
             orderBy: { createdAt: 'desc' as const },
           },

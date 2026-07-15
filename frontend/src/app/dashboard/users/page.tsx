@@ -48,6 +48,7 @@ import {
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { fadeInUp } from '@/lib/animations';
 
 type Role = 'ADMIN' | 'EDITOR' | 'VIEWER';
 
@@ -360,8 +361,9 @@ export default function UsersPage() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
       className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

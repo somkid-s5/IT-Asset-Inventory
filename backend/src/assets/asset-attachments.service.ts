@@ -86,13 +86,24 @@ export class AssetAttachmentsService {
       throw new NotFoundException('Attachment not found');
     }
 
-    // Delete file from disk
-    const fullPath = path.join(process.cwd(), attachment.storedPath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+    const deleted = await this.prisma.assetAttachment.delete({
+      where: { id: attachmentId },
+    });
 
-    return this.prisma.assetAttachment.delete({ where: { id: attachmentId } });
+    // The database record is authoritative. Cleanup happens after deletion so
+    // a filesystem error never leaves a live record pointing at a missing file.
+    const fullPath = path.join(process.cwd(), attachment.storedPath);
+    try {
+      await fs.promises.unlink(fullPath);
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        console.error(
+          `Failed to remove orphaned attachment ${attachment.id}`,
+          error,
+        );
+      }
+    }
+    return deleted;
   }
 
   async findOne(assetId: string, attachmentId: string) {

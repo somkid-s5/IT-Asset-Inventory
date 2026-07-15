@@ -13,11 +13,7 @@ import { UsersModule } from './users/users.module';
 import { DatabasesModule } from './databases/databases.module';
 import { VmModule } from './vm/vm.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
-import { TicketsModule } from './tickets/tickets.module';
 import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module';
-import { ClientsModule } from './clients/clients.module';
-import { TicketCommentsModule } from './ticket-comments/ticket-comments.module';
-import { NotificationsModule } from './notifications/notifications.module';
 import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
@@ -28,12 +24,7 @@ import { UploadsModule } from './uploads/uploads.module';
       {
         name: 'global',
         ttl: 60000,
-        limit: 10000,
-      },
-      {
-        name: 'login',
-        ttl: 60000,
-        limit: 1000,
+        limit: 300,
       },
     ]),
     PrismaModule,
@@ -45,11 +36,7 @@ import { UploadsModule } from './uploads/uploads.module';
     DatabasesModule,
     VmModule,
     AuditLogsModule,
-    TicketsModule,
     KnowledgeBaseModule,
-    ClientsModule,
-    TicketCommentsModule,
-    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

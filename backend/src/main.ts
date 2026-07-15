@@ -41,8 +41,12 @@ async function bootstrap() {
   );
 
   // Enable CORS with credentials support
+  const allowedOrigins = (process.env.FRONTEND_URL ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: true, // Dynamically reflect origin to prevent CORS blocks in IP-based/LAN deployments
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     credentials: true, // Allow cookies
     exposedHeaders: ['set-cookie'],
   });

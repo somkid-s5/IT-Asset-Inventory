@@ -1,16 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import api from '@/services/api';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronsUpDown,
   Database, FolderTree, HardDrive, LoaderCircle,
   Pencil, Plus, Search, Server, Shield, Trash2,
   Box, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon,
-  MoreHorizontal, Columns, AlertTriangle, Download, ArrowUp, ArrowDown
+  MoreHorizontal, Columns, AlertTriangle, Download, ArrowUp, ArrowDown, Bookmark
 } from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
@@ -56,6 +56,7 @@ import {
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { fadeInUp } from '@/lib/animations';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -104,12 +105,15 @@ export default function AssetsPage() {
   const { user } = useAuth();
   const { setHeader } = usePageHeader();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'ALL' | AssetType>('ALL');
+  const searchParams = useSearchParams();
+  const initialType = searchParams.get('type') as AssetType | null;
+  const [activeTab, setActiveTab] = useState<'ALL' | AssetType>(initialType && ['SERVER', 'STORAGE', 'SWITCH', 'SP', 'NETWORK'].includes(initialType) ? initialType : 'ALL');
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
 
   const { data: assets = [], isLoading, refetch } = useQuery({
-    queryKey: ['assets'],
+    queryKey: ['assets', activeTab, searchTerm],
     queryFn: async () => {
-      const response = await api.get<any>('/assets');
+      const response = await api.get<any>('/assets', { params: { q: searchTerm || undefined, type: activeTab === 'ALL' ? undefined : activeTab, limit: 200 } });
       return (Array.isArray(response.data) ? response.data : (response.data.data || [])) as Asset[];
     },
   });
@@ -120,6 +124,12 @@ export default function AssetsPage() {
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [assetPendingDelete, setAssetPendingDelete] = useState<Asset | null>(null);
+  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkOwner, setBulkOwner] = useState('');
 
   // Tanstack Table States
   const [sorting, setSorting] = useState<SortingState>([{ id: 'assetId', desc: false }]);
@@ -127,6 +137,73 @@ export default function AssetsPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [expanded, setExpanded] = useState({});
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set('q', searchTerm);
+    if (activeTab !== 'ALL') params.set('type', activeTab);
+    router.replace(params.size ? `/dashboard/assets?${params.toString()}` : '/dashboard/assets', { scroll: false });
+  }, [activeTab, router, searchTerm]);
+
+  const selectImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const [headerLine, ...lines] = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
+    const headers = headerLine.split(',').map((value) => value.trim());
+    const rows = lines.map((line) => {
+      const values = line.split(',').map((value) => value.trim().replace(/^"|"$/g, ''));
+      return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? '']));
+    }).filter((row) => row.name);
+    if (!rows.length) return toast.error('No valid rows found. The CSV needs name and type columns.');
+    if (rows.length > 200) return toast.error('Import is limited to 200 rows at a time.');
+    setImportRows(rows);
+    setImportOpen(true);
+    event.target.value = '';
+  };
+
+  const confirmImport = async () => {
+    setImporting(true);
+    try {
+      const response = await api.post('/assets/bulk-import', { rows: importRows });
+      if (response.data.errors?.length) {
+        toast.error(response.data.errors.map((error: { message: string }) => error.message).join(' · '));
+        return;
+      }
+      toast.success(`Imported ${response.data.created} asset records`);
+      setImportOpen(false);
+      setImportRows([]);
+      void refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Import failed. Check the CSV values and try again.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const saveCurrentView = () => {
+    localStorage.setItem('asset-saved-view', JSON.stringify({ q: searchTerm, type: activeTab }));
+    toast.success('Saved this Asset view on this device');
+  };
+  const loadSavedView = () => {
+    const saved = localStorage.getItem('asset-saved-view');
+    if (!saved) return toast.error('No saved Asset view yet');
+    const view = JSON.parse(saved) as { q?: string; type?: AssetType };
+    setSearchTerm(view.q ?? '');
+    setActiveTab(view.type ?? 'ALL');
+  };
+  const applyBulkUpdate = async () => {
+    const ids = table.getSelectedRowModel().rows.map((row) => row.original.id);
+    if (!ids.length) return;
+    if (!bulkStatus && !bulkOwner) return toast.error('Choose a status or enter an owner first');
+    try {
+      const response = await api.patch('/assets/bulk-update', { ids, status: bulkStatus || undefined, owner: bulkOwner || undefined });
+      toast.success(`Updated ${response.data.updated} asset records`);
+      setRowSelection({}); setBulkStatus(''); setBulkOwner(''); void refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Bulk update failed');
+    }
+  };
 
   useEffect(() => {
     setHeader({
@@ -139,12 +216,64 @@ export default function AssetsPage() {
   }, [setHeader]);
 
   const filteredData = useMemo(() => {
-    if (activeTab === 'ALL') return assets;
-    return assets.filter(a => a.type === activeTab);
-  }, [assets, activeTab]);
+    let result = assets;
+    if (activeTab !== 'ALL') {
+      result = assets.filter(a => a.type === activeTab);
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(a => {
+        const matchesName = a.name?.toLowerCase().includes(term);
+        const matchesAssetId = a.assetId?.toLowerCase().includes(term);
+        const matchesSn = a.sn?.toLowerCase().includes(term);
+        const matchesType = a.type?.toLowerCase().includes(term);
+        const matchesLocation = a.location?.toLowerCase().includes(term);
+        const matchesRack = a.rack?.toLowerCase().includes(term);
+        const matchesStatus = a.status?.toLowerCase().includes(term);
+        const matchesBrandModel = a.brandModel?.toLowerCase().includes(term);
+        const matchesIp = a.ipAllocations?.some(ip => ip.address?.toLowerCase().includes(term));
+
+        return (
+          matchesName ||
+          matchesAssetId ||
+          matchesSn ||
+          matchesType ||
+          matchesLocation ||
+          matchesRack ||
+          matchesStatus ||
+          matchesBrandModel ||
+          matchesIp
+        );
+      });
+    }
+
+    return result;
+  }, [assets, activeTab, searchTerm]);
 
   const columns = useMemo<ColumnDef<Asset>[]>(() => [
-
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+          className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          onClick={(e) => e.stopPropagation()}
+          className="translate-y-[2px] border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: 'assetId',
       header: ({ column }) => <SortableHeader column={column} title="Asset ID" />,
@@ -158,7 +287,7 @@ export default function AssetsPage() {
               <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", row.getIsExpanded() && "rotate-90")} />
             </button>
           ) : <div className="w-5" />}
-          <span className="font-mono text-[11px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10">
+          <span className="font-mono text-[11px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10 tabular-nums">
             {(getValue() as string) || '--'}
           </span>
         </div>
@@ -172,7 +301,7 @@ export default function AssetsPage() {
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground">
             {getAssetIcon(row.original.type)}
           </div>
-          <span className="truncate font-semibold text-foreground">{row.original.name}</span>
+          <span data-testid="asset-name" className="truncate font-semibold text-foreground">{row.original.name}</span>
         </div>
       )
     },
@@ -191,19 +320,19 @@ export default function AssetsPage() {
       cell: ({ getValue }) => {
         const env = getValue() as string;
         if (!env) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
-        const variants: Record<string, string> = { PROD: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', UAT: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20', DEV: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' };
-        return <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", variants[env] || "bg-slate-500/10 text-slate-500")}>{env}</Badge>;
+        const variants: Record<string, string> = { PROD: 'bg-critical/10 text-critical border-critical/20', UAT: 'bg-warning/10 text-warning border-warning/20', DEV: 'bg-low/10 text-low border-low/20' };
+        return <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", variants[env] || "bg-low/10 text-low border-low/20")}>{env}</Badge>;
       }
     },
     {
       accessorKey: 'rack',
       header: "Rack",
-      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
+      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70 tabular-nums">{(getValue() as string) || '--'}</span>
     },
     {
       accessorKey: 'sn',
       header: "Serial Number",
-      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70">{(getValue() as string) || '--'}</span>
+      cell: ({ getValue }) => <span className="font-mono text-[11px] opacity-70 tabular-nums">{(getValue() as string) || '--'}</span>
     },
     {
       accessorKey: 'status',
@@ -211,15 +340,15 @@ export default function AssetsPage() {
       cell: ({ getValue }) => {
         const status = getValue() as string;
         if (!status) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
-        
+
         const config: Record<string, { label: string; className: string }> = {
-          ACTIVE: { label: 'Under MA', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
-          INACTIVE: { label: 'MA Expired', className: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' },
-          MAINTENANCE: { label: 'Maintenance', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
-          DECOMMISSIONED: { label: 'Decommissioned', className: 'bg-slate-500/10 text-slate-500 border-slate-500/20' }
+          ACTIVE: { label: 'Under MA', className: 'bg-success/10 text-success border-success/20' },
+          INACTIVE: { label: 'MA Expired', className: 'bg-critical/10 text-critical border-critical/20' },
+          MAINTENANCE: { label: 'Maintenance', className: 'bg-warning/10 text-warning border-warning/20' },
+          DECOMMISSIONED: { label: 'Decommissioned', className: 'bg-low/10 text-low border-low/20' }
         };
 
-        const item = config[status] || { label: status, className: 'bg-slate-500/10 text-slate-500 border-slate-500/20' };
+        const item = config[status] || { label: status, className: 'bg-low/10 text-low border-low/20' };
 
         return (
           <Badge variant="outline" className={cn("text-[10px] font-semibold px-1.5 py-0", item.className)}>
@@ -239,12 +368,13 @@ export default function AssetsPage() {
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
               onClick={() => openEditDialog(asset.id)}
+              aria-label="Edit Asset"
             >
               {loadingEditId === asset.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="Asset Actions">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -375,34 +505,50 @@ export default function AssetsPage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
       className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2 text-balance">
             <HardDrive className="h-3.5 w-3.5" />
             Hardware & Infrastructure Inventory
           </h2>
-          <p className="text-xs text-muted-foreground">Manage your physical and network assets</p>
+          <p className="text-xs text-muted-foreground text-pretty">Manage your physical and network assets</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-9" onClick={loadSavedView}><Bookmark className="mr-2 h-4 w-4" />Load view</Button>
+          <Button variant="ghost" size="sm" className="h-9" onClick={saveCurrentView}><Bookmark className="mr-2 h-4 w-4" />Save view</Button>
           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
           {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+            <>
+            <input data-testid="file-import-input" ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void selectImportFile(event)} />
+            <Button variant="outline" size="sm" className="h-9" onClick={() => fileInputRef.current?.click()}>
+              <Download className="mr-2 h-4 w-4 rotate-180" />Import CSV
+            </Button>
             <Button onClick={() => { setEditingAsset(undefined); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
               <Plus className="h-4 w-4 mr-2" />
               Add Asset
             </Button>
+            </>
           )}
         </div>
       </div>
 
       <div>
+        {table.getSelectedRowModel().rows.length > 0 && (
+          <div className="mb-3 flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 sm:flex-row sm:items-center">
+            <span className="text-sm font-medium">{table.getSelectedRowModel().rows.length} selected</span>
+            <select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm"><option value="">Keep status</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="MAINTENANCE">Maintenance</option><option value="DECOMMISSIONED">Decommissioned</option></select>
+            <Input value={bulkOwner} onChange={(event) => setBulkOwner(event.target.value)} className="h-9 sm:max-w-52" placeholder="Set owner (optional)" />
+            <Button size="sm" onClick={() => void applyBulkUpdate()}>Apply changes</Button>
+          </div>
+        )}
         <Card className="border-2 border-border gap-0 shadow-md bg-card overflow-hidden p-0 rounded-[24px]">
         <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           {/* Tabs */}
@@ -428,16 +574,16 @@ export default function AssetsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name..."
-                value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-                onChange={(e) => table.getColumn('name')?.setFilterValue(e.target.value)}
+                placeholder="Search assets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
               />
             </div>
 
-            <DropdownMenu>
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 bg-card">
+                <Button variant="outline" size="icon" className="h-9 w-9 bg-card" aria-label="Toggle Columns">
                   <Columns className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -450,6 +596,7 @@ export default function AssetsPage() {
                     className="capitalize cursor-pointer"
                     checked={column.getIsVisible()}
                     onCheckedChange={(val) => column.toggleVisibility(!!val)}
+                    onSelect={(e) => e.preventDefault()}
                   >
                     {column.id === 'assetId' ? 'Asset ID' : column.id}
                   </DropdownMenuCheckboxItem>
@@ -565,6 +712,15 @@ export default function AssetsPage() {
         availableParents={assets.map(a => ({ id: a.id, name: a.name, type: a.type }))}
       />
 
+      <Dialog open={importOpen} onOpenChange={(open) => !importing && setImportOpen(open)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Review asset import</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">{importRows.length} records will be created. Required columns: <code>name</code>, <code>type</code>. Optional: assetId, status, environment, owner, department, location, rack, brandModel, sn.</p>
+          <div className="max-h-64 overflow-auto rounded-md border text-xs"><table className="w-full"><thead><tr className="bg-muted text-left"><th className="p-2">Name</th><th className="p-2">Type</th><th className="p-2">Asset ID</th></tr></thead><tbody>{importRows.slice(0, 20).map((row, index) => <tr key={index} className="border-t"><td className="p-2">{row.name}</td><td className="p-2">{row.type}</td><td className="p-2">{row.assetId || '—'}</td></tr>)}</tbody></table></div>
+          <div className="flex justify-end gap-2"><Button variant="outline" disabled={importing} onClick={() => setImportOpen(false)}>Cancel</Button><Button disabled={importing} onClick={() => void confirmImport()}>{importing ? 'Importing…' : `Import ${importRows.length} records`}</Button></div>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation */}
       <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
         <DialogContent className="sm:max-w-[425px] rounded-[24px] border-none p-0 overflow-hidden">
@@ -574,12 +730,12 @@ export default function AssetsPage() {
               You are about to delete asset <span className="font-bold underline">{assetPendingDelete?.name}</span>
             </AlertDescription>
           </Alert>
-          
+
           <div className="p-6 pt-2 space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">
               This action cannot be undone and all related data will be permanently removed from the infrastructure database.
             </p>
-            
+
             <div className="flex justify-end gap-3 pt-2">
               <Button variant="ghost" onClick={() => setAssetPendingDelete(null)} className="rounded-xl">Cancel</Button>
               <Button variant="destructive" onClick={confirmDeleteAsset} disabled={!!deletingId} className="rounded-xl shadow-lg shadow-destructive/20">

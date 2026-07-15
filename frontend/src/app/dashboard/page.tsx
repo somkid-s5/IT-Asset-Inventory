@@ -6,7 +6,7 @@ import {
   Database, RefreshCw, Server,
   ShieldCheck, Monitor, ShieldAlert,
   Laptop, Activity, ArrowUpRight,
-  Ticket, AlertCircle
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +27,8 @@ interface DashboardOverview {
   assets: {
     total: number;
     active: number;
-    inactive: number;
+    nonActive: number;
+    eolCount: number;
     breakdown: Array<{
       label: string;
       count: number;
@@ -53,32 +54,9 @@ interface DashboardOverview {
     admins: number;
     nonAdmins: number;
   };
-  tickets?: {
-    total: number;
-    open: number;
-    resolved: number;
-    metSla: number;
-    breached: number;
-    slaSuccessRate: number;
-  };
-  assetHealth?: {
-    score: number;
-    eolCount: number;
-  };
 }
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 }
-  }
-};
-
-const itemVariants: Variants = {
-  hidden: { y: 10, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.3, ease: "easeOut" } }
-};
+import { containerVariants, itemVariants } from '@/lib/animations';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -133,34 +111,23 @@ export default function DashboardPage() {
   const attentionItems = useMemo(() => {
     if (!data) return [];
     const items = [];
-    if (data.tickets && data.tickets.breached > 0) {
-      items.push({ id: 'ticket-breached', title: `${data.tickets.breached} SLA Breached Ticket(s)`, route: '/dashboard/tickets', variant: 'destructive' });
-    }
     if (data.vm.pendingSetup > 0) items.push({ id: 'pending-vm', title: `${data.vm.pendingSetup} VMs Pending Setup`, route: '/dashboard/virtual-machines', variant: 'warning' });
     if (data.vm.connectionFailedSources > 0) items.push({ id: 'vm-err', title: `vCenter Sync Failed`, route: '/dashboard/virtual-machines/sources', variant: 'destructive' });
     return items;
   }, [data]);
 
   // Asset Health parameters
-  const score = data?.assetHealth?.score ?? 100;
-  const eolCount = data?.assetHealth?.eolCount ?? 0;
-  const inactiveCount = data?.assets?.inactive ?? 0;
+  const eolCount = data?.assets?.eolCount ?? 0;
+  const nonActiveCount = data?.assets?.nonActive ?? 0;
   const failedSyncCount = data?.vm?.connectionFailedSources ?? 0;
-
-  // Color mapping for score
-  let strokeColor = "stroke-success";
-  let textColor = "text-success";
-  if (score < 60) {
-    strokeColor = "stroke-destructive";
-    textColor = "text-destructive";
-  } else if (score < 85) {
-    strokeColor = "stroke-warning";
-    textColor = "text-warning";
-  }
-
+  const score = data?.assets?.total
+    ? Math.round(((data.assets.active ?? 0) / data.assets.total) * 100)
+    : 0;
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
+  const strokeColor = score < 60 ? 'stroke-destructive' : score < 85 ? 'stroke-warning' : 'stroke-success';
+  const textColor = score < 60 ? 'text-destructive' : score < 85 ? 'text-warning' : 'text-success';
 
   if (isLoading) return <DashboardSkeleton />;
 
@@ -183,29 +150,28 @@ export default function DashboardPage() {
           </Badge>
           <Button variant="outline" size="sm" className="shadow-sm bg-card h-9" onClick={() => void refetch()} disabled={isFetching}>
             <RefreshCw className={cn("mr-2 h-3.5 w-3.5", isFetching && "animate-spin")} />
-            {isFetching ? 'Updating...' : 'Sync System'}
+            {isFetching ? 'Refreshing...' : 'Refresh dashboard'}
           </Button>
         </motion.div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Open Tickets" value={data?.tickets?.open} icon={Ticket} subtitle={`${data?.tickets?.slaSuccessRate ?? 100}% SLA Target Met`} color="destructive" onClick={() => router.push('/dashboard/tickets')} />
         <StatCard title="Compute Assets" value={data?.vm.activeInventory} icon={Monitor} subtitle={`${data?.vm.pendingSetup} Setup · ${data?.vm.orphaned} Orphaned`} color="primary" onClick={() => router.push('/dashboard/virtual-machines')} />
-        <StatCard title="Infrastructure" value={data?.assets.total} icon={Server} subtitle={`${data?.assets.active} Healthy · ${data?.assets.inactive} Offline`} color="info" onClick={() => router.push('/dashboard/assets')} />
+        <StatCard title="Infrastructure" value={data?.assets.total} icon={Server} subtitle={`${data?.assets.active} active · ${data?.assets.nonActive} non-active`} color="info" onClick={() => router.push('/dashboard/assets')} />
         <StatCard title="Managed DBs" value={data?.databases.total} icon={Database} subtitle={`${data?.databases.production} Prod · ${data?.databases.accounts} Accounts`} color="success" onClick={() => router.push('/dashboard/databases')} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
         {/* CMDB Distribution (5 Cols) */}
         <motion.div variants={itemVariants} className="lg:col-span-5">
-          <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
+          <Card role="region" aria-label="CMDB Distribution" className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
             <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
               <CardTitle className="text-lg flex items-center gap-2"><Laptop className="h-5 w-5 text-primary" />CMDB Distribution</CardTitle>
               <CardDescription>Visual breakdown of Configuration Items (CIs)</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-[320px] relative p-6">
               {mounted && assetChartData.length > 0 ? (
-                <div className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center pt-8">
+                <div role="img" aria-label="CMDB Distribution Chart" className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center pt-8">
                   <ChartContainer config={chartConfig} className="w-full max-w-[320px] h-full aspect-square">
                     <PieChart>
                       <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
@@ -229,15 +195,15 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        {/* Asset Health Index (3 Cols) */}
+        {/* Recorded inventory status (3 Cols) */}
         <motion.div variants={itemVariants} className="lg:col-span-3">
           <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
             <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Activity className="h-5 w-5 text-success" />
-                Asset Health
+                Recorded asset status
               </CardTitle>
-              <CardDescription>Real-time platform compliance</CardDescription>
+              <CardDescription>Calculated from saved status only; not live availability telemetry</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col items-center justify-between p-6 min-h-[320px]">
               {/* Circular Gauge */}
@@ -267,7 +233,7 @@ export default function DashboardPage() {
                   <span className={cn("text-3xl font-bold font-mono tracking-tighter", textColor)}>
                     {score}%
                   </span>
-                  <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Index Score</span>
+                  <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">active-status share</span>
                 </div>
               </div>
 
@@ -282,10 +248,10 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between text-xs border-b border-border/50 pb-1.5">
                   <span className="text-muted-foreground flex items-center gap-1.5">
-                    <span className={cn("w-1.5 h-1.5 rounded-full", inactiveCount > 0 ? "bg-warning" : "bg-success")}></span>
-                    Offline Assets
+                    <span className={cn("w-1.5 h-1.5 rounded-full", nonActiveCount > 0 ? "bg-warning" : "bg-success")}></span>
+                    Non-active records
                   </span>
-                  <span className="font-mono font-semibold">{inactiveCount} inactive</span>
+                  <span className="font-mono font-semibold">{nonActiveCount} records</span>
                 </div>
                 <div className="flex items-center justify-between text-xs pb-0.5">
                   <span className="text-muted-foreground flex items-center gap-1.5">
@@ -299,19 +265,19 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        {/* Incident Monitor (4 Cols) */}
+        {/* Inventory attention (4 Cols) */}
         <motion.div variants={itemVariants} className="lg:col-span-4">
-          <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
+          <Card role="region" aria-label="Inventory attention" className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
             <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
-              <CardTitle className="text-lg flex items-center justify-between"><ShieldAlert className="h-5 w-5 text-warning" />Incident Monitor</CardTitle>
-              <CardDescription>Service requests and critical events</CardDescription>
+              <CardTitle className="text-lg flex items-center justify-between"><ShieldAlert className="h-5 w-5 text-warning" />Inventory attention</CardTitle>
+              <CardDescription>Records that need review</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 space-y-4 p-6 overflow-y-auto max-h-[340px]">
               {attentionItems.length > 0 ? (
                 attentionItems.map((item: any) => (
-                  <Alert 
-                    key={item.id} 
-                    variant={item.variant || "warning"} 
+                  <Alert
+                    key={item.id}
+                    variant={item.variant || "warning"}
                     className="cursor-pointer hover:bg-muted/10 transition-all group"
                     onClick={() => router.push(item.route)}
                   >
@@ -327,8 +293,8 @@ export default function DashboardPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
                   <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center text-success"><ShieldCheck className="h-6 w-6" /></div>
-                  <p className="text-sm font-medium">Service Level OK</p>
-                  <p className="text-xs text-muted-foreground px-6">All systems operational. No open critical incidents.</p>
+                  <p className="text-sm font-medium">No inventory alerts</p>
+                  <p className="text-xs text-muted-foreground px-6">No records currently need setup or source-connection attention.</p>
                 </div>
               )}
             </CardContent>
@@ -351,7 +317,7 @@ function StatCard({ title, value, icon: Icon, subtitle, color, onClick }: any) {
 
   return (
     <motion.div variants={itemVariants} className="h-full">
-      <Card 
+      <Card
         className={cn(
           "group relative overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-0 gap-0",
           theme.border
@@ -382,5 +348,3 @@ function StatCard({ title, value, icon: Icon, subtitle, color, onClick }: any) {
     </motion.div>
   );
 }
-
-

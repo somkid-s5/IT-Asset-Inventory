@@ -149,6 +149,47 @@ export class DatabasesService {
     );
   }
 
+  async getDataQualitySummary() {
+    const databases = await this.prisma.databaseInventory.findMany({
+      select: {
+        id: true,
+        name: true,
+        engine: true,
+        host: true,
+        ipAddress: true,
+        owner: true,
+        environment: true,
+        backupPolicy: true,
+        accounts: { select: { id: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const issues = databases.flatMap((database) => {
+      const missing = [
+        !database.owner && 'owner',
+        !database.environment && 'environment',
+        !database.backupPolicy && 'backup policy',
+        database.accounts.length === 0 && 'database account',
+      ].filter(Boolean) as string[];
+      return missing.length
+        ? [
+            {
+              id: database.id,
+              name: database.name,
+              engine: database.engine,
+              issues: missing,
+            },
+          ]
+        : [];
+    });
+    return {
+      totalDatabases: databases.length,
+      completeDatabases: databases.length - issues.length,
+      issueCount: issues.length,
+      issues,
+    };
+  }
+
   async findOne(id: string) {
     const database = await this.prisma.databaseInventory.findUnique({
       where: { id },

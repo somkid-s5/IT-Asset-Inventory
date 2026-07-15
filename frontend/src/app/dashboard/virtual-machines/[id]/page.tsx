@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Copy, Eye, EyeOff, ShieldCheck, Sparkles, Monitor, Cpu, Server, HardDrive, Network, Tag, Clock, Globe, LoaderCircle, Database, History, User } from 'lucide-react';
+import { ArrowLeft, Copy, Eye, EyeOff, ShieldCheck, Sparkles, Monitor, Cpu, Server, HardDrive, Network, Tag, Clock, Globe, LoaderCircle, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,55 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { VmFormDialog } from '@/components/VmFormDialog';
 import type { VmInventoryDetail } from '@/lib/vm-inventory';
 import { archiveVmInventory, getVmInventoryById, revealVmGuestAccountPassword } from '@/services/vm';
-import type { Ticket } from '@/services/tickets';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
-function TicketHistorySection({ tickets }: { tickets: Ticket[] }) {
-  const router = useRouter();
-  
-  return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-2 px-1">
-        <History className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-bold tracking-tight text-foreground">Maintenance & Support History</h2>
-        {tickets.length > 0 && (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
-            {tickets.length}
-          </span>
-        )}
-      </div>
-      
-      <div className="glass-card divide-y divide-border/40 overflow-hidden">
-        {tickets.length === 0 ? (
-          <div className="p-8 text-center text-xs text-muted-foreground italic">
-            No maintenance tickets recorded for this VM
-          </div>
-        ) : (
-          tickets.map((ticket) => (
-            <button 
-              key={ticket.id} 
-              className="group w-full text-left p-4 hover:bg-muted/30 transition-colors cursor-pointer block"
-              onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
-            >
-              <div className="flex items-center justify-between mb-2">
-                 <div className="flex items-center gap-2">
-                    <span className="font-mono text-[10px] font-bold text-primary">{ticket.ticketNo}</span>
-                    <Badge variant="outline" className="text-[9px] h-4.5 font-bold uppercase">{ticket.status.replace(/_/g, ' ')}</Badge>
-                 </div>
-                 <span className="text-[10px] text-muted-foreground">{new Date(ticket.createdAt).toLocaleDateString()}</span>
-              </div>
-              <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">{ticket.title}</h4>
-              <div className="flex items-center gap-4 mt-2 text-[10px] text-muted-foreground">
-                 <span className="flex items-center gap-1"><User className="h-3 w-3" /> {ticket.assignee?.displayName || 'Unassigned'}</span>
-              </div>
-            </button>
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
 
 export default function VmDetailPage() {
   const params = useParams();
@@ -422,9 +375,6 @@ export default function VmDetailPage() {
           </section>
         </div>
 
-        <div className="space-y-6">
-          <TicketHistorySection tickets={vm.tickets} />
-        </div>
       </div>
 
       <VmFormDialog open={editOpen} onOpenChange={setEditOpen} vmToEdit={vm} onSuccess={() => void loadVm()} />

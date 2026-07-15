@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { EmptyState } from '@/components/EmptyState';
 import { AccessDenied } from '@/components/access-denied';
 import { motion } from 'framer-motion';
+import { fadeInUp } from '@/lib/animations';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -218,8 +219,9 @@ export default function AuditLogsPage() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
       className="space-y-6 pt-0"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

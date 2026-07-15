@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Database, Eye, EyeOff, FolderTree, HardDrive, Plus, Shield, Trash2, UserRound } from 'lucide-react';
 import api from '@/services/api';
 import { toast } from 'sonner';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -183,6 +184,11 @@ export function AssetFormDialog({
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const { confirmDiscard } = useUnsavedChanges(open, { formData, accessPoints, metadataPairs, assetMode });
+  const requestClose = () => {
+    if (loading || !confirmDiscard()) return;
+    onOpenChange(false);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -571,7 +577,7 @@ export function AssetFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => nextOpen ? onOpenChange(true) : requestClose()}>
       <DialogContent
         key={assetToEdit?.id ?? 'new-asset'}
         className="max-h-[92vh] overflow-y-auto bg-card border-border p-0 sm:max-w-4xl rounded-xl shadow-2xl"
@@ -594,10 +600,11 @@ export function AssetFormDialog({
               <p className="workspace-subtle">Asset Properties</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
-                <Label required>Asset Name / Hostname</Label>
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="asset-name" required>Asset Name / Hostname</Label>
                 <Input
+                  id="asset-name"
                   required
                   autoComplete="off"
                   value={formData.name}
@@ -611,9 +618,9 @@ export function AssetFormDialog({
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label required>Type</Label>
+                <Label htmlFor="asset-type" required>Type</Label>
                 <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as AssetType })}>
-                  <SelectTrigger>
+                  <SelectTrigger id="asset-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -627,8 +634,9 @@ export function AssetFormDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label optional>Asset ID</Label>
+                <Label htmlFor="asset-id" optional>Asset ID</Label>
                 <Input
+                  id="asset-id"
                   autoComplete="off"
                   value={formData.assetId}
                   onChange={(event) => setFormData({ ...formData, assetId: event.target.value })}
@@ -641,8 +649,9 @@ export function AssetFormDialog({
                 )}
               </div>
               <div className="space-y-1.5 ">
-                <Label optional>Brand / Model</Label>
+                <Label htmlFor="asset-brand" optional>Brand / Model</Label>
                 <Input
+                  id="asset-brand"
                   autoComplete="off"
                   value={formData.brandModel}
                   onChange={(event) => setFormData({ ...formData, brandModel: event.target.value })}
@@ -650,8 +659,9 @@ export function AssetFormDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label optional>Serial Number</Label>
+                <Label htmlFor="asset-sn" optional>Serial Number</Label>
                 <Input
+                  id="asset-sn"
                   autoComplete="off"
                   value={formData.sn}
                   onChange={(event) => setFormData({ ...formData, sn: event.target.value })}
@@ -665,8 +675,9 @@ export function AssetFormDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label optional>Location</Label>
+                <Label htmlFor="asset-location" optional>Location</Label>
                 <Input
+                  id="asset-location"
                   autoComplete="off"
                   value={formData.location}
                   onChange={(event) => setFormData({ ...formData, location: event.target.value })}
@@ -674,8 +685,9 @@ export function AssetFormDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label optional>Rack</Label>
+                <Label htmlFor="asset-rack" optional>Rack</Label>
                 <Input
+                  id="asset-rack"
                   autoComplete="off"
                   value={formData.rack}
                   onChange={(event) => setFormData({ ...formData, rack: event.target.value })}
@@ -683,12 +695,12 @@ export function AssetFormDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Status</Label>
+                <Label htmlFor="asset-status">Status</Label>
                 <Select
                   value={formData.status || "ACTIVE"}
                   onValueChange={(value) => setFormData({ ...formData, status: value })}
                 >
-                  <SelectTrigger className="bg-card/50">
+                  <SelectTrigger id="asset-status" className="bg-card/50">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -700,12 +712,12 @@ export function AssetFormDialog({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Environment (Env)</Label>
+                <Label htmlFor="asset-environment">Environment (Env)</Label>
                 <Select
                   value={formData.environment || "DEV"}
                   onValueChange={(value) => setFormData({ ...formData, environment: value })}
                 >
-                  <SelectTrigger className="bg-card/50">
+                  <SelectTrigger id="asset-environment" className="bg-card/50">
                     <SelectValue placeholder="Select env" />
                   </SelectTrigger>
                   <SelectContent>
@@ -716,12 +728,12 @@ export function AssetFormDialog({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label optional>Parent Asset</Label>
+                <Label htmlFor="asset-parent" optional>Parent Asset</Label>
                 <Select
                   value={formData.parentId || "none"}
                   onValueChange={(value) => setFormData({ ...formData, parentId: value === "none" ? "" : value })}
                 >
-                  <SelectTrigger className="bg-card/50">
+                  <SelectTrigger id="asset-parent" className="bg-card/50">
                     <div className="flex items-center gap-2">
                       <FolderTree className="h-3.5 w-3.5 text-muted-foreground" />
                       <SelectValue placeholder="Select parent" />
@@ -745,8 +757,9 @@ export function AssetFormDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label optional>Purchase Date</Label>
+                <Label htmlFor="asset-purchase-date" optional>Purchase Date</Label>
                 <Input
+                  id="asset-purchase-date"
                   type="date"
                   value={formData.purchaseDate}
                   onChange={(event) => setFormData({ ...formData, purchaseDate: event.target.value })}
@@ -754,8 +767,9 @@ export function AssetFormDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label optional>Warranty Expiration</Label>
+                <Label htmlFor="asset-warranty" optional>Warranty Expiration</Label>
                 <Input
+                  id="asset-warranty"
                   type="date"
                   value={formData.warrantyExpiration}
                   onChange={(event) => setFormData({ ...formData, warrantyExpiration: event.target.value })}
@@ -1051,7 +1065,7 @@ export function AssetFormDialog({
           </section>
 
           <div className="flex flex-col-reverse gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button type="button" variant="outline" onClick={requestClose} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
