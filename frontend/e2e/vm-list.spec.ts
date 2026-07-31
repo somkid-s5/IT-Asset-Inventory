@@ -43,4 +43,14 @@ test.describe('Virtual Machines List Spec', () => {
     await searchInputOrphaned.fill('non-existent-vm-orphaned-search');
     await expect(page.getByRole('heading', { name: 'No orphaned VMs found' })).toBeVisible();
   });
+
+  test('should keep the search field focused while typing continuously', async ({ page }) => {
+    const searchInput = page.getByPlaceholder('Search VM name, IP, host...');
+
+    await searchInput.click();
+    await searchInput.pressSequentially('vm-search-focus');
+
+    await expect(searchInput).toHaveValue('vm-search-focus');
+    await expect(searchInput).toBeFocused();
+  });
 });

@@ -16,9 +16,7 @@ export default function NotionEditor({ initialContent, onChange }: NotionEditorP
   const editor = useCreateBlockNote({
     uploadFile: async (file: File) => {
       try {
-        const url = await kbService.uploadImage(file);
-        const filename = url.split('/').pop();
-        return `/uploads/kb/${filename}`;
+        return await kbService.uploadImage(file);
       } catch (err) {
         toast.error("Failed to upload image");
         return "";
@@ -38,7 +36,7 @@ export default function NotionEditor({ initialContent, onChange }: NotionEditorP
   }, [editor, initialContent]); // Only run when editor instance is ready or initialContent changes
 
   return (
-    <div data-testid="kb-editor" className="min-h-[600px] bg-card rounded-[24px] border-2 border-border/40 p-4 focus-within:border-primary/40 transition-all shadow-inner overflow-hidden">
+    <div data-testid="kb-editor" className="min-h-[420px] overflow-hidden rounded-xl border border-border/40 bg-card p-3 shadow-inner transition-all focus-within:border-primary/40 sm:p-4">
       <BlockNoteView
         editor={editor}
         theme="dark" // Hardcoded dark to match current theme, can be dynamic later
@@ -46,7 +44,7 @@ export default function NotionEditor({ initialContent, onChange }: NotionEditorP
           const markdown = await editor.blocksToMarkdownLossy(editor.document);
           onChange(markdown);
         }}
-        className="min-h-[550px]"
+        className="min-h-[370px]"
       />
     </div>
   );

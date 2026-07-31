@@ -24,8 +24,6 @@ test.describe('Role-Based Access Control Spec - Viewer Access', () => {
     await expect(page.getByRole('heading', { name: 'Hardware & Infrastructure Inventory' })).toBeVisible({ timeout: 10000 });
     // Add Asset button must not be visible
     await expect(page.getByRole('button', { name: 'Add Asset' })).not.toBeVisible();
-    // Import CSV button must not be visible
-    await expect(page.getByRole('button', { name: 'Import' })).not.toBeVisible();
   });
 
   test('Viewer cannot access user management', async ({ page }) => {

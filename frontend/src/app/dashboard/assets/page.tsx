@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
 import api from '@/services/api';
@@ -10,13 +10,12 @@ import {
   Database, FolderTree, HardDrive, LoaderCircle,
   Pencil, Plus, Search, Server, Shield, Trash2,
   Box, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon,
-  MoreHorizontal, Columns, AlertTriangle, Download, ArrowUp, ArrowDown, Bookmark
+  MoreHorizontal, Columns, AlertTriangle, Download, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { toast } from 'sonner';
-import React from 'react';
 import { AssetFormDialog } from '@/components/LazyLoadedDialogs';
 import { EmptyState } from '@/components/EmptyState';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,16 +45,15 @@ import {
   getCoreRowModel,
   getExpandedRowModel,
   getSortedRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   useReactTable,
   ColumnDef,
+  PaginationState,
   SortingState,
   ColumnFiltersState,
   VisibilityState,
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { fadeInUp } from '@/lib/animations';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
@@ -83,6 +81,22 @@ interface Asset {
   customMetadata?: Record<string, string>;
 }
 
+interface AssetsResponse {
+  data: Asset[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+const EMPTY_ASSETS_RESPONSE: AssetsResponse = {
+  data: [],
+  total: 0,
+  page: 1,
+  limit: 20,
+  totalPages: 1,
+};
+
 const TABS: { label: string; value: 'ALL' | AssetType; icon: typeof Box; iconClassName: string }[] = [
   { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
   { label: 'Servers', value: 'SERVER', icon: Server, iconClassName: 'text-success' },
@@ -109,14 +123,12 @@ export default function AssetsPage() {
   const initialType = searchParams.get('type') as AssetType | null;
   const [activeTab, setActiveTab] = useState<'ALL' | AssetType>(initialType && ['SERVER', 'STORAGE', 'SWITCH', 'SP', 'NETWORK'].includes(initialType) ? initialType : 'ALL');
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm.trim());
 
-  const { data: assets = [], isLoading, refetch } = useQuery({
-    queryKey: ['assets', activeTab, searchTerm],
-    queryFn: async () => {
-      const response = await api.get<any>('/assets', { params: { q: searchTerm || undefined, type: activeTab === 'ALL' ? undefined : activeTab, limit: 200 } });
-      return (Array.isArray(response.data) ? response.data : (response.data.data || [])) as Asset[];
-    },
-  });
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearchTerm(searchTerm.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
 
   // Dialog functionality state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -124,10 +136,6 @@ export default function AssetsPage() {
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [assetPendingDelete, setAssetPendingDelete] = useState<Asset | null>(null);
-  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
-  const [importOpen, setImportOpen] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkOwner, setBulkOwner] = useState('');
 
@@ -138,60 +146,42 @@ export default function AssetsPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [expanded, setExpanded] = useState({});
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
+
+  const { data: assetsResponse = EMPTY_ASSETS_RESPONSE, isLoading, refetch } = useQuery({
+    queryKey: [
+      'assets',
+      activeTab,
+      debouncedSearchTerm,
+      pagination.pageIndex,
+      pagination.pageSize,
+      sorting,
+    ],
+    queryFn: async () => {
+      const response = await api.get<AssetsResponse>('/assets', {
+        params: {
+          q: debouncedSearchTerm || undefined,
+          type: activeTab === 'ALL' ? undefined : activeTab,
+          page: pagination.pageIndex + 1,
+          limit: pagination.pageSize,
+          sortBy: sorting[0]?.id || 'assetId',
+          sortDir: sorting[0]?.desc ? 'desc' : 'asc',
+        },
+      });
+      return response.data;
+    },
+    placeholderData: keepPreviousData,
+  });
+
+  const assets = assetsResponse.data;
+  const totalPages = Math.max(1, assetsResponse.totalPages);
+  const hasActiveAssetFilter = Boolean(debouncedSearchTerm) || activeTab !== 'ALL';
+
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (searchTerm) params.set('q', searchTerm);
-    if (activeTab !== 'ALL') params.set('type', activeTab);
-    router.replace(params.size ? `/dashboard/assets?${params.toString()}` : '/dashboard/assets', { scroll: false });
-  }, [activeTab, router, searchTerm]);
+    setPagination((current) => ({ ...current, pageIndex: 0 }));
+    setRowSelection({});
+  }, [activeTab, debouncedSearchTerm, sorting]);
 
-  const selectImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const [headerLine, ...lines] = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
-    const headers = headerLine.split(',').map((value) => value.trim());
-    const rows = lines.map((line) => {
-      const values = line.split(',').map((value) => value.trim().replace(/^"|"$/g, ''));
-      return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? '']));
-    }).filter((row) => row.name);
-    if (!rows.length) return toast.error('No valid rows found. The CSV needs name and type columns.');
-    if (rows.length > 200) return toast.error('Import is limited to 200 rows at a time.');
-    setImportRows(rows);
-    setImportOpen(true);
-    event.target.value = '';
-  };
-
-  const confirmImport = async () => {
-    setImporting(true);
-    try {
-      const response = await api.post('/assets/bulk-import', { rows: importRows });
-      if (response.data.errors?.length) {
-        toast.error(response.data.errors.map((error: { message: string }) => error.message).join(' · '));
-        return;
-      }
-      toast.success(`Imported ${response.data.created} asset records`);
-      setImportOpen(false);
-      setImportRows([]);
-      void refetch();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Import failed. Check the CSV values and try again.');
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const saveCurrentView = () => {
-    localStorage.setItem('asset-saved-view', JSON.stringify({ q: searchTerm, type: activeTab }));
-    toast.success('Saved this Asset view on this device');
-  };
-  const loadSavedView = () => {
-    const saved = localStorage.getItem('asset-saved-view');
-    if (!saved) return toast.error('No saved Asset view yet');
-    const view = JSON.parse(saved) as { q?: string; type?: AssetType };
-    setSearchTerm(view.q ?? '');
-    setActiveTab(view.type ?? 'ALL');
-  };
   const applyBulkUpdate = async () => {
     const ids = table.getSelectedRowModel().rows.map((row) => row.original.id);
     if (!ids.length) return;
@@ -214,42 +204,6 @@ export default function AssetsPage() {
       ],
     });
   }, [setHeader]);
-
-  const filteredData = useMemo(() => {
-    let result = assets;
-    if (activeTab !== 'ALL') {
-      result = assets.filter(a => a.type === activeTab);
-    }
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(a => {
-        const matchesName = a.name?.toLowerCase().includes(term);
-        const matchesAssetId = a.assetId?.toLowerCase().includes(term);
-        const matchesSn = a.sn?.toLowerCase().includes(term);
-        const matchesType = a.type?.toLowerCase().includes(term);
-        const matchesLocation = a.location?.toLowerCase().includes(term);
-        const matchesRack = a.rack?.toLowerCase().includes(term);
-        const matchesStatus = a.status?.toLowerCase().includes(term);
-        const matchesBrandModel = a.brandModel?.toLowerCase().includes(term);
-        const matchesIp = a.ipAllocations?.some(ip => ip.address?.toLowerCase().includes(term));
-
-        return (
-          matchesName ||
-          matchesAssetId ||
-          matchesSn ||
-          matchesType ||
-          matchesLocation ||
-          matchesRack ||
-          matchesStatus ||
-          matchesBrandModel ||
-          matchesIp
-        );
-      });
-    }
-
-    return result;
-  }, [assets, activeTab, searchTerm]);
 
   const columns = useMemo<ColumnDef<Asset>[]>(() => [
     {
@@ -312,16 +266,6 @@ export default function AssetsPage() {
         const type = getValue() as AssetType;
         const labels: Record<AssetType, string> = { SERVER: 'Server', STORAGE: 'Storage', SWITCH: 'Switch', SP: 'SP', NETWORK: 'Network' };
         return <Badge variant="outline" className="font-medium bg-muted/20 text-[11px] px-1.5 py-0">{labels[type]}</Badge>;
-      }
-    },
-    {
-      accessorKey: 'environment',
-      header: "Env",
-      cell: ({ getValue }) => {
-        const env = getValue() as string;
-        if (!env) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
-        const variants: Record<string, string> = { PROD: 'bg-critical/10 text-critical border-critical/20', UAT: 'bg-warning/10 text-warning border-warning/20', DEV: 'bg-low/10 text-low border-low/20' };
-        return <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", variants[env] || "bg-low/10 text-low border-low/20")}>{env}</Badge>;
       }
     },
     {
@@ -398,20 +342,22 @@ export default function AssetsPage() {
   ], [user, loadingEditId, router, setAssetPendingDelete]);
 
   const table = useReactTable({
-    data: filteredData,
+    data: assets,
     columns,
-    state: { sorting, columnFilters, columnVisibility, rowSelection, expanded },
+    state: { sorting, columnFilters, columnVisibility, rowSelection, expanded, pagination },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onExpandedChange: setExpanded,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getSubRows: (row) => row.children,
+    manualPagination: true,
+    manualSorting: true,
+    pageCount: totalPages,
   });
 
   const openEditDialog = async (id: string) => {
@@ -423,6 +369,17 @@ export default function AssetsPage() {
     } finally {
       setLoadingEditId(null);
     }
+  };
+
+  const handleAssetSaved = () => {
+    // Newly created records may not have an Asset ID yet and therefore sort
+    // after identified records. Show the just-created record immediately
+    // without changing the server-side pagination model.
+    if (!editingAsset) {
+      setSorting([{ id: 'createdAt', desc: true }]);
+    }
+    setPagination((current) => ({ ...current, pageIndex: 0 }));
+    void refetch();
   };
 
   const confirmDeleteAsset = async () => {
@@ -439,7 +396,7 @@ export default function AssetsPage() {
   };
 
   const handleExport = () => {
-    const exportData = filteredData.map(asset => {
+    const exportData = assets.map(asset => {
       const ips = asset.ipAllocations?.map(ip => ip.address).join('; ') || '';
       const credentials = asset.credentials?.map(c => c.username).join('; ') || '';
       const customMetadata = asset.customMetadata
@@ -493,6 +450,12 @@ export default function AssetsPage() {
     });
     link.dispatchEvent(event);
 
+    void api.post('/audit-logs/export', {
+      resource: 'assets',
+      count: exportData.length,
+      query: searchTerm.trim() || undefined,
+    }).catch(() => undefined);
+
     setTimeout(() => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
@@ -508,9 +471,9 @@ export default function AssetsPage() {
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      className="space-y-6 pt-0"
+      className="space-y-4 pt-0"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2 text-balance">
             <HardDrive className="h-3.5 w-3.5" />
@@ -518,19 +481,13 @@ export default function AssetsPage() {
           </h2>
           <p className="text-xs text-muted-foreground text-pretty">Manage your physical and network assets</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-9" onClick={loadSavedView}><Bookmark className="mr-2 h-4 w-4" />Load view</Button>
-          <Button variant="ghost" size="sm" className="h-9" onClick={saveCurrentView}><Bookmark className="mr-2 h-4 w-4" />Save view</Button>
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
           {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
             <>
-            <input data-testid="file-import-input" ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void selectImportFile(event)} />
-            <Button variant="outline" size="sm" className="h-9" onClick={() => fileInputRef.current?.click()}>
-              <Download className="mr-2 h-4 w-4 rotate-180" />Import CSV
-            </Button>
             <Button onClick={() => { setEditingAsset(undefined); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
               <Plus className="h-4 w-4 mr-2" />
               Add Asset
@@ -549,16 +506,18 @@ export default function AssetsPage() {
             <Button size="sm" onClick={() => void applyBulkUpdate()}>Apply changes</Button>
           </div>
         )}
-        <Card className="border-2 border-border gap-0 shadow-md bg-card overflow-hidden p-0 rounded-[24px]">
-        <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <Card className="border border-border/80 gap-0 shadow-md bg-card overflow-hidden p-0 rounded-2xl">
+        <div className="p-3 sm:p-4 border-b border-border bg-muted/80 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           {/* Tabs */}
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit">
+          <div className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto bg-muted/50 p-1 rounded-xl w-fit">
             {TABS.map((tab) => (
               <button
                 key={tab.value}
+                type="button"
                 onClick={() => setActiveTab(tab.value)}
+                aria-pressed={activeTab === tab.value}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+                  "shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
                   activeTab === tab.value
                     ? "bg-card text-foreground shadow-sm ring-1 ring-border/50"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/50"
@@ -570,14 +529,14 @@ export default function AssetsPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            <div className="relative min-w-0 flex-1 md:flex-none">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search assets..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
+                className="h-9 w-full pl-9 bg-card border-border/50 focus-visible:ring-primary/20 md:w-64"
               />
             </div>
 
@@ -607,7 +566,7 @@ export default function AssetsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[760px]">
             <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
@@ -641,11 +600,11 @@ export default function AssetsPage() {
                       <EmptyState
                         icon={HardDrive}
                         title="No assets found"
-                        description={assets.length === 0
+                        description={!hasActiveAssetFilter && assetsResponse.total === 0
                           ? "You haven't added any infrastructure assets yet. Start by adding your first server or switch."
                           : "No assets match your current search or filter criteria."
                         }
-                        action={assets.length === 0 ? {
+                        action={!hasActiveAssetFilter && assets.length === 0 ? {
                           label: "Add Your First Asset",
                           onClick: () => { setEditingAsset(undefined); setDialogOpen(true); }
                         } : undefined}
@@ -660,15 +619,15 @@ export default function AssetsPage() {
         </div>
 
         {/* Pagination Footer */}
-        <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
-          <div className="flex-1 text-xs text-muted-foreground">
-            Total {table.getFilteredRowModel().rows.length} items
+        <div className="flex flex-col gap-3 border-t border-border/50 bg-muted/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+          <div className="text-xs text-muted-foreground">
+            Total {assetsResponse.total} items
           </div>
-          <div className="flex items-center gap-6 lg:gap-8">
+          <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-6 lg:gap-8">
             <div className="flex items-center gap-2">
               <p className="text-xs font-medium">Rows per page</p>
               <select
-                value={table.getState().pagination.pageSize}
+                value={pagination.pageSize}
                 onChange={e => table.setPageSize(Number(e.target.value))}
                 className="h-8 w-16 rounded-md border border-border bg-card text-xs focus:ring-1 focus:ring-primary outline-none"
               >
@@ -678,12 +637,13 @@ export default function AssetsPage() {
               </select>
             </div>
             <div className="flex w-[100px] items-center justify-center text-xs font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+              Page {pagination.pageIndex + 1} of {totalPages}
             </div>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 className="h-8 w-8 p-0"
+                aria-label="Previous page"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -692,6 +652,7 @@ export default function AssetsPage() {
               <Button
                 variant="outline"
                 className="h-8 w-8 p-0"
+                aria-label="Next page"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
@@ -708,18 +669,9 @@ export default function AssetsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         assetToEdit={editingAsset}
-        onSuccess={() => void refetch()}
+        onSuccess={handleAssetSaved}
         availableParents={assets.map(a => ({ id: a.id, name: a.name, type: a.type }))}
       />
-
-      <Dialog open={importOpen} onOpenChange={(open) => !importing && setImportOpen(open)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Review asset import</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">{importRows.length} records will be created. Required columns: <code>name</code>, <code>type</code>. Optional: assetId, status, environment, owner, department, location, rack, brandModel, sn.</p>
-          <div className="max-h-64 overflow-auto rounded-md border text-xs"><table className="w-full"><thead><tr className="bg-muted text-left"><th className="p-2">Name</th><th className="p-2">Type</th><th className="p-2">Asset ID</th></tr></thead><tbody>{importRows.slice(0, 20).map((row, index) => <tr key={index} className="border-t"><td className="p-2">{row.name}</td><td className="p-2">{row.type}</td><td className="p-2">{row.assetId || '—'}</td></tr>)}</tbody></table></div>
-          <div className="flex justify-end gap-2"><Button variant="outline" disabled={importing} onClick={() => setImportOpen(false)}>Cancel</Button><Button disabled={importing} onClick={() => void confirmImport()}>{importing ? 'Importing…' : `Import ${importRows.length} records`}</Button></div>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation */}
       <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>

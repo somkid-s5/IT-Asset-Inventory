@@ -18,6 +18,8 @@ test.describe('VM Detail Page Features', () => {
     // Assert prerequisite: check that we navigated to a VM details page
     await expect(page).toHaveURL(/\/dashboard\/virtual-machines\/[a-zA-Z0-9-]+/);
     await expect(page.getByText('Connection Information')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Synced', { exact: true })).toHaveCount(2);
+    await expect(page.getByText('Lifecycle Attention Required', { exact: true })).toHaveCount(0);
 
     // Check Tabs
     await page.getByRole('button', { name: 'RESOURCES' }).click();

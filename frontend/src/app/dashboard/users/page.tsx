@@ -43,7 +43,6 @@ import {
   useReactTable,
   ColumnDef,
   SortingState,
-  ColumnFiltersState,
   VisibilityState,
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
@@ -102,7 +101,7 @@ export default function UsersPage() {
 
   // TanStack Table State
   const [sorting, setSorting] = useState<SortingState>([{ id: 'displayName', desc: false }]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
@@ -327,15 +326,22 @@ export default function UsersPage() {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { sorting, columnFilters, columnVisibility, rowSelection },
+    state: { sorting, globalFilter, columnVisibility, rowSelection },
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const normalizedFilter = String(filterValue).trim().toLowerCase().replace(/^@/, '');
+      if (!normalizedFilter) return true;
+
+      return [row.original.displayName, row.original.username]
+        .some((value) => value.toLowerCase().includes(normalizedFilter));
+    },
   });
 
   const handleCreateUser = (e: FormEvent) => {
@@ -410,8 +416,8 @@ export default function UsersPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search name or @username..."
-                value={(table.getColumn('displayName')?.getFilterValue() as string) ?? ''}
-                onChange={(e) => table.getColumn('displayName')?.setFilterValue(e.target.value)}
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
                 className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
               />
             </div>

@@ -576,6 +576,24 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return new URL(normalized.origin);
   }
 
+  /**
+   * Mock vCenter responses are an opt-in development aid. Hostname matching
+   * alone must never make a connection appear successful because a typo or a
+   * placeholder endpoint can otherwise silently turn a real sync into sample
+   * data.
+   */
+  private isMockVcenterEnabled() {
+    return ['1', 'true', 'yes'].includes(
+      (process.env.VCENTER_MOCK_ENABLED ?? '').trim().toLowerCase(),
+    );
+  }
+
+  private isKnownMockVcenterHost(url: URL) {
+    return (
+      url.hostname.includes('mock') || url.hostname.includes('infrapilot.local')
+    );
+  }
+
   private requestJson<T>(
     url: URL,
     options: {
@@ -588,10 +606,14 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     const timeoutMs = options.timeoutMs ?? 8000;
 
     return new Promise<RequestResult<T>>((resolve, reject) => {
-      if (
-        url.hostname.includes('mock') ||
-        url.hostname.includes('infrapilot.local')
-      ) {
+      if (this.isKnownMockVcenterHost(url) && this.isMockVcenterEnabled()) {
+        if (process.env.NODE_ENV === 'production') {
+          return reject(
+            new Error(
+              'Mock vCenter responses are disabled in production. Configure a real vCenter endpoint.',
+            ),
+          );
+        }
         let responseData: any = null;
         const path = url.pathname;
 

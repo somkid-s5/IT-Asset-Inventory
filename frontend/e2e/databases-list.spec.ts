@@ -19,4 +19,15 @@ test.describe('Databases List Spec', () => {
     await searchInput.fill('non-existent-db-engine');
     await expect(page.getByText('No databases found')).toBeVisible();
   });
+
+  test('should keep the database search field focused while typing continuously', async ({ page }) => {
+    const searchInput = page.getByPlaceholder('Search databases...');
+
+    await searchInput.click();
+    await searchInput.pressSequentially('postgres', { delay: 40 });
+
+    await expect(searchInput).toBeFocused();
+    await expect(searchInput).toHaveValue('postgres');
+    await expect(searchInput).toBeFocused();
+  });
 });

@@ -11,7 +11,7 @@
     "start": "nest start",
     "start:dev": "dotenv -e ../.env -- nest start --watch",
     "start:debug": "dotenv -e ../.env -- nest start --debug --watch",
-    "start:prod": "node dist/src/main",
+    "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -20,13 +20,13 @@
     "test:e2e": "dotenv -e ../.env -- jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.1",
+    "@nestjs/common": "^11.1.28",
     "@nestjs/config": "^4.0.4",
-    "@nestjs/core": "^11.0.1",
+    "@nestjs/core": "^11.1.28",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/passport": "^11.0.5",
-    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-express": "^11.1.28",
     "@nestjs/serve-static": "^5.0.5",
     "@nestjs/throttler": "^6.5.0",
     "bcrypt": "^6.0.0",
@@ -44,7 +44,7 @@
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
-    "@nestjs/testing": "^11.0.1",
+    "@nestjs/testing": "^11.1.28",
     "@prisma/client": "^5.22.0",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.30",
@@ -93,6 +93,6 @@
     "testEnvironment": "node"
   },
   "prisma": {
-    "seed": "dotenv -e ../.env -- node dist/prisma/seed.js"
+    "seed": "dotenv -e ../.env -- ts-node prisma/seed.ts"
   }
 }

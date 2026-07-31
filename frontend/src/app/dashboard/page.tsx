@@ -2,11 +2,12 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Database, RefreshCw, Server,
   ShieldCheck, Monitor, ShieldAlert,
   Laptop, Activity, ArrowUpRight,
-  AlertCircle
+  AlertCircle, ClipboardCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +57,12 @@ interface DashboardOverview {
   };
 }
 
+interface DataQualityOverview {
+  assets: { issueCount: number };
+  databases: { issueCount: number };
+  vms: { issueCount: number };
+}
+
 import { containerVariants, itemVariants } from '@/lib/animations';
 
 export default function DashboardPage() {
@@ -68,12 +75,36 @@ export default function DashboardPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    for (const route of ['/dashboard/virtual-machines', '/dashboard/assets', '/dashboard/databases']) {
+      void router.prefetch(route);
+    }
+  }, [router]);
+
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['dashboard-overview'],
     queryFn: async () => {
       const response = await api.get<DashboardOverview>('/dashboard/overview');
       return response.data;
     },
+  });
+
+  const { data: qualityData } = useQuery({
+    queryKey: ['dashboard-data-quality'],
+    queryFn: async () => {
+      const [assets, databases, vms] = await Promise.all([
+        api.get('/assets/data-quality/summary'),
+        api.get('/databases/data-quality/summary'),
+        api.get('/vm/data-quality/summary'),
+      ]);
+
+      return {
+        assets: assets.data,
+        databases: databases.data,
+        vms: vms.data,
+      } as DataQualityOverview;
+    },
+    retry: false,
   });
 
   useEffect(() => {
@@ -120,6 +151,12 @@ export default function DashboardPage() {
   const eolCount = data?.assets?.eolCount ?? 0;
   const nonActiveCount = data?.assets?.nonActive ?? 0;
   const failedSyncCount = data?.vm?.connectionFailedSources ?? 0;
+  const dataQualityIssues = (qualityData?.assets?.issueCount ?? 0)
+    + (qualityData?.databases?.issueCount ?? 0)
+    + (qualityData?.vms?.issueCount ?? 0);
+  const dataQualitySubtitle = qualityData
+    ? `${qualityData.assets.issueCount} assets · ${qualityData.databases.issueCount} DBs · ${qualityData.vms.issueCount} VMs`
+    : 'Checking records...';
   const score = data?.assets?.total
     ? Math.round(((data.assets.active ?? 0) / data.assets.total) * 100)
     : 0;
@@ -156,9 +193,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Compute Assets" value={data?.vm.activeInventory} icon={Monitor} subtitle={`${data?.vm.pendingSetup} Setup · ${data?.vm.orphaned} Orphaned`} color="primary" onClick={() => router.push('/dashboard/virtual-machines')} />
-        <StatCard title="Infrastructure" value={data?.assets.total} icon={Server} subtitle={`${data?.assets.active} active · ${data?.assets.nonActive} non-active`} color="info" onClick={() => router.push('/dashboard/assets')} />
-        <StatCard title="Managed DBs" value={data?.databases.total} icon={Database} subtitle={`${data?.databases.production} Prod · ${data?.databases.accounts} Accounts`} color="success" onClick={() => router.push('/dashboard/databases')} />
+        <StatCard title="Compute Assets" value={data?.vm.activeInventory} icon={Monitor} subtitle={`${data?.vm.pendingSetup} Setup · ${data?.vm.orphaned} Orphaned`} color="primary" href="/dashboard/virtual-machines" />
+        <StatCard title="Infrastructure" value={data?.assets.total} icon={Server} subtitle={`${data?.assets.active} active · ${data?.assets.nonActive} non-active`} color="info" href="/dashboard/assets" />
+        <StatCard title="Managed DBs" value={data?.databases.total} icon={Database} subtitle={`${data?.databases.production} Prod · ${data?.databases.accounts} Accounts`} color="success" href="/dashboard/databases" />
+        <StatCard title="Needs Review" value={dataQualityIssues} icon={ClipboardCheck} subtitle={dataQualitySubtitle} color={dataQualityIssues > 0 ? "warning" : "success"} href="/dashboard/assets" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
@@ -305,7 +343,7 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ title, value, icon: Icon, subtitle, color, onClick }: any) {
+function StatCard({ title, value, icon: Icon, subtitle, color, href }: any) {
   const styles: any = {
     primary: { bg: 'group-hover:bg-primary/5', border: 'group-hover:border-primary/50', text: 'text-primary', dot: 'bg-primary', gradient: 'from-primary/20 via-primary/5 to-transparent' },
     success: { bg: 'group-hover:bg-success/5', border: 'group-hover:border-success/50', text: 'text-success', dot: 'bg-success', gradient: 'from-success/20 via-success/5 to-transparent' },
@@ -317,34 +355,39 @@ function StatCard({ title, value, icon: Icon, subtitle, color, onClick }: any) {
 
   return (
     <motion.div variants={itemVariants} className="h-full">
-      <Card
-        className={cn(
-          "group relative overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-0 gap-0",
-          theme.border
-        )}
-        onClick={onClick}
+      <Link
+        href={href}
+        aria-label={`${title}: ${value?.toLocaleString() || 0}`}
+        className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
-        <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", theme.gradient)} />
-        <div className={cn("absolute inset-0 transition-colors duration-500", theme.bg)} />
+        <Card
+          className={cn(
+            "group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-0 gap-0",
+            theme.border
+          )}
+        >
+          <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", theme.gradient)} />
+          <div className={cn("absolute inset-0 transition-colors duration-500", theme.bg)} />
 
-        <div className="p-4 relative z-10 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className={cn("p-1.5 rounded-lg bg-background border border-border/50", theme.text)}>
-                <Icon className="h-4 w-4" strokeWidth={2.5} />
+          <div className="p-4 relative z-10 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={cn("p-1.5 rounded-lg bg-background border border-border/50", theme.text)}>
+                  <Icon className="h-4 w-4" strokeWidth={2.5} />
+                </div>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{title}</span>
               </div>
-              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{title}</span>
+            </div>
+            <div className="pl-1">
+              <div className="text-3xl font-bold font-mono tracking-tight text-foreground">{value?.toLocaleString() || 0}</div>
+              <p className="text-[10px] text-muted-foreground mt-1 font-medium flex items-center gap-1.5">
+                <span className={cn("w-1.5 h-1.5 rounded-full shadow-sm", theme.dot)}></span>
+                {subtitle}
+              </p>
             </div>
           </div>
-          <div className="pl-1">
-            <div className="text-3xl font-bold font-mono tracking-tight text-foreground">{value?.toLocaleString() || 0}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-medium flex items-center gap-1.5">
-              <span className={cn("w-1.5 h-1.5 rounded-full shadow-sm", theme.dot)}></span>
-              {subtitle}
-            </p>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </Link>
     </motion.div>
   );
 }

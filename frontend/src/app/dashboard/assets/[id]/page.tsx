@@ -54,6 +54,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { HARDWARE_SPEC_GROUPS, normalizeSpecKey, type HardwareSpecGroup } from "@/lib/asset-specs";
 import {
   Dialog,
   DialogContent,
@@ -249,6 +250,113 @@ function formatFileSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function getHardwareSpecValue(
+  metadata: Record<string, unknown> | null | undefined,
+  groupKey: string,
+  fieldKey: string,
+) {
+  const storedSpecifications = metadata?.hardwareSpecifications;
+  const storedGroup = storedSpecifications && typeof storedSpecifications === 'object' && !Array.isArray(storedSpecifications)
+    ? (storedSpecifications as Record<string, unknown>)[groupKey]
+    : undefined;
+  let entry = storedGroup && typeof storedGroup === 'object' && !Array.isArray(storedGroup)
+    ? (storedGroup as Record<string, unknown>)[fieldKey]
+    : undefined;
+
+  if (entry === undefined && fieldKey === 'configuration') {
+    const legacyValue = metadata?.[groupKey];
+    if (typeof legacyValue === 'string' || typeof legacyValue === 'number') entry = legacyValue;
+  }
+  if (entry === undefined && groupKey === 'disk' && fieldKey === 'rawCapacity') {
+    const legacyValue = Object.entries(metadata ?? {}).find(([name]) => normalizeSpecKey(name) === 'total_capacity')?.[1];
+    if (typeof legacyValue === 'string' || typeof legacyValue === 'number') entry = legacyValue;
+  }
+  if (entry === null || entry === undefined || entry === '') return '--';
+  return typeof entry === 'object' ? JSON.stringify(entry) : String(entry);
+}
+
+function getHardwareSpecSummary(metadata: Record<string, unknown> | null | undefined, group: HardwareSpecGroup) {
+  const value = (fieldKey: string) => {
+    const result = getHardwareSpecValue(metadata, group.key, fieldKey);
+    return result === '--' ? undefined : result;
+  };
+  const values = group.fields.map(({ key }) => value(key));
+  if (group.key === 'raid') {
+    const summary = values.filter(Boolean).join(' / ');
+    return summary || 'N/A';
+  }
+  if (!values.some(Boolean)) return '--';
+
+  switch (group.key) {
+    case 'cpu':
+      return [
+        value('totalSockets') && `${value('totalSockets')} sockets`,
+        value('socketsUsed') && `${value('socketsUsed')} used`,
+        value('configuration'),
+        value('totalCores') && `${value('totalCores')} cores`,
+        value('totalThreads') && `${value('totalThreads')} threads`,
+      ].filter(Boolean).join(' / ');
+    case 'ram':
+      return [
+        value('totalSlots') && `${value('totalSlots')} slots`,
+        value('slotsUsed') && `${value('slotsUsed')} used`,
+        value('configuration'),
+        value('installedCapacity') && `${value('installedCapacity')} installed`,
+        value('maximumCapacity') && `${value('maximumCapacity')} max`,
+      ].filter(Boolean).join(' / ');
+    case 'disk':
+      return [
+        value('totalBays') && `${value('totalBays')} bays`,
+        value('baysUsed') && `${value('baysUsed')} used`,
+        value('configuration'),
+        value('rawCapacity') && `${value('rawCapacity')} raw`,
+        value('usableCapacity') && `${value('usableCapacity')} usable`,
+      ].filter(Boolean).join(' / ');
+    case 'power':
+      return [
+        value('totalSlots') && `${value('totalSlots')} slots`,
+        value('installed') && `${value('installed')} installed`,
+        value('configuration'),
+        value('ratedPower') && `${value('ratedPower')} total`,
+        value('redundancy'),
+      ].filter(Boolean).join(' / ');
+    case 'networkPorts':
+      return [
+        value('totalPorts') && `${value('totalPorts')} ports`,
+        value('portsUsed') && `${value('portsUsed')} used`,
+        value('configuration'),
+        value('availablePorts') && `${value('availablePorts')} available`,
+        value('totalBandwidth'),
+      ].filter(Boolean).join(' / ');
+    case 'expansionSlots':
+      return [
+        value('totalSlots') && `${value('totalSlots')} slots`,
+        value('slotsUsed') && `${value('slotsUsed')} used`,
+        value('configuration'),
+        value('availableSlots') && `${value('availableSlots')} available`,
+        value('slotType'),
+      ].filter(Boolean).join(' / ');
+    case 'quantity':
+      return [
+        value('totalUnits') && `${value('totalUnits')} total`,
+        value('unitsInstalled') && `${value('unitsInstalled')} installed`,
+        value('configuration'),
+        value('spareUnits') && `${value('spareUnits')} spare`,
+        value('notes'),
+      ].filter(Boolean).join(' / ');
+    case 'formFactor':
+      return [
+        value('configuration'),
+        value('rackUnits'),
+        value('dimensions'),
+        value('weight'),
+        value('mounting'),
+      ].filter(Boolean).join(' / ');
+    default:
+      return values.filter(Boolean).join(' / ');
+  }
+}
+
 function formatRelativeTime(dateStr: string) {
   const date = new Date(dateStr);
   const now = new Date();
@@ -298,7 +406,8 @@ function AttachmentsSection({
     return { album: "General", displayName: filename };
   };
 
-  const isImage = (mimeType: string) => mimeType.startsWith("image/");
+  const isImage = (mimeType: string) =>
+    mimeType.startsWith("image/") && mimeType !== "image/svg+xml";
   const photos = initialAttachments.filter((a) => isImage(a.mimeType));
   const documents = initialAttachments.filter((a) => !isImage(a.mimeType));
 
@@ -743,7 +852,7 @@ function AttachmentsSection({
                     </div>
                     <div className="min-w-0">
                       <a
-                        href={getUrl(doc.storedPath)}
+                        href={`${getApiBase()}/assets/${assetId}/attachments/${doc.id}/download`}
                         target="_blank"
                         rel="noreferrer"
                         className="block truncate text-sm font-semibold text-foreground hover:text-primary transition-colors"
@@ -1753,13 +1862,17 @@ export default function AssetDetailsPage() {
   if (!asset) return null;
 
   const style = getAssetStyle(asset.type);
+  const primaryVersion =
+    asset.osVersion?.trim() ||
+    accessRows.find((row) => row.version)?.version ||
+    null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="workspace-page space-y-6 pt-2"
+      className="workspace-page space-y-4 pt-1"
     >
       <div className="flex justify-between items-center">
         <button
@@ -1773,12 +1886,12 @@ export default function AssetDetailsPage() {
 
       {/* Hero Section */}
       <section className="glass-card overflow-hidden">
-        <div className="p-6 sm:p-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between relative">
+        <div className="relative flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none"></div>
-          <div className="flex items-start gap-5 relative z-10">
+          <div className="relative z-10 flex min-w-0 items-start gap-4">
             <div
               className={cn(
-                "flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-white shadow-xl",
+                "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white shadow-xl",
                 style.bg,
               )}
             >
@@ -1812,8 +1925,8 @@ export default function AssetDetailsPage() {
               </div>
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-3 lg:justify-end relative z-10">
-            <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-4 py-2 min-w-[80px]">
+          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+            <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
               <span className="text-[10px] font-bold uppercase text-muted-foreground">
                 Interfaces
               </span>
@@ -1821,7 +1934,7 @@ export default function AssetDetailsPage() {
                 {accessRows.length}
               </span>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-4 py-2 min-w-[80px]">
+            <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
               <span className="text-[10px] font-bold uppercase text-muted-foreground">
                 Accounts
               </span>
@@ -1829,7 +1942,7 @@ export default function AssetDetailsPage() {
                 {asset.credentials?.length ?? 0}
               </span>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-4 py-2 min-w-[80px]">
+            <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
               <span className="text-[10px] font-bold uppercase text-muted-foreground">
                 Notes
               </span>
@@ -1841,116 +1954,115 @@ export default function AssetDetailsPage() {
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-        <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="space-y-4">
           {/* Hardware Specs & Governance */}
-          <section className="grid gap-6 md:grid-cols-2">
+          <section className="grid gap-3 md:grid-cols-2">
             {/* Metadata (Spec) */}
-            <div className="space-y-4">
+            <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2 px-1">
                 <LaptopMinimal className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-bold tracking-tight text-foreground">
                   Specifications
                 </h2>
               </div>
-              <div className="glass-card overflow-hidden">
-                {!asset.customMetadata ||
-                Object.keys(asset.customMetadata).length === 0 ? (
-                  <div className="p-4 text-xs italic text-muted-foreground">
-                    No technical metadata provided
-                  </div>
-                ) : (
-                  <div className="divide-y divide-border/40">
-                    {Object.entries(asset.customMetadata).map(([k, v]) => (
-                      <div
-                        key={k}
-                        className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30"
-                      >
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                          {k}
-                        </span>
-                        <span className="text-xs font-semibold text-foreground text-right">
-                          {String(v)}
+              <div className="glass-card h-full overflow-hidden">
+                <div className="divide-y divide-border/40">
+                  {HARDWARE_SPEC_GROUPS.map((group) => {
+                    const summary = getHardwareSpecSummary(asset.customMetadata, group);
+                    return (
+                      <div key={group.key} className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">{group.label}</span>
+                        <span className="max-w-[72%] truncate text-right text-[11px] font-semibold text-foreground" title={summary}>
+                          {summary}
                         </span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
             {/* Asset Properties */}
-            <div className="space-y-4">
+            <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2 px-1">
                 <Info className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-bold tracking-tight text-foreground">
                   Asset Properties
                 </h2>
               </div>
-              <div className="glass-card divide-y divide-border/40 overflow-hidden">
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+              <div className="glass-card h-full divide-y divide-border/40 overflow-hidden">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Type
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
                     {asset.type || "--"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Asset ID
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
                     {asset.assetId || "--"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Version
+                  </span>
+                  <span className="max-w-[68%] truncate text-right font-mono text-[11px] font-semibold text-foreground" title={primaryVersion || undefined}>
+                    {primaryVersion || "--"}
+                  </span>
+                </div>
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Brand / Model
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
                     {asset.brandModel || "--"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Serial Number
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
                     {asset.sn || "--"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Location
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
                     {asset.location || "--"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Rack
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
                     {asset.rack || "--"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Purchase Date
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
                     {asset.purchaseDate
                       ? new Date(asset.purchaseDate).toLocaleDateString()
                       : "--"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/30">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Warranty Exp.
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
                     {asset.warrantyExpiration
                       ? new Date(asset.warrantyExpiration).toLocaleDateString()
                       : "--"}
@@ -1961,7 +2073,7 @@ export default function AssetDetailsPage() {
           </section>
 
           {/* Access & Credentials Section */}
-          <section className="space-y-4">
+          <section className="space-y-3">
             <div className="flex items-center gap-2 px-1">
               <Globe className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-bold tracking-tight text-foreground">
@@ -1979,7 +2091,7 @@ export default function AssetDetailsPage() {
                   <div
                     key={row.key}
                     className={cn(
-                      "group overflow-hidden rounded-2xl border transition-all duration-300",
+                      "group overflow-hidden rounded-xl border transition-all duration-300",
                       openAccordion === row.key
                         ? "border-primary/40 bg-card shadow-lg ring-1 ring-primary/10"
                         : "border-border/60 bg-card/50 hover:border-primary/20 hover:bg-card",
@@ -1991,12 +2103,13 @@ export default function AssetDetailsPage() {
                           openAccordion === row.key ? null : row.key,
                         )
                       }
-                      className="flex w-full items-center justify-between p-4 text-left"
+                      aria-expanded={openAccordion === row.key}
+                      className="flex w-full items-center justify-between gap-3 p-3 text-left sm:p-4"
                     >
-                      <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex min-w-0 items-center gap-3">
                         <div
                           className={cn(
-                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors",
+                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
                             openAccordion === row.key
                               ? "bg-primary text-primary-foreground shadow-md"
                               : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
@@ -2016,7 +2129,7 @@ export default function AssetDetailsPage() {
                               {row.label}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
                             <span className="truncate text-sm font-bold text-foreground">
                               {row.addresses[0] || "No IP"}
                             </span>
@@ -2028,10 +2141,19 @@ export default function AssetDetailsPage() {
                                 +{row.addresses.length - 1}
                               </Badge>
                             )}
+                            {row.version && (
+                              <Badge
+                                variant="outline"
+                                className="max-w-full truncate border-primary/20 bg-primary/5 text-[9px] font-semibold text-primary sm:max-w-48"
+                                title={row.version}
+                              >
+                                Version {row.version}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex shrink-0 items-center gap-2">
                         <div className="hidden sm:flex items-center gap-1.5">
                           {row.methods.map((m) => (
                             <Badge
@@ -2060,8 +2182,8 @@ export default function AssetDetailsPage() {
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.3, ease: "easeInOut" }}
                         >
-                          <div className="border-t border-border/40 p-4 pt-2 space-y-4 bg-muted/10">
-                            <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-3 border-t border-border/40 bg-muted/10 p-3 pt-2 sm:p-4 sm:pt-2">
+                            <div className="grid gap-3 sm:grid-cols-2">
                               {/* IPs List */}
                               <div className="space-y-2">
                                 <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
@@ -2252,7 +2374,7 @@ export default function AssetDetailsPage() {
         </div>
 
         {/* Sidebar Components (Notes, Timeline) */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <NotesSection assetId={assetId} initialNotes={asset.notes ?? []} />
           <AssetChangelogSection assetId={assetId} />
         </div>

@@ -185,6 +185,18 @@ export class UsersService {
       },
     });
 
+    await this.prisma.auditLog.create({
+      data: {
+        userId: currentUserId,
+        action: AuditAction.DELETE_USER,
+        targetId: userId,
+        details: JSON.stringify({
+          username: user.username,
+          role: user.role,
+        }),
+      },
+    });
+
     return { success: true };
   }
 

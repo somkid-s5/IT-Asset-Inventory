@@ -11,6 +11,13 @@ import { Database, Eye, EyeOff, FolderTree, HardDrive, Plus, Shield, Trash2, Use
 import api from '@/services/api';
 import { toast } from 'sonner';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import {
+  createEmptyHardwareSpecifications,
+  HARDWARE_SPEC_GROUPS,
+  hasHardwareSpecifications,
+  normalizeSpecKey,
+  type HardwareSpecifications,
+} from '@/lib/asset-specs';
 
 type AssetType = 'SERVER' | 'STORAGE' | 'SWITCH' | 'SP' | 'NETWORK';
 
@@ -31,10 +38,6 @@ interface FormErrors {
       password?: string;
     }>;
   }>;
-  metadata?: Record<number, {
-    key?: string;
-    value?: string;
-  }>;
 }
 
 interface AccessUserFormValue {
@@ -49,11 +52,6 @@ interface AccessPointFormValue {
   version: string;
   address: string;
   users: AccessUserFormValue[];
-}
-
-interface MetadataPair {
-  key: string;
-  value: string;
 }
 
 interface AssetCredential {
@@ -178,13 +176,14 @@ export function AssetFormDialog({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
   const [accessPoints, setAccessPoints] = useState<AccessPointFormValue[]>([{ ...EMPTY_ACCESS_POINT }]);
-  const [metadataPairs, setMetadataPairs] = useState<MetadataPair[]>([]);
+  const [hardwareSpecs, setHardwareSpecs] = useState<HardwareSpecifications>(() => createEmptyHardwareSpecifications());
+  const [metadataExtras, setMetadataExtras] = useState<Record<string, unknown>>({});
   const [assetMode, setAssetMode] = useState<'single' | 'multi'>('single');
   const [nodeLabels, setNodeLabels] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
-  const { confirmDiscard } = useUnsavedChanges(open, { formData, accessPoints, metadataPairs, assetMode });
+  const { confirmDiscard } = useUnsavedChanges(open, { formData, accessPoints, hardwareSpecs, metadataExtras, assetMode });
   const requestClose = () => {
     if (loading || !confirmDiscard()) return;
     onOpenChange(false);
@@ -198,7 +197,8 @@ export function AssetFormDialog({
     if (!assetToEdit) {
       setFormData(DEFAULT_FORM_STATE);
       setAccessPoints([{ ...EMPTY_ACCESS_POINT }]);
-      setMetadataPairs([]);
+      setHardwareSpecs(createEmptyHardwareSpecifications());
+      setMetadataExtras({});
       setAssetMode('single');
       setNodeLabels([]);
       setFormErrors({});
@@ -306,14 +306,34 @@ export function AssetFormDialog({
     setAssetMode(existingNodeLabels.length > 0 ? 'multi' : 'single');
     setNodeLabels(existingNodeLabels);
 
-    setMetadataPairs(
-      assetToEdit.customMetadata
-        ? Object.entries(assetToEdit.customMetadata).map(([key, value]) => ({
-          key,
-          value: String(value),
-        }))
-        : [],
-    );
+    const nextHardwareSpecs = createEmptyHardwareSpecifications();
+    const nextMetadataExtras: Record<string, unknown> = {};
+    const metadata = assetToEdit.customMetadata ?? {};
+    const storedSpecifications = metadata.hardwareSpecifications;
+    if (storedSpecifications && typeof storedSpecifications === 'object' && !Array.isArray(storedSpecifications)) {
+      HARDWARE_SPEC_GROUPS.forEach((group) => {
+        const storedGroup = (storedSpecifications as Record<string, unknown>)[group.key];
+        if (!storedGroup || typeof storedGroup !== 'object' || Array.isArray(storedGroup)) return;
+        group.fields.forEach(({ key }) => {
+          const value = (storedGroup as Record<string, unknown>)[key];
+          if (value !== null && value !== undefined) nextHardwareSpecs[group.key][key] = String(value);
+        });
+      });
+    }
+    Object.entries(metadata).forEach(([key, value]) => {
+      if (key === 'hardwareSpecifications') return;
+      const normalizedKey = normalizeSpecKey(key);
+      const legacyGroup = HARDWARE_SPEC_GROUPS.find((group) => normalizeSpecKey(group.key) === normalizedKey);
+      if (legacyGroup && (typeof value === 'string' || typeof value === 'number')) {
+        nextHardwareSpecs[legacyGroup.key].configuration = String(value);
+      } else if (normalizedKey === 'total_capacity' && (typeof value === 'string' || typeof value === 'number')) {
+        nextHardwareSpecs.disk.rawCapacity = String(value);
+      } else {
+        nextMetadataExtras[key] = value;
+      }
+    });
+    setHardwareSpecs(nextHardwareSpecs);
+    setMetadataExtras(nextMetadataExtras);
   }, [assetToEdit, open]);
 
   useEffect(() => {
@@ -348,10 +368,11 @@ export function AssetFormDialog({
     );
   };
 
-  const updateMetadataField = (index: number, field: keyof MetadataPair, value: string) => {
-    setMetadataPairs((current) =>
-      current.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)),
-    );
+  const updateHardwareSpec = (groupKey: string, fieldKey: string, value: string) => {
+    setHardwareSpecs((current) => ({
+      ...current,
+      [groupKey]: { ...current[groupKey], [fieldKey]: value },
+    }));
   };
 
   const handleFieldBlur = (fieldName: string) => {
@@ -459,12 +480,12 @@ export function AssetFormDialog({
     setLoading(true);
 
     try {
-      const customMetadata = metadataPairs.reduce<Record<string, string>>((result, pair) => {
-        if (pair.key.trim() && pair.value.trim()) {
-          result[pair.key.trim().toLowerCase().replace(/\s+/g, '_')] = pair.value.trim();
-        }
-        return result;
-      }, {});
+      const customMetadata: Record<string, unknown> = { ...metadataExtras };
+      if (hasHardwareSpecifications(hardwareSpecs)) {
+        customMetadata.hardwareSpecifications = hardwareSpecs;
+      } else {
+        delete customMetadata.hardwareSpecifications;
+      }
 
       const finalIps = accessPoints
         .filter((item) => item.address.trim())
@@ -1013,53 +1034,38 @@ export function AssetFormDialog({
           </section>
 
           <section className="muted-panel p-4">
-            <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
-              <div>
-                <p className="workspace-subtle">Additional Specifications</p>
-                <p className="mt-1 text-xs text-muted-foreground">Supplementary data such as RAM, CPU, or warranty details</p>
+            <div className="border-b border-border/70 pb-3">
+              <div className="mb-3">
+                <p className="workspace-subtle">Hardware Specifications</p>
+                <p className="mt-1 text-xs text-muted-foreground">Enter hardware details using the standard fields below.</p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setMetadataPairs((current) => [...current, { key: '', value: '' }])}
-              >
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Add Spec
-              </Button>
+              <div className="hidden">
+                <p className="workspace-subtle">Hardware Specifications</p>
+                <p className="mt-1 text-xs text-muted-foreground">กรอกข้อมูลสเปคโดยตรง ไม่ต้องสร้างชื่อรายการเอง</p>
+              </div>
             </div>
 
-            <div className="mt-4 space-y-2">
-              {metadataPairs.length === 0 && (
-                <div className="rounded-[22px] border border-dashed border-border/70 bg-card/70 px-4 py-4 text-sm text-muted-foreground">
-                  No extra specifications yet.
-                </div>
-              )}
-
-              {metadataPairs.map((pair, index) => (
-                <div key={`${pair.key}-${index}`} className="grid gap-2 md:grid-cols-[1fr_1.3fr_auto]">
-                  <Input
-                    autoComplete="off"
-                    value={pair.key}
-                    onChange={(event) => updateMetadataField(index, 'key', event.target.value)}
-                    placeholder="Specification name"
-                  />
-                  <Input
-                    autoComplete="off"
-                    value={pair.value}
-                    onChange={(event) => updateMetadataField(index, 'value', event.target.value)}
-                    placeholder="Specification value"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={() => setMetadataPairs((current) => current.filter((_, currentIndex) => currentIndex !== index))}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+            <div className="mt-4 grid gap-4">
+              {HARDWARE_SPEC_GROUPS.map((group) => (
+                <fieldset key={group.key} className="rounded-xl border border-border/70 bg-card/70 p-3">
+                  <legend className="px-1 text-xs font-bold text-foreground">{group.label}</legend>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.fields.map(({ key, label, placeholder }) => (
+                      <div key={key} className="space-y-1.5">
+                        <Label htmlFor={`asset-spec-${group.key}-${key}`} className="text-xs font-semibold">
+                          {label}
+                        </Label>
+                        <Input
+                          id={`asset-spec-${group.key}-${key}`}
+                          autoComplete="off"
+                          value={hardwareSpecs[group.key]?.[key] ?? ''}
+                          onChange={(event) => updateHardwareSpec(group.key, key, event.target.value)}
+                          placeholder={placeholder}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
               ))}
             </div>
           </section>

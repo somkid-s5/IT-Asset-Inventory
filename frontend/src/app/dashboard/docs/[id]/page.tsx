@@ -3,6 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { kbService } from '@/services/kb';
 import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import EditArticlePage from './edit/page';
 import {
   Calendar,
   Eye,
@@ -25,6 +27,19 @@ export default function ArticlePage() {
   const { id } = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      void router.prefetch(`/dashboard/docs/${id}/edit`);
+    }
+  }, [id, router]);
+
+  useEffect(() => {
+    const handleDocumentSaved = () => setIsEditing(false);
+    window.addEventListener('kb-document-saved', handleDocumentSaved);
+    return () => window.removeEventListener('kb-document-saved', handleDocumentSaved);
+  }, []);
 
   const { data: document, isLoading } = useQuery({
     queryKey: ['kb-document', id],
@@ -40,7 +55,7 @@ export default function ArticlePage() {
 
   if (isLoading) {
     return (
-      <div className="p-10 space-y-8 max-w-4xl mx-auto">
+      <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8">
         <div className="space-y-4">
           <Skeleton className="h-10 w-3/4" />
           <div className="flex gap-4">
@@ -64,15 +79,19 @@ export default function ArticlePage() {
     );
   }
 
+  if (isEditing) {
+    return <EditArticlePage />;
+  }
+
   return (
     <motion.div
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      className="flex h-full flex-col"
+      className="flex min-h-full flex-col"
     >
       {/* Document Navigation Bar */}
-      <div className="border-b border-border/40 bg-card/20 backdrop-blur-md px-8 py-3 flex items-center justify-between sticky top-0 z-10">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border/40 bg-card/80 px-4 py-3 backdrop-blur-md sm:px-6">
         <Button
           variant="ghost"
           size="sm"
@@ -90,13 +109,13 @@ export default function ArticlePage() {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row">
         {/* Main Content Scroll Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <article className="max-w-4xl mx-auto px-8 py-12">
+        <div className="min-w-0 flex-1">
+          <article className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
             {/* Header Metadata */}
-            <header className="mb-10 space-y-6">
-              <div className="flex items-center gap-3">
+            <header className="mb-8 space-y-5">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase tracking-wider text-[10px] px-3">
                   {document.category.name}
                 </Badge>
@@ -107,27 +126,27 @@ export default function ArticlePage() {
                 </div>
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.1]">
+              <h1 className="text-3xl font-black leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl">
                 {document.title}
               </h1>
 
-              <div className="flex items-center justify-between pt-6 border-t border-border/40">
-                <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/40 pt-5">
+                <div className="flex min-w-0 items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-muted border border-border overflow-hidden">
                      {/* Avatar Placeholder */}
                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold">
                        {document.author.displayName.charAt(0)}
                      </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-tight">{document.author.displayName}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold uppercase tracking-tight">{document.author.displayName}</p>
                     <p className="text-[10px] text-muted-foreground font-medium">
                       Published on {new Date(document.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -144,8 +163,8 @@ export default function ArticlePage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 ml-2"
-                      onClick={() => router.push(`/dashboard/docs/${id}/edit`)}
+                      className="ml-2 h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary/10"
+                      onClick={() => setIsEditing(true)}
                       aria-label="Edit Document"
                     >
                       <Edit className="h-4 w-4" />
@@ -161,8 +180,8 @@ export default function ArticlePage() {
         </div>
 
         {/* Right Utility Sidebar (Document Context) */}
-        <aside className="w-64 border-l border-border/40 p-6 hidden xl:block shrink-0 bg-muted/5">
-          <div className="space-y-8 sticky top-0">
+        <aside className="hidden w-64 shrink-0 border-l border-border/40 bg-muted/5 p-5 xl:block">
+          <div className="sticky top-20 space-y-6">
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Details</h4>
               <div className="space-y-3">

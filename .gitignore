@@ -49,6 +49,9 @@ backups/
 # Test coverage
 coverage/
 *.lcov
+frontend/playwright/.auth/
+frontend/playwright-report/
+frontend/test-results/
 
 # Cache and build tools
 .turbo/

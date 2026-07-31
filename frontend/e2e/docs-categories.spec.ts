@@ -41,4 +41,16 @@ test.describe('KB Categories Management Spec', () => {
     await deleteBtn.click();
     await expect(categoryItem).not.toBeVisible();
   });
+
+  test('should preselect the category when creating a document from a category page', async ({ page }) => {
+    await page.goto('/dashboard/docs');
+    await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    await page.getByRole('link', { name: 'Open General' }).click();
+    await page.waitForURL(/\/dashboard\/docs\/categories\/[^/]+$/);
+
+    await page.getByRole('link', { name: 'Create a new document' }).click();
+    await page.waitForURL(/\/dashboard\/docs\/new\?categoryId=[^&]+/);
+
+    await expect(page.getByRole('combobox', { name: 'Category' })).toHaveText('General');
+  });
 });

@@ -19,6 +19,10 @@ test.describe('Assets CRUD Operations', () => {
     await page.getByRole('button', { name: 'Create Asset' }).click();
     await expect(page.getByText('Asset name is required')).toBeVisible();
 
+    for (const label of ['Total Sockets', 'Installed Capacity (Total)', 'Raw Capacity (Total)', 'Rated Power (Total)', 'Total Ports', 'Slot Type', 'Total Units', 'Rack Units', 'RAID Level']) {
+      await expect(page.getByLabel(label, { exact: true })).toBeVisible();
+    }
+
     // Fill form and submit
     await page.getByPlaceholder('Enter asset or host name').fill(assetName);
 
@@ -28,6 +32,10 @@ test.describe('Assets CRUD Operations', () => {
 
     await page.getByPlaceholder('e.g. Rack A1').fill('Rack-99');
     await page.getByPlaceholder('e.g. Data Center 1').fill('Main DC');
+    await page.getByLabel('Total Sockets', { exact: true }).fill('2');
+    await page.getByLabel('Installed Capacity (Total)', { exact: true }).fill('256 GB');
+    await page.getByLabel('Raw Capacity (Total)', { exact: true }).fill('15.36 TB');
+    await page.getByLabel('Rated Power (Total)', { exact: true }).fill('1,600W');
     await page.getByRole('button', { name: 'Create Asset' }).click();
 
     await expect(page.getByText('Asset created successfully')).toBeVisible({ timeout: 5000 });
@@ -39,6 +47,8 @@ test.describe('Assets CRUD Operations', () => {
     const editBtn = row.getByRole('button', { name: 'Edit Asset' });
     await editBtn.click();
 
+    await expect(page.getByLabel('Installed Capacity (Total)', { exact: true })).toHaveValue('256 GB');
+    await expect(page.getByLabel('Raw Capacity (Total)', { exact: true })).toHaveValue('15.36 TB');
     await page.getByPlaceholder('Enter asset or host name').fill(modifiedName);
     await page.getByRole('button', { name: 'Save Changes' }).click();
 

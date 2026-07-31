@@ -62,11 +62,13 @@ export class AssetsController {
     @Query('environment') environment?: string,
     @Query('owner') owner?: string,
     @Query('location') location?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
   ) {
     return this.assetsService.findAll(
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 100,
-      { q, type, status, environment, owner, location },
+      { q, type, status, environment, owner, location, sortBy, sortDir },
     );
   }
 

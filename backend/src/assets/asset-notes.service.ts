@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { AuditAction } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
@@ -18,7 +19,7 @@ export class AssetNotesService {
     });
     if (!asset) throw new NotFoundException(`Asset ${assetId} not found`);
 
-    return this.prisma.assetNote.create({
+    const note = await this.prisma.assetNote.create({
       data: {
         assetId,
         content: dto.content,
@@ -31,6 +32,17 @@ export class AssetNotesService {
         },
       },
     });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.CREATE_ASSET_NOTE,
+        targetId: note.id,
+        details: JSON.stringify({ assetId, isPinned: note.isPinned }),
+      },
+    });
+
+    return note;
   }
 
   async findAllNotes(assetId: string) {
@@ -70,7 +82,7 @@ export class AssetNotesService {
       );
     }
 
-    return this.prisma.assetNote.update({
+    const updated = await this.prisma.assetNote.update({
       where: { id: noteId },
       data: {
         ...(dto.content !== undefined ? { content: dto.content } : {}),
@@ -82,6 +94,17 @@ export class AssetNotesService {
         },
       },
     });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_ASSET_NOTE,
+        targetId: noteId,
+        details: JSON.stringify({ assetId, isPinned: updated.isPinned }),
+      },
+    });
+
+    return updated;
   }
 
   async deleteNote(
@@ -102,6 +125,19 @@ export class AssetNotesService {
       );
     }
 
-    return this.prisma.assetNote.delete({ where: { id: noteId } });
+    const deleted = await this.prisma.assetNote.delete({
+      where: { id: noteId },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.DELETE_ASSET_NOTE,
+        targetId: noteId,
+        details: JSON.stringify({ assetId }),
+      },
+    });
+
+    return deleted;
   }
 }

@@ -14,6 +14,14 @@ test.describe('Admin Users Management', () => {
     await expect(page.getByRole('button', { name: /Viewers/ })).toBeVisible();
   });
 
+  test('should search by username as well as display name', async ({ page }) => {
+    const searchInput = page.getByPlaceholder('Search name or @username...');
+    await searchInput.fill('@soc_analyst');
+
+    await expect(page.getByText('@soc_analyst', { exact: true })).toBeVisible();
+    await expect(page.getByText('@admin', { exact: true })).not.toBeVisible();
+  });
+
   test('should validate add user form', async ({ page }) => {
     await page.getByRole('button', { name: 'Add New User' }).click();
 

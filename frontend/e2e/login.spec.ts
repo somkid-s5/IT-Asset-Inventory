@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { getE2eCredentials } from './auth-credentials';
+
+const adminCredentials = getE2eCredentials('admin');
 
 // Reset storageState to test logged-out / clean login states
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -36,8 +39,8 @@ test.describe('Login Flow', () => {
   });
 
   test('should disable submit button while request in-flight', async ({ page }) => {
-    await page.getByLabel('Username').fill('admin');
-    await page.getByLabel('Password').fill('AssetOpsNewPass2026!!');
+    await page.getByLabel('Username').fill(adminCredentials.username);
+    await page.getByLabel('Password').fill(adminCredentials.password);
 
     let resolveGate: () => void = () => {};
     const gatePromise = new Promise<void>((resolve) => {
@@ -64,8 +67,8 @@ test.describe('Login Flow', () => {
   });
 
   test('should submit form on pressing Enter on password field', async ({ page }) => {
-    await page.getByLabel('Username').fill('admin');
-    await page.getByLabel('Password').fill('AssetOpsNewPass2026!!');
+    await page.getByLabel('Username').fill(adminCredentials.username);
+    await page.getByLabel('Password').fill(adminCredentials.password);
     await page.getByLabel('Password').focus();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/.*dashboard/);
@@ -84,7 +87,7 @@ test.describe('Login Flow', () => {
 
   test('should handle very long passwords gracefully', async ({ page }) => {
     const longPassword = 'a'.repeat(500);
-    await page.getByLabel('Username').fill('admin');
+    await page.getByLabel('Username').fill(adminCredentials.username);
     await page.getByLabel('Password').fill(longPassword);
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(

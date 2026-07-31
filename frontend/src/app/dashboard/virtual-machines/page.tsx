@@ -12,6 +12,7 @@ import {
   LoaderCircle, Box
 } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '@/services/api';
 import { VmFormDialog } from '@/components/LazyLoadedDialogs';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -98,13 +99,6 @@ export default function VmPage() {
     });
   }, [setHeader]);
 
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (searchTerm) params.set('q', searchTerm);
-    if (activeView !== 'ACTIVE') params.set('view', activeView);
-    router.replace(params.size ? `/dashboard/virtual-machines?${params.toString()}` : '/dashboard/virtual-machines', { scroll: false });
-  }, [activeView, router, searchTerm]);
-
   const openPendingSetup = useCallback(async (id: string) => {
     try {
       setOpeningPendingId(id);
@@ -126,6 +120,12 @@ export default function VmPage() {
   const activeQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ACTIVE' && vm.syncState !== 'Missing from source'), [inventory]);
   const orphanedQueue = useMemo(() => inventory.filter(vm => vm.syncState === 'Missing from source' || vm.lifecycleState === 'DELETED_IN_VCENTER'), [inventory]);
 
+  useEffect(() => {
+    for (const vm of inventory) {
+      void router.prefetch(`/dashboard/virtual-machines/${vm.id}`);
+    }
+  }, [inventory, router]);
+
   const stats = useMemo(() => ({
     ACTIVE: activeQueue.length,
     PENDING: pendingQueue.length,
@@ -137,9 +137,9 @@ export default function VmPage() {
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      className="space-y-6 pt-0"
+      className="space-y-4 pt-0"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2 text-balance">
             <Monitor className="h-3.5 w-3.5" />
@@ -147,7 +147,7 @@ export default function VmPage() {
           </h2>
           <p className="text-xs text-muted-foreground text-pretty">Manage virtual instances across vCenter sources</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
            <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={() => router.push('/dashboard/virtual-machines/sources')}>
              <Server className="h-4 w-4 mr-2" />
              Manage vCenter Sources
@@ -155,7 +155,7 @@ export default function VmPage() {
         </div>
       </div>
 
-      <Card className="border-2 border-border shadow-md bg-card overflow-hidden p-0 gap-0 rounded-[24px]">
+      <Card className="gap-0 overflow-hidden rounded-2xl border border-border/80 bg-card p-0 shadow-md">
         {isLoading ? (
            <div className="p-20 flex flex-col items-center justify-center text-muted-foreground">
              <LoaderCircle className="h-8 w-8 animate-spin mb-4 text-primary" />
@@ -174,14 +174,16 @@ export default function VmPage() {
         )}
       </Card>
 
-      <VmFormDialog
-        open={pendingDialogOpen}
-        onOpenChange={setPendingDialogOpen}
-        discoveryVm={selectedDiscovery}
-        submitMode="promote"
-        onPromoted={(inventoryDetail) => router.push(`/dashboard/virtual-machines/${inventoryDetail.id}`)}
-        onSuccess={() => void refetch()}
-      />
+      {pendingDialogOpen && (
+        <VmFormDialog
+          open={pendingDialogOpen}
+          onOpenChange={setPendingDialogOpen}
+          discoveryVm={selectedDiscovery}
+          submitMode="promote"
+          onPromoted={(inventoryDetail) => router.push(`/dashboard/virtual-machines/${inventoryDetail.id}`)}
+          onSuccess={() => void refetch()}
+        />
+      )}
     </motion.div>
   );
 }
@@ -279,7 +281,13 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
       view: window
     });
     link.dispatchEvent(event);
-    
+
+    void api.post('/audit-logs/export', {
+      resource: `virtual-machines:${view.toLowerCase()}`,
+      count: exportData.length,
+      query: searchTerm.trim() || undefined,
+    }).catch(() => undefined);
+
     setTimeout(() => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
@@ -289,9 +297,9 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
   };
 
   return (
-    <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 border-b border-border bg-muted/80 p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
       {/* Left: View Tabs */}
-      <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit shrink-0">
+      <div className="no-scrollbar flex max-w-full shrink-0 items-center gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1">
         {(
           [
             { key: 'ACTIVE', label: VIEW_COPY.ACTIVE.shortLabel, icon: CheckCircle2, iconClassName: 'text-success' },
@@ -301,9 +309,11 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
         ).map((tab) => (
           <button
             key={tab.key}
+            type="button"
             onClick={() => setView(tab.key)}
+            aria-pressed={view === tab.key}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+              "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
               view === tab.key 
                 ? "bg-card text-foreground shadow-sm ring-1 ring-border/50" 
                 : "text-muted-foreground hover:text-foreground hover:bg-card/50"
@@ -319,25 +329,25 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
       </div>
 
       {/* Right: Search & Actions */}
-      <div className="flex items-center gap-3">
-        <div className="relative">
+      <div className="flex w-full items-center gap-2 lg:w-auto">
+        <div className="relative min-w-0 flex-1 lg:flex-none">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={VIEW_COPY[view].searchPlaceholder}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
+            className="h-9 w-full pl-9 bg-card border-border/50 focus-visible:ring-primary/20 lg:w-64"
           />
         </div>
 
-        <Button variant="outline" size="sm" className="h-9 bg-card px-3" onClick={handleExport}>
+        <Button variant="outline" size="sm" className="h-9 shrink-0 bg-card px-3" onClick={handleExport}>
           <Download className="h-4 w-4 mr-2" />
           Export
         </Button>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="h-9 w-9 bg-card">
+            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 bg-card" aria-label="Toggle Columns">
               <Columns className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
@@ -363,11 +373,11 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
 
 function TablePaginationFooter({ table }: { table: any }) {
   return (
-    <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
-      <div className="flex-1 text-xs text-muted-foreground">
+    <div className="flex flex-col gap-3 border-t border-border/50 bg-muted/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+      <div className="text-xs text-muted-foreground">
         Total {table.getFilteredRowModel().rows.length} items
       </div>
-      <div className="flex items-center gap-6 lg:gap-8">
+      <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-6 lg:gap-8">
         <div className="flex items-center gap-2">
           <p className="text-xs font-medium text-muted-foreground">Rows per page</p>
           <select
@@ -384,10 +394,10 @@ function TablePaginationFooter({ table }: { table: any }) {
           Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+          <Button variant="outline" className="h-8 w-8 p-0" aria-label="Previous page" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+          <Button variant="outline" className="h-8 w-8 p-0" aria-label="Next page" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -445,11 +455,11 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
     <>
       <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} />
       <div className="overflow-x-auto">
-        <Table>
+        <Table className="min-w-[780px]">
           <TableHeader className="bg-transparent">
             {table.getHeaderGroups().map((hg: any) => (
               <TableRow key={hg.id} className="border-border hover:bg-transparent">
-                {hg.headers.map((h: any) => <TableHead key={h.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3 border-b-2 border-border">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
+                {hg.headers.map((h: any) => <TableHead key={h.id} className="border-b border-border px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
               </TableRow>
             ))}
           </TableHeader>
@@ -555,11 +565,11 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
     <>
       <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} />
       <div className="overflow-x-auto">
-        <Table>
+        <Table className="min-w-[1120px]">
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map(hg => (
               <TableRow key={hg.id} className="border-border/50 hover:bg-transparent">
-                {hg.headers.map(h => <TableHead key={h.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
+                {hg.headers.map(h => <TableHead key={h.id} className="border-b border-border px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
               </TableRow>
             ))}
           </TableHeader>
@@ -643,11 +653,11 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
     <>
       <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} />
       <div className="overflow-x-auto">
-        <Table>
+        <Table className="min-w-[820px]">
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map(hg => (
               <TableRow key={hg.id} className="border-border/50 hover:bg-transparent">
-                {hg.headers.map(h => <TableHead key={h.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
+                {hg.headers.map(h => <TableHead key={h.id} className="border-b border-border px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}
               </TableRow>
             ))}
           </TableHeader>

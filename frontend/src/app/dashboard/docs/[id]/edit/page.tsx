@@ -23,7 +23,7 @@ import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
   ssr: false,
   loading: () => (
-    <div className="min-h-[600px] w-full bg-muted/20 animate-pulse rounded-[24px] border-2 border-dashed border-border/40 flex items-center justify-center">
+    <div className="flex min-h-[420px] w-full items-center justify-center rounded-xl border border-dashed border-border/40 bg-muted/20 animate-pulse">
       <div className="flex flex-col items-center gap-2 opacity-20">
         <Loader2 className="h-8 w-8 animate-spin" />
         <p className="text-[10px] font-black uppercase tracking-widest">Loading Editor...</p>
@@ -91,6 +91,7 @@ export default function EditArticlePage() {
       queryClient.invalidateQueries({ queryKey: ['kb-recent-documents'] });
       queryClient.invalidateQueries({ queryKey: ['kb-category'] });
       toast.success('Document updated successfully');
+      window.dispatchEvent(new Event('kb-document-saved'));
       router.push(`/dashboard/docs/${id}`);
     } catch (error) {
       toast.error('Failed to update document');
@@ -108,26 +109,26 @@ export default function EditArticlePage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full hover:bg-primary/10 transition-colors">
+    <div className="max-w-6xl mx-auto pb-12">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-9 w-9 shrink-0 rounded-xl hover:bg-primary/10 transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-black tracking-tight">Edit Document</h1>
+          <h1 className="truncate text-xl font-black tracking-tight sm:text-2xl">Edit Document</h1>
         </div>
         <div className="flex items-center gap-3">
             <Button
                 variant="outline"
                 onClick={() => router.back()}
-                className="rounded-2xl px-6 h-12 border-2 font-bold"
+                className="h-10 rounded-xl px-4 font-bold"
             >
                 Cancel
             </Button>
             <Button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="rounded-2xl px-8 h-12 shadow-xl shadow-primary/20 font-bold"
+                className="h-10 rounded-xl px-5 shadow-md shadow-primary/15 font-bold"
             >
                 {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 Save Changes
@@ -135,21 +136,21 @@ export default function EditArticlePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3 space-y-6">
-           <Card className="p-6 rounded-[32px] border-2 shadow-lg space-y-6 bg-card">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="min-w-0 space-y-5">
+           <Card className="space-y-5 rounded-2xl border shadow-sm p-4 sm:p-5 bg-card">
               <div className="space-y-2 px-1">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Document Title</Label>
+                <Label className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Document Title</Label>
                 <Input
                   placeholder="Enter title..."
                   value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
-                  className="h-14 text-2xl font-black rounded-2xl border-none shadow-none focus-visible:ring-0 bg-transparent px-0 placeholder:text-muted-foreground/20"
+                  className="h-11 rounded-xl border-none bg-transparent px-0 text-xl font-black shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/20 sm:text-2xl"
                 />
               </div>
 
               <Tabs defaultValue="write" className="w-full">
-                <div className="flex items-center justify-between mb-4 bg-muted/50 p-1 rounded-xl w-fit border border-border/40">
+                <div className="mb-3 flex w-fit items-center justify-between rounded-lg border border-border/40 bg-muted/50 p-1">
                    <TabsList className="bg-transparent h-8">
                       <TabsTrigger value="write" className="rounded-lg text-xs gap-2 font-bold uppercase tracking-tight data-[state=active]:bg-card data-[state=active]:text-primary">
                         <Layout className="h-3 w-3" /> Write
@@ -170,7 +171,7 @@ export default function EditArticlePage() {
                 </TabsContent>
 
                 <TabsContent value="preview" className="mt-0">
-                   <div className="min-h-[600px] rounded-[24px] border-2 p-10 md:p-14 bg-card shadow-inner overflow-y-auto prose prose-invert prose-slate max-w-none prose-headings:font-black prose-headings:tracking-tight prose-img:rounded-[32px]">
+                   <div className="min-h-[420px] max-w-none overflow-y-auto rounded-xl border bg-card p-5 shadow-inner prose prose-invert prose-slate prose-headings:font-black prose-headings:tracking-tight prose-img:rounded-2xl sm:p-8">
                       {formData.content && typeof formData.content === 'string' ? (
                         <MarkdownRenderer content={formData.content} />
                       ) : (
@@ -183,16 +184,16 @@ export default function EditArticlePage() {
         </div>
 
         <div className="space-y-6">
-           <Card className="p-6 rounded-[32px] border-2 shadow-md space-y-6 bg-muted/20 border-border/40">
+           <Card className="space-y-5 rounded-2xl border border-border/40 bg-muted/20 p-4 shadow-sm sm:p-5">
               <div className="space-y-3">
-                 <Label htmlFor="select-category" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                 <Label htmlFor="select-category" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
                     <FileText className="h-3 w-3" /> Category
                  </Label>
                  <Select
                     value={formData.categoryId}
                     onValueChange={(val) => setFormData({ ...formData, categoryId: val })}
                  >
-                    <SelectTrigger id="select-category" className="rounded-xl h-12 bg-card border-2 border-border/60 font-bold text-sm">
+                    <SelectTrigger id="select-category" className="h-10 rounded-xl border bg-card text-sm font-bold">
                        <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-2">
@@ -203,9 +204,9 @@ export default function EditArticlePage() {
                  </Select>
               </div>
 
-              <div className="pt-6 border-t border-border/40">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-4">Markdown Tips</p>
-                 <div className="space-y-3">
+              <div className="border-t border-border/40 pt-4">
+                 <p className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Markdown Tips</p>
+                 <div className="space-y-2">
                     {[
                         { label: 'Header', code: '# Title' },
                         { label: 'Bold', code: '**Text**' },

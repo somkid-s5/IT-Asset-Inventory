@@ -21,91 +21,105 @@ function encryptPasswordForSeed(password: string, hexKey: string): string {
 async function main() {
     const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
     const defaultEditorPassword = process.env.DEFAULT_EDITOR_PASSWORD;
+    const defaultViewerPassword = process.env.DEFAULT_VIEWER_PASSWORD;
     const encryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
 
-    if (!defaultAdminPassword || !defaultEditorPassword) {
-        throw new Error('DEFAULT_ADMIN_PASSWORD and DEFAULT_EDITOR_PASSWORD must be set before seeding.');
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('Development seed is disabled when NODE_ENV=production.');
+    }
+
+    if (process.env.ALLOW_DEVELOPMENT_SEED !== 'true') {
+        throw new Error('Set ALLOW_DEVELOPMENT_SEED=true only for an isolated development database.');
+    }
+
+    if (!defaultAdminPassword || !defaultEditorPassword || !defaultViewerPassword) {
+        throw new Error('DEFAULT_ADMIN_PASSWORD, DEFAULT_EDITOR_PASSWORD, and DEFAULT_VIEWER_PASSWORD must be set before seeding.');
     }
 
     console.log('--- Database Seeding Started ---');
+    console.log('Existing records will be preserved; development fixtures are upserted by stable identifiers.');
 
-    console.log('Step 1: Clearing existing data...');
-    // Delete in reverse dependency order
-    await prisma.knowledgeDocument.deleteMany();
-    await prisma.knowledgeCategory.deleteMany();
-    await prisma.auditLog.deleteMany();
-    await prisma.credential.deleteMany();
-    await prisma.patchInfo.deleteMany();
-    await prisma.iPAllocation.deleteMany();
-    await prisma.assetNote.deleteMany();
-    await prisma.assetAttachment.deleteMany();
-    await prisma.databaseAccount.deleteMany();
-    await prisma.databaseInventory.deleteMany();
-    await prisma.vmGuestAccount.deleteMany();
-    await prisma.vmInventory.deleteMany();
-    await prisma.vmDiscovery.deleteMany();
-    await prisma.vmVCenterSource.deleteMany();
-    await prisma.asset.deleteMany();
-    await prisma.user.deleteMany();
-    console.log('✅ Old data cleared.');
+    console.log('Step 1: Upserting users...');
+    const [adminPasswordHash, editorPasswordHash, viewerPasswordHash] = await Promise.all([
+        bcrypt.hash(defaultAdminPassword, 10),
+        bcrypt.hash(defaultEditorPassword, 10),
+        bcrypt.hash(defaultViewerPassword, 10),
+    ]);
 
-    console.log('Step 2: Creating users...');
-    const fixedPasswordHash = await bcrypt.hash('AssetOpsNewPass2026!!', 10);
-
-    const adminUser = await prisma.user.create({
-        data: {
+    const adminUser = await prisma.user.upsert({
+        where: { username: 'admin' },
+        create: {
             username: 'admin',
             displayName: 'Infra Admin',
             avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'admin@infrapilot.local',
-            passwordHash: fixedPasswordHash,
+            passwordHash: adminPasswordHash,
             mustChangePassword: false,
             role: Role.ADMIN,
         },
+        update: {
+            displayName: 'Infra Admin',
+            passwordHash: adminPasswordHash,
+            mustChangePassword: false,
+            role: Role.ADMIN,
+            deletedAt: null,
+        },
     });
 
-    const editorUser = await prisma.user.create({
-        data: {
+    await prisma.user.upsert({
+        where: { username: 'soc_analyst' },
+        create: {
             username: 'soc_analyst',
             displayName: 'SOC Analyst',
             avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'soc-analyst@infrapilot.local',
-            passwordHash: fixedPasswordHash,
+            passwordHash: editorPasswordHash,
             mustChangePassword: false,
             role: Role.EDITOR,
-        }
+        },
+        update: {
+            displayName: 'SOC Analyst',
+            passwordHash: editorPasswordHash,
+            mustChangePassword: false,
+            role: Role.EDITOR,
+            deletedAt: null,
+        },
     });
 
-    const viewerUser = await prisma.user.upsert({
+    await prisma.user.upsert({
         where: { username: 'test_viewer' },
         create: {
             username: 'test_viewer',
             displayName: 'Test Viewer',
             avatarSeed: crypto.randomBytes(8).toString('hex'),
             email: 'viewer@infrapilot.local',
-            passwordHash: fixedPasswordHash,
+            passwordHash: viewerPasswordHash,
             mustChangePassword: false,
             role: Role.VIEWER,
         },
         update: {
             displayName: 'Test Viewer',
             email: 'viewer@infrapilot.local',
-            passwordHash: fixedPasswordHash,
+            passwordHash: viewerPasswordHash,
             mustChangePassword: false,
             role: Role.VIEWER,
+            deletedAt: null,
         }
     });
-    console.log(`✅ Users created (admin, soc_analyst, test_viewer).`);
+    console.log('Development users upserted (admin, soc_analyst, test_viewer).');
 
-    console.log('Step 3: Creating sample categories...');
-    const category = await prisma.knowledgeCategory.create({
-        data: { name: 'General', icon: 'Book' }
+    console.log('Step 2: Upserting sample category...');
+    const category = await prisma.knowledgeCategory.upsert({
+        where: { name: 'General' },
+        create: { name: 'General', icon: 'Book' },
+        update: { icon: 'Book' },
     });
-    console.log(`✅ Sample clients and categories created.`);
+    console.log('Sample category upserted.');
 
-    console.log('Step 4: Creating sample assets...');
+    console.log('Step 3: Upserting sample assets...');
     const assetsData = [
         {
+            assetId: 'DEV-ASSET-001',
             name: 'db-prod-01',
             type: AssetType.SERVER,
             osVersion: 'Ubuntu 22.04 LTS',
@@ -119,6 +133,7 @@ async function main() {
             }
         },
         {
+            assetId: 'DEV-ASSET-002',
             name: 'web-front-lb',
             type: AssetType.SERVER,
             osVersion: 'NGINX Alpine',
@@ -132,6 +147,7 @@ async function main() {
             }
         },
         {
+            assetId: 'DEV-ASSET-003',
             name: 'switch-core-01',
             type: AssetType.SWITCH,
             osVersion: 'Cisco IOS-XE',
@@ -148,19 +164,29 @@ async function main() {
 
     const createdAssets = [];
     for (const assetData of assetsData) {
-        const asset = await prisma.asset.create({
-            data: {
+        const asset = await prisma.asset.upsert({
+            where: { assetId: assetData.assetId },
+            create: {
                 ...assetData,
                 createdByUser: { connect: { id: adminUser.id } }
-            }
+            },
+            update: {
+                name: assetData.name,
+                type: assetData.type,
+                osVersion: assetData.osVersion,
+                status: assetData.status,
+                department: assetData.department,
+                owner: assetData.owner,
+            },
         });
         createdAssets.push(asset);
     }
-    console.log(`✅ Sample assets created.`);
+    console.log('Sample assets upserted.');
 
-    console.log('Step 4.5: Creating sample virtual machines...');
-    await prisma.vmInventory.create({
-        data: {
+    console.log('Step 4: Upserting sample virtual machine...');
+    await prisma.vmInventory.upsert({
+        where: { moid: 'vm-12345' },
+        create: {
             name: 'vm-prod-01',
             systemName: 'VM-PROD-01.infrapilot.local',
             moid: 'vm-12345',
@@ -185,35 +211,71 @@ async function main() {
             notes: 'Managed by terraform',
             lastSyncAt: new Date(),
             createdByUser: { connect: { id: adminUser.id } }
-        }
+        },
+        update: {
+            name: 'vm-prod-01',
+            systemName: 'VM-PROD-01.infrapilot.local',
+            owner: 'infra-team',
+            lifecycleState: 'ACTIVE',
+            lastSyncAt: new Date(),
+        },
     });
-    console.log(`✅ Sample VMs created.`);
+    console.log('Sample VM upserted.');
 
-    console.log('Step 5: Creating sample KB document...');
-    await prisma.knowledgeDocument.create({
-        data: {
+    console.log('Step 5: Upserting sample KB document...');
+    const existingDocument = await prisma.knowledgeDocument.findFirst({
+        where: { title: 'Getting Started', categoryId: category.id },
+    });
+    if (existingDocument) {
+        await prisma.knowledgeDocument.update({
+            where: { id: existingDocument.id },
+            data: {
+                content: 'Welcome to the IT Asset Inventory system.',
+                authorId: adminUser.id,
+            },
+        });
+    } else {
+        await prisma.knowledgeDocument.create({
+          data: {
             title: 'Getting Started',
             content: 'Welcome to the IT Asset Inventory system.',
             categoryId: category.id,
             authorId: adminUser.id
-        }
-    });
-    console.log(`✅ Sample KB document created.`);
+          },
+        });
+    }
+    console.log('Sample KB document upserted.');
 
     if (encryptionKey && Buffer.from(encryptionKey, 'hex').length === 32) {
         console.log('Step 6: Seeding credentials...');
-        await prisma.credential.create({
-            data: {
+        const encryptedPassword = encryptPasswordForSeed(defaultAdminPassword, encryptionKey);
+        const existingCredential = await prisma.credential.findFirst({
+            where: {
                 assetId: createdAssets[0].id,
                 username: 'postgres_admin',
-                encryptedPassword: encryptPasswordForSeed('SuperSecretDBPass123!', encryptionKey),
                 type: 'OS',
-                nodeLabel: 'MGMT'
-            }
+                nodeLabel: 'MGMT',
+            },
         });
-        console.log(`✅ Credentials seeded.`);
+        if (existingCredential) {
+            await prisma.credential.update({
+                where: { id: existingCredential.id },
+                data: { encryptedPassword },
+            });
+        } else {
+            await prisma.credential.create({
+                data: {
+                    assetId: createdAssets[0].id,
+                    username: 'postgres_admin',
+                    encryptedPassword,
+                    type: 'OS',
+                    nodeLabel: 'MGMT',
+                },
+            });
+        }
+        console.log('Development credential upserted.');
     } else {
-        console.warn('⚠️ Skipping credentials seed: CREDENTIAL_ENCRYPTION_KEY invalid or missing.');
+        throw new Error('CREDENTIAL_ENCRYPTION_KEY must be a valid 64-character hex value.');
     }
 
     console.log('--- Seeding Completed Successfully! ---');

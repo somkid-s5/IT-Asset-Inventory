@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2,
@@ -88,6 +89,12 @@ export default function DbPage() {
     },
   });
 
+  useEffect(() => {
+    for (const database of databases) {
+      void router.prefetch(`/dashboard/databases/${database.id}`);
+    }
+  }, [databases, router]);
+
   // Dialogs
   const [dialogOpen, setDialogOpen] = useState(false);
   const [databaseToEdit, setDatabaseToEdit] = useState<DatabaseInventoryDetail | null>(null);
@@ -101,13 +108,6 @@ export default function DbPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (searchTerm) params.set('q', searchTerm);
-    if (activeEnvironment !== 'ALL') params.set('environment', activeEnvironment);
-    router.replace(params.size ? `/dashboard/databases?${params.toString()}` : '/dashboard/databases', { scroll: false });
-  }, [activeEnvironment, router, searchTerm]);
 
   useEffect(() => {
     setHeader({
@@ -152,6 +152,7 @@ export default function DbPage() {
 
     return result;
   }, [databases, activeEnvironment, searchTerm]);
+  const hasActiveDatabaseFilter = Boolean(searchTerm.trim()) || activeEnvironment !== 'ALL';
 
   const countsByEnvironment = useMemo<Record<'ALL' | DatabaseEnvironment, number>>(() => ({
     ALL: databases.length,
@@ -170,7 +171,14 @@ export default function DbPage() {
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground">
             <Database className="h-4 w-4" />
           </div>
-          <span className="truncate font-semibold text-foreground">{row.original.name}</span>
+          <Link
+            href={`/dashboard/databases/${row.original.id}`}
+            aria-label={`View details for ${row.original.name}`}
+            className="truncate font-semibold text-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {row.original.name}
+          </Link>
         </div>
       )
     },
@@ -361,6 +369,12 @@ export default function DbPage() {
     });
     link.dispatchEvent(event);
 
+    void api.post('/audit-logs/export', {
+      resource: 'databases',
+      count: exportData.length,
+      query: searchTerm.trim() || undefined,
+    }).catch(() => undefined);
+
     setTimeout(() => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
@@ -374,9 +388,9 @@ export default function DbPage() {
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      className="space-y-6 pt-0"
+      className="space-y-4 pt-0"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2 text-balance">
             <Database className="h-3.5 w-3.5" />
@@ -384,7 +398,7 @@ export default function DbPage() {
           </h2>
           <p className="text-xs text-muted-foreground text-pretty">Monitor and manage all database instances</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
            <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
              <Download className="h-4 w-4 mr-2" />
              Export
@@ -398,15 +412,17 @@ export default function DbPage() {
         </div>
       </div>
 
-      <Card className="border-2 border-border shadow-md bg-card overflow-hidden p-0 gap-0 rounded-[24px]">
-        <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit">
+      <Card className="gap-0 overflow-hidden rounded-2xl border border-border/80 bg-card p-0 shadow-md">
+        <div className="flex flex-col gap-3 border-b border-border bg-muted/80 p-3 sm:p-4 md:flex-row md:items-center md:justify-between">
+          <div className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1">
             {ENVIRONMENT_TABS.map((tab) => (
               <button
                 key={tab.value}
+                type="button"
                 onClick={() => setActiveEnvironment(tab.value)}
+                aria-pressed={activeEnvironment === tab.value}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+                  "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
                   activeEnvironment === tab.value
                     ? "bg-card text-foreground shadow-sm ring-1 ring-border/50"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/50"
@@ -421,20 +437,20 @@ export default function DbPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            <div className="relative min-w-0 flex-1 md:flex-none">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search databases..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
+                className="h-9 w-full pl-9 bg-card border-border/50 focus-visible:ring-primary/20 md:w-64"
               />
             </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 bg-card">
+                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 bg-card" aria-label="Toggle Columns">
                   <Columns className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -457,12 +473,12 @@ export default function DbPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[980px]">
             <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
                   {headerGroup.headers.map(header => (
-                    <TableHead key={header.id} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3 border-b-2 border-border">
+                    <TableHead key={header.id} className="border-b border-border px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -500,11 +516,11 @@ export default function DbPage() {
                       <EmptyState
                         icon={Database}
                         title="No databases found"
-                        description={databases.length === 0
+                        description={!hasActiveDatabaseFilter && databases.length === 0
                           ? "You haven't added any database records yet. Start by adding your first database."
                           : "No databases match your current search or filter criteria."
                         }
-                        action={databases.length === 0 && mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR') ? {
+                        action={!hasActiveDatabaseFilter && databases.length === 0 && mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR') ? {
                           label: "Add Your First Database",
                           onClick: () => { setDatabaseToEdit(null); setDialogOpen(true); }
                         } : undefined}
@@ -518,11 +534,11 @@ export default function DbPage() {
           </Table>
         </div>
 
-        <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
-          <div className="flex-1 text-xs text-muted-foreground">
+        <div className="flex flex-col gap-3 border-t border-border/50 bg-muted/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+          <div className="text-xs text-muted-foreground">
             Total {table.getFilteredRowModel().rows.length} items
           </div>
-          <div className="flex items-center gap-6 lg:gap-8">
+          <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-6 lg:gap-8">
             <div className="flex items-center gap-2">
               <p className="text-xs font-medium">Rows per page</p>
               <select
@@ -539,10 +555,10 @@ export default function DbPage() {
               Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+              <Button variant="outline" className="h-8 w-8 p-0" aria-label="Previous page" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+              <Button variant="outline" className="h-8 w-8 p-0" aria-label="Next page" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -550,12 +566,14 @@ export default function DbPage() {
         </div>
       </Card>
 
-      <DatabaseFormDialog
-        open={dialogOpen}
-        onOpenChange={(open) => { setDialogOpen(open); if (!open) setDatabaseToEdit(null); }}
-        databaseToEdit={databaseToEdit}
-        onSuccess={() => void refetch()}
-      />
+      {dialogOpen && (
+        <DatabaseFormDialog
+          open={dialogOpen}
+          onOpenChange={(open) => { setDialogOpen(open); if (!open) setDatabaseToEdit(null); }}
+          databaseToEdit={databaseToEdit}
+          onSuccess={() => void refetch()}
+        />
+      )}
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">

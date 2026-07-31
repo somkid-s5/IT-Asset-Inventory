@@ -11,9 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { randomUUID } from 'crypto';
+import { memoryStorage } from 'multer';
 import { Role } from '@prisma/client';
 import type { Response } from 'express';
 import * as path from 'path';
@@ -36,28 +34,9 @@ export class AssetAttachmentsController {
   @Post(':assetId/attachments')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (
-          _req: Express.Request,
-          _file: Express.Multer.File,
-          cb: (error: Error | null, destination: string) => void,
-        ) => {
-          const uploadDir = path.join(process.cwd(), 'uploads', 'assets');
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          }
-          cb(null, uploadDir);
-        },
-        filename: (
-          _req: Express.Request,
-          file: Express.Multer.File,
-          cb: (error: Error | null, filename: string) => void,
-        ) => {
-          const unique = randomUUID();
-          const ext = extname(file.originalname);
-          cb(null, `${unique}${ext}`);
-        },
-      }),
+      // Validate content before persisting it. diskStorage writes untrusted
+      // bytes before the service can inspect MIME type and file signature.
+      storage: memoryStorage(),
       limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
     }),
   )
@@ -81,8 +60,13 @@ export class AssetAttachmentsController {
   remove(
     @Param('assetId') assetId: string,
     @Param('attachmentId') attachmentId: string,
+    @Request() req: AuthRequest,
   ) {
-    return this.attachmentsService.deleteAttachment(assetId, attachmentId);
+    return this.attachmentsService.deleteAttachment(
+      assetId,
+      attachmentId,
+      req.user.id,
+    );
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -91,6 +75,7 @@ export class AssetAttachmentsController {
     @Param('assetId') assetId: string,
     @Param('attachmentId') attachmentId: string,
     @Res() res: Response,
+    @Request() req: AuthRequest,
   ) {
     const attachment = await this.attachmentsService.findOne(
       assetId,
@@ -101,10 +86,16 @@ export class AssetAttachmentsController {
       res.status(404).json({ message: 'File not found on disk' });
       return;
     }
+    await this.attachmentsService.logDownload(
+      attachmentId,
+      assetId,
+      req.user.id,
+    );
     res.download(filePath, attachment.filename);
   }
 
-  // Serve uploaded files — Public access for <img> tags
+  // Serve uploaded files only to authenticated users for image previews.
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('uploads/:filename')
   serveFile(@Param('filename') filename: string, @Res() res: Response) {
     // Sanitize filename to prevent path traversal

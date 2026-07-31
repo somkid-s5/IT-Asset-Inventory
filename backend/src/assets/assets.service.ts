@@ -208,11 +208,38 @@ export class AssetsService {
       environment?: string;
       owner?: string;
       location?: string;
+      sortBy?: string;
+      sortDir?: string;
     } = {},
   ) {
     const skip = (page - 1) * limit;
     const take = Math.min(limit, 200); // limit to max 200 per page
     const q = filters.q?.trim();
+    const normalizedQuery = q?.toLowerCase();
+    const matchingType = Object.values(AssetType).find(
+      (value) => value.toLowerCase() === normalizedQuery,
+    );
+    const matchingStatus = Object.values(AssetStatus).find(
+      (value) => value.toLowerCase() === normalizedQuery,
+    );
+    const searchConditions: Prisma.AssetWhereInput[] = q
+      ? [
+          { name: { contains: q, mode: 'insensitive' } },
+          { assetId: { contains: q, mode: 'insensitive' } },
+          { sn: { contains: q, mode: 'insensitive' } },
+          { owner: { contains: q, mode: 'insensitive' } },
+          { location: { contains: q, mode: 'insensitive' } },
+          { rack: { contains: q, mode: 'insensitive' } },
+          { brandModel: { contains: q, mode: 'insensitive' } },
+          {
+            ipAllocations: {
+              some: { address: { contains: q, mode: 'insensitive' } },
+            },
+          },
+          ...(matchingType ? [{ type: matchingType }] : []),
+          ...(matchingStatus ? [{ status: matchingStatus }] : []),
+        ]
+      : [];
     const where: Prisma.AssetWhereInput = {
       ...(filters.type ? { type: filters.type as AssetType } : {}),
       ...(filters.status ? { status: filters.status as AssetStatus } : {}),
@@ -223,22 +250,30 @@ export class AssetsService {
       ...(filters.location
         ? { location: { equals: filters.location, mode: 'insensitive' } }
         : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { assetId: { contains: q, mode: 'insensitive' } },
-              { sn: { contains: q, mode: 'insensitive' } },
-              { owner: { contains: q, mode: 'insensitive' } },
-              {
-                ipAllocations: {
-                  some: { address: { contains: q, mode: 'insensitive' } },
-                },
-              },
-            ],
-          }
-        : {}),
+      ...(searchConditions.length ? { OR: searchConditions } : {}),
     };
+
+    const sortableFields = [
+      'assetId',
+      'name',
+      'type',
+      'rack',
+      'sn',
+      'status',
+      'location',
+      'brandModel',
+      'owner',
+      'createdAt',
+    ] as const;
+    const sortField = sortableFields.includes(
+      filters.sortBy as (typeof sortableFields)[number],
+    )
+      ? (filters.sortBy as (typeof sortableFields)[number])
+      : 'createdAt';
+    const sortDirection = filters.sortDir === 'asc' ? 'asc' : 'desc';
+    const orderBy = {
+      [sortField]: sortDirection,
+    } as Prisma.AssetOrderByWithRelationInput;
 
     const [assets, total] = await Promise.all([
       this.prisma.asset.findMany({
@@ -278,7 +313,7 @@ export class AssetsService {
             orderBy: { createdAt: 'desc' as const },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
       this.prisma.asset.count({ where }),
     ]);

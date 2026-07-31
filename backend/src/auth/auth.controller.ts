@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import * as express from 'express';
 import type { Response } from 'express';
-import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';

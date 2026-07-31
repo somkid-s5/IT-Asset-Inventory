@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditAction } from '@prisma/client';
 
 @Injectable()
 export class AuditLogsService {
@@ -43,5 +44,18 @@ export class AuditLogsService {
       console.error('AuditLogsService.findAll Error:', error);
       throw error;
     }
+  }
+
+  async recordExport(
+    userId: string,
+    details: { resource: string; count: number; query?: string },
+  ) {
+    return this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.EXPORT_DATA,
+        details: JSON.stringify(details),
+      },
+    });
   }
 }

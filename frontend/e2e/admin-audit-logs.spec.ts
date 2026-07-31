@@ -29,10 +29,10 @@ test.describe('Audit Logs Viewer Spec', () => {
 
     // Type non-existent query to verify empty state
     await searchInput.fill('NON_EXISTENT_AUDIT_LOG_ACTION_123456');
-    await expect(page.getByText('No audit logs found')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'No audit logs found' })).toBeVisible({ timeout: 5000 });
 
     // Clear search query
     await searchInput.fill('');
-    await expect(page.getByText('No audit logs found')).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No audit logs found' })).not.toBeVisible();
   });
 });

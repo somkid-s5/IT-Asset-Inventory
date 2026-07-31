@@ -37,15 +37,19 @@ test.describe('Database Detail View Specs', () => {
 
     // Verify database creation
     await expect(page.getByText('Database created')).toBeVisible();
+    // The list is paginated and sorted by name, so locate the new record via
+    // the same search path a user would use in a larger inventory.
+    await page.getByPlaceholder('Search databases...').fill(dbUniqueName);
     const row = page.getByRole('row').filter({ hasText: dbUniqueName });
     await expect(row).toBeVisible();
 
-    // Click the database row to open detail view
-    await row.click();
+    // Use the semantic details link so the dynamic route can be prefetched.
+    await row.getByRole('link', { name: `View details for ${dbUniqueName}` }).click();
 
     // Verify detail page elements
-    await expect(page.getByText('Database Details')).toBeVisible();
-    await expect(page.getByText('Database Accounts')).toBeVisible();
+    await expect(page.getByRole('heading', { name: dbUniqueName })).toBeVisible();
+    await expect(page.getByText('Connection Information')).toBeVisible();
+    await expect(page.getByText('Accounts & Credentials')).toBeVisible();
     await expect(page.getByText('detail_user')).toBeVisible();
     await expect(page.getByText('detail-db-host.local')).toBeVisible();
 
@@ -53,6 +57,7 @@ test.describe('Database Detail View Specs', () => {
     await page.goto('/dashboard/databases');
     await expect(page.getByRole('heading', { name: 'Relational Database Inventory' })).toBeVisible({ timeout: 10000 });
 
+    await page.getByPlaceholder('Search databases...').fill(dbUniqueName);
     const rowToDelete = page.getByRole('row').filter({ hasText: dbUniqueName });
     await expect(rowToDelete).toBeVisible();
 

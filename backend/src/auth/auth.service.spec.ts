@@ -46,13 +46,22 @@ describe('AuthService', () => {
     decode: jest.fn(),
   };
 
+  type MockTransactionClient = {
+    user: typeof mockPrisma.user;
+    auditLog: typeof mockPrisma.auditLog;
+    $executeRawUnsafe: jest.Mock;
+  };
+
   beforeEach(async () => {
-    mockPrisma.$transaction.mockImplementation(async (callback) =>
-      callback({
-        user: mockPrisma.user,
-        auditLog: mockPrisma.auditLog,
-        $executeRawUnsafe: jest.fn(),
-      }),
+    mockPrisma.$transaction.mockImplementation(
+      (callback: (tx: MockTransactionClient) => unknown) =>
+        Promise.resolve(
+          callback({
+            user: mockPrisma.user,
+            auditLog: mockPrisma.auditLog,
+            $executeRawUnsafe: jest.fn(),
+          }),
+        ),
     );
     const module: TestingModule = await Test.createTestingModule({
       providers: [

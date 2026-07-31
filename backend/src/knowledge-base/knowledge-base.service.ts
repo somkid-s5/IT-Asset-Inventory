@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { AuditAction, Prisma } from '@prisma/client';
 import { sanitizeHtml } from '../utils/sanitize';
 
 @Injectable()
@@ -8,10 +8,23 @@ export class KnowledgeBaseService {
   constructor(private prisma: PrismaService) {}
 
   // --- Category CRUD ---
-  async createCategory(name: string, icon?: string) {
-    return this.prisma.knowledgeCategory.create({
+  async createCategory(name: string, icon?: string, userId?: string) {
+    const category = await this.prisma.knowledgeCategory.create({
       data: { name, icon },
     });
+
+    if (userId) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.CREATE_KB_CATEGORY,
+          targetId: category.id,
+          details: JSON.stringify({ name: category.name }),
+        },
+      });
+    }
+
+    return category;
   }
 
   async initializeDefaults(authorId: string) {
@@ -130,7 +143,7 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
     return { success: true };
   }
 
-  async deleteCategory(id: string) {
+  async deleteCategory(id: string, userId?: string) {
     // Check if category has documents
     const count = await this.prisma.knowledgeDocument.count({
       where: { categoryId: id },
@@ -142,9 +155,22 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
       );
     }
 
-    return this.prisma.knowledgeCategory.delete({
+    const deleted = await this.prisma.knowledgeCategory.delete({
       where: { id },
     });
+
+    if (userId) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.DELETE_KB_CATEGORY,
+          targetId: id,
+          details: JSON.stringify({ name: deleted.name }),
+        },
+      });
+    }
+
+    return deleted;
   }
 
   async findAllCategories() {
@@ -186,7 +212,7 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
     authorId: string;
   }) {
     const sanitizedContent = sanitizeHtml(data.content);
-    return this.prisma.knowledgeDocument.create({
+    const document = await this.prisma.knowledgeDocument.create({
       data: {
         ...data,
         content: sanitizedContent,
@@ -196,6 +222,20 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
         author: { select: { displayName: true } },
       },
     });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: data.authorId,
+        action: AuditAction.CREATE_KB_DOCUMENT,
+        targetId: document.id,
+        details: JSON.stringify({
+          title: document.title,
+          categoryId: document.categoryId,
+        }),
+      },
+    });
+
+    return document;
   }
 
   async findAllDocuments(categoryId?: string) {
@@ -233,7 +273,11 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
     return doc;
   }
 
-  async updateDocument(id: string, data: Prisma.KnowledgeDocumentUpdateInput) {
+  async updateDocument(
+    id: string,
+    data: Prisma.KnowledgeDocumentUpdateInput,
+    userId?: string,
+  ) {
     const updateData = { ...data };
     if (typeof updateData.content === 'string') {
       updateData.content = sanitizeHtml(updateData.content);
@@ -248,15 +292,54 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
       }
     }
 
-    return this.prisma.knowledgeDocument.update({
+    const updated = await this.prisma.knowledgeDocument.update({
       where: { id },
       data: updateData,
     });
+
+    if (userId) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.UPDATE_KB_DOCUMENT,
+          targetId: id,
+          details: JSON.stringify({
+            title: updated.title,
+            categoryId: updated.categoryId,
+          }),
+        },
+      });
+    }
+
+    return updated;
   }
 
-  async removeDocument(id: string) {
-    return this.prisma.knowledgeDocument.delete({
+  async removeDocument(id: string, userId?: string) {
+    const deleted = await this.prisma.knowledgeDocument.delete({
       where: { id },
+    });
+
+    if (userId) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.DELETE_KB_DOCUMENT,
+          targetId: id,
+          details: JSON.stringify({ title: deleted.title }),
+        },
+      });
+    }
+
+    return deleted;
+  }
+
+  async recordImageUpload(filename: string, userId: string) {
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPLOAD_KB_IMAGE,
+        details: JSON.stringify({ filename }),
+      },
     });
   }
 

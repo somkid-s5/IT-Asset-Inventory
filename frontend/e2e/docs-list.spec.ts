@@ -4,12 +4,19 @@ test.describe('Knowledge Base List Features', () => {
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
   test.beforeEach(async ({ page }) => {
+    const recentDocumentsResponse = page.waitForResponse((response) =>
+      response.url().includes('/knowledge-base/recent/documents') &&
+      response.request().method() === 'GET' &&
+      response.status() === 200,
+    );
     await page.goto('/dashboard/docs');
+    await recentDocumentsResponse;
     await expect(page.getByRole('heading', { name: 'SysOps Knowledge Base' })).toBeVisible();
   });
 
   test('should display article list and category chips', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Document Categories' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Recent Documents' })).toBeVisible();
     await expect(page.getByText('Total Documents')).toBeVisible();
     // Verify categories or empty state is visible without conditional blocks
     await expect(

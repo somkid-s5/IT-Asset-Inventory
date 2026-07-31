@@ -41,7 +41,40 @@ test.describe('Assets List Page Features', () => {
     await expect(page.getByText('No assets found')).toBeVisible();
   });
 
+  test('should keep the search field focused while typing continuously', async ({ page }) => {
+    const searchInput = page.getByPlaceholder('Search assets...');
+
+    await searchInput.click();
+    await searchInput.pressSequentially('switch-core-01', { delay: 40 });
+
+    await expect(searchInput).toBeFocused();
+    await expect(searchInput).toHaveValue('switch-core-01');
+    await expect(page.getByRole('table')).toContainText('switch-core-01');
+    await expect(searchInput).toBeFocused();
+  });
+
+  test('should paginate assets from the server', async ({ page }) => {
+    const pageSize = page.getByRole('combobox');
+    await pageSize.selectOption('10');
+
+    await expect(page.getByText(/Total \d+ items/)).toBeVisible();
+    await expect(page.getByText(/Page 1 of \d+/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Next page' })).toBeEnabled();
+
+    await page.getByRole('button', { name: 'Next page' }).click();
+    await expect(page.getByText(/Page 2 of \d+/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+  });
+
+  test('should keep layer-specific Env and Version out of the asset table', async ({ page }) => {
+    const table = page.getByRole('table');
+    await expect(table.getByRole('columnheader', { name: 'Env' })).not.toBeVisible();
+    await expect(table.getByRole('columnheader', { name: 'Version' })).not.toBeVisible();
+    await expect(table.getByRole('columnheader', { name: 'Asset ID' })).toBeVisible();
+  });
+
   test('should sort columns ascending and descending', async ({ page }) => {
+    await page.getByRole('combobox').selectOption('50');
     const nameHeader = page.getByRole('button', { name: 'Asset Name' });
     const seededNames = page.getByTestId('asset-name').filter({ hasText: /^(db-prod-01|web-front-lb)$/ });
 
@@ -103,8 +136,10 @@ test.describe('Assets List Page Features', () => {
   });
 
   test('should navigate to details on row click', async ({ page }) => {
-    const row = page.getByRole('row').filter({ hasText: 'db-prod-01' });
-    await row.click();
-    await expect(page).toHaveURL(/\/dashboard\/assets\/[a-zA-Z0-9-]+/);
+    await page.getByPlaceholder('Search assets...').fill('db-prod-01');
+    const assetCell = page.getByRole('cell', { name: 'db-prod-01', exact: true });
+    await expect(assetCell).toBeVisible();
+    await assetCell.click();
+    await expect(page).toHaveURL(/\/dashboard\/assets\/[a-zA-Z0-9-]+/, { timeout: 15000 });
   });
 });

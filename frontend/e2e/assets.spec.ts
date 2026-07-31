@@ -12,9 +12,13 @@ test.describe('Assets Dashboard', () => {
   });
 
   test('should display seeded assets in table', async ({ page }) => {
-    // Check that our seeded assets are present in the table rows using getByRole
+    // Server pagination may place seeded records on different pages. Use the
+    // real search path so this check remains valid as the inventory grows.
+    const searchInput = page.getByPlaceholder('Search assets...');
     const table = page.getByRole('table');
+    await searchInput.fill('db-prod-01');
     await expect(table).toContainText('db-prod-01');
+    await searchInput.fill('web-front-lb');
     await expect(table).toContainText('web-front-lb');
   });
 

@@ -15,7 +15,6 @@ import {
   LoaderCircle,
   Server,
   ShieldCheck,
-  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/services/api";
@@ -52,7 +51,7 @@ export default function DatabaseDetailPage() {
   useEffect(() => {
     if (!database) return;
     setHeader({
-      title: database.name,
+      title: "Database Details",
       breadcrumbs: [
         { label: "Workspace", href: "/dashboard" },
         { label: "Databases", href: "/dashboard/databases" },
@@ -93,9 +92,9 @@ export default function DatabaseDetailPage() {
   const copyValue = async (value: string, label: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(`คัดลอก ${label} แล้ว`);
+      toast.success(`Copied ${label}`);
     } catch {
-      toast.error(`ไม่สามารถคัดลอก ${label.toLowerCase()} ได้`);
+      toast.error(`Unable to copy ${label.toLowerCase()}`);
     }
   };
 
@@ -130,22 +129,29 @@ export default function DatabaseDetailPage() {
       }
       if (pwdToCopy) {
         await navigator.clipboard.writeText(pwdToCopy);
-        toast.success("คัดลอก Password แล้ว");
+        toast.success("Copied password");
       }
     } catch {
-      toast.error("ไม่สามารถคัดลอก password ได้");
+      toast.error("Unable to copy password");
     }
   };
 
-  const hostValue = database.port ? `${database.ipAddress}:${database.port}` : database.ipAddress;
+  const connectionProperties = [
+    { label: "Engine", value: database.engine || "--", icon: <Database className="h-4 w-4" /> },
+    { label: "Version", value: database.version || "--", icon: <Hash className="h-4 w-4" /> },
+    { label: "Environment", value: database.environment || "--", icon: <Globe className="h-4 w-4" /> },
+    { label: "Host", value: database.host || "--", icon: <Server className="h-4 w-4" /> },
+    { label: "IP Address", value: database.ipAddress || "--", icon: <Globe className="h-4 w-4" /> },
+    { label: "Port", value: database.port || "--", icon: <Hash className="h-4 w-4" /> },
+    { label: "Service Name", value: database.serviceName || "--", icon: <ShieldCheck className="h-4 w-4" /> },
+  ];
 
-  const properties = [
-    { label: "Database Name", value: database.name || "--", icon: <Database className="h-4 w-4" /> },
-    { label: "Engine", value: database.engine || "--", icon: <Tag className="h-4 w-4" /> },
-    { label: "เวอร์ชัน", value: database.version || "--", icon: <Hash className="h-4 w-4" /> },
-    { label: "สภาพแวดล้อม", value: database.environment || "--", icon: <Globe className="h-4 w-4" /> },
-    { label: "โฮสต์ IP", value: hostValue || "--", note: database.host || "--", icon: <Server className="h-4 w-4" /> },
-    { label: "ชื่อบริการ", value: database.serviceName || "--", icon: <ShieldCheck className="h-4 w-4" /> },
+  const operationsProperties = [
+    { label: "Owner", value: database.owner || "--" },
+    { label: "Status", value: database.status || "--" },
+    { label: "Backup Policy", value: database.backupPolicy || "--" },
+    { label: "Replication", value: database.replication || "--" },
+    { label: "Maintenance Window", value: database.maintenanceWindow || "--" },
   ];
 
   const getRoleBadge = (role?: string | null) => {
@@ -165,119 +171,137 @@ export default function DatabaseDetailPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-page space-y-6 pt-2">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-page space-y-4 pt-1">
       <div className="flex justify-between items-center">
         <button onClick={() => router.push("/dashboard/databases")} className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
-          กลับไปหน้าฐานข้อมูล
+          Back to Databases
         </button>
       </div>
 
       <section className="glass-card overflow-hidden">
-        <div className="p-6 sm:p-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between relative">
+        <div className="relative flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none"></div>
 
-          <div className="flex items-start gap-5 relative z-10">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-success to-primary text-white shadow-xl">
-              <Database className="h-7 w-7" />
+          <div className="relative z-10 flex min-w-0 items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-success to-primary text-white shadow-xl">
+              <Database className="h-6 w-6" />
             </div>
 
             <div className="space-y-2 min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground truncate max-w-[500px]" title={database.note || database.name}>
-                  {database.note || "Database System"}
+                <h1 className="text-2xl font-bold tracking-tight text-foreground truncate max-w-[500px]" title={database.name}>
+                  {database.name || "Database System"}
                 </h1>
                 <span className="rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
                   {database.environment}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground min-w-0">
-                <span className="font-semibold text-foreground/80 shrink-0">{database.engine}</span>
-                <span className="flex items-center gap-1.5 shrink-0"><Hash className="h-3.5 w-3.5" /> Version: <span className="text-foreground">{database.version}</span></span>
-                <span className="flex items-center gap-1.5 truncate max-w-[300px]"><Globe className="h-3.5 w-3.5 shrink-0" /> Host: <span className="font-mono text-xs text-foreground truncate">{hostValue}</span></span>
-              </div>
+              {database.note && <p className="max-w-[500px] truncate text-xs text-muted-foreground" title={database.note}>{database.note}</p>}
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-3 lg:justify-end relative z-10">
-            <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-4 py-2">
-               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Accounts</span>
+          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+            <div className="flex min-w-[80px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
+               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Accounts</span>
                <span className="text-lg font-bold text-primary">{databaseStats.accounts}</span>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-xl border border-border/50 bg-background/50 px-4 py-2">
-               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Linked Apps</span>
+            <div className="flex min-w-[80px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
+               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Linked Apps</span>
                <span className="text-lg font-bold text-info">{databaseStats.appIps}</span>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="glass-card p-6 sm:p-8">
-          <div className="border-b border-border/50 pb-3 mb-5">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+      <div className="grid gap-4 lg:grid-cols-12">
+        <section className="glass-card p-4 sm:p-5 lg:col-span-7">
+          <div className="mb-3 border-b border-border/50 pb-2.5">
+            <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <Database className="h-4 w-4" /> Database Details
-              </h2>          </div>
-          <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
-             {properties.map((item) => (
-                <div key={item.label} className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    {item.icon} {item.label}
-                  </div>
-                  <div className="text-sm font-semibold text-foreground pl-6">
-                    {item.value}
-                    {item.note && <div className="text-[11px] text-muted-foreground font-normal mt-0.5">{item.note}</div>}
-                  </div>
+            </h2>
+            <p className="mt-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+              <Server className="h-3.5 w-3.5" /> Connection Information
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {connectionProperties.map((item) => (
+              <div key={item.label} className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border/50 bg-background/40 px-2.5 py-1.5">
+                <div className="flex min-w-0 items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {item.icon}
+                  <span className="truncate">{item.label}</span>
                 </div>
-             ))}
+                <span className="max-w-[58%] truncate text-right font-mono text-xs font-semibold text-foreground">{item.value}</span>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className="glass-card p-6 sm:p-8">
-          <div className="border-b border-border/50 pb-3 mb-5">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-              <Server className="h-4 w-4" /> Connected Application IPs
-          </h2>
-        </div>
-        <div className="space-y-3 max-h-[220px] overflow-y-auto custom-scrollbar pr-2">
-          {database.linkedApps.length > 0 ? (
-            database.linkedApps.map((entry) => {
-              const linkedApp = parseLinkedAppEntry(entry);
-              return (
-                <div key={entry} className="flex items-center justify-between rounded-xl border border-border/50 bg-background/50 px-4 py-3">
-                  <div className="min-w-0">
-                    <div className="font-mono text-sm font-bold text-foreground">{linkedApp.ipAddress || "--"}</div>
-                    <div className="text-xs text-muted-foreground truncate max-w-[200px]">{linkedApp.description || "No description"}</div>
+        <section className="glass-card p-4 sm:p-5 lg:col-span-5">
+          <div className="mb-3 border-b border-border/50 pb-2.5">
+            <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <ShieldCheck className="h-4 w-4" /> Operations &amp; Protection
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {operationsProperties.map((item) => (
+              <div key={item.label} className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border/50 bg-background/40 px-2.5 py-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</span>
+                <span className="max-w-[58%] truncate text-right text-xs font-semibold text-foreground">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="glass-card p-4 sm:p-5 lg:col-span-12">
+          <div className="mb-3 border-b border-border/50 pb-2.5">
+            <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <Globe className="h-4 w-4" /> Connected Application IPs
+            </h2>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {database.linkedApps.length > 0 ? (
+              database.linkedApps.map((entry) => {
+                const linkedApp = parseLinkedAppEntry(entry);
+                return (
+                  <div key={entry} className="flex items-center justify-between rounded-lg border border-border/50 bg-background/40 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="font-mono text-xs font-bold text-foreground">{linkedApp.ipAddress || "--"}</div>
+                      <div className="truncate text-[11px] text-muted-foreground" title={linkedApp.description || "No description"}>{linkedApp.description || "No description"}</div>
+                    </div>
+                    <button onClick={() => { void navigator.clipboard.writeText(linkedApp.ipAddress || ''); toast.success('IP copied'); }} className="ml-3 shrink-0 rounded-lg px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary transition-colors hover:bg-primary/10 hover:text-primary/80">
+                      Copy
+                    </button>
                   </div>
-                  <button onClick={() => { void navigator.clipboard.writeText(linkedApp.ipAddress || ''); toast.success('IP copied'); }} className="text-primary hover:text-primary/80 text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors">
-                    Copy
-                  </button>
-                </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-6 text-sm text-muted-foreground">No application IP data found</div>
-          )}
-        </div>
-      </section>
-    </div>
+                );
+              })
+            ) : (
+              <div className="py-3 text-sm text-muted-foreground">No application IP data found</div>
+            )}
+          </div>
+        </section>
+      </div>
 
     <section className="glass-card overflow-hidden">
-      <div className="p-6 border-b border-border/50">
-         <h2 className="text-lg font-bold tracking-tight flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-success"/> Database Accounts</h2>
+      <div className="flex flex-col gap-2 border-b border-border/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+         <div>
+           <h2 className="flex items-center gap-2 text-base font-bold tracking-tight"><ShieldCheck className="h-4 w-4 text-success"/> Accounts &amp; Credentials</h2>
+           <p className="mt-1 text-[11px] text-muted-foreground">Access accounts linked to this database. Passwords stay hidden until explicitly revealed.</p>
+         </div>
+         <span className="shrink-0 rounded-lg border border-border/50 bg-background/50 px-2.5 py-1 font-mono text-xs font-semibold text-primary">{databaseStats.accounts}</span>
       </div>
-      <div className="p-0 overflow-x-auto">
+      <div className="overflow-x-auto p-0">
         {database.accounts.length === 0 ? (
            <div className="p-8 text-center text-sm text-muted-foreground">No saved accounts found</div>
         ) : (
-            <table className="w-full text-sm text-left border-collapse">
+            <table className="w-full min-w-[820px] border-collapse text-left text-sm">
               <thead>
                 <tr className="bg-muted/20 border-b border-border/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  <th className="px-6 py-4">Username</th>
-                  <th className="px-6 py-4">Password</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Privileges</th>
-                  <th className="px-6 py-4">Notes</th>
+                  <th className="px-3 py-2.5 sm:px-4">Username</th>
+                  <th className="px-3 py-2.5 sm:px-4">Password</th>
+                  <th className="px-3 py-2.5 sm:px-4">Role</th>
+                  <th className="px-3 py-2.5 sm:px-4">Privileges</th>
+                  <th className="px-3 py-2.5 sm:px-4">Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -285,32 +309,32 @@ export default function DatabaseDetailPage() {
                   const isRev = !!revealedPasswords[account.id];
                   return (
                     <tr key={account.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2.5 sm:px-4">
                         <div className="flex items-center gap-2">
                            <span className="font-mono font-semibold">{account.username}</span>
-                           <button onClick={() => { void copyValue(account.username, 'Username'); }} className="text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
+                           <button aria-label="Copy username" onClick={() => { void copyValue(account.username, 'Username'); }} className="text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
                         </div>
                       </td>
-                       <td className="px-6 py-4">
+                       <td className="px-3 py-2.5 sm:px-4">
                         <div className="flex items-center gap-2">
                            <div className="font-mono bg-muted/50 px-2 py-1 rounded-md min-w-[160px] text-center font-semibold tabular-nums transition-all">
                              {isRev ? revealedPasswords[account.id] : '••••••••••••'}
                            </div>
-                           <button onClick={() => handleRevealPassword(account.id)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                           <button aria-label={isRev ? "Hide password" : "Reveal password"} onClick={() => handleRevealPassword(account.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted">
                              {isRev ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                            </button>
-                           <button onClick={() => { void copyPassword(account.id, isRev ? revealedPasswords[account.id] : undefined); }} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                           <button aria-label="Copy password" onClick={() => { void copyPassword(account.id, isRev ? revealedPasswords[account.id] : undefined); }} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted">
                              <Copy className="h-4 w-4" />
                            </button>
                         </div>
                       </td>
-                      <td className="px-6 py-4"><span className={cn("px-2.5 py-1 border rounded-md text-[11px] font-semibold", getRoleBadge(account.role))}>{account.role || '--'}</span></td>
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2.5 sm:px-4"><span className={cn("rounded-md border px-2.5 py-1 text-[11px] font-semibold", getRoleBadge(account.role))}>{account.role || '--'}</span></td>
+                      <td className="px-3 py-2.5 sm:px-4">
                         <div className="flex flex-wrap gap-1.5">
                           {account.privileges.map(priv => <span key={priv} className={cn("px-2 py-1 border rounded-md text-[11px] font-semibold", getPrivilegeBadge(priv))}>{priv}</span>)}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-muted-foreground text-xs">{account.note || '--'}</td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground sm:px-4">{account.note || '--'}</td>
                     </tr>
                   )
                 })}

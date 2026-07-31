@@ -43,7 +43,7 @@ export const kbService = {
     return res.data;
   },
   getRecentDocuments: async (limit: number = 5) => {
-    const res = await api.get<KBDocument[]>('/knowledge-base/recent', {
+    const res = await api.get<KBDocument[]>('/knowledge-base/recent/documents', {
       params: { limit },
     });
     return res.data;
@@ -71,10 +71,23 @@ export const kbService = {
   uploadImage: async (file: File) => {
     const formData = new FormData();
     formData.append('image', file);
-    // Silent log
     const res = await api.post<{ url: string }>('/knowledge-base/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
-    return res.data.url;
+
+    const relativeUrl = res.data.url;
+    if (/^https?:\/\//i.test(relativeUrl)) {
+      return relativeUrl;
+    }
+
+    const baseUrl = api.defaults.baseURL?.replace(/\/$/, '');
+    if (!baseUrl) return relativeUrl;
+
+    // The backend returns an /api/... path while Axios already has /api in
+    // its base URL. Avoid producing /api/api/... in the editor markdown.
+    const path = baseUrl.endsWith('/api') && relativeUrl.startsWith('/api/')
+      ? relativeUrl.slice('/api'.length)
+      : relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`;
+    return `${baseUrl}${path}`;
   }
 };

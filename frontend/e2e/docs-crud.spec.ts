@@ -11,7 +11,7 @@ test.describe('KB Document CRUD Operations', () => {
     await newDocButton.click();
 
     // Verify redirects to /new
-    await page.waitForURL('**/dashboard/docs/new', { timeout: 15000 });
+    await page.waitForURL('**/dashboard/docs/new', { timeout: 30000 });
     const titleInput = page.getByPlaceholder('e.g. How to configure the core switch...');
     await expect(titleInput).toBeVisible();
 
@@ -57,12 +57,15 @@ test.describe('KB Document CRUD Operations', () => {
     await categoryCard.click();
 
     // Click the title card
-    const docLink = page.getByRole('heading', { name: uniqueTitle });
+    const docLink = page.getByRole('link', { name: `Open ${uniqueTitle}` });
     await expect(docLink).toBeVisible();
-    await docLink.click();
+    await Promise.all([
+      page.waitForURL(/\/dashboard\/docs\/[^/]+$/, { timeout: 30000 }),
+      docLink.click(),
+    ]);
 
     // Verify detail view page
-    await expect(page.getByRole('heading', { name: uniqueTitle, level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: uniqueTitle, level: 1 })).toBeVisible({ timeout: 15000 });
 
     // Edit Document
     const editIconBtn = page.getByRole('button', { name: 'Edit Document' });

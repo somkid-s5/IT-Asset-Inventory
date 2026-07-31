@@ -1,53 +1,48 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { kbService } from '@/services/kb';
+import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  FileText, 
-  ChevronLeft, 
-  Plus, 
-  Search,
-  Clock,
-  User,
+import { useEffect, useState } from 'react';
+import {
   ArrowRight,
-  Bookmark,
+  ChevronLeft,
   ChevronRight,
   Eye,
-  BookOpen
+  FileText,
+  Plus,
+  Search,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { kbService } from '@/services/kb';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
-import { useEffect, useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Helper to get initials from author display name
 const getInitials = (name: string) => {
   if (!name) return 'IT';
-  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  return name.split(' ').map((part) => part[0]).join('').substring(0, 2).toUpperCase();
 };
 
 export default function CategoryPage() {
   const { id } = useParams();
   const router = useRouter();
   const { setHeader } = usePageHeader();
+  const categoryId = id as string;
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('latest');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  // Fetch current category detail
-  const { data: category, isLoading: catLoading } = useQuery({
-    queryKey: ['kb-category', id],
-    queryFn: () => kbService.getCategory(id as string),
-    enabled: !!id,
+  const { data: category, isLoading: categoryLoading } = useQuery({
+    queryKey: ['kb-category', categoryId],
+    queryFn: () => kbService.getCategory(categoryId),
+    enabled: !!categoryId,
   });
 
-  // Fetch all categories for the left sidebar
   const { data: categories = [] } = useQuery({
     queryKey: ['kb-categories'],
     queryFn: kbService.getCategories,
@@ -66,16 +61,33 @@ export default function CategoryPage() {
     }
   }, [category, setHeader]);
 
-  if (catLoading) {
+  useEffect(() => {
+    if (categoryId) {
+      void router.prefetch(`/dashboard/docs/new?categoryId=${categoryId}`);
+    }
+  }, [categoryId, router]);
+
+  useEffect(() => {
+    if (category?.documents) {
+      category.documents.forEach((document) => {
+        void router.prefetch(`/dashboard/docs/${document.id}`);
+        void router.prefetch(`/dashboard/docs/${document.id}/edit`);
+      });
+    }
+  }, [category, router]);
+
+  if (categoryLoading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
-        <Skeleton className="h-40 w-full rounded-2xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <Skeleton className="h-60 lg:col-span-1 rounded-xl" />
-          <div className="lg:col-span-3 space-y-4">
-            <Skeleton className="h-12 w-full rounded-xl" />
-            <Skeleton className="h-32 w-full rounded-xl" />
-            <Skeleton className="h-32 w-full rounded-xl" />
+      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-12 sm:px-6">
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <Skeleton className="h-52 rounded-2xl" />
+          <div className="space-y-4">
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Skeleton className="h-48 rounded-2xl" />
+              <Skeleton className="h-48 rounded-2xl" />
+            </div>
           </div>
         </div>
       </div>
@@ -84,94 +96,83 @@ export default function CategoryPage() {
 
   if (!category) return null;
 
-  // Filter documents in category
-  const filteredDocuments = (category.documents || []).filter(doc => 
-    doc.title.toLowerCase().includes(search.toLowerCase()) ||
-    doc.content.toLowerCase().includes(search.toLowerCase())
+  const documents = category.documents || [];
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredDocuments = documents.filter((document) =>
+    document.title.toLowerCase().includes(normalizedSearch) ||
+    document.content.toLowerCase().includes(normalizedSearch),
   );
-
-  // Sort documents
   const sortedDocuments = [...filteredDocuments].sort((a, b) => {
-    if (sortBy === 'latest') {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-    if (sortBy === 'popular') {
-      return (b.viewCount || 0) - (a.viewCount || 0);
-    }
-    if (sortBy === 'az') {
-      return a.title.localeCompare(b.title);
-    }
-    return 0;
+    if (sortBy === 'popular') return (b.viewCount || 0) - (a.viewCount || 0);
+    if (sortBy === 'az') return a.title.localeCompare(b.title);
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
-
-  // Pagination logic
   const totalPages = Math.ceil(sortedDocuments.length / itemsPerPage) || 1;
   const paginatedDocuments = sortedDocuments.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
-
-  const totalViews = (category.documents || []).reduce((sum, doc) => sum + (doc.viewCount || 0), 0);
+  const totalViews = documents.reduce((sum, document) => sum + (document.viewCount || 0), 0);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-20 px-4 sm:px-6">
-      {/* Category Hero Header Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#05160e] to-[#0e3b26] text-white p-8 sm:p-10 border-b-4 border-primary shadow-xl">
-        <nav className="flex items-center gap-2 text-xs text-muted-foreground/80 mb-4 font-semibold">
-          <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => router.push('/dashboard/docs')}>Knowledge Base</span>
+    <div className="mx-auto max-w-6xl space-y-5 px-4 pb-12 sm:px-6">
+      <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-[#071b11] to-[#0f3d27] p-5 text-white shadow-sm sm:p-6">
+        <nav className="mb-3 flex items-center gap-2 text-[11px] font-semibold text-white/60" aria-label="Breadcrumb">
+          <button type="button" className="transition-colors hover:text-primary" onClick={() => router.push('/dashboard/docs')}>
+            Knowledge Base
+          </button>
           <ChevronRight className="h-3 w-3" />
           <span className="text-primary">{category.name}</span>
         </nav>
-        
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-display mb-3">{category.name}</h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full text-xs font-medium text-primary">
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="mb-2 truncate text-2xl font-black tracking-tight sm:text-3xl">{category.name}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="gap-1.5 rounded-full border-0 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-primary hover:bg-white/10">
                 <FileText className="h-3.5 w-3.5" />
-                {category.documents?.length || 0} Documents
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full text-xs font-medium text-accent-purple">
+                {documents.length} Documents
+              </Badge>
+              <Badge className="gap-1.5 rounded-full border-0 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-[#d8b4fe] hover:bg-white/10">
                 <Eye className="h-3.5 w-3.5 text-[#a855f7]" />
                 {totalViews} Views
-              </div>
+              </Badge>
             </div>
           </div>
-          <Button 
-            onClick={() => router.push(`/dashboard/docs/new?categoryId=${id}`)}
-            className="bg-primary text-primary-foreground rounded-full hover:bg-primary/95 font-bold px-6 shadow-lg shadow-primary/20 shrink-0 self-start md:self-auto"
+          <Link
+            href={`/dashboard/docs/new?categoryId=${categoryId}`}
+            aria-label="Create a new document"
+            className="shrink-0 self-start rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:self-auto"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Create New Document
-          </Button>
+            <Button className="h-9 rounded-xl bg-primary px-4 font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Document
+            </Button>
+          </Link>
         </div>
-      </div>
+      </section>
 
-      {/* Main Split Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
-        {/* Left Sidebar Filter */}
-        <aside className="lg:col-span-1 space-y-6">
-          
-          {/* Subcategory List */}
-          <div className="bg-card p-5 rounded-xl border border-border/60 shadow-sm">
-            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">All Categories</h4>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <aside>
+          <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">All Categories</h3>
             <div className="space-y-1">
-              {categories.map((cat) => {
-                const isActive = cat.id === id;
+              {categories.map((item) => {
+                const isActive = item.id === categoryId;
                 return (
-                  <button 
-                    key={cat.id}
-                    onClick={() => router.push(`/dashboard/docs/categories/${cat.id}`)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                      isActive 
-                        ? 'bg-primary/10 text-primary' 
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => router.push(`/dashboard/docs/categories/${item.id}`)}
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-bold transition-all ${
+                      isActive
+                        ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }`}
                   >
-                    <span className="truncate">{cat.name}</span>
-                    <span className="bg-muted text-[10px] px-2 py-0.5 rounded-full border border-border/20 text-muted-foreground">
-                      {cat._count?.documents || 0}
+                    <span className="truncate">{item.name}</span>
+                    <span className="rounded-full border border-border/20 bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {item._count?.documents || 0}
                     </span>
                   </button>
                 );
@@ -180,29 +181,31 @@ export default function CategoryPage() {
           </div>
         </aside>
 
-        {/* Right Articles Grid */}
-        <div className="lg:col-span-3 space-y-6">
-          
-          {/* Search & View Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-card p-4 border border-border/60 rounded-xl shadow-sm">
-            <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder={`Search in ${category.name}...`} 
+        <main className="min-w-0 space-y-4">
+          <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
+            <div className="relative w-full sm:max-w-sm sm:flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={`Search in ${category.name}...`}
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+                onChange={(event) => {
+                  setSearch(event.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-9 h-9 text-xs rounded-lg bg-background border-border/60"
+                className="h-9 rounded-xl border-border/60 bg-background pl-9 text-xs"
               />
             </div>
-            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-              <span className="text-xs text-muted-foreground font-semibold">Sort by:</span>
-              <select 
+            <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+              <label htmlFor="category-sort" className="text-[11px] font-semibold text-muted-foreground">Sort by</label>
+              <select
+                id="category-sort"
+                aria-label="Sort documents"
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-background border border-border/60 rounded-lg px-3 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary outline-none"
+                onChange={(event) => {
+                  setSortBy(event.target.value);
+                  setCurrentPage(1);
+                }}
+                className="rounded-xl border border-border/60 bg-background px-3 py-2 text-xs font-bold outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="latest">Latest</option>
                 <option value="popular">Popular</option>
@@ -211,105 +214,125 @@ export default function CategoryPage() {
             </div>
           </div>
 
-          {/* Articles list */}
+          <div className="flex items-center justify-between px-1">
+            <p className="text-[11px] font-semibold text-muted-foreground">
+              {filteredDocuments.length} {filteredDocuments.length === 1 ? 'document' : 'documents'}
+            </p>
+            {normalizedSearch && <p className="text-[11px] text-muted-foreground">Filtered by “{search.trim()}”</p>}
+          </div>
+
           {paginatedDocuments.length === 0 ? (
-            <div className="py-20 text-center border-2 border-dashed rounded-2xl border-border/40 bg-muted/5">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground/20 mb-4" />
-              <h3 className="text-base font-bold opacity-60">No documents found in this category</h3>
-              <p className="text-xs text-muted-foreground mt-1">Start sharing knowledge by creating a new document.</p>
+            <div className="rounded-2xl border-2 border-dashed border-border/40 bg-muted/5 py-14 text-center">
+              <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground/20" />
+              <h3 className="text-sm font-bold opacity-60">No documents found in this category</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Start sharing knowledge by creating a new document.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {paginatedDocuments.map((doc, idx) => {
-                const initials = getInitials(doc.author.displayName);
-                const isFeatured = idx === 0 && currentPage === 1 && (doc.title.toLowerCase().includes('policy') || doc.title.toLowerCase().includes('important'));
-                const plainTextSnippet = doc.content
-                  .replace(/[#*`>_\-]/g, '') // remove markdown syntax
-                  .replace(/\[.*?\]\(.*?\)/g, '') // remove links
-                  .substring(0, 140) + '...';
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {paginatedDocuments.map((document, index) => {
+                const initials = getInitials(document.author.displayName);
+                const isFeatured = index === 0 && currentPage === 1 && (
+                  document.title.toLowerCase().includes('policy') ||
+                  document.title.toLowerCase().includes('important')
+                );
+                const plainTextSnippet = `${document.content
+                  .replace(/[#*`>_\-]/g, '')
+                  .replace(/\[.*?\]\(.*?\)/g, '')
+                  .substring(0, 140)}...`;
 
                 return (
-                  <Card 
-                    key={doc.id}
-                    onClick={() => router.push(`/dashboard/docs/${doc.id}`)}
-                    className={`group p-6 rounded-xl transition-all duration-300 flex flex-col justify-between cursor-pointer hover:shadow-lg ${
-                      isFeatured 
-                        ? 'bg-[#f0f9f4] dark:bg-primary/[0.03] border-2 border-primary/30 relative overflow-hidden' 
-                        : 'bg-card border-border/60 hover:border-primary/30'
-                    }`}
+                  <Link
+                    key={document.id}
+                    href={`/dashboard/docs/${document.id}`}
+                    aria-label={`Open ${document.title}`}
+                    className="group block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                   >
+                    <Card
+                      className={`relative flex h-full flex-col justify-between rounded-2xl p-4 transition-all duration-300 hover:shadow-md ${
+                        isFeatured
+                          ? 'border-2 border-primary/30 bg-[#f0f9f4] dark:bg-primary/[0.03]'
+                          : 'border-border/60 bg-card hover:border-primary/30'
+                      }`}
+                    >
                     {isFeatured && (
-                      <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-[9px] uppercase tracking-widest font-black rounded-bl-xl">
+                      <div className="absolute right-0 top-0 rounded-bl-xl bg-primary px-3 py-1 text-[9px] font-black uppercase tracking-widest text-primary-foreground">
                         Featured
                       </div>
                     )}
                     <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <Bookmark className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-colors ml-auto" />
+                      <div className="mb-3 flex items-center justify-between">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <FileText className="h-3.5 w-3.5" />
+                        </div>
+                        <span className="text-[10px] font-semibold text-muted-foreground">{document.viewCount || 0} views</span>
                       </div>
-                      <h4 className="text-base font-bold mb-2 group-hover:text-primary transition-colors duration-200 leading-snug line-clamp-2">
-                        {doc.title}
-                      </h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed mb-6 line-clamp-3">
-                        {plainTextSnippet}
-                      </p>
+                        <h4
+                          className="mb-1.5 line-clamp-2 text-sm font-bold leading-snug transition-colors duration-200 group-hover:text-primary sm:text-base"
+                          onClick={() => router.push(`/dashboard/docs/${document.id}`)}
+                        >
+                          {document.title}
+                        </h4>
+                      <p className="mb-4 line-clamp-3 text-xs leading-relaxed text-muted-foreground">{plainTextSnippet}</p>
                     </div>
 
                     <div className="mt-auto">
-                      <div className="flex items-center gap-3 pt-4 border-t border-border/40 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px]">
+                      <div className="mb-3 flex items-center gap-2.5 border-t border-border/40 pt-3">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
                           {initials}
                         </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-foreground leading-tight">{doc.author.displayName}</p>
-                          <p className="text-[10px] text-muted-foreground">Updated {formatDistanceToNow(new Date(doc.updatedAt), { addSuffix: true })}</p>
+                        <div className="min-w-0">
+                          <p className="truncate text-[10px] font-bold leading-tight text-foreground">{document.author.displayName}</p>
+                          <p className="text-[10px] text-muted-foreground">Updated {formatDistanceToNow(new Date(document.updatedAt), { addSuffix: true })}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs font-bold text-primary group-hover:text-primary/80 transition-colors">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-primary transition-colors group-hover:text-primary/80">
                         <span>Read More</span>
-                        <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                       </div>
                     </div>
-                  </Card>
+                    </Card>
+                  </Link>
                 );
               })}
             </div>
           )}
 
-          {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-1.5 pt-6">
-              <Button 
-                variant="outline" 
+            <div className="flex items-center justify-center gap-1.5 pt-3">
+              <Button
+                variant="outline"
                 size="icon"
+                aria-label="Previous page"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                onClick={() => setCurrentPage((previous) => Math.max(previous - 1, 1))}
                 className="h-8 w-8 rounded-lg"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              {Array.from({ length: totalPages }).map((_, i) => (
+              {Array.from({ length: totalPages }).map((_, index) => (
                 <Button
-                  key={i}
-                  variant={currentPage === i + 1 ? 'default' : 'outline'}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className="h-8 w-8 text-xs font-bold rounded-lg"
+                  key={index}
+                  variant={currentPage === index + 1 ? 'default' : 'outline'}
+                  aria-label={`Page ${index + 1}`}
+                  onClick={() => setCurrentPage(index + 1)}
+                  className="h-8 w-8 rounded-lg text-xs font-bold"
                 >
-                  {i + 1}
+                  {index + 1}
                 </Button>
               ))}
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
+                aria-label="Next page"
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                onClick={() => setCurrentPage((previous) => Math.min(previous + 1, totalPages))}
                 className="h-8 w-8 rounded-lg"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );

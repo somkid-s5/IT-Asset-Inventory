@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { 
   Database, LayoutDashboard, Monitor, 
   Server, Users, Workflow, ChevronLeft, Activity,
-  BookOpen, ChevronDown, ClipboardCheck
+  BookOpen, ChevronDown
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -29,7 +29,6 @@ const inventoryNavItems: NavItem[] = [
   { title: 'Assets', url: '/dashboard/assets', icon: Server },
   { title: 'Virtual Machines', url: '/dashboard/virtual-machines', icon: Monitor },
   { title: 'Databases', url: '/dashboard/databases', icon: Database },
-  { title: 'Data Quality', url: '/dashboard/data-quality', icon: ClipboardCheck },
 ];
 
 const systemNavItems: NavItem[] = [

@@ -4,8 +4,8 @@
 
 - Run `npm run build` and `npm test -- --runInBand` in `backend`.
 - Run `npm run lint` and `npm run build` in `frontend`.
-- Verify login, asset create/edit/delete, CSV import, bulk update, attachment download, VM source test/sync, and the Data Quality queue against staging.
-- Confirm that `FRONTEND_URL`, `JWT_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`, `REGISTRATION_SECRET`, `VCENTER_ALLOWED_HOSTS`, and the default seed passwords are explicit production values. Do not use placeholders.
+- Verify login, asset create/edit/delete, CSV export, bulk update, attachment download, VM source test/sync, and the Dashboard Needs Review summary against staging.
+- Confirm that `FRONTEND_URL`, `JWT_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`, `REGISTRATION_SECRET`, `VCENTER_ALLOWED_HOSTS`, and the default seed passwords are explicit production values. Do not use placeholders. Confirm `VCENTER_MOCK_ENABLED` is `false` or unset.
 
 ## Database backup and migration
 
@@ -18,8 +18,9 @@
 
 ## Post-release checks
 
-- Open Data Quality and confirm Asset, Database, and VM counts match expected inventory.
-- Confirm CSV import rejects duplicate Asset IDs and writes a single audit event.
+- Open the Dashboard and confirm the Needs Review count for Assets, Databases, and VMs matches the expected inventory.
+- Confirm CSV export contains the current asset view and does not expose credential values.
 - Confirm an unauthenticated attachment URL is rejected and a signed-in download works.
 - Confirm vCenter endpoints are HTTPS and match `VCENTER_ALLOWED_HOSTS`.
+- Verify `/api/health/live` returns 200 and `/api/health/ready` returns 200 with database status `ok`.
 - Review Audit Logs for the release window.
