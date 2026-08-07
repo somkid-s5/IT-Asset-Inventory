@@ -55,7 +55,7 @@ test.describe('Assets List Page Features', () => {
 
   test('should paginate assets from the server', async ({ page }) => {
     const pageSize = page.getByRole('combobox');
-    await pageSize.selectOption('10');
+    await pageSize.selectOption('5');
 
     await expect(page.getByText(/Total \d+ items/)).toBeVisible();
     await expect(page.getByText(/Page 1 of \d+/)).toBeVisible();
@@ -76,7 +76,8 @@ test.describe('Assets List Page Features', () => {
   test('should sort columns ascending and descending', async ({ page }) => {
     await page.getByRole('combobox').selectOption('50');
     const nameHeader = page.getByRole('button', { name: 'Asset Name' });
-    const seededNames = page.getByTestId('asset-name').filter({ hasText: /^(db-prod-01|web-front-lb)$/ });
+    const seededRows = page.getByRole('row').filter({ hasText: /DEV-ASSET-001|DEV-ASSET-002/ });
+    const seededNames = seededRows.getByTestId('asset-name');
 
     // Sort Ascending
     await nameHeader.click();
@@ -137,9 +138,9 @@ test.describe('Assets List Page Features', () => {
 
   test('should navigate to details on row click', async ({ page }) => {
     await page.getByPlaceholder('Search assets...').fill('db-prod-01');
-    const assetCell = page.getByRole('cell', { name: 'db-prod-01', exact: true });
-    await expect(assetCell).toBeVisible();
-    await assetCell.click();
+    const assetRow = page.getByRole('row').filter({ hasText: 'DEV-ASSET-001' });
+    await expect(assetRow).toBeVisible();
+    await assetRow.click();
     await expect(page).toHaveURL(/\/dashboard\/assets\/[a-zA-Z0-9-]+/, { timeout: 15000 });
   });
 });

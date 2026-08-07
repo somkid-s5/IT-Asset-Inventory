@@ -1,5 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
+import { AppBreadcrumbs } from '@/components/AppBreadcrumbs';
 import { BrandMark } from '@/components/BrandMark';
 import { UserAvatar } from '@/components/UserAvatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -88,7 +89,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
         )}
 
         <div className="content-bridge relative flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 h-[56px] border-b border-border/60 bg-background/85 backdrop-blur-xl px-4 sm:px-6 lg:px-8 shadow-sm">
+          <header className="sticky top-0 z-20 h-16 border-b border-border/70 bg-background/90 px-4 shadow-sm backdrop-blur-xl sm:px-6 lg:px-8">
             <div className="app-shell flex h-full items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
                 <button
@@ -105,7 +106,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                 
                 <AnimatePresence mode="wait">
                   {header ? (
-                    <motion.div 
+                    <motion.div
                       key={header.title}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -113,9 +114,14 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                       transition={{ duration: 0.2 }}
                       className="min-w-0"
                     >
-                      <h1 className="truncate text-lg font-bold tracking-tight text-foreground">
+                      <h1 className="truncate text-base font-bold tracking-tight text-foreground sm:text-lg">
                         {header.title}
                       </h1>
+                      {header.breadcrumbs.length > 0 ? (
+                        <div className="mt-0.5 hidden sm:block">
+                          <AppBreadcrumbs items={header.breadcrumbs} />
+                        </div>
+                      ) : null}
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
@@ -125,11 +131,12 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   className="group relative flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background transition-all hover:border-primary/30 hover:bg-muted"
-                  title="Toggle theme"
+                  title={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
+                  aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
                 >
                   <div className="relative h-4 w-4 transition-transform duration-500 group-hover:rotate-45">
                     {theme === 'dark' ? (
-                      <Sun className="h-4 w-4 text-teal-300" />
+                      <Sun className="h-4 w-4 text-warning" />
                     ) : (
                       <Moon className="h-4 w-4 text-primary" />
                     )}
@@ -140,7 +147,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="group flex items-center gap-2 rounded-xl border border-transparent p-1 px-1 transition-all hover:bg-muted/50">
+                    <button aria-label="Open account menu" className="group flex items-center gap-2 rounded-xl border border-transparent p-1 px-1 transition-all hover:bg-muted/50">
                       <div className="relative">
                         <UserAvatar
                           seed={user?.avatarSeed}
@@ -148,7 +155,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                           label={user?.displayName ?? 'Admin'}
                           className="h-7 w-7 border-border/50 ring-0"
                         />
-                        <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-card bg-emerald-500" />
+                        <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-card bg-success" />
                       </div>
                       <div className="hidden min-w-0 text-left sm:block">
                         <div className="truncate text-xs font-bold leading-none text-foreground">{user?.displayName ?? 'User'}</div>
@@ -177,7 +184,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
             </div>
           </header>
 
-          <main id="main-content" className="relative flex-1 px-4 pb-8 pt-4 sm:px-5 lg:px-7" tabIndex={-1}>
+          <main id="main-content" className="relative flex-1 px-4 pb-10 pt-5 sm:px-5 lg:px-7 lg:pt-6" tabIndex={-1}>
             <div className="app-shell">
               {children}
             </div>

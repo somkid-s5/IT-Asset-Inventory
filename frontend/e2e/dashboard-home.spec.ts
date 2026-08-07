@@ -5,6 +5,7 @@ test.describe('Main Dashboard Home', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard');
+    await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
     await expect(page.getByText('Compute Assets', { exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Needs Review', { exact: true })).toBeVisible({ timeout: 10000 });
   });
@@ -12,17 +13,17 @@ test.describe('Main Dashboard Home', () => {
   test('should navigate via stat cards', async ({ page }) => {
     // Click Compute Assets Card
     await page.getByRole('link', { name: /Compute Assets:/ }).click();
-    await expect(page).toHaveURL(/.*virtual-machines/);
+    await expect(page).toHaveURL(/.*virtual-machines/, { timeout: 15000 });
 
     await page.goto('/dashboard');
     // Click Infrastructure Card
     await page.getByRole('link', { name: /Infrastructure:/ }).click();
-    await expect(page).toHaveURL(/.*assets/);
+    await expect(page).toHaveURL(/.*assets/, { timeout: 15000 });
 
     await page.goto('/dashboard');
     // Click Managed DBs Card
     await page.getByRole('link', { name: /Managed DBs:/ }).click();
-    await expect(page).toHaveURL(/.*databases/);
+    await expect(page).toHaveURL(/.*databases/, { timeout: 15000 });
   });
 
   test('should trigger refresh dashboard action', async ({ page }) => {

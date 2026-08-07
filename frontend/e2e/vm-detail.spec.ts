@@ -5,6 +5,7 @@ test.describe('VM Detail Page Features', () => {
 
   test('should display resources tabs and power action toggles', async ({ page }) => {
     await page.goto('/dashboard/virtual-machines');
+    await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
     await expect(page.getByRole('heading', { name: 'Compute & Virtualization Inventory' })).toBeVisible({ timeout: 10000 });
 
     // Locate the VM row for the seeded vm-prod-01 and click its Details button
@@ -16,7 +17,7 @@ test.describe('VM Detail Page Features', () => {
     await detailsButton.click();
 
     // Assert prerequisite: check that we navigated to a VM details page
-    await expect(page).toHaveURL(/\/dashboard\/virtual-machines\/[a-zA-Z0-9-]+/);
+    await expect(page).toHaveURL(/\/dashboard\/virtual-machines\/[a-zA-Z0-9-]+/, { timeout: 15000 });
     await expect(page.getByText('Connection Information')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Synced', { exact: true })).toHaveCount(2);
     await expect(page.getByText('Lifecycle Attention Required', { exact: true })).toHaveCount(0);

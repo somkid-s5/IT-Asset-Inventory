@@ -9,12 +9,9 @@ test.describe("Asset Detail Management", () => {
     const searchInput = page.getByPlaceholder("Search assets...");
     await expect(searchInput).toBeVisible({ timeout: 15000 });
     await searchInput.fill("db-prod-01");
-    const assetCell = page.getByRole("cell", {
-      name: "db-prod-01",
-      exact: true,
-    });
-    await expect(assetCell).toBeVisible({ timeout: 15000 });
-    await assetCell.click();
+    const assetRow = page.getByRole("row").filter({ hasText: "DEV-ASSET-001" });
+    await expect(assetRow).toBeVisible({ timeout: 15000 });
+    await assetRow.click();
 
     const credentialSection = page.getByText("Access Interfaces & Credentials");
     await expect(credentialSection).toBeVisible({ timeout: 25000 });

@@ -44,10 +44,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 6px);
   
-  /* Typography - Cyber Terminal */
+  /* Typography */
   --font-sans: var(--font-google-sans), sans-serif;
-  --font-display: var(--font-mono), ui-monospace, monospace;
-  --font-mono: var(--font-mono), ui-monospace, monospace;
+  --font-display: var(--font-google-sans), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
   
   --animate-slide-in: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   @keyframes slide-in {
@@ -198,19 +198,33 @@
   * { @apply border-border; }
   html {
     font-size: 14px;
+    color-scheme: light;
+    scroll-behavior: smooth;
   }
   body { 
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-mono) !important;
+    min-height: 100vh;
+    font-family: var(--font-google-sans), sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
     font-size: 0.925rem;
+    line-height: 1.5;
   }
+  .dark { color-scheme: dark; }
+  button, a, input, textarea, select { @apply focus-visible:outline-none; }
+  :focus-visible { @apply ring-2 ring-ring/70 ring-offset-2 ring-offset-background; }
+  ::selection { @apply bg-primary/25 text-foreground; }
+  h1, h2, h3 { text-wrap: balance; }
 }
 
 @layer components {
   /* ─── Layout Shells ─── */
   .workspace-page { @apply space-y-3 pb-3; }
   .app-shell { @apply mx-auto w-full max-w-7xl; }
+  .app-backdrop {
+    background-image:
+      radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.045), transparent 28rem),
+      linear-gradient(to bottom, hsl(var(--background)), hsl(var(--muted) / 0.28));
+  }
 
   /* ─── Hero Section ─── */
   .workspace-hero {
@@ -263,5 +277,19 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  .custom-scrollbar { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
+  .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { @apply rounded-full bg-border; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

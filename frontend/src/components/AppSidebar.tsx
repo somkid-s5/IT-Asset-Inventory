@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { 
   Database, LayoutDashboard, Monitor, 
   Server, Users, Workflow, ChevronLeft, Activity,
-  BookOpen, ChevronDown
+  BookOpen, ChevronDown, ShieldCheck, ClipboardCheck
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -29,6 +29,7 @@ const inventoryNavItems: NavItem[] = [
   { title: 'Assets', url: '/dashboard/assets', icon: Server },
   { title: 'Virtual Machines', url: '/dashboard/virtual-machines', icon: Monitor },
   { title: 'Databases', url: '/dashboard/databases', icon: Database },
+  { title: 'Data Quality', url: '/dashboard/data-quality', icon: ClipboardCheck },
 ];
 
 const systemNavItems: NavItem[] = [
@@ -69,12 +70,6 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         end={item.url === '/dashboard'}
         active={active}
         title={item.title}
-        onClick={(e) => {
-          if (collapsed) {
-            // If collapsed, clicking any item expands the sidebar
-            onToggleCollapsed();
-          }
-        }}
         className={cn(
           'group flex items-center rounded-lg transition-all duration-200 py-1.5',
           collapsed ? 'justify-center px-1' : 'gap-2.5 px-3',
@@ -94,7 +89,10 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
     return (
       <div className="space-y-1">
         <button
+          type="button"
           onClick={() => toggleSection(title)}
+          aria-expanded={collapsed ? undefined : isExpanded}
+          aria-label={collapsed ? `Expand ${title} navigation` : `${isExpanded ? 'Collapse' : 'Expand'} ${title} navigation`}
           className={cn(
             "flex w-full items-center justify-between px-3.5 py-2 text-sidebar-foreground/80 hover:text-white transition-colors",
             collapsed && "justify-center px-0"
@@ -135,15 +133,17 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         collapsed ? '-translate-x-full lg:w-16 lg:translate-x-0' : 'w-64 translate-x-0',
       )}
     >
-      <div 
+      <button
+        type="button"
         onClick={onToggleCollapsed}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'flex h-[56px] cursor-pointer items-center px-5 border-b border-sidebar-border/30 transition-colors hover:bg-sidebar-accent/30', 
+          'flex h-16 w-full cursor-pointer items-center border-b border-sidebar-border/30 px-5 text-left transition-colors hover:bg-sidebar-accent/30',
           collapsed && 'justify-center px-0'
         )}
       >
         <BrandMark compact={collapsed} tone="inverse" className="scale-90 origin-left" />
-      </div>
+      </button>
 
       <nav className="flex-1 space-y-6 overflow-y-auto py-4 px-3 custom-scrollbar">
         {renderSection('Workspace', operationsNavItems)}
@@ -160,7 +160,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
       <button
         onClick={onToggleCollapsed}
         className={cn(
-          "absolute -right-[18px] top-24 z-50 flex h-9 w-9 items-center justify-center rounded-xl border-2 border-primary/20 bg-card shadow-xl transition-all duration-300 hover:border-primary/50 hover:bg-accent hover:scale-110 active:scale-95",
+          "absolute -right-[18px] top-24 z-50 hidden h-9 w-9 items-center justify-center rounded-xl border-2 border-primary/20 bg-card shadow-xl transition-all duration-300 hover:scale-105 hover:border-primary/50 hover:bg-accent active:scale-95 lg:flex",
           collapsed && "rounded-full"
         )}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -168,8 +168,14 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
         <ChevronLeft className={cn("h-5 w-5 text-primary transition-transform duration-500", collapsed && "rotate-180")} />
       </button>
 
-      <div className="p-4 border-t border-sidebar-border/30 bg-sidebar-background/50 backdrop-blur-md">
-      </div>
+      {!collapsed ? (
+        <div className="border-t border-sidebar-border/30 bg-sidebar-background/50 px-5 py-4 backdrop-blur-md">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/60">
+            <ShieldCheck className="h-3.5 w-3.5 text-sidebar-primary" />
+            Internal team workspace
+          </div>
+        </div>
+      ) : null}
     </aside>
   );
 }

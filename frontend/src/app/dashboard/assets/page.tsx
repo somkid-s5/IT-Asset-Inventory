@@ -631,7 +631,7 @@ export default function AssetsPage() {
                 onChange={e => table.setPageSize(Number(e.target.value))}
                 className="h-8 w-16 rounded-md border border-border bg-card text-xs focus:ring-1 focus:ring-primary outline-none"
               >
-                {[10, 20, 30, 40, 50].map(size => (
+                {[5, 10, 20, 30, 40, 50].map(size => (
                   <option key={size} value={size}>{size}</option>
                 ))}
               </select>

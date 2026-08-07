@@ -73,84 +73,74 @@ export default function LoginPage() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Loading...
-      </div>
+      <main id="main-content" className="flex min-h-screen items-center justify-center bg-background">
+        <div role="status" aria-live="polite" className="flex items-center gap-3 text-sm text-muted-foreground">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+          Preparing secure sign in...
+        </div>
+      </main>
     )
   }
 
   return (
-    <>
-      <div className="min-h-screen bg-background px-4 py-6 md:px-6 md:py-8">
-        <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+    <main id="main-content" className="flex min-h-screen items-center bg-background px-4 py-6 md:px-6 md:py-8">
+        <div className="mx-auto flex min-h-[620px] w-full max-w-6xl overflow-hidden rounded-2xl border border-border/80 bg-card shadow-2xl shadow-black/10 lg:h-[min(720px,calc(100vh-4rem))]">
           {/* Left Panel */}
-          <div className="relative hidden w-[47%] flex-col justify-between border-r border-border bg-slate-950 p-8 text-white lg:flex overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-50"></div>
+          <section aria-label="Product overview" className="relative hidden w-[47%] flex-col justify-between overflow-hidden border-r border-sidebar-border bg-sidebar-background p-10 text-white lg:flex">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,hsl(var(--primary)/0.24),transparent_36%),linear-gradient(145deg,transparent_35%,hsl(var(--primary)/0.06))]" />
             <div>
               <BrandMark tone="inverse" className="relative z-10" />
-              <div className="relative z-10 mt-10">
-                <p className="inline-flex items-center rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
-                  Standard Security Protocol
+              <div className="relative z-10 mt-14">
+                <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70">
+                  <LockKeyhole className="h-3.5 w-3.5 text-primary" />
+                  Private team workspace
                 </p>
-                <h1 className="mt-5 max-w-md text-3xl font-semibold leading-tight text-white">
-                  Enterprise IT Asset<br />Management Hub
+                <h1 className="mt-6 max-w-md text-4xl font-semibold leading-[1.12] tracking-tight text-white">
+                  Your infrastructure,<br />clear and accountable.
                 </h1>
-                <p className="mt-4 max-w-sm text-sm leading-6 text-white/60">
-                  Manage infrastructure, audit access, and track organizational inventory in a single unified platform.
+                <p className="mt-5 max-w-sm text-[15px] leading-7 text-white/65">
+                  Keep assets, virtual machines, databases, ownership, and operational knowledge in one reliable place.
                 </p>
               </div>
             </div>
 
-            <div className="relative z-10 space-y-4">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-                <div className="text-xs font-medium uppercase tracking-wide text-white/50">
-                  Infrastructure Management
+            <div className="relative z-10 rounded-2xl border border-white/10 bg-white/[0.055] p-5 backdrop-blur-sm">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-lg bg-primary/15 p-2 text-primary">
+                  <Sparkles className="h-4 w-4" />
                 </div>
-                <div className="mt-3 text-sm font-medium text-white/90">
-                  Centralized repository for hardware, VMs, and databases.
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="h-4 w-4 text-white/70" />
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-white/50">
-                      Real-time Discovery
-                    </div>
-                    <div className="mt-1 text-sm text-white/70">
-                      Automated sync and status monitoring for all resources.
-                    </div>
+                <div>
+                  <div className="text-sm font-semibold text-white">Built for day-to-day IT operations</div>
+                  <div className="mt-1.5 text-sm leading-6 text-white/60">
+                    Fast inventory lookup, clear ownership, quality checks, and traceable changes for your team.
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Decorative element */}
-            <div className="absolute inset-0 dot-pattern opacity-10"></div>
-          </div>
+          </section>
 
 
           {/* Right Panel - Login Form */}
-          <div className="relative flex flex-1 items-center justify-center bg-card p-6 sm:p-8 lg:p-10">
+          <section aria-label="Sign in" className="relative flex flex-1 items-center justify-center bg-card p-6 sm:p-10 lg:p-14">
             <div className="w-full max-w-md">
               <div className="lg:hidden">
                 <BrandMark />
               </div>
 
-              <div className="mt-6">
-                <p className="inline-flex items-center rounded-md border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                  System Access
+              <div className="mt-8 lg:mt-0">
+                <p className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                  <LockKeyhole className="h-3.5 w-3.5 text-primary" />
+                  Secure access
                 </p>
-                <h2 className="mt-5 text-2xl font-semibold text-foreground">
+                <h2 className="mt-6 text-3xl font-semibold tracking-tight text-foreground">
                   Welcome back
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  Please sign in with your account to manage IT inventory.
+                <p className="mt-2.5 text-sm leading-6 text-muted-foreground">
+                  Sign in with the account provided by your team administrator.
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit(handleLogin)} className="mt-8 space-y-5">
+              <form aria-label="Sign in" onSubmit={handleSubmit(handleLogin)} className="mt-8 space-y-5" noValidate>
                 <div className="space-y-2">
                   <Label htmlFor="username" required>Username</Label>
                   <Input
@@ -188,15 +178,18 @@ export default function LoginPage() {
                   )}
                 </div>
 
-                <Button type="submit" className="h-12 w-full text-[15px] font-medium" disabled={loading}>
+                <Button type="submit" className="h-12 w-full text-[15px] font-semibold shadow-lg shadow-primary/15" disabled={loading}>
                   {loading ? "Signing in..." : "Sign In"}
                   {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
               </form>
+
+              <p className="mt-6 text-center text-xs leading-5 text-muted-foreground">
+                Access is restricted to authorized team members. Activity may be recorded for security and audit purposes.
+              </p>
             </div>
-          </div>
+          </section>
         </div>
-      </div>
-    </>
+    </main>
   )
 }

@@ -16,12 +16,17 @@ export default function DashboardLayout({
     // Add effect to properly redirect when not logged in
     useEffect(() => {
         if (!loading && !user) {
-            router.push('/login');
+            router.replace('/login');
         }
     }, [user, loading, router]);
 
     if (loading || !user) {
-        return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground">Loading...</div>;
+        return (
+            <div role="status" aria-live="polite" className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-muted-foreground">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                {loading ? 'Loading your workspace...' : 'Redirecting to sign in...'}
+            </div>
+        );
     }
 
     return (

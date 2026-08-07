@@ -7,6 +7,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ReactQueryProvider } from '@/components/ReactQueryProvider';
+import { HydrationMarker } from '@/components/HydrationMarker';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ const googleSans = localFont({
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  variable: '--font-mono',
+  variable: '--font-jetbrains-mono',
 });
 
 export const metadata: Metadata = {
@@ -43,8 +44,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={`${googleSans.variable} ${jetbrainsMono.variable} font-sans subpixel-antialiased selection:bg-primary/30`}>
+        <HydrationMarker />
         {/* Skip Link for Accessibility */}
         <a
           href="#main-content"

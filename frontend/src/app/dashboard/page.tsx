@@ -109,7 +109,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setHeader({
-      title: 'SysOps Console',
+      title: 'IT Asset Overview',
       breadcrumbs: [
         { label: 'Workspace', href: '/dashboard' },
         { label: 'Control Center' },
@@ -177,13 +177,13 @@ export default function DashboardPage() {
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground">Command Center</h2>
-          <p className="text-[13px] font-medium text-muted-foreground">Service & Infrastructure Operations Orchestrator</p>
+          <h2 className="text-base font-semibold text-foreground">Inventory health at a glance</h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">Current records, operational exceptions, and data-quality work for your team.</p>
         </div>
         <motion.div variants={itemVariants} className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1 font-medium bg-card/50 border-border/50">
-            <Activity className="h-3 w-3 text-success mr-2 animate-pulse" />
-            <span className="text-success">Ops Center Active</span>
+            <Activity className="mr-2 h-3 w-3 text-success" />
+            <span className="text-success">Inventory online</span>
           </Badge>
           <Button variant="outline" size="sm" className="shadow-sm bg-card h-9" onClick={() => void refetch()} disabled={isFetching}>
             <RefreshCw className={cn("mr-2 h-3.5 w-3.5", isFetching && "animate-spin")} />
@@ -193,10 +193,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Compute Assets" value={data?.vm.activeInventory} icon={Monitor} subtitle={`${data?.vm.pendingSetup} Setup · ${data?.vm.orphaned} Orphaned`} color="primary" href="/dashboard/virtual-machines" />
+        <StatCard title="Compute Assets" value={data?.vm.activeInventory} icon={Monitor} subtitle={`${data?.vm.pendingSetup} setup · ${data?.vm.orphaned} orphaned`} color="primary" href="/dashboard/virtual-machines" />
         <StatCard title="Infrastructure" value={data?.assets.total} icon={Server} subtitle={`${data?.assets.active} active · ${data?.assets.nonActive} non-active`} color="info" href="/dashboard/assets" />
-        <StatCard title="Managed DBs" value={data?.databases.total} icon={Database} subtitle={`${data?.databases.production} Prod · ${data?.databases.accounts} Accounts`} color="success" href="/dashboard/databases" />
-        <StatCard title="Needs Review" value={dataQualityIssues} icon={ClipboardCheck} subtitle={dataQualitySubtitle} color={dataQualityIssues > 0 ? "warning" : "success"} href="/dashboard/assets" />
+        <StatCard title="Managed DBs" value={data?.databases.total} icon={Database} subtitle={`${data?.databases.production} prod · ${data?.databases.accounts} accounts`} color="success" href="/dashboard/databases" />
+        <StatCard title="Needs Review" value={dataQualityIssues} icon={ClipboardCheck} subtitle={dataQualitySubtitle} color={dataQualityIssues > 0 ? "warning" : "success"} href="/dashboard/data-quality" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
@@ -307,26 +307,26 @@ export default function DashboardPage() {
         <motion.div variants={itemVariants} className="lg:col-span-4">
           <Card role="region" aria-label="Inventory attention" className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
             <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
-              <CardTitle className="text-lg flex items-center justify-between"><ShieldAlert className="h-5 w-5 text-warning" />Inventory attention</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-lg"><ShieldAlert className="h-5 w-5 text-warning" />Inventory attention</CardTitle>
               <CardDescription>Records that need review</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 space-y-4 p-6 overflow-y-auto max-h-[340px]">
               {attentionItems.length > 0 ? (
                 attentionItems.map((item: any) => (
-                  <Alert
-                    key={item.id}
-                    variant={item.variant || "warning"}
-                    className="cursor-pointer hover:bg-muted/10 transition-all group"
-                    onClick={() => router.push(item.route)}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div>
-                        <AlertTitle className="text-sm">{item.title}</AlertTitle>
-                        <AlertDescription className="text-xs">Immediate intervention suggested.</AlertDescription>
+                  <Link key={item.id} href={item.route} className="group block rounded-xl focus-visible:ring-2 focus-visible:ring-primary">
+                    <Alert
+                      variant={item.variant || "warning"}
+                      className="cursor-pointer transition-all group-hover:bg-muted/20"
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <div>
+                          <AlertTitle className="text-sm">{item.title}</AlertTitle>
+                          <AlertDescription className="text-xs">Review this exception and confirm the next action.</AlertDescription>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
                       </div>
-                      <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                    </div>
-                  </Alert>
+                    </Alert>
+                  </Link>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
