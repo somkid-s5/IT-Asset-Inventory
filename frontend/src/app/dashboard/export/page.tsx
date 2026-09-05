@@ -79,7 +79,7 @@ export default function InventoryExportPage() {
       <div>
         <h2 className="text-base font-semibold">Detailed inventory workbook</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Export the current inventory snapshot for team hand-off. Archived records are excluded.
+          Export a complete inventory snapshot for team hand-off, including archived history.
         </p>
       </div>
       <Card>
