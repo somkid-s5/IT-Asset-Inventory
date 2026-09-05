@@ -1,200 +1,104 @@
-# 📘 คู่มือการติดตั้งระบบ IT-Asset-Inventory (InfraPilot) สำหรับ Production
-**สถานะ:** สำหรับใช้งานภายในทีม (Internal IP-Based)  
-**เวอร์ชัน:** 1.0.0 (เมษายน 2569)
+# คู่มือ Deploy SysOps (Internal IP + HTTPS)
 
----
+เอกสารนี้เป็นขั้นตอน deploy สำหรับทีม System Admin ภายในเครือข่ายเดียวกัน โดยใช้ Docker Compose ชุดเดียวกับที่อยู่ใน repository ปัจจุบัน ระบบไม่มี application-managed backup/restore; การปกป้อง VM และข้อมูลให้ใช้ NetBackup ของทีมตามกระบวนการเดิม
 
-## 1. ข้อมูลภาพรวม (Overview)
-ระบบถูกออกแบบมาให้รันบน **Docker** เพื่อความเสถียร โดยมี **Nginx** เป็น Gateway หลักในการรับคำขอผ่าน Port 80 (Standard HTTP) เพื่อให้ผู้ใช้เข้าถึงผ่าน IP ของเครื่อง Server ได้โดยตรงโดยไม่ต้องระบุ Port
+## สิ่งที่ต้องเตรียม
 
-### 🏗️ โครงสร้างระบบ (Architecture)
-*   **Frontend:** Next.js (Port 3000 -> Nginx `/`)
-*   **Backend:** NestJS (Port 3001 -> Nginx `/api`)
-*   **Database:** PostgreSQL 15 (Internal - Port 5432)
-*   **DB Management:** pgAdmin 4 (Internal - Port 5050)
-*   **Reverse Proxy:** Nginx (Port 80)
+- Deployment VM ที่ติดตั้ง Docker Engine และ Docker Compose v2
+- IP ภายในของ VM เช่น `192.168.1.50` และให้เครื่องลูกข่ายเข้าถึง TCP `80/443` ได้
+- ไฟล์ `.env` ที่มีค่าจริง (ห้าม commit)
+- ค่า secret แบบสุ่ม: `JWT_SECRET`, `BOOTSTRAP_SECRET`, `CREDENTIAL_ENCRYPTION_KEY` (64 ตัวอักษร hex) และรหัสผ่านเริ่มต้นที่แข็งแรง
 
----
+PostgreSQL และ pgAdmin อยู่เฉพาะใน Docker network และไม่มีการ publish port ออก LAN
 
-## 2. สิ่งที่ต้องเตรียม (System Requirements)
-*   **Operating System:** Ubuntu 22.04 LTS หรือสูงกว่า (แนะนำ)
-*   **Hardware:** RAM ขั้นต่ำ 2GB / CPU 2 Cores / Disk 20GB+
-*   **Network:** ต้องสามารถเชื่อมต่อภายในวง LAN เดียวกันได้ และทราบเลข IP ของเครื่อง (เช่น `192.168.1.50`)
-
----
-
-## 3. ขั้นตอนการเตรียมเครื่อง (Server Preparation)
-
-### 3.1 อัปเดตระบบและตั้งค่าความปลอดภัย
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl git vim ufw fail2ban
-```
-
-### 3.2 ตั้งค่า Firewall (UFW)
-อนุญาตเฉพาะการเชื่อมต่อที่จำเป็น:
-```bash
-sudo ufw allow ssh
-sudo ufw allow http
-# หมายเหตุ: Port 5432 และ 5050 ไม่จำเป็นต้องเปิดแล้วเนื่องจากเข้าถึงผ่าน Docker Network/Nginx
-sudo ufw enable
-```
-
----
-
-## 4. การติดตั้ง Docker และ Docker Compose
+## ตั้งค่า `.env`
 
 ```bash
-# ติดตั้ง Docker Engine
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# เพิ่มสิทธิ์ให้ User ปัจจุบัน (ไม่ต้องใช้ sudo ทุกครั้ง)
-sudo usermod -aG docker $USER
-
-# ติดตั้ง Docker Compose V2
-sudo apt install docker-compose-v2 -y
-```
-*(หมายเหตุ: หลังจากรันคำสั่งกลุ่มนี้ ให้ Logout แล้ว Login ใหม่หนึ่งครั้ง)*
-
----
-
-## 5. การตั้งค่าโปรเจกต์ (Project Configuration)
-
-### 5.1 ดึง Source Code และตั้งค่า Environment
-```bash
-git clone <URL_REPO> it-inventory
-cd it-inventory
 cp .env.example .env
 nano .env
 ```
 
-### 5.2 การตั้งค่าตัวแปรสำคัญในไฟล์ `.env`
-**สำคัญ: ห้ามข้ามขั้นตอนนี้เด็ดขาด**
-*   `POSTGRES_PASSWORD`: กำหนดรหัสผ่านฐานข้อมูลใหม่
-*   `JWT_SECRET`: (สุ่มข้อความยาวๆ สำหรับระบบ Login)
-*   `CREDENTIAL_ENCRYPTION_KEY`: (ข้อความ 64 ตัวอักษร Hex สำหรับเข้ารหัสรหัสผ่าน)
-*   `NEXT_PUBLIC_API_URL`: **ระบุ IP ของ Server** เช่น http://192.168.1.50/api
-*   `FRONTEND_URL`: **ระบุ IP ของ Server** เช่น http://192.168.1.50
-*   `REGISTRATION_SECRET`: (รหัสผ่านสำหรับการลงทะเบียนผู้ใช้ใหม่หลังสร้าง Admin แล้ว)
+ค่าที่ต้องกำหนดอย่างน้อย:
 
----
+```dotenv
+POSTGRES_USER=infrapilot
+POSTGRES_PASSWORD=<สุ่มค่าใหม่>
+POSTGRES_DB=infrapilot_db
+JWT_SECRET=<สุ่มค่าใหม่>
+CREDENTIAL_ENCRYPTION_KEY=<64-character-hex>
+BOOTSTRAP_SECRET=<สุ่มค่าใหม่>
+DEFAULT_ADMIN_PASSWORD=<รหัสผ่าน Admin ชั่วคราว>
+DEFAULT_EDITOR_PASSWORD=<รหัสผ่าน Editor สำหรับ dev seed เท่านั้น>
+DEFAULT_VIEWER_PASSWORD=<รหัสผ่าน Viewer สำหรับ dev seed เท่านั้น>
+APP_HOST=192.168.1.50
+FRONTEND_URL=https://192.168.1.50
+COOKIE_SECURE=true
+NEXT_PUBLIC_API_URL=/api
+```
 
-## 6. การ Deploy ระบบ (Deployment)
+`APP_HOST` ต้องเป็น IP หรือ DNS name ที่ทีมใช้เปิดเว็บจริง หากใช้ IP ให้เปิด `https://<APP_HOST>` เท่านั้น
 
-### 6.1 รันระบบผ่าน Docker Compose
+## Start / update stack
+
+จากโฟลเดอร์ repository:
+
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env up -d --build
+docker compose --env-file .env ps
 ```
 
-### 6.2 การตั้งค่าโครงสร้างฐานข้อมูล (ครั้งแรก)
+Backend จะรัน `prisma migrate deploy` ก่อน start โดยอัตโนมัติ ตรวจ health ได้ดังนี้:
+
 ```bash
-# หมายเหตุ: ระบบได้ตั้งค่าให้รัน prisma migrate deploy อัตโนมัติเมื่อ Start Backend Container แล้ว
-# แต่หากต้องการรันด้วยตนเองหรือเพื่อตรวจสอบ:
-docker exec -it infrapilot_backend npx prisma migrate deploy
-
-# สร้างข้อมูลเริ่มต้น (User Admin และระบบพื้นฐาน)
-docker exec -it infrapilot_backend npx prisma db seed
+curl -k https://192.168.1.50/api/health/live
+curl -k https://192.168.1.50/api/health/ready
 ```
 
----
+`live` ยืนยันว่า process ทำงาน ส่วน `ready` ยืนยันว่าเชื่อมต่อ PostgreSQL ได้
 
-## 7. การตั้งค่า Nginx (Gateway Setup)
-เพื่อให้ทีมเข้าใช้งานผ่าน `http://<SERVER_IP>` ได้ทันที
+## Bootstrap ผู้ดูแลระบบครั้งแรก
 
-### 7.1 ติดตั้งและสร้าง Config
+สร้าง Administrator เพียงครั้งเดียวผ่านหน้า Login หรือ API โดยส่ง `BOOTSTRAP_SECRET` ใน header `x-bootstrap-key` ไปยัง `POST /api/auth/bootstrap` จากนั้นให้เปลี่ยนรหัสผ่านตามนโยบายทีมและสร้างบัญชีผู้ใช้เพิ่มจากหน้า Admin Users การสมัครเองภายหลังจะถูกปิด
+
+ห้ามนำค่า secret หรือรหัสผ่านจริงใส่ในเอกสาร, log, issue หรือ commit
+
+## การยอมรับ certificate และการเข้าใช้งาน
+
+Caddy ใน stack ออก internal certificate ให้ `APP_HOST` และ redirect HTTP ไป HTTPS อัตโนมัติ เปิด `https://<internal-ip>` จากเครื่องใน LAN แล้วเลือกยอมรับ/ติดตั้ง certificate ตามนโยบายเครื่องลูกข่ายครั้งแรก หลังจากนั้นใช้ลิงก์ HTTPS เดิมแชร์ให้ทีมได้
+
+ตรวจว่า HTTP redirect สำเร็จ:
+
 ```bash
-sudo apt install nginx -y
-sudo nano /etc/nginx/sites-available/it-inventory
+curl -I http://192.168.1.50
 ```
 
-วางค่านี้ลงไปในไฟล์:
-```nginx
-server {
-    listen 80;
-    server_name _; # รับคำขอจากทุก IP
+ควรได้สถานะ `301` หรือ `308` ไปยัง `https://192.168.1.50/`
 
-    # Backend API Path
-    location /api {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
+## Restart และหยุดระบบ
 
-    # Frontend UI Path
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
+การ restart ปกติไม่ลบข้อมูล เพราะ PostgreSQL ใช้ named volume:
 
-### 7.2 เปิดใช้งาน Config
 ```bash
-sudo ln -s /etc/nginx/sites-available/it-inventory /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default # ลบค่าพื้นฐานของ Nginx
-sudo nginx -t
-sudo systemctl restart nginx
+docker compose --env-file .env restart
+docker compose --env-file .env down
+docker compose --env-file .env up -d
 ```
 
----
+ห้ามใช้ `docker compose down -v` ใน deployment จริง เพราะจะลบ volume ฐานข้อมูล
 
-## 8. การใช้งานและการบำรุงรักษา (Maintenance)
+## ตรวจสอบหลัง deploy
 
-### 🔴 การเข้าใช้งานสำหรับทีม
-*   **หน้าเว็บหลัก:** `http://<SERVER_IP>`
-*   **จัดการฐานข้อมูล:** เข้าผ่าน VPN หรือ SSH Tunnel ไปยัง Port 5050 (เนื่องจากถูกปิดพอร์ตสาธารณะเพื่อความปลอดภัย)
+1. `docker compose ps` แสดง `postgres`, `backend`, `frontend`, `gateway` เป็น running/healthy ตามลำดับ
+2. เปิด HTTPS ด้วย IP แล้ว login ได้
+3. ตรวจสร้าง/แก้ไข/Archive รายการ Asset, VM, Database และ Document
+4. ตรวจ Global Search, Data Quality และ Export workbook
+5. restart stack แล้วตรวจว่าผู้ใช้และข้อมูลเดิมยังอยู่
 
-### 🟢 การอัปเดตเวอร์ชันใหม่
-เมื่อมีการปรับปรุงโค้ด:
+ดู log เฉพาะ service ที่เกี่ยวข้องได้ด้วย:
+
 ```bash
-git pull origin main
-docker compose -f docker-compose.prod.yml up -d --build
-docker exec -it infrapilot_backend npx prisma migrate deploy
+docker compose logs --tail=200 backend
+docker compose logs --tail=200 gateway
 ```
 
-### 🟡 การดู Error Logs
-```bash
-# ดู Backend logs
-docker logs -f infrapilot_backend
-# ดู Nginx logs
-sudo tail -f /var/log/nginx/error.log
-```
-
----
-
-## 9. การสำรองข้อมูล (Database Backup)
-
-เพื่อป้องกันข้อมูลสูญหาย ควรตั้งค่าการสำรองข้อมูลเป็นประจำ
-
-### 9.1 การรัน Backup ด้วยตนเอง
-```bash
-chmod +x scripts/backup-db.sh
-./scripts/backup-db.sh
-```
-ไฟล์สำรองข้อมูลจะถูกเก็บไว้ที่โฟลเดอร์ `./backups`
-
-### 9.2 การตั้งค่า Automatic Backup (Cronjob)
-แนะนำให้ตั้งค่าสำรองข้อมูลทุกวันเวลา 03:00 น.
-```bash
-# เปิด crontab
-crontab -e
-
-# เพิ่มบรรทัดนี้ลงไป (ปรับ Path ให้ถูกต้องตามที่ติดตั้งจริง)
-0 3 * * * /path/to/it-inventory/scripts/backup-db.sh >> /path/to/it-inventory/backups/backup.log 2>&1
-```
-
----
-
-## 10. ข้อมูลบัญชีเริ่มต้น (Default Credentials)
-*ดูข้อมูลนี้ได้จากไฟล์ `backend/prisma/seed.ts`*
-*   **Email:** `admin@infrapilot.local`
-*   **Password:** `AssetOpsAdmin2026!` (หรือตามที่คุณระบุใน .env)
-*   *คำแนะนำ: ให้เปลี่ยนรหัสผ่านทันทีหลัง Login ครั้งแรก*
+สำหรับชุดตรวจพัฒนาและ E2E ให้ดูคำสั่งใน [README.md](../README.md) และใช้ `docker compose` ใน environment ที่ Docker daemon พร้อมใช้งาน
