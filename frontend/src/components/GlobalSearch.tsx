@@ -106,13 +106,15 @@ export function GlobalSearch() {
         onOpenChange={setOpen}
         title="Global search"
         description="Search safe inventory identifiers"
+        className="w-[calc(100%-2rem)] max-w-2xl rounded-2xl border-border/80 bg-popover/95 shadow-2xl sm:max-w-2xl"
       >
         <CommandInput
           placeholder="Search applications, assets, VMs, databases, documents…"
+          aria-label="Search inventory"
           value={query}
           onValueChange={setQuery}
         />
-        <CommandList>
+        <CommandList className="max-h-[min(60vh,28rem)] p-2">
           <CommandEmpty>
             {query.trim().length > 1
               ? "No matching inventory records."
@@ -145,6 +147,10 @@ export function GlobalSearch() {
             ) : null,
           )}
         </CommandList>
+        <div className="flex items-center justify-between border-t border-border/70 px-4 py-2 text-[11px] text-muted-foreground">
+          <span>{query.trim().length > 1 ? "Select a result to open its record" : "Search across your inventory"}</span>
+          <kbd className="rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd>
+        </div>
       </CommandDialog>
     </>
   );

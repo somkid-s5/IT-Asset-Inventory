@@ -78,7 +78,7 @@ export default function CategoryPage() {
 
   if (categoryLoading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-12 sm:px-6">
+      <div className="w-full space-y-5 pb-12">
         <Skeleton className="h-32 w-full rounded-2xl" />
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
           <Skeleton className="h-52 rounded-2xl" />
@@ -115,7 +115,7 @@ export default function CategoryPage() {
   const totalViews = documents.reduce((sum, document) => sum + (document.viewCount || 0), 0);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 px-4 pb-12 sm:px-6">
+    <div className="w-full space-y-5 pb-12">
       <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-[#071b11] to-[#0f3d27] p-5 text-white shadow-sm sm:p-6">
         <nav className="mb-3 flex items-center gap-2 text-[11px] font-semibold text-white/60" aria-label="Breadcrumb">
           <button type="button" className="transition-colors hover:text-primary" onClick={() => router.push('/dashboard/docs')}>

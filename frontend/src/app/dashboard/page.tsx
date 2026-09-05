@@ -268,7 +268,7 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Applications"
           value={data?.applications.total}
