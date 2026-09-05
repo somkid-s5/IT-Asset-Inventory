@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppWindow, Plus, Search, ArchiveRestore, ExternalLink } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageHeader } from "@/contexts/PageHeaderContext";
 import api from "@/services/api";
@@ -26,6 +27,7 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -44,9 +46,7 @@ export default function ApplicationsPage() {
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [owner, setOwner] = useState("");
-  const [businessUnit, setBusinessUnit] = useState("");
+  const form = useForm<{ name: string; technicalOwner: string; businessUnit: string }>({ defaultValues: { name: "", technicalOwner: "", businessUnit: "" } });
 
   useEffect(
     () =>
@@ -69,21 +69,19 @@ export default function ApplicationsPage() {
       ).data,
   });
   const create = useMutation({
-    mutationFn: async () =>
+    mutationFn: async (values: { name: string; technicalOwner: string; businessUnit: string }) =>
       (
         await api.post("/applications", {
-          name,
-          technicalOwner: owner,
-          businessUnit,
+          name: values.name,
+          technicalOwner: values.technicalOwner,
+          businessUnit: values.businessUnit,
           environments: [{ name: "PROD" }],
         })
       ).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       setOpen(false);
-      setName("");
-      setOwner("");
-      setBusinessUnit("");
+      form.reset();
       toast.success("Application created");
     },
     onError: () => toast.error("Could not create application"),
@@ -139,7 +137,13 @@ export default function ApplicationsPage() {
     ],
     [archive, user?.role],
   );
-  const table = useReactTable({ data: visible, columns, getCoreRowModel: getCoreRowModel() });
+  const table = useReactTable({
+    data: visible,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+  });
 
   return (
     <div className="space-y-6">
@@ -172,39 +176,36 @@ export default function ApplicationsPage() {
                 <DialogHeader>
                   <DialogTitle>Create application</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <form className="space-y-4" onSubmit={form.handleSubmit((values) => create.mutate(values))}>
                   <div>
                     <Label htmlFor="application-name">Name</Label>
                     <Input
                       id="application-name"
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
+                      {...form.register("name", { required: true })}
                     />
                   </div>
                   <div>
                     <Label htmlFor="technical-owner">Technical Owner</Label>
                     <Input
                       id="technical-owner"
-                      value={owner}
-                      onChange={(event) => setOwner(event.target.value)}
+                      {...form.register("technicalOwner")}
                     />
                   </div>
                   <div>
                     <Label htmlFor="business-unit">Business Unit</Label>
                     <Input
                       id="business-unit"
-                      value={businessUnit}
-                      onChange={(event) => setBusinessUnit(event.target.value)}
+                      {...form.register("businessUnit")}
                     />
                   </div>
                   <Button
                     className="w-full"
-                    disabled={!name.trim() || create.isPending}
-                    onClick={() => create.mutate()}
+                    type="submit"
+                    disabled={create.isPending}
                   >
                     Create application
                   </Button>
-                </div>
+                </form>
               </DialogContent>
             </Dialog>
           )}
@@ -233,7 +234,8 @@ export default function ApplicationsPage() {
           description="Create the first application to start mapping its environments and components."
         />
       ) : (
-        <Card className="overflow-hidden p-0">
+        <div className="space-y-3">
+          <Card className="overflow-hidden p-0">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table className="min-w-[760px]">
@@ -246,7 +248,15 @@ export default function ApplicationsPage() {
               </Table>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+          {table.getPageCount() > 1 && (
+          <div className="flex items-center justify-end gap-3 pt-3 text-sm">
+            <span className="text-muted-foreground">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</span>
+            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Previous</Button>
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</Button>
+          </div>
+          )}
+        </div>
       )}
     </div>
   );
