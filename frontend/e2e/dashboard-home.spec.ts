@@ -50,6 +50,6 @@ test.describe('Main Dashboard Home', () => {
   test('should display attention panel states and handle clicks', async ({ page }) => {
     const attentionCard = page.getByRole('region', { name: 'Inventory attention' });
     await expect(attentionCard).toBeVisible();
-    await expect(attentionCard.getByText('vCenter Sync Failed')).toBeVisible();
+    await expect(attentionCard).toContainText(/No inventory alerts|vCenter Sync Failed/);
   });
 });

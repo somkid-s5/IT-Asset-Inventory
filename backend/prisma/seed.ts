@@ -169,6 +169,42 @@ async function main() {
         ],
       },
     },
+    {
+      assetId: 'DEV-ASSET-004',
+      name: 'app-prod-01',
+      type: AssetType.SERVER,
+      osVersion: 'Rocky Linux 9',
+      status: AssetStatus.ACTIVE,
+      department: 'Application Operations',
+      owner: 'app-team',
+      ipAllocations: {
+        create: [{ address: '10.0.3.20', type: 'Host', nodeLabel: 'APP' }],
+      },
+    },
+    {
+      assetId: 'DEV-ASSET-005',
+      name: 'db-uat-01',
+      type: AssetType.SERVER,
+      osVersion: 'Ubuntu 24.04 LTS',
+      status: AssetStatus.MAINTENANCE,
+      department: 'Database Admins',
+      owner: 'db-team',
+      ipAllocations: {
+        create: [{ address: '10.0.4.45', type: 'Management', nodeLabel: 'MGMT' }],
+      },
+    },
+    {
+      assetId: 'DEV-ASSET-006',
+      name: 'switch-edge-01',
+      type: AssetType.SWITCH,
+      osVersion: 'Cisco IOS-XE',
+      status: AssetStatus.ACTIVE,
+      department: 'Network Operations',
+      owner: 'net-team',
+      ipAllocations: {
+        create: [{ address: '10.0.9.2', type: 'Management', nodeLabel: 'MGMT' }],
+      },
+    },
   ];
 
   const createdAssets = [];
