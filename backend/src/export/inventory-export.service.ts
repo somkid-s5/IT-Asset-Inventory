@@ -13,7 +13,7 @@ export class InventoryExportService {
   ) {}
 
   async createWorkbook(passphrase: string, userId: string) {
-    const [assets, applications, databases, vms] = await Promise.all([
+    const [assets, applications, databases, vms, sources] = await Promise.all([
       this.prisma.asset.findMany({
         include: { ipAllocations: true, credentials: true },
       }),
@@ -49,6 +49,7 @@ export class InventoryExportService {
           componentLinks: true,
         },
       }),
+      this.prisma.vmVCenterSource.findMany(),
     ]);
     const workbook = await XlsxPopulate.fromBlankAsync();
     const sheets: Array<[string, string[][]]> = [
@@ -212,6 +213,27 @@ export class InventoryExportService {
         ],
       ],
       [
+        'vCenter Sources',
+        [
+          [
+            'Name',
+            'Endpoint',
+            'Version',
+            'Status',
+            'Sync Interval',
+            'VM Count',
+          ],
+          ...sources.map((source) => [
+            source.name,
+            source.endpoint,
+            source.version,
+            source.status,
+            String(source.syncInterval),
+            String(vms.filter((vm) => vm.sourceId === source.id).length),
+          ]),
+        ],
+      ],
+      [
         'Credentials',
         [
           ['Record Type', 'Record Name', 'Username', 'Password'],
@@ -251,6 +273,18 @@ export class InventoryExportService {
               account.username,
               this.credentials.decrypt(account.encryptedPassword),
             ]),
+          ),
+          ...sources.flatMap((source) =>
+            source.encryptedPassword
+              ? [
+                  [
+                    'vCenter Source',
+                    source.name,
+                    source.username ?? '',
+                    this.credentials.decrypt(source.encryptedPassword),
+                  ],
+                ]
+              : [],
           ),
         ],
       ],
