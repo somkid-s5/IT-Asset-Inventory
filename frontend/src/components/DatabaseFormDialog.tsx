@@ -31,6 +31,7 @@ const EMPTY_ACCOUNT: DatabaseAccountFormValue = {
   role: '',
   privileges: '',
   note: '',
+  logicalDatabaseIds: [],
 };
 
 const EMPTY_LINKED_APP: DatabaseLinkedAppFormValue = {
@@ -114,6 +115,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
           role: account.role ?? '',
           privileges: joinCommaSeparated(account.privileges),
           note: account.note ?? '',
+          logicalDatabaseIds: account.logicalDatabaseIds ?? [],
         }))
         : [{ ...EMPTY_ACCOUNT }],
     );
@@ -150,6 +152,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
         role: account.role.trim(),
         privileges: splitCommaSeparated(account.privileges),
         note: account.note.trim() || undefined,
+        logicalDatabaseIds: account.logicalDatabaseIds ?? [],
       })),
       logicalDatabases: splitCommaSeparated(logicalDatabases),
     };
@@ -501,6 +504,13 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
                       <Label htmlFor={`db-account-note-${index}`} optional>Notes</Label>
                       <Input id={`db-account-note-${index}`} className={COMPACT_INPUT_CLASS} value={account.note} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, note: event.target.value } : item))} />
                     </div>
+                    {databaseToEdit?.logicalDatabases?.length ? <div className="space-y-1.5 md:col-span-2">
+                      <Label htmlFor={`db-account-scope-${index}`} optional>Logical database scope</Label>
+                      <select id={`db-account-scope-${index}`} multiple value={account.logicalDatabaseIds ?? []} onChange={(event) => setAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, logicalDatabaseIds: Array.from(event.target.selectedOptions, (option) => option.value) } : item))} className="min-h-16 w-full rounded-xl border border-border bg-background px-2 py-1 text-sm">
+                        {databaseToEdit.logicalDatabases.map((logical) => <option key={logical.id} value={logical.id}>{logical.name}</option>)}
+                      </select>
+                      <p className="text-[11px] text-muted-foreground">Leave empty to scope this account to the whole database instance.</p>
+                    </div> : null}
                   </div>
                 </div>
               ))}

@@ -6,6 +6,8 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApplicationEnvironmentName } from '@prisma/client';
@@ -24,6 +26,7 @@ export class ComponentDto {
   @IsArray()
   @IsString({ each: true })
   logicalDatabaseIds?: string[];
+  @IsOptional() @IsInt() @Min(0) sortOrder?: number;
 }
 
 export class AccessDto {
@@ -36,6 +39,30 @@ export class AccessDto {
   @ValidateNested({ each: true })
   @Type(() => AccessCredentialDto)
   credentials?: AccessCredentialDto[];
+}
+
+/**
+ * Access-point metadata can be edited without forcing a password rotation.
+ * Credentials remain write-only on this endpoint: callers that need to set a
+ * new password send a complete credential entry with `password` populated.
+ */
+export class UpdateAccessDto {
+  @IsOptional() @IsString() @IsNotEmpty() label?: string;
+  @IsOptional() @IsString() @IsNotEmpty() address?: string;
+  @IsOptional() @IsString() @IsNotEmpty() method?: string;
+  @IsOptional() @IsString() environmentId?: string | null;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAccessCredentialDto)
+  credentials?: UpdateAccessCredentialDto[];
+}
+
+export class UpdateAccessCredentialDto {
+  @IsOptional() @IsString() id?: string;
+  @IsString() @IsNotEmpty() username: string;
+  @IsOptional() @IsString() password?: string;
+  @IsOptional() @IsString() role?: string;
 }
 
 export class AccessCredentialDto {

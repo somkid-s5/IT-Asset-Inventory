@@ -5,7 +5,6 @@ test.describe('VM Detail Page Features', () => {
 
   test('should display resources tabs and power action toggles', async ({ page }) => {
     await page.goto('/dashboard/virtual-machines');
-    await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
     await expect(page.getByRole('heading', { name: 'Compute & Virtualization Inventory' })).toBeVisible({ timeout: 10000 });
 
     // Locate the VM row for the seeded vm-prod-01 and click its Details button

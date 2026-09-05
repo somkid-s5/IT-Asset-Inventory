@@ -4,7 +4,12 @@ import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
-import { AccessDto, ComponentDto, EnvironmentDto } from './dto/topology.dto';
+import {
+  AccessDto,
+  ComponentDto,
+  EnvironmentDto,
+  UpdateAccessDto,
+} from './dto/topology.dto';
 import { evaluateApplicationCompleteness } from './completeness';
 
 const include = {
@@ -410,6 +415,123 @@ export class ApplicationsService {
     return this.findOne(applicationId);
   }
 
+  async updateAccess(
+    applicationId: string,
+    accessId: string,
+    dto: UpdateAccessDto,
+    userId: string,
+  ) {
+    const access = await this.prisma.applicationAccess.findFirst({
+      where: { id: accessId, applicationId },
+      select: { id: true, label: true },
+    });
+    if (!access)
+      throw new NotFoundException('Application access point not found');
+
+    if (dto.environmentId) {
+      const environment = await this.prisma.applicationEnvironment.findFirst({
+        where: { id: dto.environmentId, applicationId },
+        select: { id: true },
+      });
+      if (!environment)
+        throw new NotFoundException('Application environment not found');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const data: Prisma.ApplicationAccessUpdateInput = {
+        ...(dto.label !== undefined ? { label: dto.label.trim() } : {}),
+        ...(dto.address !== undefined ? { address: dto.address.trim() } : {}),
+        ...(dto.method !== undefined ? { method: dto.method.trim() } : {}),
+        ...(dto.environmentId !== undefined
+          ? dto.environmentId
+            ? { environment: { connect: { id: dto.environmentId } } }
+            : { environment: { disconnect: true } }
+          : {}),
+      };
+      if (Object.keys(data).length) {
+        await tx.applicationAccess.update({ where: { id: accessId }, data });
+      }
+
+      // Credential passwords are write-only. Existing credential IDs retain
+      // their encrypted value when a rotation is not requested; entries
+      // without an ID are appended as new credentials.
+      for (const credential of dto.credentials ?? []) {
+        if (credential.id) {
+          const existing = await tx.applicationCredential.findFirst({
+            where: { id: credential.id, accessId },
+            select: { id: true, encryptedPassword: true },
+          });
+          if (!existing)
+            throw new NotFoundException('Application credential not found');
+          await tx.applicationCredential.update({
+            where: { id: existing.id },
+            data: {
+              username: credential.username.trim(),
+              role: this.text(credential.role),
+              ...(credential.password !== undefined
+                ? {
+                    encryptedPassword: this.credentials.encrypt(
+                      credential.password,
+                    ),
+                    lastChangedDate: new Date(),
+                  }
+                : {}),
+            },
+          });
+        } else {
+          await tx.applicationCredential.create({
+            data: {
+              accessId,
+              username: credential.username.trim(),
+              encryptedPassword: this.credentials.encrypt(
+                credential.password ?? '',
+              ),
+              role: this.text(credential.role),
+            },
+          });
+        }
+      }
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.UPDATE_APPLICATION,
+          targetId: applicationId,
+          details: JSON.stringify({
+            access: access.label,
+            accessId,
+            action: 'update',
+          }),
+        },
+      });
+    });
+    return this.findOne(applicationId);
+  }
+
+  async deleteAccess(applicationId: string, accessId: string, userId: string) {
+    const access = await this.prisma.applicationAccess.findFirst({
+      where: { id: accessId, applicationId },
+      select: { id: true, label: true },
+    });
+    if (!access)
+      throw new NotFoundException('Application access point not found');
+    await this.prisma.$transaction([
+      this.prisma.applicationAccess.delete({ where: { id: accessId } }),
+      this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.UPDATE_APPLICATION,
+          targetId: applicationId,
+          details: JSON.stringify({
+            access: access.label,
+            accessId,
+            action: 'delete',
+          }),
+        },
+      }),
+    ]);
+    return this.findOne(applicationId);
+  }
+
   async updateEnvironment(
     applicationId: string,
     environmentId: string,
@@ -468,9 +590,11 @@ export class ApplicationsService {
         environmentId,
         name: dto.name.trim(),
         description: this.text(dto.description),
-        sortOrder: await this.prisma.applicationComponent.count({
-          where: { environmentId },
-        }),
+        sortOrder:
+          dto.sortOrder ??
+          (await this.prisma.applicationComponent.count({
+            where: { environmentId },
+          })),
         ...(dto.assetIds?.length
           ? {
               assetLinks: {
@@ -514,6 +638,7 @@ export class ApplicationsService {
       data: {
         name: dto.name.trim(),
         description: this.text(dto.description),
+        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         ...(dto.assetIds
           ? {
               assetLinks: {
@@ -631,5 +756,27 @@ export class ApplicationsService {
       },
     });
     return { password: this.credentials.decrypt(credential.encryptedPassword) };
+  }
+
+  async recordCredentialCopy(id: string, credentialId: string, userId: string) {
+    const credential = await this.prisma.applicationCredential.findFirst({
+      where: { id: credentialId, access: { applicationId: id } },
+      select: { id: true, username: true, accessId: true },
+    });
+    if (!credential)
+      throw new NotFoundException('Application credential not found');
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.COPY_APPLICATION_PASSWORD,
+        targetId: credential.id,
+        details: JSON.stringify({
+          applicationId: id,
+          accessId: credential.accessId,
+          username: credential.username,
+        }),
+      },
+    });
+    return { recorded: true };
   }
 }

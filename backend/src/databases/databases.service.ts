@@ -12,7 +12,9 @@ import { LogicalDatabaseDto } from './dto/logical-database.dto';
 
 type DatabaseWithAccounts = Prisma.DatabaseInventoryGetPayload<{
   include: {
-    accounts: true;
+    accounts: {
+      include: { logicalDatabases: { select: { id: true; name: true } } };
+    };
     logicalDatabases: { include: { components: true } };
     documentLinks: {
       include: {
@@ -129,6 +131,12 @@ export class DatabasesService {
         hasPassword: !!account.encryptedPassword,
         privileges: account.privileges,
         note: account.note,
+        logicalDatabaseIds: account.logicalDatabases.map(
+          (logical) => logical.id,
+        ),
+        logicalDatabaseNames: account.logicalDatabases.map(
+          (logical) => logical.name,
+        ),
         createdAt: account.createdAt,
         updatedAt: account.updatedAt,
       })),
@@ -190,7 +198,9 @@ export class DatabasesService {
         },
       },
       include: {
-        accounts: true,
+        accounts: {
+          include: { logicalDatabases: { select: { id: true, name: true } } },
+        },
         logicalDatabases: { include: { components: true } },
         hostAsset: { select: { id: true, name: true, assetId: true } },
         hostVm: { select: { id: true, name: true, systemName: true } },
@@ -293,7 +303,9 @@ export class DatabasesService {
     const database = await this.prisma.databaseInventory.findUnique({
       where: { id },
       include: {
-        accounts: true,
+        accounts: {
+          include: { logicalDatabases: { select: { id: true, name: true } } },
+        },
         logicalDatabases: { include: { components: true } },
         hostAsset: { select: { id: true, name: true, assetId: true } },
         hostVm: { select: { id: true, name: true, systemName: true } },
@@ -430,7 +442,9 @@ export class DatabasesService {
           : {}),
       },
       include: {
-        accounts: true,
+        accounts: {
+          include: { logicalDatabases: { select: { id: true, name: true } } },
+        },
         logicalDatabases: { include: { components: true } },
         hostAsset: { select: { id: true, name: true, assetId: true } },
         hostVm: { select: { id: true, name: true, systemName: true } },

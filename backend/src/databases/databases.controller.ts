@@ -1,7 +1,7 @@
 import {
   Body,
-  Controller,
   Delete,
+  Controller,
   Get,
   Param,
   Patch,
@@ -96,12 +96,6 @@ export class DatabasesController {
       logicalId,
       req.user.id,
     );
-  }
-
-  @Roles(Role.ADMIN)
-  @Delete(':id')
-  remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
-    return this.databasesService.remove(id, req.user.id);
   }
 
   @Roles(Role.ADMIN)

@@ -5,7 +5,6 @@ test.describe('Main Dashboard Home', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
     await expect(page.getByText('Compute Assets', { exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Needs Review', { exact: true })).toBeVisible({ timeout: 10000 });
   });

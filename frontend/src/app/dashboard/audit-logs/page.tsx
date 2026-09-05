@@ -296,9 +296,9 @@ export default function AuditLogsPage() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <SummaryTile icon={Activity} label="Total Events" value={logs.length} tone="bg-primary/10 text-primary" />
-        <SummaryTile icon={Clock3} label="Today" value={todayEvents} tone="bg-sky-500/10 text-sky-600" />
+        <SummaryTile icon={Clock3} label="Today" value={todayEvents} tone="bg-info/10 text-info" />
         <SummaryTile icon={Trash2} label="Delete Events" value={deleteEvents} tone="bg-destructive/10 text-destructive" />
-        <SummaryTile icon={Users} label="Unique Actors" value={uniqueActors} tone="bg-violet-500/10 text-violet-600" />
+        <SummaryTile icon={Users} label="Unique Actors" value={uniqueActors} tone="bg-primary/10 text-primary" />
       </div>
 
       <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-sm">

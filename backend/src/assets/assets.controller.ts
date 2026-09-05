@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Patch,
@@ -95,12 +94,6 @@ export class AssetsController {
     @Request() req: { user: { id: string } },
   ) {
     return this.assetsService.update(id, updateAssetDto, req.user.id);
-  }
-
-  @Roles(Role.ADMIN)
-  @Delete(':id')
-  remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
-    return this.assetsService.remove(id, req.user.id);
   }
 
   @Roles(Role.ADMIN)

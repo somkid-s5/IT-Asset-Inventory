@@ -4,6 +4,7 @@ export interface DatabaseAccountFormValue {
   role: string;
   privileges: string;
   note: string;
+  logicalDatabaseIds?: string[];
 }
 
 export interface DatabaseLinkedAppFormValue {
@@ -47,6 +48,8 @@ export interface DatabaseAccountDetail {
   note?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  logicalDatabaseIds?: string[];
+  logicalDatabaseNames?: string[];
 }
 
 export interface DatabaseInventoryDetail extends Omit<DatabaseInventoryItem, 'accountsCount'> {
@@ -75,6 +78,7 @@ export interface DatabaseInventoryPayload {
     role: string;
     privileges: string[];
     note?: string;
+    logicalDatabaseIds?: string[];
   }>;
   logicalDatabases?: string[];
 }
