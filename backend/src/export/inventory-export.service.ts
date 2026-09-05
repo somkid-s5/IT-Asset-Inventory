@@ -1,32 +1,53 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { Injectable } from '@nestjs/common';
-import { AuditAction, ApplicationStatus, AssetStatus } from '@prisma/client';
+import { AuditAction } from '@prisma/client';
 import XlsxPopulate from 'xlsx-populate';
 import { PrismaService } from '../prisma/prisma.service';
+import { CredentialsService } from '../credentials/credentials.service';
 
 @Injectable()
 export class InventoryExportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly credentials: CredentialsService,
+  ) {}
 
   async createWorkbook(passphrase: string, userId: string) {
     const [assets, applications, databases, vms] = await Promise.all([
       this.prisma.asset.findMany({
-        where: { status: { not: AssetStatus.DECOMMISSIONED } },
         include: { ipAllocations: true, credentials: true },
       }),
       this.prisma.application.findMany({
-        where: { status: ApplicationStatus.ACTIVE },
         include: {
-          environments: { include: { components: true } },
-          access: { include: { credentials: true } },
+          environments: {
+            include: {
+              components: {
+                include: {
+                  assetLinks: true,
+                  vmLinks: true,
+                  logicalDatabases: true,
+                },
+              },
+              access: { include: { credentials: true } },
+            },
+          },
+          access: { include: { credentials: true, environment: true } },
         },
       }),
       this.prisma.databaseInventory.findMany({
-        include: { accounts: true, logicalDatabases: true },
+        include: {
+          accounts: true,
+          logicalDatabases: true,
+          hostAsset: { select: { id: true, name: true, assetId: true } },
+          hostVm: { select: { id: true, name: true, systemName: true } },
+        },
       }),
       this.prisma.vmInventory.findMany({
-        where: { lifecycleState: { not: 'ARCHIVED' } },
-        include: { guestAccounts: true },
+        include: {
+          guestAccounts: true,
+          source: { select: { id: true, name: true, endpoint: true } },
+          componentLinks: true,
+        },
       }),
     ]);
     const workbook = await XlsxPopulate.fromBlankAsync();
@@ -43,6 +64,8 @@ export class InventoryExportService {
             'Location',
             'Owner',
             'Serial Number',
+            'IP Addresses',
+            'Responsible Party',
           ],
           ...assets.map((asset) => [
             asset.name,
@@ -53,6 +76,8 @@ export class InventoryExportService {
             asset.location ?? '',
             asset.owner ?? '',
             asset.sn ?? '',
+            asset.ipAllocations.map((ip) => ip.address).join(', '),
+            asset.responsibleParty ?? '',
           ]),
         ],
       ],
@@ -66,6 +91,8 @@ export class InventoryExportService {
             'Environment',
             'Components',
             'Access Points',
+            'Description',
+            'Status',
           ],
           ...applications.map((app) => [
             app.name,
@@ -85,6 +112,8 @@ export class InventoryExportService {
                   `${access.label} (${access.method}) ${access.address}`,
               )
               .join('; '),
+            app.description ?? '',
+            app.status,
           ]),
         ],
       ],
@@ -100,6 +129,9 @@ export class InventoryExportService {
             'Port',
             'Logical Databases',
             'Accounts',
+            'Host Asset',
+            'Host VM',
+            'Status',
           ],
           ...databases.map((db) => [
             db.name,
@@ -112,6 +144,9 @@ export class InventoryExportService {
             db.accounts
               .map((account) => `${account.username} [${account.scope}]`)
               .join(', '),
+            db.hostAsset?.name ?? '',
+            db.hostVm?.systemName ?? '',
+            db.status ?? '',
           ]),
         ],
       ],
@@ -127,6 +162,9 @@ export class InventoryExportService {
             'Power State',
             'Lifecycle',
             'Owner',
+            'Discovery State',
+            'Source',
+            'Responsible Party',
           ],
           ...vms.map((vm) => [
             vm.name,
@@ -137,7 +175,37 @@ export class InventoryExportService {
             vm.powerState,
             vm.lifecycleState,
             vm.owner,
+            vm.discoveryState,
+            vm.source?.name ?? '',
+            vm.responsibleParty ?? '',
           ]),
+        ],
+      ],
+      [
+        'Relationships',
+        [
+          [
+            'Application',
+            'Environment',
+            'Component',
+            'Assets',
+            'VMs',
+            'Logical Databases',
+          ],
+          ...applications.flatMap((app) =>
+            app.environments.flatMap((environment) =>
+              environment.components.map((component) => [
+                app.name,
+                environment.name,
+                component.name,
+                component.assetLinks.map((link) => link.assetId).join(', '),
+                component.vmLinks.map((link) => link.vmId).join(', '),
+                component.logicalDatabases
+                  .map((database) => database.name)
+                  .join(', '),
+              ]),
+            ),
+          ),
         ],
       ],
       [
@@ -149,7 +217,7 @@ export class InventoryExportService {
               'Asset',
               asset.name,
               credential.username,
-              credential.encryptedPassword,
+              this.credentials.decrypt(credential.encryptedPassword),
             ]),
           ),
           ...applications.flatMap((app) =>
@@ -158,7 +226,7 @@ export class InventoryExportService {
                 'Application Access',
                 `${app.name} / ${access.label}`,
                 credential.username,
-                credential.encryptedPassword,
+                this.credentials.decrypt(credential.encryptedPassword),
               ]),
             ),
           ),
@@ -167,7 +235,7 @@ export class InventoryExportService {
               'Database',
               db.name,
               account.username,
-              account.encryptedPassword,
+              this.credentials.decrypt(account.encryptedPassword),
             ]),
           ),
           ...vms.flatMap((vm) =>
@@ -175,7 +243,7 @@ export class InventoryExportService {
               'VM Guest',
               vm.name,
               account.username,
-              account.encryptedPassword,
+              this.credentials.decrypt(account.encryptedPassword),
             ]),
           ),
         ],

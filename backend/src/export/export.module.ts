@@ -3,9 +3,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { InventoryExportController } from './inventory-export.controller';
 import { InventoryExportService } from './inventory-export.service';
 import { AuthModule } from '../auth/auth.module';
+import { CredentialsModule } from '../credentials/credentials.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, AuthModule, CredentialsModule],
   controllers: [InventoryExportController],
   providers: [InventoryExportService],
 })
