@@ -96,6 +96,7 @@ interface AssetFormAsset {
   customMetadata?: Record<string, unknown> | null;
   ipAllocations?: AssetIpAllocation[];
   credentials?: AssetCredential[];
+  componentLinks?: Array<{ componentId: string }>;
 }
 
 interface ParentAssetOption {
@@ -183,7 +184,9 @@ export function AssetFormDialog({
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
-  const { confirmDiscard } = useUnsavedChanges(open, { formData, accessPoints, hardwareSpecs, metadataExtras, assetMode });
+  const [componentIds, setComponentIds] = useState<string[]>([]);
+  const [availableComponents, setAvailableComponents] = useState<Array<{ id: string; label: string }>>([]);
+  const { confirmDiscard } = useUnsavedChanges(open, { formData, accessPoints, hardwareSpecs, metadataExtras, assetMode, componentIds });
   const requestClose = () => {
     if (loading || !confirmDiscard()) return;
     onOpenChange(false);
@@ -203,6 +206,7 @@ export function AssetFormDialog({
       setNodeLabels([]);
       setFormErrors({});
       setTouchedFields({});
+      setComponentIds([]);
       return;
     }
 
@@ -334,7 +338,15 @@ export function AssetFormDialog({
     });
     setHardwareSpecs(nextHardwareSpecs);
     setMetadataExtras(nextMetadataExtras);
+    setComponentIds(assetToEdit.componentLinks?.map((link) => link.componentId) ?? []);
   }, [assetToEdit, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    api.get<Array<{ id: string; name: string; environments: Array<{ name: string; components: Array<{ id: string; name: string }> }> }>>('/applications')
+      .then(({ data }) => setAvailableComponents(data.flatMap((app) => app.environments.flatMap((env) => env.components.map((component) => ({ id: component.id, label: `${app.name} · ${env.name} · ${component.name}` }))))))
+      .catch(() => setAvailableComponents([]));
+  }, [open]);
 
   useEffect(() => {
     if (assetMode === 'single') {
@@ -531,6 +543,7 @@ export function AssetFormDialog({
         ips: finalIps,
         credentials: finalCredentials,
         customMetadata: Object.keys(customMetadata).length > 0 ? customMetadata : undefined,
+        componentIds,
       };
 
       if (assetToEdit) {
@@ -797,6 +810,16 @@ export function AssetFormDialog({
                 />
               </div>
             </div>
+          </section>
+
+          <section className="muted-panel space-y-3 p-4">
+            <div>
+              <p className="workspace-subtle">Application Components</p>
+              <p className="mt-1 text-xs text-muted-foreground">Link this asset to the applications it supports.</p>
+            </div>
+            <select aria-label="Application components" multiple value={componentIds} onChange={(event) => setComponentIds(Array.from(event.target.selectedOptions, (option) => option.value))} className="min-h-20 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+              {availableComponents.map((component) => <option key={component.id} value={component.id}>{component.label}</option>)}
+            </select>
           </section>
 
           <section className="muted-panel p-4">
