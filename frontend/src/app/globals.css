@@ -219,7 +219,8 @@
 @layer components {
   /* ─── Layout Shells ─── */
   .workspace-page { @apply space-y-3 pb-3; }
-  .app-shell { @apply mx-auto w-full max-w-7xl; }
+  /* Keep the workspace readable without leaving an oversized dead zone on wide screens. */
+  .app-shell { @apply mx-auto w-full max-w-[1800px]; }
   .app-backdrop {
     background-image:
       radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.045), transparent 28rem),
