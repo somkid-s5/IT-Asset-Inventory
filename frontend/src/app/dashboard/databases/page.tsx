@@ -422,10 +422,6 @@ export default function DbPage() {
                {showArchived ? 'Active Databases' : 'Archived Databases'}
              </Button>
            )}
-           {false && <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
-             <Download className="h-4 w-4 mr-2" />
-             Export
-           </Button>}
            {mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
              <Button onClick={() => { setDatabaseToEdit(null); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
                <Plus className="h-4 w-4 mr-2" />

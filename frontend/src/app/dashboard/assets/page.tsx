@@ -101,7 +101,7 @@ const EMPTY_ASSETS_RESPONSE: AssetsResponse = {
 const TABS: { label: string; value: 'ALL' | AssetType; icon: typeof Box; iconClassName: string }[] = [
   { label: 'All', value: 'ALL', icon: Box, iconClassName: 'text-primary' },
   { label: 'Servers', value: 'SERVER', icon: Server, iconClassName: 'text-success' },
-  { label: 'Storage', value: 'STORAGE', icon: Database, iconClassName: 'text-sky-500' },
+  { label: 'Storage', value: 'STORAGE', icon: Database, iconClassName: 'text-info' },
   { label: 'Switches', value: 'SWITCH', icon: Shield, iconClassName: 'text-warning' },
 ];
 
@@ -509,10 +509,6 @@ export default function AssetsPage() {
               {showArchived ? 'Active Assets' : 'Archived Assets'}
             </Button>
           )}
-          {false && <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>}
           {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
             <>
             <Button onClick={() => { setEditingAsset(undefined); setDialogOpen(true); }} className="h-9 shadow-lg shadow-primary/20">
@@ -525,14 +521,6 @@ export default function AssetsPage() {
       </div>
 
       <div>
-        {false && table.getSelectedRowModel().rows.length > 0 && (
-          <div className="mb-3 flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 sm:flex-row sm:items-center">
-            <span className="text-sm font-medium">{table.getSelectedRowModel().rows.length} selected</span>
-            <select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm"><option value="">Keep status</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="MAINTENANCE">Maintenance</option><option value="DECOMMISSIONED">Decommissioned</option></select>
-            <Input value={bulkOwner} onChange={(event) => setBulkOwner(event.target.value)} className="h-9 sm:max-w-52" placeholder="Set owner (optional)" />
-            <Button size="sm" onClick={() => void applyBulkUpdate()}>Apply changes</Button>
-          </div>
-        )}
         <Card className="border border-border/80 gap-0 shadow-md bg-card overflow-hidden p-0 rounded-2xl">
         <div className="p-3 sm:p-4 border-b border-border bg-muted/80 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           {/* Tabs */}

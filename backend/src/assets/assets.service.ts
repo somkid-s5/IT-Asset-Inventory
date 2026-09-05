@@ -59,9 +59,8 @@ export class AssetsService {
                 nodeLabel: ip.nodeLabel?.trim() || null,
                 manageType: ip.manageType?.trim() || null,
                 version: ip.version?.trim() || null,
-                ...(ip.credentialId?.trim()
-                  ? { credential: { connect: { id: ip.credentialId.trim() } } }
-                  : {}),
+                // A new asset cannot safely reference a credential before the
+                // asset row exists; link interface credentials on the edit flow.
               })),
             },
           }
@@ -72,6 +71,9 @@ export class AssetsService {
               create: (dto.credentials ?? [])
                 .filter((credential) => credential.username.trim())
                 .map((credential) => ({
+                  ...(credential.id?.trim()
+                    ? { id: credential.id.trim() }
+                    : {}),
                   username: credential.username.trim(),
                   type: credential.type?.trim() || null,
                   nodeLabel: credential.nodeLabel?.trim() || null,
@@ -94,8 +96,39 @@ export class AssetsService {
     };
   }
 
-  private buildReplaceRelations(dto: CreateAssetDto | UpdateAssetDto) {
+  private buildReplaceRelations(
+    dto: CreateAssetDto | UpdateAssetDto,
+    existingEncryptedPasswords = new Map<string, string>(),
+  ) {
     return {
+      // Recreate credentials before IP allocations so explicit FK links can
+      // connect to preserved credential IDs in the same nested write.
+      ...(dto.credentials !== undefined
+        ? {
+            credentials: {
+              deleteMany: {},
+              create: (dto.credentials ?? [])
+                .filter((credential) => credential.username.trim())
+                .map((credential) => ({
+                  ...(credential.id ? { id: credential.id } : {}),
+                  username: credential.username.trim(),
+                  type: credential.type?.trim() || null,
+                  nodeLabel: credential.nodeLabel?.trim() || null,
+                  manageType: credential.manageType?.trim() || null,
+                  version: credential.version?.trim() || null,
+                  encryptedPassword:
+                    credential.id?.trim() && !credential.password
+                      ? (existingEncryptedPasswords.get(credential.id.trim()) ??
+                        this.credentialsService.encrypt(
+                          credential.password ?? '',
+                        ))
+                      : this.credentialsService.encrypt(
+                          credential.password ?? '',
+                        ),
+                })),
+            },
+          }
+        : {}),
       ...(dto.ips !== undefined
         ? {
             ipAllocations: {
@@ -110,25 +143,6 @@ export class AssetsService {
                   ? { credential: { connect: { id: ip.credentialId.trim() } } }
                   : {}),
               })),
-            },
-          }
-        : {}),
-      ...(dto.credentials !== undefined
-        ? {
-            credentials: {
-              deleteMany: {},
-              create: (dto.credentials ?? [])
-                .filter((credential) => credential.username.trim())
-                .map((credential) => ({
-                  username: credential.username.trim(),
-                  type: credential.type?.trim() || null,
-                  nodeLabel: credential.nodeLabel?.trim() || null,
-                  manageType: credential.manageType?.trim() || null,
-                  version: credential.version?.trim() || null,
-                  encryptedPassword: this.credentialsService.encrypt(
-                    credential.password ?? '',
-                  ),
-                })),
             },
           }
         : {}),
@@ -178,6 +192,36 @@ export class AssetsService {
           'Asset component links must reference existing application components',
         );
     }
+    const credentials = (createAssetDto.credentials ?? []).filter(
+      (credential) => credential.username.trim(),
+    );
+    const credentialIds = new Set(
+      credentials
+        .map((credential) => credential.id?.trim())
+        .filter((id): id is string => Boolean(id)),
+    );
+    if (
+      credentialIds.size !==
+      credentials.filter((credential) => credential.id?.trim()).length
+    ) {
+      throw new BadRequestException('Asset credential IDs must be unique.');
+    }
+    const linkedCredentialIds = (createAssetDto.ips ?? [])
+      .map((ip) => ip.credentialId?.trim())
+      .filter((id): id is string => Boolean(id));
+    if (linkedCredentialIds.some((id) => !credentialIds.has(id))) {
+      throw new BadRequestException(
+        'Asset IP credentials must reference credentials submitted for this asset.',
+      );
+    }
+    if (credentialIds.size > 0) {
+      const existingCredentialCount = await this.prisma.credential.count({
+        where: { id: { in: [...credentialIds] } },
+      });
+      if (existingCredentialCount > 0) {
+        throw new BadRequestException('Asset credential IDs must be new.');
+      }
+    }
     const {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       ips: _ips,
@@ -225,6 +269,15 @@ export class AssetsService {
       },
     });
 
+    for (const ip of createAssetDto.ips ?? []) {
+      const credentialId = ip.credentialId?.trim();
+      if (!credentialId) continue;
+      await this.prisma.iPAllocation.updateMany({
+        where: { assetId: created.id, address: ip.address.trim() },
+        data: { credentialId },
+      });
+    }
+
     const typedCreated = created as unknown as AssetWithRelations;
 
     await this.prisma.auditLog.create({
@@ -240,7 +293,9 @@ export class AssetsService {
       },
     });
 
-    return this.toDetail(typedCreated);
+    return linkedCredentialIds.length
+      ? this.findOne(typedCreated.id)
+      : this.toDetail(typedCreated);
   }
 
   async findAll(
@@ -588,6 +643,36 @@ export class AssetsService {
     await this.findOne(id);
 
     const { ips, credentials, componentIds, ...assetData } = updateAssetDto;
+    const credentialIds = [
+      ...(credentials ?? []).map((credential) => credential.id),
+      ...(ips ?? []).map((ip) => ip.credentialId),
+    ].filter((value): value is string => Boolean(value));
+    const existingCredentialRecords = credentialIds.length
+      ? await this.prisma.credential.findMany({
+          where: {
+            assetId: id,
+            id: { in: credentialIds },
+          },
+          select: { id: true, encryptedPassword: true },
+        })
+      : [];
+    const existingCredentialIds = new Set(
+      credentialIds.length
+        ? existingCredentialRecords.map((credential) => credential.id)
+        : [],
+    );
+    const normalizedCredentials = credentials?.map((credential) => ({
+      ...credential,
+      ...(credential.id && existingCredentialIds.has(credential.id)
+        ? { id: credential.id }
+        : { id: undefined }),
+    }));
+    const normalizedIps = ips?.map((ip) => ({
+      ...ip,
+      ...(ip.credentialId && existingCredentialIds.has(ip.credentialId)
+        ? { credentialId: ip.credentialId }
+        : { credentialId: undefined }),
+    }));
     if (componentIds?.length) {
       const ids = [...new Set(componentIds)];
       const count = await this.prisma.applicationComponent.count({
@@ -614,12 +699,23 @@ export class AssetsService {
           ...(ips !== undefined ||
           credentials !== undefined ||
           componentIds !== undefined
-            ? this.buildReplaceRelations({
-                ...updateAssetDto,
-                ips: updateAssetDto.ips ?? [],
-                credentials: updateAssetDto.credentials ?? [],
-                componentIds,
-              })
+            ? this.buildReplaceRelations(
+                {
+                  ...updateAssetDto,
+                  ips: ips !== undefined ? (normalizedIps ?? []) : undefined,
+                  credentials:
+                    credentials !== undefined
+                      ? (normalizedCredentials ?? [])
+                      : undefined,
+                  componentIds,
+                },
+                new Map(
+                  existingCredentialRecords.map((credential) => [
+                    credential.id,
+                    credential.encryptedPassword,
+                  ]),
+                ),
+              )
             : {}),
         },
         include: {

@@ -55,7 +55,11 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
-import { HARDWARE_SPEC_GROUPS, normalizeSpecKey, type HardwareSpecGroup } from "@/lib/asset-specs";
+import {
+  HARDWARE_SPEC_GROUPS,
+  normalizeSpecKey,
+  type HardwareSpecGroup,
+} from "@/lib/asset-specs";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +90,7 @@ interface AssetIpAllocation {
   nodeLabel?: string | null;
   manageType?: string | null;
   version?: string | null;
+  credentialId?: string | null;
 }
 
 interface NoteAuthor {
@@ -159,37 +164,37 @@ function getAssetStyle(type: AssetType) {
     case "SERVER":
       return {
         icon: <HardDrive className="h-6 w-6" />,
-        bg: "bg-gradient-to-br from-indigo-500 to-purple-600",
+        bg: "bg-gradient-to-br from-primary to-info",
         label: "Server",
       };
     case "STORAGE":
       return {
         icon: <Database className="h-6 w-6" />,
-        bg: "bg-gradient-to-br from-cyan-500 to-blue-600",
+        bg: "bg-gradient-to-br from-info to-primary",
         label: "Storage",
       };
     case "SWITCH":
       return {
         icon: <Shield className="h-6 w-6" />,
-        bg: "bg-gradient-to-br from-amber-500 to-orange-600",
+        bg: "bg-gradient-to-br from-warning to-critical",
         label: "Switch",
       };
     case "SP":
       return {
         icon: <LaptopMinimal className="h-6 w-6" />,
-        bg: "bg-gradient-to-br from-slate-600 to-slate-800",
+        bg: "bg-gradient-to-br from-muted-foreground to-muted",
         label: "Service Processor",
       };
     case "NETWORK":
       return {
         icon: <Network className="h-6 w-6" />,
-        bg: "bg-gradient-to-br from-emerald-500 to-teal-600",
+        bg: "bg-gradient-to-br from-success to-info",
         label: "Network",
       };
     default:
       return {
         icon: <Boxes className="h-6 w-6" />,
-        bg: "bg-gradient-to-br from-slate-500 to-zinc-600",
+        bg: "bg-gradient-to-br from-muted-foreground to-muted",
         label: "Asset",
       };
   }
@@ -258,104 +263,137 @@ function getHardwareSpecValue(
   fieldKey: string,
 ) {
   const storedSpecifications = metadata?.hardwareSpecifications;
-  const storedGroup = storedSpecifications && typeof storedSpecifications === 'object' && !Array.isArray(storedSpecifications)
-    ? (storedSpecifications as Record<string, unknown>)[groupKey]
-    : undefined;
-  let entry = storedGroup && typeof storedGroup === 'object' && !Array.isArray(storedGroup)
-    ? (storedGroup as Record<string, unknown>)[fieldKey]
-    : undefined;
+  const storedGroup =
+    storedSpecifications &&
+    typeof storedSpecifications === "object" &&
+    !Array.isArray(storedSpecifications)
+      ? (storedSpecifications as Record<string, unknown>)[groupKey]
+      : undefined;
+  let entry =
+    storedGroup &&
+    typeof storedGroup === "object" &&
+    !Array.isArray(storedGroup)
+      ? (storedGroup as Record<string, unknown>)[fieldKey]
+      : undefined;
 
-  if (entry === undefined && fieldKey === 'configuration') {
+  if (entry === undefined && fieldKey === "configuration") {
     const legacyValue = metadata?.[groupKey];
-    if (typeof legacyValue === 'string' || typeof legacyValue === 'number') entry = legacyValue;
+    if (typeof legacyValue === "string" || typeof legacyValue === "number")
+      entry = legacyValue;
   }
-  if (entry === undefined && groupKey === 'disk' && fieldKey === 'rawCapacity') {
-    const legacyValue = Object.entries(metadata ?? {}).find(([name]) => normalizeSpecKey(name) === 'total_capacity')?.[1];
-    if (typeof legacyValue === 'string' || typeof legacyValue === 'number') entry = legacyValue;
+  if (
+    entry === undefined &&
+    groupKey === "disk" &&
+    fieldKey === "rawCapacity"
+  ) {
+    const legacyValue = Object.entries(metadata ?? {}).find(
+      ([name]) => normalizeSpecKey(name) === "total_capacity",
+    )?.[1];
+    if (typeof legacyValue === "string" || typeof legacyValue === "number")
+      entry = legacyValue;
   }
-  if (entry === null || entry === undefined || entry === '') return '--';
-  return typeof entry === 'object' ? JSON.stringify(entry) : String(entry);
+  if (entry === null || entry === undefined || entry === "") return "--";
+  return typeof entry === "object" ? JSON.stringify(entry) : String(entry);
 }
 
-function getHardwareSpecSummary(metadata: Record<string, unknown> | null | undefined, group: HardwareSpecGroup) {
+function getHardwareSpecSummary(
+  metadata: Record<string, unknown> | null | undefined,
+  group: HardwareSpecGroup,
+) {
   const value = (fieldKey: string) => {
     const result = getHardwareSpecValue(metadata, group.key, fieldKey);
-    return result === '--' ? undefined : result;
+    return result === "--" ? undefined : result;
   };
   const values = group.fields.map(({ key }) => value(key));
-  if (group.key === 'raid') {
-    const summary = values.filter(Boolean).join(' / ');
-    return summary || 'N/A';
+  if (group.key === "raid") {
+    const summary = values.filter(Boolean).join(" / ");
+    return summary || "N/A";
   }
-  if (!values.some(Boolean)) return '--';
+  if (!values.some(Boolean)) return "--";
 
   switch (group.key) {
-    case 'cpu':
+    case "cpu":
       return [
-        value('totalSockets') && `${value('totalSockets')} sockets`,
-        value('socketsUsed') && `${value('socketsUsed')} used`,
-        value('configuration'),
-        value('totalCores') && `${value('totalCores')} cores`,
-        value('totalThreads') && `${value('totalThreads')} threads`,
-      ].filter(Boolean).join(' / ');
-    case 'ram':
+        value("totalSockets") && `${value("totalSockets")} sockets`,
+        value("socketsUsed") && `${value("socketsUsed")} used`,
+        value("configuration"),
+        value("totalCores") && `${value("totalCores")} cores`,
+        value("totalThreads") && `${value("totalThreads")} threads`,
+      ]
+        .filter(Boolean)
+        .join(" / ");
+    case "ram":
       return [
-        value('totalSlots') && `${value('totalSlots')} slots`,
-        value('slotsUsed') && `${value('slotsUsed')} used`,
-        value('configuration'),
-        value('installedCapacity') && `${value('installedCapacity')} installed`,
-        value('maximumCapacity') && `${value('maximumCapacity')} max`,
-      ].filter(Boolean).join(' / ');
-    case 'disk':
+        value("totalSlots") && `${value("totalSlots")} slots`,
+        value("slotsUsed") && `${value("slotsUsed")} used`,
+        value("configuration"),
+        value("installedCapacity") && `${value("installedCapacity")} installed`,
+        value("maximumCapacity") && `${value("maximumCapacity")} max`,
+      ]
+        .filter(Boolean)
+        .join(" / ");
+    case "disk":
       return [
-        value('totalBays') && `${value('totalBays')} bays`,
-        value('baysUsed') && `${value('baysUsed')} used`,
-        value('configuration'),
-        value('rawCapacity') && `${value('rawCapacity')} raw`,
-        value('usableCapacity') && `${value('usableCapacity')} usable`,
-      ].filter(Boolean).join(' / ');
-    case 'power':
+        value("totalBays") && `${value("totalBays")} bays`,
+        value("baysUsed") && `${value("baysUsed")} used`,
+        value("configuration"),
+        value("rawCapacity") && `${value("rawCapacity")} raw`,
+        value("usableCapacity") && `${value("usableCapacity")} usable`,
+      ]
+        .filter(Boolean)
+        .join(" / ");
+    case "power":
       return [
-        value('totalSlots') && `${value('totalSlots')} slots`,
-        value('installed') && `${value('installed')} installed`,
-        value('configuration'),
-        value('ratedPower') && `${value('ratedPower')} total`,
-        value('redundancy'),
-      ].filter(Boolean).join(' / ');
-    case 'networkPorts':
+        value("totalSlots") && `${value("totalSlots")} slots`,
+        value("installed") && `${value("installed")} installed`,
+        value("configuration"),
+        value("ratedPower") && `${value("ratedPower")} total`,
+        value("redundancy"),
+      ]
+        .filter(Boolean)
+        .join(" / ");
+    case "networkPorts":
       return [
-        value('totalPorts') && `${value('totalPorts')} ports`,
-        value('portsUsed') && `${value('portsUsed')} used`,
-        value('configuration'),
-        value('availablePorts') && `${value('availablePorts')} available`,
-        value('totalBandwidth'),
-      ].filter(Boolean).join(' / ');
-    case 'expansionSlots':
+        value("totalPorts") && `${value("totalPorts")} ports`,
+        value("portsUsed") && `${value("portsUsed")} used`,
+        value("configuration"),
+        value("availablePorts") && `${value("availablePorts")} available`,
+        value("totalBandwidth"),
+      ]
+        .filter(Boolean)
+        .join(" / ");
+    case "expansionSlots":
       return [
-        value('totalSlots') && `${value('totalSlots')} slots`,
-        value('slotsUsed') && `${value('slotsUsed')} used`,
-        value('configuration'),
-        value('availableSlots') && `${value('availableSlots')} available`,
-        value('slotType'),
-      ].filter(Boolean).join(' / ');
-    case 'quantity':
+        value("totalSlots") && `${value("totalSlots")} slots`,
+        value("slotsUsed") && `${value("slotsUsed")} used`,
+        value("configuration"),
+        value("availableSlots") && `${value("availableSlots")} available`,
+        value("slotType"),
+      ]
+        .filter(Boolean)
+        .join(" / ");
+    case "quantity":
       return [
-        value('totalUnits') && `${value('totalUnits')} total`,
-        value('unitsInstalled') && `${value('unitsInstalled')} installed`,
-        value('configuration'),
-        value('spareUnits') && `${value('spareUnits')} spare`,
-        value('notes'),
-      ].filter(Boolean).join(' / ');
-    case 'formFactor':
+        value("totalUnits") && `${value("totalUnits")} total`,
+        value("unitsInstalled") && `${value("unitsInstalled")} installed`,
+        value("configuration"),
+        value("spareUnits") && `${value("spareUnits")} spare`,
+        value("notes"),
+      ]
+        .filter(Boolean)
+        .join(" / ");
+    case "formFactor":
       return [
-        value('configuration'),
-        value('rackUnits'),
-        value('dimensions'),
-        value('weight'),
-        value('mounting'),
-      ].filter(Boolean).join(' / ');
+        value("configuration"),
+        value("rackUnits"),
+        value("dimensions"),
+        value("weight"),
+        value("mounting"),
+      ]
+        .filter(Boolean)
+        .join(" / ");
     default:
-      return values.filter(Boolean).join(' / ');
+      return values.filter(Boolean).join(" / ");
   }
 }
 
@@ -1794,6 +1832,7 @@ export default function AssetDetailsPage() {
   const accessRows = useMemo<AccessRow[]>(() => {
     if (!asset) return [];
     const groups = new Map<string, AccessRow>();
+    const explicitlyLinkedCredentialIds = new Set<string>();
     (asset.ipAllocations ?? []).forEach((ip) => {
       const nodeLabel = ip.nodeLabel?.trim() || "Primary";
       const label = ip.type?.trim() || "Primary";
@@ -1808,6 +1847,18 @@ export default function AssetDetailsPage() {
         credentials: [],
       };
       existing.addresses.push(ip.address);
+      if (ip.credentialId) {
+        const credential = asset.credentials?.find(
+          (item) => item.id === ip.credentialId,
+        );
+        if (
+          credential &&
+          !existing.credentials.some((item) => item.id === credential.id)
+        ) {
+          existing.credentials.push(credential);
+          explicitlyLinkedCredentialIds.add(credential.id);
+        }
+      }
       existing.methods =
         existing.methods.length > 0
           ? existing.methods
@@ -1816,6 +1867,7 @@ export default function AssetDetailsPage() {
       groups.set(key, existing);
     });
     (asset.credentials ?? []).forEach((credential) => {
+      if (explicitlyLinkedCredentialIds.has(credential.id)) return;
       const nodeLabel = credential.nodeLabel?.trim() || "Primary";
       const label = credential.type?.trim() || "Primary";
       const key = `${nodeLabel.toLowerCase()}::${label.toLowerCase()}`;
@@ -1881,8 +1933,7 @@ export default function AssetDetailsPage() {
           onClick={() => router.push(returnTo || "/dashboard/assets")}
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />{" "}
-          Back to Assets
+          <ArrowLeft className="h-4 w-4" /> Back to Assets
         </button>
       </div>
 
@@ -1971,11 +2022,22 @@ export default function AssetDetailsPage() {
               <div className="glass-card h-full overflow-hidden">
                 <div className="divide-y divide-border/40">
                   {HARDWARE_SPEC_GROUPS.map((group) => {
-                    const summary = getHardwareSpecSummary(asset.customMetadata, group);
+                    const summary = getHardwareSpecSummary(
+                      asset.customMetadata,
+                      group,
+                    );
                     return (
-                      <div key={group.key} className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">{group.label}</span>
-                        <span className="max-w-[72%] truncate text-right text-[11px] font-semibold text-foreground" title={summary}>
+                      <div
+                        key={group.key}
+                        className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30"
+                      >
+                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                          {group.label}
+                        </span>
+                        <span
+                          className="max-w-[72%] truncate text-right text-[11px] font-semibold text-foreground"
+                          title={summary}
+                        >
                           {summary}
                         </span>
                       </div>
@@ -2014,7 +2076,10 @@ export default function AssetDetailsPage() {
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     Version
                   </span>
-                  <span className="max-w-[68%] truncate text-right font-mono text-[11px] font-semibold text-foreground" title={primaryVersion || undefined}>
+                  <span
+                    className="max-w-[68%] truncate text-right font-mono text-[11px] font-semibold text-foreground"
+                    title={primaryVersion || undefined}
+                  >
                     {primaryVersion || "--"}
                   </span>
                 </div>
@@ -2270,7 +2335,9 @@ export default function AssetDetailsPage() {
                                                 navigator.clipboard.writeText(
                                                   cred.password,
                                                 );
-                                                void api.post(`/credentials/${cred.id}/copy`);
+                                                void api.post(
+                                                  `/credentials/${cred.id}/copy`,
+                                                );
                                                 toast.success(
                                                   "Password copied",
                                                 );

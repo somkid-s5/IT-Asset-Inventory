@@ -73,6 +73,21 @@ export class ApplicationsController {
     return this.service.deleteAccess(id, accessId, req.user.id);
   }
   @Roles(Role.ADMIN, Role.EDITOR)
+  @Delete(':id/access/:accessId/credentials/:credentialId')
+  deleteAccessCredential(
+    @Param('id') id: string,
+    @Param('accessId') accessId: string,
+    @Param('credentialId') credentialId: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.service.deleteAccessCredential(
+      id,
+      accessId,
+      credentialId,
+      req.user.id,
+    );
+  }
+  @Roles(Role.ADMIN, Role.EDITOR)
   @Post(':id/environments')
   createEnvironment(
     @Param('id') id: string,

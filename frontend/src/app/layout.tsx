@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { JetBrains_Mono } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -32,11 +31,6 @@ const googleSans = localFont({
   variable: '--font-google-sans',
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
-});
-
 export const metadata: Metadata = {
   title: 'SysOps | IT Service Management',
   description: 'A secure IT inventory registry for assets, virtual machines, databases, and technical documentation.',
@@ -45,7 +39,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className={`${googleSans.variable} ${jetbrainsMono.variable} font-sans subpixel-antialiased selection:bg-primary/30`}>
+      <body className={`${googleSans.variable} font-sans subpixel-antialiased selection:bg-primary/30`}>
         <HydrationMarker />
         {/* Skip Link for Accessibility */}
         <a

@@ -40,6 +40,10 @@ class IpAllocationDto {
 }
 
 class AssetCredentialDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   username: string;
 

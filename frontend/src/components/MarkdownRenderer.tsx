@@ -46,19 +46,19 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             if (!inline) {
               const language = match ? match[1] : 'text';
               return (
-                <div className="relative group my-6 rounded-[20px] overflow-hidden border border-border/40 shadow-2xl bg-[#0d1117]">
-                  <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-border/10">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <div className="relative group my-6 rounded-[20px] overflow-hidden border border-border/40 shadow-2xl bg-muted/80">
+                  <div className="flex items-center justify-between px-4 py-2 bg-muted border-b border-border/10">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       {language}
                     </span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-lg hover:bg-primary/20 text-slate-400 hover:text-primary transition-colors"
+                      className="h-7 w-7 rounded-lg hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => handleCopy(codeContent)}
                     >
                       {copiedCode === codeContent ? (
-                        <Check className="h-3.5 w-3.5 text-green-400" />
+                        <Check className="h-3.5 w-3.5 text-success" />
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}

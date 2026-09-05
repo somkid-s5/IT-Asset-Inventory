@@ -532,6 +532,37 @@ export class ApplicationsService {
     return this.findOne(applicationId);
   }
 
+  async deleteAccessCredential(
+    applicationId: string,
+    accessId: string,
+    credentialId: string,
+    userId: string,
+  ) {
+    const credential = await this.prisma.applicationCredential.findFirst({
+      where: { id: credentialId, accessId, access: { applicationId } },
+      select: { id: true, username: true },
+    });
+    if (!credential)
+      throw new NotFoundException('Application credential not found');
+    await this.prisma.$transaction([
+      this.prisma.applicationCredential.delete({ where: { id: credentialId } }),
+      this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.UPDATE_APPLICATION,
+          targetId: applicationId,
+          details: JSON.stringify({
+            accessId,
+            credentialId,
+            username: credential.username,
+            action: 'delete-credential',
+          }),
+        },
+      }),
+    ]);
+    return this.findOne(applicationId);
+  }
+
   async updateEnvironment(
     applicationId: string,
     environmentId: string,
