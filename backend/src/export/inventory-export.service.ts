@@ -106,7 +106,10 @@ export class InventoryExportService {
                 ),
               )
               .join('; '),
-            app.access
+            [
+              ...app.access,
+              ...app.environments.flatMap((environment) => environment.access),
+            ]
               .map(
                 (access) =>
                   `${access.label} (${access.method}) ${access.address}`,
@@ -221,7 +224,10 @@ export class InventoryExportService {
             ]),
           ),
           ...applications.flatMap((app) =>
-            app.access.flatMap((access) =>
+            [
+              ...app.access,
+              ...app.environments.flatMap((environment) => environment.access),
+            ].flatMap((access) =>
               access.credentials.map((credential) => [
                 'Application Access',
                 `${app.name} / ${access.label}`,
