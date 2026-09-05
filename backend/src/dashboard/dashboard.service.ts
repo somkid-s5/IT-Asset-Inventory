@@ -6,6 +6,7 @@ import {
   VmLifecycleState,
   VmSourceStatus,
   ApplicationStatus,
+  DatabaseStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -35,12 +36,29 @@ export class DashboardService {
       totalApplications,
       activeApplications,
     ] = await Promise.all([
-      this.prisma.asset.count(),
+      this.prisma.asset.count({
+        where: { status: { not: AssetStatus.ARCHIVED } },
+      }),
       this.prisma.asset.count({ where: { status: AssetStatus.ACTIVE } }),
-      this.prisma.asset.groupBy({ by: ['type'], _count: { _all: true } }),
-      this.prisma.databaseInventory.count(),
-      this.prisma.databaseInventory.count({ where: { environment: 'PROD' } }),
-      this.prisma.databaseAccount.count(),
+      this.prisma.asset.groupBy({
+        by: ['type'],
+        where: { status: { not: AssetStatus.ARCHIVED } },
+        _count: { _all: true },
+      }),
+      this.prisma.databaseInventory.count({
+        where: { status: { not: DatabaseStatus.ARCHIVED } },
+      }),
+      this.prisma.databaseInventory.count({
+        where: {
+          environment: 'PROD',
+          status: { not: DatabaseStatus.ARCHIVED },
+        },
+      }),
+      this.prisma.databaseAccount.count({
+        where: {
+          databaseInventory: { status: { not: DatabaseStatus.ARCHIVED } },
+        },
+      }),
       this.prisma.user.count({ where: { deletedAt: null } }),
       this.prisma.vmVCenterSource.count(),
       this.prisma.vmVCenterSource.count({
@@ -74,6 +92,7 @@ export class DashboardService {
             { syncState: 'Missing from source' },
             { lifecycleState: VmLifecycleState.DELETED_IN_VCENTER },
           ],
+          NOT: { lifecycleState: VmLifecycleState.ARCHIVED },
         },
       }),
       this.prisma.vmVCenterSource.aggregate({ _max: { lastSyncAt: true } }),

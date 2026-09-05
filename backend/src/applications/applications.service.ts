@@ -52,6 +52,17 @@ export class ApplicationsService {
   }
   private project(app: ApplicationWithRelations, role: Role = Role.VIEWER) {
     const canViewSensitive = role === Role.ADMIN || role === Role.EDITOR;
+    const projectAccess = (item: (typeof app.access)[number]) => ({
+      ...item,
+      address: canViewSensitive ? item.address : '[restricted]',
+      credentials: item.credentials.map((c) => ({
+        id: c.id,
+        username: c.username,
+        role: c.role,
+        hasPassword: Boolean(c.encryptedPassword),
+        lastChangedDate: c.lastChangedDate,
+      })),
+    });
     const completeness = evaluateApplicationCompleteness({
       name: app.name,
       description: app.description,
@@ -80,6 +91,7 @@ export class ApplicationsService {
       createdByUser: app.createdByUser,
       environments: app.environments.map((env) => ({
         ...env,
+        access: env.access.map(projectAccess),
         components: env.components.map((component) => ({
           ...component,
           assets: component.assetLinks.map((link) => ({
@@ -95,17 +107,7 @@ export class ApplicationsService {
           logicalDatabases: component.logicalDatabases,
         })),
       })),
-      access: app.access.map((item) => ({
-        ...item,
-        address: canViewSensitive ? item.address : '[restricted]',
-        credentials: item.credentials.map((c) => ({
-          id: c.id,
-          username: c.username,
-          role: c.role,
-          hasPassword: Boolean(c.encryptedPassword),
-          lastChangedDate: c.lastChangedDate,
-        })),
-      })),
+      access: app.access.map(projectAccess),
     };
   }
 

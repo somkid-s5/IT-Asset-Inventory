@@ -95,7 +95,9 @@ export default function ApplicationDetailPage() {
           <CardTitle className="text-base">Environment topology</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
-          {data.environments.map((env) => (
+          {data.environments.length === 0 ? (
+            <EmptyState icon={AppWindow} title="No environments" description="Add PROD, UAT, or TEST context to describe this application." className="border-none bg-transparent md:col-span-3" />
+          ) : data.environments.map((env) => (
             <div key={env.id} className="rounded-lg border p-4">
               <div className="flex items-center justify-between">
                 <p className="font-semibold">{env.name}</p>
