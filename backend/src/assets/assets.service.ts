@@ -661,18 +661,36 @@ export class AssetsService {
         ? existingCredentialRecords.map((credential) => credential.id)
         : [],
     );
-    const normalizedCredentials = credentials?.map((credential) => ({
-      ...credential,
-      ...(credential.id && existingCredentialIds.has(credential.id)
-        ? { id: credential.id }
-        : { id: undefined }),
-    }));
-    const normalizedIps = ips?.map((ip) => ({
-      ...ip,
-      ...(ip.credentialId && existingCredentialIds.has(ip.credentialId)
-        ? { credentialId: ip.credentialId }
-        : { credentialId: undefined }),
-    }));
+    const normalizedCredentials = credentials?.map((credential) => {
+      const credentialId = credential.id?.trim();
+      return {
+        ...credential,
+        ...(credentialId && existingCredentialIds.has(credentialId)
+          ? { id: credentialId }
+          : { id: undefined }),
+      };
+    });
+    const normalizedSubmittedCredentialIds = new Set(
+      (normalizedCredentials ?? [])
+        .map((credential) => credential.id)
+        .filter((value): value is string => Boolean(value)),
+    );
+    const normalizedIps = ips?.map((ip) => {
+      const credentialId = ip.credentialId?.trim();
+      const credentialIsAllowed =
+        credentials !== undefined
+          ? Boolean(
+              credentialId &&
+              normalizedSubmittedCredentialIds.has(credentialId),
+            )
+          : Boolean(credentialId && existingCredentialIds.has(credentialId));
+      return {
+        ...ip,
+        ...(credentialIsAllowed
+          ? { credentialId }
+          : { credentialId: undefined }),
+      };
+    });
     if (componentIds?.length) {
       const ids = [...new Set(componentIds)];
       const count = await this.prisma.applicationComponent.count({
