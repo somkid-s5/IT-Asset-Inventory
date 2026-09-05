@@ -1955,6 +1955,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           serviceRole: true,
           criticality: true,
         },
+        where: { lifecycleState: { not: VmLifecycleState.ARCHIVED } },
       }),
     ]);
     const discoveryIssues = discoveries.flatMap((vm) => {
