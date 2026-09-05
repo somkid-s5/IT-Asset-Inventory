@@ -63,6 +63,9 @@ function getSourceStatusMeta(status: string, syncing: boolean) {
   if (normalized === 'CONNECTION_FAILED') {
     return { label: 'Connection failed', className: 'bg-critical/10 border-critical/25 text-critical', Icon: CircleAlert };
   }
+  if (normalized === 'ARCHIVED') {
+    return { label: 'Archived', className: 'bg-muted text-muted-foreground', Icon: Archive };
+  }
   return { label: 'Ready to sync', className: 'bg-warning/10 border-warning/25 text-warning', Icon: Clock3 };
 }
 
