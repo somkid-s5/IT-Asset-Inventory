@@ -15,6 +15,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CreateDatabaseDto } from './dto/create-database.dto';
 import { UpdateDatabaseDto } from './dto/update-database.dto';
+import { LogicalDatabaseDto } from './dto/logical-database.dto';
 import { DatabasesService } from './databases.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -54,6 +55,46 @@ export class DatabasesController {
     @Request() req: { user: { id: string } },
   ) {
     return this.databasesService.update(id, updateDatabaseDto, req.user.id);
+  }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Post(':id/logical-databases')
+  createLogicalDatabase(
+    @Param('id') id: string,
+    @Body() dto: LogicalDatabaseDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.databasesService.createLogicalDatabase(id, dto, req.user.id);
+  }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Patch(':id/logical-databases/:logicalId')
+  updateLogicalDatabase(
+    @Param('id') id: string,
+    @Param('logicalId') logicalId: string,
+    @Body() dto: LogicalDatabaseDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.databasesService.updateLogicalDatabase(
+      id,
+      logicalId,
+      dto,
+      req.user.id,
+    );
+  }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Delete(':id/logical-databases/:logicalId')
+  deleteLogicalDatabase(
+    @Param('id') id: string,
+    @Param('logicalId') logicalId: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.databasesService.deleteLogicalDatabase(
+      id,
+      logicalId,
+      req.user.id,
+    );
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)

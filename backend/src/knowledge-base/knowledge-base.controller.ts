@@ -133,7 +133,6 @@ export class KnowledgeBaseController {
   }
 
   // --- Categories ---
-  @Public()
   @Get('categories')
   findAllCategories() {
     return this.knowledgeBaseService.findAllCategories();
@@ -164,14 +163,12 @@ export class KnowledgeBaseController {
     );
   }
 
-  @Public()
   @Get('categories/:id')
   findCategory(@Param('id') id: string) {
     return this.knowledgeBaseService.findCategory(id);
   }
 
   // --- Documents ---
-  @Public()
   @Get('documents')
   findAllDocuments(@Query('categoryId') categoryId?: string) {
     return this.knowledgeBaseService.findAllDocuments(categoryId);
@@ -201,7 +198,6 @@ export class KnowledgeBaseController {
     return this.knowledgeBaseService.findDocument(id);
   }
 
-  @Public()
   @Get('recent/documents')
   getRecentDocuments(@Query('limit') limit?: string) {
     return this.knowledgeBaseService.getRecentDocuments(

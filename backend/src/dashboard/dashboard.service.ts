@@ -5,6 +5,7 @@ import {
   VmDiscoveryState,
   VmLifecycleState,
   VmSourceStatus,
+  ApplicationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -31,6 +32,8 @@ export class DashboardService {
       latestVmSync,
       adminUsers,
       eolAssets,
+      totalApplications,
+      activeApplications,
     ] = await Promise.all([
       this.prisma.asset.count(),
       this.prisma.asset.count({ where: { status: AssetStatus.ACTIVE } }),
@@ -76,6 +79,10 @@ export class DashboardService {
       this.prisma.vmVCenterSource.aggregate({ _max: { lastSyncAt: true } }),
       this.prisma.user.count({ where: { role: Role.ADMIN, deletedAt: null } }),
       this.prisma.patchInfo.count({ where: { eolDate: { lt: new Date() } } }),
+      this.prisma.application.count(),
+      this.prisma.application.count({
+        where: { status: ApplicationStatus.ACTIVE },
+      }),
     ]);
 
     return {
@@ -103,6 +110,11 @@ export class DashboardService {
         total: totalDatabases,
         production: productionDatabases,
         accounts: totalDatabaseAccounts,
+      },
+      applications: {
+        total: totalApplications,
+        active: activeApplications,
+        archived: Math.max(0, totalApplications - activeApplications),
       },
       users: {
         total: totalUsers,

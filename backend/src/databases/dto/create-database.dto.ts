@@ -30,6 +30,10 @@ class DatabaseAccountDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString({ each: true })
+  logicalDatabaseIds?: string[];
 }
 
 export class CreateDatabaseDto {
@@ -101,4 +105,9 @@ export class CreateDatabaseDto {
   @ValidateNested({ each: true })
   @Type(() => DatabaseAccountDto)
   accounts: DatabaseAccountDto[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  logicalDatabases?: string[];
 }

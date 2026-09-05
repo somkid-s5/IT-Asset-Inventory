@@ -4,10 +4,12 @@ import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDatabaseDto } from './dto/create-database.dto';
 import { UpdateDatabaseDto } from './dto/update-database.dto';
+import { LogicalDatabaseDto } from './dto/logical-database.dto';
 
 type DatabaseWithAccounts = Prisma.DatabaseInventoryGetPayload<{
   include: {
     accounts: true;
+    logicalDatabases: { include: { components: true } };
     createdByUser: true;
   };
 }>;
@@ -60,6 +62,14 @@ export class DatabasesService {
       status: database.status,
       note: database.note,
       accountsCount: database.accounts.length,
+      logicalDatabases: database.logicalDatabases.map((logicalDatabase) => ({
+        id: logicalDatabase.id,
+        name: logicalDatabase.name,
+        description: logicalDatabase.description,
+        componentIds: logicalDatabase.components.map(
+          (component) => component.id,
+        ),
+      })),
       createdAt: database.createdAt,
       updatedAt: database.updatedAt,
     };
@@ -107,11 +117,30 @@ export class DatabasesService {
         note: this.sanitizeText(createDatabaseDto.note),
         createdByUserId: userId,
         accounts: {
-          create: this.buildAccounts(createDatabaseDto.accounts),
+          create: this.buildAccounts(createDatabaseDto.accounts).map(
+            (account, index) => ({
+              ...account,
+              ...(createDatabaseDto.accounts[index]?.logicalDatabaseIds?.length
+                ? {
+                    logicalDatabases: {
+                      connect: createDatabaseDto.accounts[
+                        index
+                      ].logicalDatabaseIds.map((id) => ({ id })),
+                    },
+                  }
+                : {}),
+            }),
+          ),
+        },
+        logicalDatabases: {
+          create: (createDatabaseDto.logicalDatabases ?? [])
+            .filter(Boolean)
+            .map((name) => ({ name: name.trim() })),
         },
       },
       include: {
         accounts: true,
+        logicalDatabases: { include: { components: true } },
         createdByUser: true,
       },
     });
@@ -195,6 +224,7 @@ export class DatabasesService {
       where: { id },
       include: {
         accounts: true,
+        logicalDatabases: { include: { components: true } },
         createdByUser: true,
       },
     });
@@ -279,13 +309,38 @@ export class DatabasesService {
           ? {
               accounts: {
                 deleteMany: {},
-                create: this.buildAccounts(updateDatabaseDto.accounts),
+                create: this.buildAccounts(updateDatabaseDto.accounts).map(
+                  (account, index) => ({
+                    ...account,
+                    ...(updateDatabaseDto.accounts?.[index]?.logicalDatabaseIds
+                      ?.length
+                      ? {
+                          logicalDatabases: {
+                            connect: updateDatabaseDto.accounts[
+                              index
+                            ].logicalDatabaseIds.map((id) => ({ id })),
+                          },
+                        }
+                      : {}),
+                  }),
+                ),
+              },
+            }
+          : {}),
+        ...(updateDatabaseDto.logicalDatabases !== undefined
+          ? {
+              logicalDatabases: {
+                deleteMany: {},
+                create: updateDatabaseDto.logicalDatabases
+                  .filter(Boolean)
+                  .map((name) => ({ name: name.trim() })),
               },
             }
           : {}),
       },
       include: {
         accounts: true,
+        logicalDatabases: { include: { components: true } },
         createdByUser: true,
       },
     });
@@ -324,6 +379,100 @@ export class DatabasesService {
     });
 
     return deleted;
+  }
+
+  async createLogicalDatabase(
+    id: string,
+    dto: LogicalDatabaseDto,
+    userId: string,
+  ) {
+    await this.findOne(id);
+    const logical = await this.prisma.logicalDatabase.create({
+      data: {
+        databaseInventoryId: id,
+        name: dto.name.trim(),
+        description: this.sanitizeText(dto.description),
+        ...(dto.componentIds?.length
+          ? {
+              components: {
+                connect: dto.componentIds.map((componentId) => ({
+                  id: componentId,
+                })),
+              },
+            }
+          : {}),
+      },
+      include: { components: true },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_DATABASE,
+        targetId: id,
+        details: JSON.stringify({ logicalDatabase: logical.name }),
+      },
+    });
+    return logical;
+  }
+
+  async updateLogicalDatabase(
+    id: string,
+    logicalId: string,
+    dto: LogicalDatabaseDto,
+    userId: string,
+  ) {
+    const existing = await this.prisma.logicalDatabase.findFirst({
+      where: { id: logicalId, databaseInventoryId: id },
+    });
+    if (!existing)
+      throw new NotFoundException(`Logical database ${logicalId} not found`);
+    const logical = await this.prisma.logicalDatabase.update({
+      where: { id: logicalId },
+      data: {
+        name: dto.name.trim(),
+        description: this.sanitizeText(dto.description),
+        ...(dto.componentIds
+          ? {
+              components: {
+                set: dto.componentIds.map((componentId) => ({
+                  id: componentId,
+                })),
+              },
+            }
+          : {}),
+      },
+      include: { components: true },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_DATABASE,
+        targetId: id,
+        details: JSON.stringify({ logicalDatabase: logical.name }),
+      },
+    });
+    return logical;
+  }
+
+  async deleteLogicalDatabase(id: string, logicalId: string, userId: string) {
+    const existing = await this.prisma.logicalDatabase.findFirst({
+      where: { id: logicalId, databaseInventoryId: id },
+    });
+    if (!existing)
+      throw new NotFoundException(`Logical database ${logicalId} not found`);
+    await this.prisma.logicalDatabase.delete({ where: { id: logicalId } });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_DATABASE,
+        targetId: id,
+        details: JSON.stringify({
+          logicalDatabase: existing.name,
+          deleted: true,
+        }),
+      },
+    });
+    return { id: logicalId, deleted: true };
   }
 
   async revealPassword(id: string, accountId: string, userId: string) {

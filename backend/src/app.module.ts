@@ -15,6 +15,8 @@ import { VmModule } from './vm/vm.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ApplicationsModule } from './applications/applications.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { UploadsModule } from './uploads/uploads.module';
     VmModule,
     AuditLogsModule,
     KnowledgeBaseModule,
+    ApplicationsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [

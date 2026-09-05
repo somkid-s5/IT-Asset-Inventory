@@ -3,10 +3,17 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AssetsService } from './assets.service';
 
 describe('AssetsService pagination', () => {
+  type CountArgs = {
+    where: {
+      OR: Array<{ location: { contains: string; mode: string } }>;
+    };
+  };
+  const findMany = jest.fn();
+  const count = jest.fn();
   const prisma = {
     asset: {
-      findMany: jest.fn(),
-      count: jest.fn(),
+      findMany,
+      count,
     },
   } as unknown as PrismaService;
   const credentialsService = {} as CredentialsService;
@@ -15,7 +22,7 @@ describe('AssetsService pagination', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     service = new AssetsService(prisma, credentialsService);
-    prisma.asset.findMany = jest.fn().mockResolvedValue([
+    findMany.mockResolvedValue([
       {
         id: 'asset-1',
         credentials: [],
@@ -26,7 +33,7 @@ describe('AssetsService pagination', () => {
         parent: null,
       },
     ]);
-    prisma.asset.count = jest.fn().mockResolvedValue(25);
+    count.mockResolvedValue(25);
   });
 
   it('queries only the requested page and returns pagination metadata', async () => {
@@ -36,20 +43,20 @@ describe('AssetsService pagination', () => {
       sortDir: 'desc',
     });
 
-    expect(prisma.asset.findMany).toHaveBeenCalledWith(
+    expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         skip: 10,
         take: 10,
         orderBy: { name: 'desc' },
       }),
     );
-    expect(prisma.asset.count).toHaveBeenCalledWith({
-      where: expect.objectContaining({
-        OR: expect.arrayContaining([
-          { location: { contains: 'server', mode: 'insensitive' } },
-        ]),
-      }),
-    });
+    expect(count).toHaveBeenCalled();
+    const [[countArgs]] = count.mock.calls as unknown as [[CountArgs]];
+    expect(countArgs.where.OR).toEqual(
+      expect.arrayContaining([
+        { location: { contains: 'server', mode: 'insensitive' } },
+      ]),
+    );
     expect(result).toMatchObject({
       total: 25,
       page: 2,
@@ -62,7 +69,7 @@ describe('AssetsService pagination', () => {
   it('caps a requested page size at 200', async () => {
     const result = await service.findAll(1, 1000);
 
-    expect(prisma.asset.findMany).toHaveBeenCalledWith(
+    expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 200 }),
     );
     expect(result.limit).toBe(200);

@@ -70,6 +70,17 @@ enum DatabaseStatus {
   MAINTENANCE
 }
 
+enum ApplicationStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ApplicationEnvironmentName {
+  PROD
+  UAT
+  TEST
+}
+
 enum VmSourceStatus {
   READY_TO_SYNC
   HEALTHY
@@ -93,6 +104,12 @@ enum AuditAction {
   CREATE_DATABASE
   UPDATE_DATABASE
   DELETE_DATABASE
+  CREATE_APPLICATION
+  UPDATE_APPLICATION
+  ARCHIVE_APPLICATION
+  RESTORE_APPLICATION
+  VIEW_APPLICATION_PASSWORD
+  COPY_APPLICATION_PASSWORD
   CREATE_VM
   UPDATE_VM
   DELETE_VM
@@ -141,6 +158,84 @@ model User {
   assetAttachments    AssetAttachment[]
 
   writtenDocuments KnowledgeDocument[]
+  applications     Application[]
+}
+
+model Application {
+  id              String                   @id @default(uuid())
+  name            String                   @unique
+  technicalOwner  String?
+  businessUnit    String?
+  description     String?
+  status          ApplicationStatus        @default(ACTIVE)
+  createdByUserId String
+  createdByUser   User                     @relation(fields: [createdByUserId], references: [id])
+  environments    ApplicationEnvironment[]
+  access          ApplicationAccess[]
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  @@index([status])
+  @@index([technicalOwner])
+  @@index([businessUnit])
+}
+
+model ApplicationEnvironment {
+  id            String                     @id @default(uuid())
+  applicationId String
+  application   Application                @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name          ApplicationEnvironmentName
+  noDatabase    Boolean                    @default(false)
+  sortOrder     Int                        @default(0)
+  components    ApplicationComponent[]
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+
+  @@unique([applicationId, name])
+  @@index([applicationId, sortOrder])
+}
+
+model ApplicationComponent {
+  id               String                 @id @default(uuid())
+  environmentId    String
+  environment      ApplicationEnvironment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?
+  sortOrder        Int                    @default(0)
+  logicalDatabases LogicalDatabase[]
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@unique([environmentId, name])
+  @@index([environmentId, sortOrder])
+}
+
+model ApplicationAccess {
+  id            String                  @id @default(uuid())
+  applicationId String
+  application   Application             @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  label         String
+  address       String
+  method        String
+  credentials   ApplicationCredential[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@index([applicationId])
+}
+
+model ApplicationCredential {
+  id                String            @id @default(uuid())
+  accessId          String
+  access            ApplicationAccess @relation(fields: [accessId], references: [id], onDelete: Cascade)
+  username          String
+  encryptedPassword String
+  role              String?
+  lastChangedDate   DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([accessId])
 }
 
 model IPAllocation {
@@ -280,9 +375,10 @@ model DatabaseInventory {
   createdByUserId String
   createdByUser   User   @relation(fields: [createdByUserId], references: [id])
 
-  accounts  DatabaseAccount[]
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  accounts         DatabaseAccount[]
+  logicalDatabases LogicalDatabase[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([status])
   @@index([engine])
@@ -299,9 +395,27 @@ model DatabaseAccount {
   encryptedPassword String
   privileges        String[]
   note              String?
+  scope             String            @default("INSTANCE")
+  logicalDatabases  LogicalDatabase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model LogicalDatabase {
+  id                  String                 @id @default(uuid())
+  databaseInventoryId String
+  databaseInventory   DatabaseInventory      @relation(fields: [databaseInventoryId], references: [id], onDelete: Cascade)
+  name                String
+  description         String?
+  components          ApplicationComponent[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  DatabaseAccount     DatabaseAccount?       @relation(fields: [databaseAccountId], references: [id])
+  databaseAccountId   String?
+
+  @@unique([databaseInventoryId, name])
+  @@index([databaseInventoryId])
 }
 
 model VmVCenterSource {

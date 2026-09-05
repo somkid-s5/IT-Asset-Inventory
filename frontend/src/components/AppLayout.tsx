@@ -1,15 +1,26 @@
-import { useState, useEffect, type ReactNode } from 'react';
-import { AppSidebar } from '@/components/AppSidebar';
-import { AppBreadcrumbs } from '@/components/AppBreadcrumbs';
-import { BrandMark } from '@/components/BrandMark';
-import { UserAvatar } from '@/components/UserAvatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/contexts/AuthContext';
-import { PageHeaderProvider, usePageHeader } from '@/contexts/PageHeaderContext';
-import { LogOut, Moon, Sun, Menu, X } from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useTheme } from 'next-themes';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, type ReactNode } from "react";
+import { AppSidebar } from "@/components/AppSidebar";
+import { AppBreadcrumbs } from "@/components/AppBreadcrumbs";
+import { BrandMark } from "@/components/BrandMark";
+import { UserAvatar } from "@/components/UserAvatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  PageHeaderProvider,
+  usePageHeader,
+} from "@/contexts/PageHeaderContext";
+import { LogOut, Moon, Sun, Menu, X } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
+import { motion, AnimatePresence } from "framer-motion";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -30,11 +41,13 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const { header } = usePageHeader();
   const [isNavigating, setIsNavigating] = useState(false);
-  
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === "undefined") return false;
     try {
-      return window.localStorage.getItem('assetops.sidebar.collapsed') === 'true';
+      return (
+        window.localStorage.getItem("assetops.sidebar.collapsed") === "true"
+      );
     } catch {
       return false;
     }
@@ -45,19 +58,19 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsNavigating(true);
     const timer = setTimeout(() => setIsNavigating(false), 300);
-    
+
     // Auto-close sidebar on mobile when navigating
     if (window.innerWidth < 1024) {
       setSidebarCollapsed(true);
     }
-    
+
     return () => clearTimeout(timer);
   }, [pathname]);
 
   const toggleSidebar = () => {
     setSidebarCollapsed((current) => {
       const next = !current;
-      window.localStorage.setItem('assetops.sidebar.collapsed', String(next));
+      window.localStorage.setItem("assetops.sidebar.collapsed", String(next));
       return next;
     });
   };
@@ -67,7 +80,7 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
       {/* Navigation Progress Bar */}
       <AnimatePresence>
         {isNavigating && (
-          <motion.div 
+          <motion.div
             initial={{ width: "0%", opacity: 1 }}
             animate={{ width: "100%", opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -78,11 +91,14 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
       </AnimatePresence>
 
       <div className="flex min-h-screen w-full">
-        <AppSidebar collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+        <AppSidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebar}
+        />
 
         {/* Mobile Backdrop */}
         {!sidebarCollapsed && (
-          <div 
+          <div
             className="fixed inset-0 z-30 bg-background/60 backdrop-blur-sm transition-opacity lg:hidden"
             onClick={toggleSidebar}
           />
@@ -97,13 +113,17 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
                   className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background hover:bg-muted lg:hidden"
                   aria-label="Toggle Menu"
                 >
-                  {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                  {sidebarCollapsed ? (
+                    <Menu className="h-4 w-4" />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
                 </button>
-                
+
                 <div className="lg:hidden">
                   <BrandMark compact />
                 </div>
-                
+
                 <AnimatePresence mode="wait">
                   {header ? (
                     <motion.div
@@ -128,14 +148,19 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
               </div>
 
               <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                <GlobalSearch />
                 <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                   className="group relative flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background transition-all hover:border-primary/30 hover:bg-muted"
-                  title={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
-                  aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
+                  title={
+                    theme === "dark" ? "Use light theme" : "Use dark theme"
+                  }
+                  aria-label={
+                    theme === "dark" ? "Use light theme" : "Use dark theme"
+                  }
                 >
                   <div className="relative h-4 w-4 transition-transform duration-500 group-hover:rotate-45">
-                    {theme === 'dark' ? (
+                    {theme === "dark" ? (
                       <Sun className="h-4 w-4 text-warning" />
                     ) : (
                       <Moon className="h-4 w-4 text-primary" />
@@ -147,34 +172,52 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button aria-label="Open account menu" className="group flex items-center gap-2 rounded-xl border border-transparent p-1 px-1 transition-all hover:bg-muted/50">
+                    <button
+                      aria-label="Open account menu"
+                      className="group flex items-center gap-2 rounded-xl border border-transparent p-1 px-1 transition-all hover:bg-muted/50"
+                    >
                       <div className="relative">
                         <UserAvatar
                           seed={user?.avatarSeed}
                           imageUrl={user?.avatarImage}
-                          label={user?.displayName ?? 'Admin'}
+                          label={user?.displayName ?? "Admin"}
                           className="h-7 w-7 border-border/50 ring-0"
                         />
                         <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-card bg-success" />
                       </div>
                       <div className="hidden min-w-0 text-left sm:block">
-                        <div className="truncate text-xs font-bold leading-none text-foreground">{user?.displayName ?? 'User'}</div>
+                        <div className="truncate text-xs font-bold leading-none text-foreground">
+                          {user?.displayName ?? "User"}
+                        </div>
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-60 rounded-2xl border-border/80 p-2 shadow-2xl">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-60 rounded-2xl border-border/80 p-2 shadow-2xl"
+                  >
                     <DropdownMenuLabel className="px-3 py-3">
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm font-bold text-foreground">{user?.displayName}</span>
-                        <span className="text-xs text-muted-foreground">@{user?.username}</span>
+                        <span className="text-sm font-bold text-foreground">
+                          {user?.displayName}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          @{user?.username}
+                        </span>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="opacity-50" />
-                    <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="rounded-lg py-2.5 cursor-pointer">
+                    <DropdownMenuItem
+                      onClick={() => router.push("/dashboard/profile")}
+                      className="rounded-lg py-2.5 cursor-pointer"
+                    >
                       My Profile
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="opacity-50" />
-                    <DropdownMenuItem onClick={logout} className="rounded-lg py-2.5 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
+                    <DropdownMenuItem
+                      onClick={logout}
+                      className="rounded-lg py-2.5 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                    >
                       <LogOut className="h-4 w-4 mr-2" />
                       Log Out
                     </DropdownMenuItem>
@@ -184,10 +227,12 @@ function AppLayoutFrame({ children }: AppLayoutProps) {
             </div>
           </header>
 
-          <main id="main-content" className="relative flex-1 px-4 pb-10 pt-5 sm:px-5 lg:px-7 lg:pt-6" tabIndex={-1}>
-            <div className="app-shell">
-              {children}
-            </div>
+          <main
+            id="main-content"
+            className="relative flex-1 px-4 pb-10 pt-5 sm:px-5 lg:px-7 lg:pt-6"
+            tabIndex={-1}
+          >
+            <div className="app-shell">{children}</div>
           </main>
         </div>
       </div>
