@@ -55,6 +55,14 @@ export class VmController {
   ) {
     return this.vmService.archiveSource(id, req.user.id);
   }
+  @Roles(Role.ADMIN)
+  @Patch('sources/:id/restore')
+  restoreSource(
+    @Param('id') id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.vmService.restoreSource(id, req.user.id);
+  }
 
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post('sources/sync-all')

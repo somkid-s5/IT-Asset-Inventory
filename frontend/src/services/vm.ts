@@ -70,6 +70,10 @@ export async function archiveVmSource(id: string) {
   await api.patch(`/vm/sources/${id}/archive`);
 }
 
+export async function restoreVmSource(id: string) {
+  await api.patch(`/vm/sources/${id}/restore`);
+}
+
 export async function syncAllVmSources() {
   const response = await api.post<VmSourceActionResult>('/vm/sources/sync-all');
   return response.data;

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   AlertTriangle, PlugZap, CheckCircle2, Clock3,
   LoaderCircle, Pencil, Plus, RefreshCw, Server,
-  Archive, Search, ChevronLeft, ChevronRight, ArrowLeft, Workflow,
+  Archive, ArchiveRestore, Search, ChevronLeft, ChevronRight, ArrowLeft, Workflow,
   CircleAlert, Boxes, type LucideIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { VmVCenterSource } from '@/lib/vm-inventory';
-import { archiveVmSource, createVmSource, getVmSources, syncAllVmSources, syncVmSource, testVmSourceConnection, updateVmSource } from '@/services/vm';
+import { archiveVmSource, createVmSource, getVmSources, restoreVmSource, syncAllVmSources, syncVmSource, testVmSourceConnection, updateVmSource } from '@/services/vm';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { fadeInUp } from '@/lib/animations';
@@ -172,6 +172,14 @@ export default function VmSourcesPage() {
     } catch { toast.error('Failed to archive source'); }
   }, [deleteTarget, refetch]);
 
+  const handleRestoreSource = useCallback(async (source: VmVCenterSource) => {
+    try {
+      await restoreVmSource(source.id);
+      toast.success(`${source.name} restored`);
+      void refetch();
+    } catch { toast.error('Failed to restore source'); }
+  }, [refetch]);
+
   const columns = useMemo<ColumnDef<VmVCenterSource>[]>(() => [
     {
       accessorKey: 'name',
@@ -219,8 +227,8 @@ export default function VmSourcesPage() {
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label={`Edit ${source.name}`} title="Edit source" disabled={isSyncing} onClick={() => openEditDialog(source)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label={`Archive ${source.name}`} title="Archive source" disabled={isSyncing || source.status === 'ARCHIVED'} onClick={() => setDeleteTarget(source)}>
-              <Archive className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label={`${source.status === 'ARCHIVED' ? 'Restore' : 'Archive'} ${source.name}`} title={`${source.status === 'ARCHIVED' ? 'Restore' : 'Archive'} source`} disabled={isSyncing} onClick={() => source.status === 'ARCHIVED' ? void handleRestoreSource(source) : setDeleteTarget(source)}>
+              {source.status === 'ARCHIVED' ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
             </Button>
           </div>
         );

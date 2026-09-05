@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MultiCheckbox } from "@/components/ui/multi-checkbox";
 import {
   Database,
   Eye,
@@ -1115,26 +1116,7 @@ export function AssetFormDialog({
                 Link this asset to the applications it supports.
               </p>
             </div>
-            <select
-              aria-label="Application components"
-              multiple
-              value={componentIds}
-              onChange={(event) =>
-                setComponentIds(
-                  Array.from(
-                    event.target.selectedOptions,
-                    (option) => option.value,
-                  ),
-                )
-              }
-              className="min-h-20 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
-            >
-              {availableComponents.map((component) => (
-                <option key={component.id} value={component.id}>
-                  {component.label}
-                </option>
-              ))}
-            </select>
+            <MultiCheckbox label="Application components" options={availableComponents} value={componentIds} onChange={setComponentIds} />
           </section>
 
           <section className="muted-panel p-4">

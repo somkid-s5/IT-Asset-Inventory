@@ -1563,6 +1563,27 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return { success: true, status: VmSourceStatus.ARCHIVED };
   }
 
+  async restoreSource(id: string, userId: string) {
+    this.ensureSeedData();
+    const source = await this.prisma.vmVCenterSource.findUnique({
+      where: { id },
+    });
+    if (!source) throw new NotFoundException(`VM source ${id} not found`);
+    await this.prisma.vmVCenterSource.update({
+      where: { id },
+      data: { status: VmSourceStatus.READY_TO_SYNC },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.VCENTER_SYNC,
+        targetId: id,
+        details: `Restored vCenter source: ${source.name}`,
+      },
+    });
+    return { success: true, status: VmSourceStatus.READY_TO_SYNC };
+  }
+
   async syncAllSources() {
     this.ensureSeedData();
     const sources = await this.prisma.vmVCenterSource.findMany({
