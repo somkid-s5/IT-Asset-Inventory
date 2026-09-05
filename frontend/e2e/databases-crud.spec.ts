@@ -66,7 +66,7 @@ test.describe('Databases CRUD Operations', () => {
     await menuBtn.click();
     await page.getByRole('menuitem', { name: 'Archive Database' }).click();
 
-    // Confirm Delete
+    // Confirm Archive
     const confirmBtn = page.getByRole('button', { name: 'Confirm Archive' });
     await expect(confirmBtn).toBeVisible();
     await confirmBtn.click();

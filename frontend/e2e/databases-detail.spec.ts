@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Database Detail View Specs', () => {
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
-  test('should create, view details, and delete database', async ({ page }) => {
+  test('should create, view details, and archive database', async ({ page }) => {
     const dbUniqueName = `e2e-detail-db-${Date.now()}`;
 
     await page.goto('/dashboard/databases');
@@ -53,24 +53,24 @@ test.describe('Database Detail View Specs', () => {
     await expect(page.getByText('detail_user')).toBeVisible();
     await expect(page.getByText('detail-db-host.local')).toBeVisible();
 
-    // Clean up: navigate back and delete the database
+    // Clean up: navigate back and archive the database
     await page.goto('/dashboard/databases');
     await expect(page.getByRole('heading', { name: 'Relational Database Inventory' })).toBeVisible({ timeout: 10000 });
 
     await page.getByPlaceholder('Search databases...').fill(dbUniqueName);
-    const rowToDelete = page.getByRole('row').filter({ hasText: dbUniqueName });
-    await expect(rowToDelete).toBeVisible();
+    const rowToArchive = page.getByRole('row').filter({ hasText: dbUniqueName });
+    await expect(rowToArchive).toBeVisible();
 
-    const menuBtn = rowToDelete.getByRole('button', { name: 'Database Actions' });
+    const menuBtn = rowToArchive.getByRole('button', { name: 'Database Actions' });
     await menuBtn.click();
-    await page.getByRole('menuitem', { name: 'Delete Database' }).click();
+    await page.getByRole('menuitem', { name: 'Archive Database' }).click();
 
-    const confirmBtn = page.getByRole('button', { name: 'Confirm Delete' });
+    const confirmBtn = page.getByRole('button', { name: 'Confirm Archive' });
     await expect(confirmBtn).toBeVisible();
     await confirmBtn.click();
 
-    // Verify deletion
-    await expect(page.getByText('Database deleted successfully')).toBeVisible();
-    await expect(rowToDelete).not.toBeVisible();
+    // Verify archive
+    await expect(page.getByText('Database archived successfully')).toBeVisible();
+    await expect(rowToArchive).not.toBeVisible();
   });
 });

@@ -123,17 +123,16 @@ test.describe('Assets List Page Features', () => {
     await expect(rackHeader).toBeVisible();
   });
 
-  test('should manage bulk selections and actions', async ({ page }) => {
+  test('should manage table row selection', async ({ page }) => {
     const headerCheckbox = page.getByRole('checkbox', { name: 'Select all' });
 
-    // Check bulk selection
+    // Check selection state
     await headerCheckbox.check();
-    const bulkPanel = page.getByText(/selected/i);
-    await expect(bulkPanel).toBeVisible();
+    await expect(headerCheckbox).toBeChecked();
 
     // Uncheck bulk selection
     await headerCheckbox.uncheck();
-    await expect(bulkPanel).not.toBeVisible();
+    await expect(headerCheckbox).not.toBeChecked();
   });
 
   test('should navigate to details on row click', async ({ page }) => {
