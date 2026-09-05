@@ -17,6 +17,7 @@ import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { SearchModule } from './search/search.module';
+import { ExportModule } from './export/export.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { SearchModule } from './search/search.module';
     KnowledgeBaseModule,
     ApplicationsModule,
     SearchModule,
+    ExportModule,
   ],
   controllers: [AppController],
   providers: [
