@@ -33,6 +33,7 @@ export interface DatabaseInventoryItem {
   accountsCount: number;
   createdAt?: string;
   updatedAt?: string;
+  documentLinks?: Array<{ id: string; title: string; updatedAt?: string }>;
 }
 
 export interface DatabaseAccountDetail {

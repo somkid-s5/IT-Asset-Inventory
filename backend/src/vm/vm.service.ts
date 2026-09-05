@@ -51,6 +51,11 @@ const VM_INVENTORY_INCLUDE = {
       },
     },
   },
+  documentLinks: {
+    include: {
+      document: { select: { id: true, title: true, updatedAt: true } },
+    },
+  },
 };
 
 type VmInventoryWithRelations = Prisma.VmInventoryGetPayload<{
@@ -542,6 +547,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         application: link.component.environment.application,
         environment: link.component.environment.name,
       })),
+      documentLinks: inventory.documentLinks.map(({ document }) => document),
       sourceHistory: inventory.source
         ? [
             {
@@ -2007,23 +2013,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     this.ensureSeedData();
     const inventory = await this.prisma.vmInventory.findUnique({
       where: { id },
-      include: {
-        source: true,
-        guestAccounts: true,
-        componentLinks: {
-          include: {
-            component: {
-              include: {
-                environment: {
-                  include: {
-                    application: { select: { id: true, name: true } },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      include: VM_INVENTORY_INCLUDE,
     });
 
     if (!inventory) {

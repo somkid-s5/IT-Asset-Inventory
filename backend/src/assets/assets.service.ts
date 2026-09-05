@@ -19,6 +19,11 @@ type AssetWithRelations = Prisma.AssetGetPayload<{
     children: true;
     credentials: true;
     componentLinks: true;
+    documentLinks: {
+      include: {
+        document: { select: { id: true; title: true; updatedAt: true } };
+      };
+    };
     notes: {
       include: {
         createdByUser: {
@@ -153,6 +158,7 @@ export class AssetsService {
   private toDetail(asset: AssetWithRelations) {
     return {
       ...asset,
+      documentLinks: asset.documentLinks.map(({ document }) => document),
       credentials: asset.credentials.map((credential) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { encryptedPassword, ...rest } = credential;
@@ -334,6 +340,11 @@ export class AssetsService {
             },
           },
           componentLinks: true,
+          documentLinks: {
+            include: {
+              document: { select: { id: true, title: true, updatedAt: true } },
+            },
+          },
           notes: {
             include: {
               createdByUser: {
@@ -523,6 +534,11 @@ export class AssetsService {
         children: true,
         credentials: true,
         componentLinks: true,
+        documentLinks: {
+          include: {
+            document: { select: { id: true, title: true, updatedAt: true } },
+          },
+        },
         notes: {
           include: {
             createdByUser: {
@@ -613,6 +629,11 @@ export class AssetsService {
           children: true,
           credentials: true,
           componentLinks: true,
+          documentLinks: {
+            include: {
+              document: { select: { id: true, title: true, updatedAt: true } },
+            },
+          },
           notes: {
             include: {
               createdByUser: {

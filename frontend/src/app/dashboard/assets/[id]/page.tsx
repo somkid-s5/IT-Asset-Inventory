@@ -54,6 +54,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { InventoryDocuments } from "@/components/InventoryDocuments";
 import { HARDWARE_SPEC_GROUPS, normalizeSpecKey, type HardwareSpecGroup } from "@/lib/asset-specs";
 import {
   Dialog,
@@ -140,6 +141,7 @@ interface Asset {
   children?: { id: string; name: string; type: AssetType }[];
   notes?: AssetNote[];
   attachments?: AssetAttachment[];
+  documentLinks?: Array<{ id: string; title: string; updatedAt?: string }>;
 }
 
 interface AccessRow {
@@ -2366,6 +2368,8 @@ export default function AssetDetailsPage() {
               </div>
             </section>
           )}
+
+          <InventoryDocuments documents={asset.documentLinks} />
 
           {/* Attachments Section */}
           <AttachmentsSection

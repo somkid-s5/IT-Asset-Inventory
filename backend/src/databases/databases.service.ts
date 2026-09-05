@@ -14,6 +14,11 @@ type DatabaseWithAccounts = Prisma.DatabaseInventoryGetPayload<{
   include: {
     accounts: true;
     logicalDatabases: { include: { components: true } };
+    documentLinks: {
+      include: {
+        document: { select: { id: true; title: true; updatedAt: true } };
+      };
+    };
     hostAsset: { select: { id: true; name: true; assetId: true } };
     hostVm: { select: { id: true; name: true; systemName: true } };
     createdByUser: true;
@@ -99,6 +104,7 @@ export class DatabasesService {
       responsibleParty: database.responsibleParty,
       hostAsset: database.hostAsset,
       hostVm: database.hostVm,
+      documentLinks: database.documentLinks.map(({ document }) => document),
       accountsCount: database.accounts.length,
       logicalDatabases: database.logicalDatabases.map((logicalDatabase) => ({
         id: logicalDatabase.id,
@@ -189,6 +195,11 @@ export class DatabasesService {
         hostAsset: { select: { id: true, name: true, assetId: true } },
         hostVm: { select: { id: true, name: true, systemName: true } },
         createdByUser: true,
+        documentLinks: {
+          include: {
+            document: { select: { id: true, title: true, updatedAt: true } },
+          },
+        },
       },
     });
 
@@ -222,6 +233,11 @@ export class DatabasesService {
         hostAsset: { select: { id: true, name: true, assetId: true } },
         hostVm: { select: { id: true, name: true, systemName: true } },
         createdByUser: true,
+        documentLinks: {
+          include: {
+            document: { select: { id: true, title: true, updatedAt: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -282,6 +298,11 @@ export class DatabasesService {
         hostAsset: { select: { id: true, name: true, assetId: true } },
         hostVm: { select: { id: true, name: true, systemName: true } },
         createdByUser: true,
+        documentLinks: {
+          include: {
+            document: { select: { id: true, title: true, updatedAt: true } },
+          },
+        },
       },
     });
 
@@ -414,6 +435,11 @@ export class DatabasesService {
         hostAsset: { select: { id: true, name: true, assetId: true } },
         hostVm: { select: { id: true, name: true, systemName: true } },
         createdByUser: true,
+        documentLinks: {
+          include: {
+            document: { select: { id: true, title: true, updatedAt: true } },
+          },
+        },
       },
     });
 

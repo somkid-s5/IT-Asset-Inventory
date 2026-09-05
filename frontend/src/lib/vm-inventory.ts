@@ -123,6 +123,7 @@ export interface VmInventoryDetail extends VmInventoryItem {
   sourceHistory: VmSourceHistoryItem[];
   guestAccounts: VmGuestAccount[];
   components?: Array<{ id: string; name: string; environment: VmInventoryEnvironment; application: { id: string; name: string } }>;
+  documentLinks?: Array<{ id: string; title: string; updatedAt?: string }>;
 }
 
 export const VM_ENVIRONMENT_FILTERS: Array<{ label: string; value: 'ALL' | VmInventoryEnvironment }> = [

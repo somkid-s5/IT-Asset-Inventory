@@ -24,6 +24,7 @@ import {
 } from "@/lib/database-inventory";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { InventoryDocuments } from "@/components/InventoryDocuments";
 
 export default function DatabaseDetailPage() {
   const params = useParams();
@@ -282,6 +283,8 @@ export default function DatabaseDetailPage() {
           </div>
         </section>
       </div>
+
+      <InventoryDocuments documents={database.documentLinks} />
 
     <section className="glass-card overflow-hidden">
       <div className="flex flex-col gap-2 border-b border-border/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">

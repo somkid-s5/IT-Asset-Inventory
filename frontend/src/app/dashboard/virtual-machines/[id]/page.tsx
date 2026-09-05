@@ -16,6 +16,7 @@ import { archiveVmInventory, getVmInventoryById, revealVmGuestAccountPassword } 
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import api from '@/services/api';
+import { InventoryDocuments } from '@/components/InventoryDocuments';
 
 export default function VmDetailPage() {
   const params = useParams();
@@ -381,6 +382,8 @@ export default function VmDetailPage() {
         </div>
 
       </div>
+
+      <InventoryDocuments documents={vm.documentLinks} />
 
       <VmFormDialog open={editOpen} onOpenChange={setEditOpen} vmToEdit={vm} onSuccess={() => void loadVm()} />
       

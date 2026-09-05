@@ -34,6 +34,11 @@ const include = {
     include: { credentials: true, environment: true },
     orderBy: { createdAt: 'asc' as const },
   },
+  documentLinks: {
+    include: {
+      document: { select: { id: true, title: true, updatedAt: true } },
+    },
+  },
   createdByUser: { select: { id: true, displayName: true, username: true } },
 } satisfies Prisma.ApplicationInclude;
 type ApplicationWithRelations = Prisma.ApplicationGetPayload<{
@@ -108,6 +113,7 @@ export class ApplicationsService {
         })),
       })),
       access: app.access.map(projectAccess),
+      documentLinks: app.documentLinks.map(({ document }) => document),
     };
   }
 
