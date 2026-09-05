@@ -122,7 +122,7 @@ export class ApplicationsController {
   ) {
     return this.service.update(id, dto, req.user.id);
   }
-  @Roles(Role.ADMIN, Role.EDITOR) @Patch(':id/archive') archive(
+  @Roles(Role.ADMIN) @Patch(':id/archive') archive(
     @Param('id') id: string,
     @Request() req: { user: { id: string } },
   ) {

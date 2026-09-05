@@ -47,7 +47,7 @@ export class VmController {
     return this.vmService.updateSource(id, dto, req.user.id);
   }
 
-  @Roles(Role.ADMIN, Role.EDITOR)
+  @Roles(Role.ADMIN)
   @Delete('sources/:id')
   removeSource(
     @Param('id') id: string,

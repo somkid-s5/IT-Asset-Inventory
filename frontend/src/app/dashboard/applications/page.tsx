@@ -91,6 +91,10 @@ export default function ApplicationsPage() {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["applications"] }),
   });
+  const restore = useMutation({
+    mutationFn: (id: string) => api.patch(`/applications/${id}/restore`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["applications"] }),
+  });
   const canEdit = user?.role === "ADMIN" || user?.role === "EDITOR";
   const visible = useMemo(
     () => data.filter((app) => showArchived || app.status === "ACTIVE"),
@@ -132,10 +136,10 @@ export default function ApplicationsPage() {
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => user?.role === "ADMIN" && row.original.status === "ACTIVE" ? <Button variant="ghost" size="sm" onClick={() => archive.mutate(row.original.id)}>Archive</Button> : null,
+        cell: ({ row }) => user?.role === "ADMIN" && row.original.status === "ACTIVE" ? <Button variant="ghost" size="sm" onClick={() => archive.mutate(row.original.id)}>Archive</Button> : user?.role === "ADMIN" && row.original.status === "ARCHIVED" ? <Button variant="ghost" size="sm" onClick={() => restore.mutate(row.original.id)}>Restore</Button> : null,
       },
     ],
-    [archive, user?.role],
+    [archive, restore, user?.role],
   );
   const table = useReactTable({
     data: visible,
