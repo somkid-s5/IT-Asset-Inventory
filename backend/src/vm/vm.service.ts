@@ -1809,7 +1809,19 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             : ((discovery.disks ?? undefined) as
                 | Prisma.InputJsonValue
                 | undefined);
-        const componentIds = [...new Set(dto.componentIds ?? [])];
+        const existingInventory = await tx.vmInventory.findUnique({
+          where: { discoveryId: id },
+          select: { componentLinks: { select: { componentId: true } } },
+        });
+        const componentIds = [
+          ...new Set(
+            dto.componentIds ??
+              existingInventory?.componentLinks.map(
+                (link) => link.componentId,
+              ) ??
+              [],
+          ),
+        ];
         if (componentIds.length) {
           const componentCount = await tx.applicationComponent.count({
             where: { id: { in: componentIds } },
