@@ -12,6 +12,7 @@ import {
   Headers,
   UnauthorizedException,
   ConflictException,
+  GoneException,
 } from '@nestjs/common';
 import * as express from 'express';
 import type { Response } from 'express';
@@ -34,28 +35,10 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(
-    @Body() registerDto: RegisterDto,
-    @Res({ passthrough: true }) res: Response,
-    @Headers('x-registration-key') registrationKey?: string,
-  ) {
-    const secret =
-      process.env.BOOTSTRAP_SECRET ?? process.env.REGISTRATION_SECRET;
-    if (!secret || registrationKey !== secret) {
-      throw new UnauthorizedException(
-        'Registration is restricted. Valid registration key required.',
-      );
-    }
-
-    if ((await this.authService.getUserCount()) > 0) {
-      throw new ConflictException(
-        'Self-registration is disabled after the initial administrator is created.',
-      );
-    }
-
-    const result = await this.authService.register(registerDto, true);
-    this.setAuthCookie(res, result.access_token);
-    return { user: result.user };
+  register() {
+    throw new GoneException(
+      'Self-registration is disabled. Use the one-time bootstrap endpoint.',
+    );
   }
 
   /** One-time bootstrap endpoint for the first administrator account. */

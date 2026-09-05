@@ -8,9 +8,13 @@ import api from "@/services/api";
 import { Application } from "@/lib/application";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/EmptyState";
+import { useAuth } from "@/contexts/AuthContext";
+import { AppWindow } from "lucide-react";
 
 export default function ApplicationDetailPage() {
   const params = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { setHeader } = usePageHeader();
   const { data, isLoading } = useQuery({
     queryKey: ["application", params.id],
@@ -35,7 +39,7 @@ export default function ApplicationDetailPage() {
       <p className="text-sm text-muted-foreground">Loading application…</p>
     );
   if (!data)
-    return <p className="text-sm text-destructive">Application not found.</p>;
+    return <EmptyState icon={AppWindow} title="Application not found" description="The application may have been archived or removed." />;
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -73,7 +77,7 @@ export default function ApplicationDetailPage() {
                 <div key={item.id} className="rounded-lg border p-3 text-sm">
                   <p className="font-medium">{item.label}</p>
                   <p className="text-muted-foreground">
-                    {item.method} · {item.address}
+                    {item.method} · {user?.role === "ADMIN" || user?.role === "EDITOR" ? item.address : "Restricted"}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {item.credentials.length} credential(s)
@@ -81,9 +85,7 @@ export default function ApplicationDetailPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No access points recorded.
-              </p>
+              <EmptyState icon={AppWindow} title="No access points" description="No application access points have been recorded yet." className="border-none bg-transparent py-4" />
             )}
           </CardContent>
         </Card>
@@ -114,14 +116,12 @@ export default function ApplicationDetailPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  No components yet.
-                </p>
+                <EmptyState icon={AppWindow} title="No components" description="Add a component to map compute and database dependencies." className="border-none bg-transparent py-4" />
               )}
               {env.access?.length ? (
                 <div className="mt-4 border-t pt-3">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Access</p>
-                  {env.access.map((access) => <p key={access.id} className="mt-1 text-xs">{access.label} · {access.method} · {access.address}</p>)}
+                  {env.access.map((access) => <p key={access.id} className="mt-1 text-xs">{access.label} · {access.method} · {user?.role === "ADMIN" || user?.role === "EDITOR" ? access.address : "Restricted"}</p>)}
                 </div>
               ) : null}
             </div>

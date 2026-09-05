@@ -21,7 +21,6 @@ type SearchResult = {
   title?: string;
   assetId?: string | null;
   systemName?: string;
-  primaryIp?: string;
   engine?: string;
   host?: string;
   category?: { name: string };
@@ -125,7 +124,7 @@ export function GlobalSearch() {
                 {items.map((item) => (
                   <CommandItem
                     key={item.id}
-                    value={`${item.name ?? item.title ?? ""} ${item.host ?? ""} ${item.primaryIp ?? ""}`}
+                    value={`${item.name ?? item.title ?? ""} ${item.host ?? ""}`}
                     onSelect={() => {
                       setOpen(false);
                       router.push(href(item));

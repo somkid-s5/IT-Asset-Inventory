@@ -14,11 +14,15 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { InventoryExportDto } from './export.dto';
 import { InventoryExportService } from './inventory-export.service';
+import { AuthService } from '../auth/auth.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/export')
 export class InventoryExportController {
-  constructor(private readonly service: InventoryExportService) {}
+  constructor(
+    private readonly service: InventoryExportService,
+    private readonly authService: AuthService,
+  ) {}
   @Roles(Role.ADMIN)
   @Post('inventory')
   async export(
@@ -26,6 +30,10 @@ export class InventoryExportController {
     @Request() req: { user: { id: string } },
     @Res() res: Response,
   ) {
+    await this.authService.verifyCurrentPassword(
+      req.user.id,
+      dto.currentPassword,
+    );
     const workbook = await this.service.createWorkbook(
       dto.passphrase,
       req.user.id,

@@ -46,6 +46,7 @@ export class AuthService {
           email: null,
           passwordHash,
           role: userCount === 0 ? 'ADMIN' : 'VIEWER',
+          mustChangePassword: bootstrapOnly,
         },
       });
       await tx.auditLog.create({
@@ -57,7 +58,7 @@ export class AuthService {
             username: created.username,
             displayName: created.displayName,
             role: created.role,
-            source: 'self-register',
+            source: bootstrapOnly ? 'bootstrap' : 'admin-user-management',
           }),
         },
       });
@@ -69,7 +70,7 @@ export class AuthService {
         sub: user.id,
         username: user.username,
         role: user.role,
-        mustChangePassword: false,
+        mustChangePassword: user.mustChangePassword,
       }),
       user: {
         id: user.id,
@@ -78,7 +79,7 @@ export class AuthService {
         avatarSeed: user.avatarSeed,
         avatarImage: user.avatarImage,
         role: user.role,
-        mustChangePassword: false,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -154,6 +155,18 @@ export class AuthService {
         mustChangePassword: user.mustChangePassword,
       },
     };
+  }
+
+  async verifyCurrentPassword(userId: string, password: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (
+      !user ||
+      user.deletedAt ||
+      !(await bcrypt.compare(password, user.passwordHash))
+    ) {
+      throw new UnauthorizedException('Current password is invalid');
+    }
+    return true;
   }
 
   async me(userId: string) {

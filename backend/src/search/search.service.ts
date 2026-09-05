@@ -58,7 +58,7 @@ export class SearchService {
               { host: contains },
             ],
           },
-          select: { id: true, name: true, systemName: true, primaryIp: true },
+          select: { id: true, name: true, systemName: true },
           take: 8,
         }),
         this.prisma.databaseInventory.findMany({

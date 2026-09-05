@@ -26,14 +26,18 @@ export class ApplicationsController {
   @Get() findAll(
     @Query('includeArchived') includeArchived?: string,
     @Query('q') q?: string,
+    @Request() req?: { user: { role: Role } },
   ) {
-    return this.service.findAll(includeArchived === 'true', q);
+    return this.service.findAll(includeArchived === 'true', q, req?.user.role);
   }
   @Get('data-quality/summary') getDataQualitySummary() {
     return this.service.getDataQualitySummary();
   }
-  @Get(':id') findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  @Get(':id') findOne(
+    @Param('id') id: string,
+    @Request() req: { user: { role: Role } },
+  ) {
+    return this.service.findOne(id, req.user.role);
   }
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post(':id/environments')

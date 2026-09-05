@@ -182,6 +182,9 @@ export class DatabasesService {
         accounts: {
           select: { id: true },
         },
+        logicalDatabases: { include: { components: true } },
+        hostAsset: { select: { id: true, name: true, assetId: true } },
+        hostVm: { select: { id: true, name: true, systemName: true } },
         createdByUser: true,
       },
       orderBy: { createdAt: 'desc' },

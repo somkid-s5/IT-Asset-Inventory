@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ApplicationStatus, AuditAction, Prisma } from '@prisma/client';
+import { ApplicationStatus, AuditAction, Prisma, Role } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
@@ -50,7 +50,8 @@ export class ApplicationsService {
   private text(value?: string | null) {
     return value?.trim() || null;
   }
-  private project(app: ApplicationWithRelations) {
+  private project(app: ApplicationWithRelations, role: Role = Role.VIEWER) {
+    const canViewSensitive = role === Role.ADMIN || role === Role.EDITOR;
     const completeness = evaluateApplicationCompleteness({
       name: app.name,
       description: app.description,
@@ -96,6 +97,7 @@ export class ApplicationsService {
       })),
       access: app.access.map((item) => ({
         ...item,
+        address: canViewSensitive ? item.address : '[restricted]',
         credentials: item.credentials.map((c) => ({
           id: c.id,
           username: c.username,
@@ -186,7 +188,7 @@ export class ApplicationsService {
     }));
   }
 
-  async findAll(includeArchived = false, q?: string) {
+  async findAll(includeArchived = false, q?: string, role: Role = Role.VIEWER) {
     const where: Prisma.ApplicationWhereInput = {
       ...(includeArchived ? {} : { status: ApplicationStatus.ACTIVE }),
       ...(q?.trim()
@@ -204,16 +206,16 @@ export class ApplicationsService {
       include,
       orderBy: { name: 'asc' },
     });
-    return apps.map((app) => this.project(app));
+    return apps.map((app) => this.project(app, role));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, role: Role = Role.VIEWER) {
     const app = await this.prisma.application.findUnique({
       where: { id },
       include,
     });
     if (!app) throw new NotFoundException(`Application ${id} not found`);
-    return this.project(app);
+    return this.project(app, role);
   }
 
   async getDataQualitySummary() {

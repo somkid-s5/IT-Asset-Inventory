@@ -23,6 +23,12 @@ import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import {
   Table,
   TableBody,
   TableCell,
@@ -92,6 +98,48 @@ export default function ApplicationsPage() {
     () => data.filter((app) => showArchived || app.status === "ACTIVE"),
     [data, showArchived],
   );
+  const columns = useMemo<ColumnDef<Application>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Application",
+        cell: ({ row }) => (
+          <Link href={`/dashboard/applications/${row.original.id}`} className="flex items-center gap-2 font-semibold hover:text-primary">
+            <AppWindow className="h-4 w-4 text-primary" />
+            {row.original.name}
+            <ExternalLink className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+          </Link>
+        ),
+      },
+      {
+        id: "ownership",
+        header: "Owner / Business unit",
+        cell: ({ row }) => <div className="text-sm text-muted-foreground"><div>{row.original.technicalOwner || "Needs context"}</div><div>{row.original.businessUnit || "Needs context"}</div></div>,
+      },
+      {
+        id: "topology",
+        header: "Topology",
+        cell: ({ row }) => <span className="text-sm">{row.original.environments.length} env · {row.original.environments.reduce((count, env) => count + env.components.length, 0)} components · {row.original.access.length} access</span>,
+      },
+      {
+        id: "completeness",
+        header: "Completeness",
+        cell: ({ row }) => <Badge variant={row.original.completeness?.complete ? "default" : "secondary"}>{row.original.completeness?.completeness ?? 0}%</Badge>,
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => <Badge variant={row.original.status === "ACTIVE" ? "default" : "secondary"}>{row.original.status}</Badge>,
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => user?.role === "ADMIN" && row.original.status === "ACTIVE" ? <Button variant="ghost" size="sm" onClick={() => archive.mutate(row.original.id)}>Archive</Button> : null,
+      },
+    ],
+    [archive, user?.role],
+  );
+  const table = useReactTable({ data: visible, columns, getCoreRowModel: getCoreRowModel() });
 
   return (
     <div className="space-y-6">
@@ -190,47 +238,10 @@ export default function ApplicationsPage() {
             <div className="overflow-x-auto">
               <Table className="min-w-[760px]">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Application</TableHead>
-                    <TableHead>Owner / Business unit</TableHead>
-                    <TableHead>Topology</TableHead>
-                    <TableHead>Completeness</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
+                  {table.getHeaderGroups().map((headerGroup) => <TableRow key={headerGroup.id}>{headerGroup.headers.map((header) => <TableHead key={header.id} className={header.id === "actions" ? "text-right" : undefined}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}
                 </TableHeader>
                 <TableBody>
-                  {visible.map((app) => (
-                    <TableRow key={app.id} className="group">
-                      <TableCell>
-                        <Link href={`/dashboard/applications/${app.id}`} className="flex items-center gap-2 font-semibold hover:text-primary">
-                          <AppWindow className="h-4 w-4 text-primary" />
-                          {app.name}
-                          <ExternalLink className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        <div>{app.technicalOwner || "Needs context"}</div>
-                        <div>{app.businessUnit || "Needs context"}</div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {app.environments.length} env · {app.environments.reduce((count, env) => count + env.components.length, 0)} components · {app.access.length} access
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={app.completeness?.complete ? "default" : "secondary"}>
-                          {app.completeness?.completeness ?? 0}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={app.status === "ACTIVE" ? "default" : "secondary"}>{app.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {user?.role === "ADMIN" && app.status === "ACTIVE" && (
-                          <Button variant="ghost" size="sm" onClick={() => archive.mutate(app.id)}>Archive</Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {table.getRowModel().rows.map((row) => <TableRow key={row.id} className="group">{row.getVisibleCells().map((cell) => <TableCell key={cell.id} className={cell.column.id === "actions" ? "text-right" : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
                 </TableBody>
               </Table>
             </div>
