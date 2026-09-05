@@ -55,7 +55,7 @@ test.describe('Assets List Page Features', () => {
 
   test('should paginate assets from the server', async ({ page }) => {
     const pageSize = page.getByRole('combobox');
-    await pageSize.selectOption('5');
+    await pageSize.selectOption('2');
 
     await expect(page.getByText(/Total \d+ items/)).toBeVisible();
     await expect(page.getByText(/Page 1 of \d+/)).toBeVisible();

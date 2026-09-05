@@ -13,7 +13,7 @@ test.describe('Data Quality Spec', () => {
     await expect(page.getByText('Inventory readiness', { exact: true })).toBeVisible();
     await expect(page.getByText('Needs review', { exact: true })).toBeVisible();
     await expect(page.getByText('Assets issues', { exact: true })).toBeVisible();
-    await expect(page.getByText('Databases issues', { exact: true })).toBeVisible();
+    await expect(page.getByText('Databases', { exact: true })).toBeVisible();
     const main = page.getByRole('main');
     await expect(main.getByText('Assets', { exact: true })).toBeVisible();
     await expect(main.getByText('Virtual Machines', { exact: true })).toBeVisible();

@@ -247,6 +247,11 @@ export class AssetsService {
         children: true,
         credentials: true,
         componentLinks: true,
+        documentLinks: {
+          include: {
+            document: { select: { id: true, title: true, updatedAt: true } },
+          },
+        },
         notes: {
           include: {
             createdByUser: {

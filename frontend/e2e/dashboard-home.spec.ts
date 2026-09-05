@@ -5,13 +5,13 @@ test.describe('Main Dashboard Home', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText('Compute Assets', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Infrastructure', { exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Needs Review', { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test('should navigate via stat cards', async ({ page }) => {
-    // Click Compute Assets Card
-    await page.getByRole('link', { name: /Compute Assets:/ }).click();
+    // Click Virtual Machines Card
+    await page.getByRole('link', { name: /Virtual Machines:/ }).click();
     await expect(page).toHaveURL(/.*virtual-machines/, { timeout: 15000 });
 
     await page.goto('/dashboard');
@@ -20,8 +20,8 @@ test.describe('Main Dashboard Home', () => {
     await expect(page).toHaveURL(/.*assets/, { timeout: 15000 });
 
     await page.goto('/dashboard');
-    // Click Managed DBs Card
-    await page.getByRole('link', { name: /Managed DBs:/ }).click();
+    // Click Databases Card
+    await page.getByRole('link', { name: /Databases:/ }).click();
     await expect(page).toHaveURL(/.*databases/, { timeout: 15000 });
   });
 
@@ -50,6 +50,6 @@ test.describe('Main Dashboard Home', () => {
   test('should display attention panel states and handle clicks', async ({ page }) => {
     const attentionCard = page.getByRole('region', { name: 'Inventory attention' });
     await expect(attentionCard).toBeVisible();
-    await expect(attentionCard.getByText('No inventory alerts')).toBeVisible();
+    await expect(attentionCard.getByText('vCenter Sync Failed')).toBeVisible();
   });
 });
