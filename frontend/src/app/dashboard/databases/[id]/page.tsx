@@ -286,6 +286,11 @@ export default function DatabaseDetailPage() {
 
       <InventoryDocuments documents={database.documentLinks} />
 
+      <section className="glass-card p-4 sm:p-5">
+        <h2 className="mb-3 flex items-center gap-2 text-base font-bold"><Database className="h-4 w-4 text-primary" />Logical databases</h2>
+        {database.logicalDatabases?.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{database.logicalDatabases.map((logical) => <div key={logical.id} className="rounded-lg border border-border/50 bg-background/40 px-3 py-2"><p className="text-sm font-semibold">{logical.name}</p><p className="text-[11px] text-muted-foreground">{logical.componentIds?.length ?? 0} application component link(s)</p></div>)}</div> : <p className="text-sm text-muted-foreground">No logical databases recorded yet.</p>}
+      </section>
+
     <section className="glass-card overflow-hidden">
       <div className="flex flex-col gap-2 border-b border-border/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
          <div>

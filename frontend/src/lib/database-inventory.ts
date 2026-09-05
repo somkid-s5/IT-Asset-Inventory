@@ -34,6 +34,7 @@ export interface DatabaseInventoryItem {
   createdAt?: string;
   updatedAt?: string;
   documentLinks?: Array<{ id: string; title: string; updatedAt?: string }>;
+  logicalDatabases?: Array<{ id: string; name: string; description?: string | null; componentIds?: string[] }>;
 }
 
 export interface DatabaseAccountDetail {
@@ -75,6 +76,7 @@ export interface DatabaseInventoryPayload {
     privileges: string[];
     note?: string;
   }>;
+  logicalDatabases?: string[];
 }
 
 export const ENVIRONMENT_FILTERS: Array<{ label: string; value: 'ALL' | DatabaseEnvironment }> = [

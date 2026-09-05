@@ -70,6 +70,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
   };
   const [accounts, setAccounts] = useState<DatabaseAccountFormValue[]>([{ ...EMPTY_ACCOUNT }]);
   const [linkedApps, setLinkedApps] = useState<DatabaseLinkedAppFormValue[]>([{ ...EMPTY_LINKED_APP }]);
+  const [logicalDatabases, setLogicalDatabases] = useState('');
   const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
@@ -81,6 +82,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
       setFormData(DEFAULT_FORM);
       setAccounts([{ ...EMPTY_ACCOUNT }]);
       setLinkedApps([{ ...EMPTY_LINKED_APP }]);
+      setLogicalDatabases('');
       return;
     }
 
@@ -103,6 +105,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
     setLinkedApps(
       databaseToEdit.linkedApps.length > 0 ? parseLinkedApps(databaseToEdit.linkedApps) : [{ ...EMPTY_LINKED_APP }],
     );
+    setLogicalDatabases(joinCommaSeparated(databaseToEdit.logicalDatabases?.map((logical) => logical.name)));
     setAccounts(
       databaseToEdit.accounts.length > 0
         ? databaseToEdit.accounts.map((account) => ({
@@ -148,6 +151,7 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
         privileges: splitCommaSeparated(account.privileges),
         note: account.note.trim() || undefined,
       })),
+      logicalDatabases: splitCommaSeparated(logicalDatabases),
     };
 
     setLoading(true);
@@ -369,6 +373,12 @@ export function DatabaseFormDialog({ open, onOpenChange, databaseToEdit, onSucce
               <div className="space-y-1 md:col-span-12 pt-1">
                 <h3 className="text-sm font-semibold text-foreground">Linked Applications</h3>
                 <p className="text-[11px] text-muted-foreground">IP addresses of application servers connecting to this database</p>
+              </div>
+
+              <div className="space-y-1 md:col-span-12">
+                <Label htmlFor="db-logical-databases" optional>Logical Databases</Label>
+                <Input id="db-logical-databases" className={COMPACT_INPUT_CLASS} value={logicalDatabases} onChange={(event) => setLogicalDatabases(event.target.value)} placeholder="e.g. billing, reporting (comma separated)" />
+                <p className="text-[11px] text-muted-foreground">Record database names separately from the instance so Application Components can reference them.</p>
               </div>
 
               <div className="space-y-3 md:col-span-12">
