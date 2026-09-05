@@ -17,6 +17,7 @@ export default function InventoryExportPage() {
   const { setHeader } = usePageHeader();
   const [passphrase, setPassphrase] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(
@@ -53,7 +54,7 @@ export default function InventoryExportPage() {
 
     setIsExporting(true);
     try {
-      const response = await api.post("/export/inventory", { passphrase }, { responseType: "blob" });
+      const response = await api.post("/export/inventory", { passphrase, currentPassword }, { responseType: "blob" });
       const url = URL.createObjectURL(response.data);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -64,6 +65,7 @@ export default function InventoryExportPage() {
       URL.revokeObjectURL(url);
       setPassphrase("");
       setConfirm("");
+      setCurrentPassword("");
       toast.success("Encrypted inventory workbook downloaded");
     } catch {
       toast.error("Export failed. Check your permissions and try again.");
@@ -90,6 +92,10 @@ export default function InventoryExportPage() {
               <ShieldCheck className="h-4 w-4" />
               <AlertDescription>Keep this password separate from the downloaded file. The workbook contains sensitive inventory and credential metadata.</AlertDescription>
             </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Confirm your account password</Label>
+              <Input id="current-password" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" required />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="export-passphrase">Workbook password</Label>
               <Input id="export-passphrase" type="password" value={passphrase} onChange={(event) => setPassphrase(event.target.value)} autoComplete="new-password" minLength={8} required />
