@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Request,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { Role, VmLifecycleState } from '@prisma/client';
@@ -122,8 +123,8 @@ export class VmController {
   }
 
   @Get('inventory')
-  findInventory() {
-    return this.vmService.findInventory();
+  findInventory(@Query('includeArchived') includeArchived?: string) {
+    return this.vmService.findInventory(includeArchived === 'true');
   }
 
   @Get('inventory/:id')
@@ -167,5 +168,14 @@ export class VmController {
     @Request() req: { user: { id: string } },
   ) {
     return this.vmService.revealGuestAccountPassword(id, req.user.id);
+  }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Post('guest-accounts/:id/copy')
+  recordGuestAccountCopy(
+    @Param('id') id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.vmService.recordGuestAccountCopy(id, req.user.id);
   }
 }

@@ -17,7 +17,7 @@ import { Roles } from '../auth/roles.decorator';
 import { ApplicationsService } from './applications.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
-import { ComponentDto, EnvironmentDto } from './dto/topology.dto';
+import { AccessDto, ComponentDto, EnvironmentDto } from './dto/topology.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/applications')
@@ -38,6 +38,15 @@ export class ApplicationsController {
     @Request() req: { user: { role: Role } },
   ) {
     return this.service.findOne(id, req.user.role);
+  }
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Post(':id/access')
+  createAccess(
+    @Param('id') id: string,
+    @Body() dto: AccessDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.service.createAccess(id, dto, req.user.id);
   }
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post(':id/environments')

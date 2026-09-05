@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePageHeader } from "@/contexts/PageHeaderContext";
 import api from "@/services/api";
 import { Application } from "@/lib/application";
@@ -11,10 +11,24 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppWindow } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 export default function ApplicationDetailPage() {
   const params = useParams<{ id: string }>();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [environmentDialog, setEnvironmentDialog] = useState(false);
+  const [componentDialog, setComponentDialog] = useState<{ environmentId: string } | null>(null);
+  const [accessDialog, setAccessDialog] = useState(false);
+  const [environmentName, setEnvironmentName] = useState<"PROD" | "UAT" | "TEST">("PROD");
+  const [componentName, setComponentName] = useState("");
+  const [accessForm, setAccessForm] = useState({ label: "", address: "", method: "HTTPS", environmentId: "", username: "", password: "", role: "" });
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
   const { setHeader } = usePageHeader();
   const { data, isLoading } = useQuery({
     queryKey: ["application", params.id],
@@ -22,6 +36,14 @@ export default function ApplicationDetailPage() {
       (await api.get<Application>(`/applications/${params.id}`)).data,
     enabled: Boolean(params.id),
   });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["application", params.id] });
+  const addEnvironment = useMutation({ mutationFn: () => api.post(`/applications/${params.id}/environments`, { name: environmentName }), onSuccess: () => { invalidate(); setEnvironmentDialog(false); toast.success("Environment added"); }, onError: () => toast.error("Could not add environment") });
+  const addComponent = useMutation({ mutationFn: () => api.post(`/applications/${params.id}/environments/${componentDialog?.environmentId}/components`, { name: componentName }), onSuccess: () => { invalidate(); setComponentDialog(null); setComponentName(""); toast.success("Component added"); }, onError: () => toast.error("Could not add component") });
+  const addAccess = useMutation({ mutationFn: () => api.post(`/applications/${params.id}/access`, { label: accessForm.label, address: accessForm.address, method: accessForm.method, environmentId: accessForm.environmentId || undefined, credentials: accessForm.username ? [{ username: accessForm.username, password: accessForm.password, role: accessForm.role }] : [] }), onSuccess: () => { invalidate(); setAccessDialog(false); setAccessForm({ label: "", address: "", method: "HTTPS", environmentId: "", username: "", password: "", role: "" }); toast.success("Access point added"); }, onError: () => toast.error("Could not add access point") });
+  const reveal = async (credentialId: string, accessId: string) => {
+    try { const result = await api.get<{ password: string }>(`/applications/${params.id}/credentials/${credentialId}/password`); setRevealed((current) => ({ ...current, [`${accessId}:${credentialId}`]: result.data.password })); } catch { toast.error("Could not reveal password"); }
+  };
+  const canEdit = user?.role === "ADMIN" || user?.role === "EDITOR";
   useEffect(
     () =>
       setHeader({
@@ -49,7 +71,7 @@ export default function ApplicationDetailPage() {
             {data.description || "Application topology and operational access."}
           </p>
         </div>
-        <Badge>{data.status}</Badge>
+        <div className="flex items-center gap-2"><Badge>{data.status}</Badge>{canEdit && <><Button size="sm" variant="outline" onClick={() => setEnvironmentDialog(true)}>Add environment</Button><Button size="sm" onClick={() => setAccessDialog(true)}>Add access</Button></>}</div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -82,6 +104,7 @@ export default function ApplicationDetailPage() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {item.credentials.length} credential(s)
                   </p>
+                  {item.credentials.map((credential) => <div key={credential.id} className="mt-2 flex items-center gap-2 text-xs"><span>{credential.username}</span>{canEdit && <Button type="button" size="xs" variant="outline" onClick={() => reveal(credential.id, item.id)}>{revealed[`${item.id}:${credential.id}`] ? revealed[`${item.id}:${credential.id}`] : "Reveal"}</Button>}</div>)}
                 </div>
               ))
             ) : (
@@ -101,7 +124,7 @@ export default function ApplicationDetailPage() {
             <div key={env.id} className="rounded-lg border p-4">
               <div className="flex items-center justify-between">
                 <p className="font-semibold">{env.name}</p>
-                {env.noDatabase && <Badge variant="outline">No Database</Badge>}
+                <div className="flex items-center gap-2">{env.noDatabase && <Badge variant="outline">No Database</Badge>}{canEdit && <Button size="xs" variant="outline" onClick={() => setComponentDialog({ environmentId: env.id })}>Add component</Button>}</div>
               </div>
               <p className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">
                 Components
@@ -130,6 +153,9 @@ export default function ApplicationDetailPage() {
           ))}
         </CardContent>
       </Card>
+      <Dialog open={environmentDialog} onOpenChange={setEnvironmentDialog}><DialogContent><DialogHeader><DialogTitle>Add environment</DialogTitle></DialogHeader><div className="space-y-4"><Label>Environment</Label><Select value={environmentName} onValueChange={(value) => setEnvironmentName(value as typeof environmentName)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PROD">PROD</SelectItem><SelectItem value="UAT">UAT</SelectItem><SelectItem value="TEST">TEST</SelectItem></SelectContent></Select><Button className="w-full" onClick={() => addEnvironment.mutate()} disabled={addEnvironment.isPending}>Add environment</Button></div></DialogContent></Dialog>
+      <Dialog open={Boolean(componentDialog)} onOpenChange={(open) => !open && setComponentDialog(null)}><DialogContent><DialogHeader><DialogTitle>Add component</DialogTitle></DialogHeader><div className="space-y-4"><Label htmlFor="component-name">Component name</Label><Input id="component-name" value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="e.g. API" /><Button className="w-full" onClick={() => addComponent.mutate()} disabled={!componentName.trim() || addComponent.isPending}>Add component</Button></div></DialogContent></Dialog>
+      <Dialog open={accessDialog} onOpenChange={setAccessDialog}><DialogContent><DialogHeader><DialogTitle>Add access point</DialogTitle></DialogHeader><div className="grid gap-3"><Input aria-label="Access label" placeholder="Label" value={accessForm.label} onChange={(e) => setAccessForm({ ...accessForm, label: e.target.value })} /><Input aria-label="Access address" placeholder="Address / URL" value={accessForm.address} onChange={(e) => setAccessForm({ ...accessForm, address: e.target.value })} /><Input aria-label="Access method" placeholder="Method (HTTPS, SSH)" value={accessForm.method} onChange={(e) => setAccessForm({ ...accessForm, method: e.target.value })} /><Select value={accessForm.environmentId || "none"} onValueChange={(value) => setAccessForm({ ...accessForm, environmentId: value === "none" ? "" : value })}><SelectTrigger><SelectValue placeholder="Environment (optional)" /></SelectTrigger><SelectContent><SelectItem value="none">Application-wide</SelectItem>{data.environments.map((env) => <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>)}</SelectContent></Select><Input aria-label="Username" placeholder="Username (optional)" value={accessForm.username} onChange={(e) => setAccessForm({ ...accessForm, username: e.target.value })} /><Input aria-label="Password" type="password" placeholder="Password" value={accessForm.password} onChange={(e) => setAccessForm({ ...accessForm, password: e.target.value })} /><Input aria-label="Credential role" placeholder="Credential role" value={accessForm.role} onChange={(e) => setAccessForm({ ...accessForm, role: e.target.value })} /><Button className="w-full" onClick={() => addAccess.mutate()} disabled={!accessForm.label.trim() || !accessForm.address.trim() || addAccess.isPending}>Add access point</Button></div></DialogContent></Dialog>
     </div>
   );
 }

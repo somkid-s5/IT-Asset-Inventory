@@ -49,6 +49,15 @@ export class CredentialsController {
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)
+  @Post(':id/copy')
+  recordCopy(
+    @Param('id') id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.credentialsService.recordCopy(id, req.user.id);
+  }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
   @Patch(':id')
   update(
     @Param('id') id: string,

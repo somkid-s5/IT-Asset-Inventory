@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditAction, Prisma, DatabaseStatus } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -44,6 +48,34 @@ export class DatabasesService {
         note: this.sanitizeText(account.note),
         scope: this.sanitizeText(account.scope) ?? 'INSTANCE',
       }));
+  }
+
+  private async validateLogicalDatabaseScopes(
+    databaseId: string | undefined,
+    accounts:
+      | CreateDatabaseDto['accounts']
+      | UpdateDatabaseDto['accounts']
+      | undefined,
+  ) {
+    const ids = [
+      ...new Set(
+        (accounts ?? []).flatMap((account) => account.logicalDatabaseIds ?? []),
+      ),
+    ];
+    if (!ids.length) return;
+    if (!databaseId) {
+      throw new BadRequestException(
+        'Logical database scopes require a saved database inventory',
+      );
+    }
+    const matches = await this.prisma.logicalDatabase.count({
+      where: { id: { in: ids }, databaseInventoryId: databaseId },
+    });
+    if (matches !== ids.length) {
+      throw new BadRequestException(
+        'Each logical database scope must belong to this database inventory',
+      );
+    }
   }
 
   private toListItem(database: DatabaseWithAccounts) {
@@ -98,6 +130,10 @@ export class DatabasesService {
   }
 
   async create(createDatabaseDto: CreateDatabaseDto, userId: string) {
+    await this.validateLogicalDatabaseScopes(
+      undefined,
+      createDatabaseDto.accounts,
+    );
     const created = await this.prisma.databaseInventory.create({
       data: {
         name: createDatabaseDto.name.trim(),
@@ -262,6 +298,7 @@ export class DatabasesService {
     userId: string,
   ) {
     await this.findOne(id);
+    await this.validateLogicalDatabaseScopes(id, updateDatabaseDto.accounts);
 
     const updated = await this.prisma.databaseInventory.update({
       where: { id },
@@ -443,6 +480,16 @@ export class DatabasesService {
     userId: string,
   ) {
     await this.findOne(id);
+    if (dto.componentIds?.length) {
+      const count = await this.prisma.applicationComponent.count({
+        where: { id: { in: dto.componentIds } },
+      });
+      if (count !== new Set(dto.componentIds).size) {
+        throw new BadRequestException(
+          'Logical database component links must reference existing application components',
+        );
+      }
+    }
     const logical = await this.prisma.logicalDatabase.create({
       data: {
         databaseInventoryId: id,
@@ -482,6 +529,19 @@ export class DatabasesService {
     });
     if (!existing)
       throw new NotFoundException(`Logical database ${logicalId} not found`);
+    if (dto.componentIds) {
+      const ids = [...new Set(dto.componentIds)];
+      const count = ids.length
+        ? await this.prisma.applicationComponent.count({
+            where: { id: { in: ids } },
+          })
+        : 0;
+      if (count !== ids.length) {
+        throw new BadRequestException(
+          'Logical database component links must reference existing application components',
+        );
+      }
+    }
     const logical = await this.prisma.logicalDatabase.update({
       where: { id: logicalId },
       data: {
@@ -559,5 +619,25 @@ export class DatabasesService {
     return {
       password: this.credentialsService.decrypt(account.encryptedPassword),
     };
+  }
+
+  async recordCopy(id: string, accountId: string, userId: string) {
+    const account = await this.prisma.databaseAccount.findFirst({
+      where: { id: accountId, databaseInventoryId: id },
+      select: { id: true, username: true },
+    });
+    if (!account)
+      throw new NotFoundException(
+        `Account ${accountId} not found in database ${id}`,
+      );
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.COPY_PASSWORD,
+        targetId: account.id,
+        details: JSON.stringify({ databaseId: id, username: account.username }),
+      },
+    });
+    return { recorded: true };
   }
 }

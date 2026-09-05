@@ -4,7 +4,7 @@ import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
-import { ComponentDto, EnvironmentDto } from './dto/topology.dto';
+import { AccessDto, ComponentDto, EnvironmentDto } from './dto/topology.dto';
 import { evaluateApplicationCompleteness } from './completeness';
 
 const include = {
@@ -363,6 +363,42 @@ export class ApplicationsService {
     });
     await this.recordTopologyAudit(userId, applicationId, {
       environment: environment.name,
+      action: 'create',
+    });
+    return this.findOne(applicationId);
+  }
+
+  async createAccess(applicationId: string, dto: AccessDto, userId: string) {
+    await this.findOne(applicationId);
+    if (dto.environmentId) {
+      const environment = await this.prisma.applicationEnvironment.findFirst({
+        where: { id: dto.environmentId, applicationId },
+      });
+      if (!environment)
+        throw new NotFoundException('Application environment not found');
+    }
+    await this.prisma.applicationAccess.create({
+      data: {
+        applicationId,
+        environmentId: dto.environmentId,
+        label: dto.label.trim(),
+        address: dto.address.trim(),
+        method: dto.method.trim(),
+        credentials: {
+          create: (dto.credentials ?? [])
+            .filter((credential) => credential.username.trim())
+            .map((credential) => ({
+              username: credential.username.trim(),
+              encryptedPassword: this.credentials.encrypt(
+                credential.password ?? '',
+              ),
+              role: this.text(credential.role),
+            })),
+        },
+      },
+    });
+    await this.recordTopologyAudit(userId, applicationId, {
+      access: dto.label.trim(),
       action: 'create',
     });
     return this.findOne(applicationId);

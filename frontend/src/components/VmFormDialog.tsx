@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { VM_ENVIRONMENT_FILTERS, VM_SERVICE_ROLE_OPTIONS, type VmDiscoveryItem, type VmInventoryDetail } from '@/lib/vm-inventory';
 import { promoteVmDiscovery, updateVmDiscovery, updateVmInventory } from '@/services/vm';
+import api from '@/services/api';
+import type { Application } from '@/lib/application';
 
 interface VmAccountFormValue {
   username: string;
@@ -54,7 +56,7 @@ const DEFAULT_FORM = {
   memoryGb: '',
   storageGb: '',
   networkLabel: '',
-  environment: 'PROD',
+  environment: '',
   owner: '',
   businessUnit: '',
   slaTier: '',
@@ -112,7 +114,7 @@ function buildFormData(vmToEdit?: VmInventoryDetail | null, discoveryVm?: VmDisc
       memoryGb: String(discoveryVm.memoryGb),
       storageGb: String(discoveryVm.storageGb),
       networkLabel: discoveryVm.networkLabel,
-      environment: discoveryVm.environment ?? discoveryVm.suggestedEnvironment ?? 'PROD',
+      environment: discoveryVm.environment ?? '',
       owner: discoveryVm.owner ?? discoveryVm.suggestedOwner ?? '',
       businessUnit: discoveryVm.businessUnit ?? '',
       slaTier: discoveryVm.slaTier ?? '',
@@ -164,6 +166,15 @@ export function VmFormDialog({
   const [lockedFields, setLockedFields] = useState<string[]>(() => {
     return vmToEdit?.managedFields || [];
   });
+  const [availableComponents, setAvailableComponents] = useState<Array<{ id: string; label: string }>>([]);
+  const [componentIds, setComponentIds] = useState<string[]>(() => vmToEdit?.components?.map((component) => component.id) ?? []);
+
+  useEffect(() => {
+    if (!open) return;
+    api.get<Application[]>('/applications').then(({ data }) => {
+      setAvailableComponents(data.flatMap((app) => app.environments.flatMap((env) => env.components.map((component) => ({ id: component.id, label: `${app.name} · ${env.name} · ${component.name}` })))));
+    }).catch(() => setAvailableComponents([]));
+  }, [open]);
 
   const resetForm = useCallback(() => {
     setFormData(buildFormData(vmToEdit, discoveryVm));
@@ -181,6 +192,7 @@ export function VmFormDialog({
           : [{ ...EMPTY_ACCOUNT }],
     );
     setLockedFields(vmToEdit?.managedFields || []);
+    setComponentIds(vmToEdit?.components?.map((component) => component.id) ?? []);
   }, [vmToEdit, discoveryVm]);
 
   useEffect(() => {
@@ -191,16 +203,11 @@ export function VmFormDialog({
     event.preventDefault();
 
     const validAccounts = accounts.filter((account) => account.username.trim());
-    if (validAccounts.length === 0) {
-      toast.error('Add at least one guest account');
-      return;
-    }
-
     setLoading(true);
     try {
       const payload = {
         systemName: formData.systemName,
-        environment: formData.environment as 'PROD' | 'TEST' | 'UAT',
+        environment: formData.environment ? formData.environment as 'PROD' | 'TEST' | 'UAT' : undefined,
         owner: formData.owner,
         businessUnit: formData.businessUnit,
         slaTier: formData.slaTier,
@@ -212,6 +219,7 @@ export function VmFormDialog({
         tags: formData.tags,
         guestAccounts: validAccounts,
         managedFields: lockedFields,
+        componentIds,
       };
 
       if (vmToEdit) {
@@ -602,6 +610,22 @@ export function VmFormDialog({
                 />
               </div>
             </div>
+          </section>
+
+          <section className="surface-panel p-4">
+            <div className="mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Application components</h3>
+              <p className="text-[11px] text-muted-foreground">Link this VM to the services it runs. Hold Ctrl/Cmd to select multiple components.</p>
+            </div>
+            <select
+              aria-label="Application components"
+              multiple
+              value={componentIds}
+              onChange={(event) => setComponentIds(Array.from(event.target.selectedOptions, (option) => option.value))}
+              className="min-h-24 w-full rounded-[12px] border border-border bg-background/70 px-3 py-2 text-sm"
+            >
+              {availableComponents.map((component) => <option key={component.id} value={component.id}>{component.label}</option>)}
+            </select>
           </section>
 
           <section className="space-y-3">

@@ -5,7 +5,9 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApplicationEnvironmentName } from '@prisma/client';
 
 export class EnvironmentDto {
@@ -29,4 +31,15 @@ export class AccessDto {
   @IsString() @IsNotEmpty() address: string;
   @IsString() @IsNotEmpty() method: string;
   @IsOptional() @IsString() environmentId?: string;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AccessCredentialDto)
+  credentials?: AccessCredentialDto[];
+}
+
+export class AccessCredentialDto {
+  @IsString() @IsNotEmpty() username: string;
+  @IsString() password: string;
+  @IsOptional() @IsString() role?: string;
 }

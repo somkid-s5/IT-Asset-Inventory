@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
@@ -14,6 +18,7 @@ type AssetWithRelations = Prisma.AssetGetPayload<{
     parent: true;
     children: true;
     credentials: true;
+    componentLinks: true;
     notes: {
       include: {
         createdByUser: {
@@ -49,6 +54,9 @@ export class AssetsService {
                 nodeLabel: ip.nodeLabel?.trim() || null,
                 manageType: ip.manageType?.trim() || null,
                 version: ip.version?.trim() || null,
+                ...(ip.credentialId?.trim()
+                  ? { credential: { connect: { id: ip.credentialId.trim() } } }
+                  : {}),
               })),
             },
           }
@@ -68,6 +76,13 @@ export class AssetsService {
                     credential.password ?? '',
                   ),
                 })),
+            },
+          }
+        : {}),
+      ...(dto.componentIds !== undefined
+        ? {
+            componentLinks: {
+              create: dto.componentIds.map((componentId) => ({ componentId })),
             },
           }
         : {}),
@@ -86,6 +101,9 @@ export class AssetsService {
                 nodeLabel: ip.nodeLabel?.trim() || null,
                 manageType: ip.manageType?.trim() || null,
                 version: ip.version?.trim() || null,
+                ...(ip.credentialId?.trim()
+                  ? { credential: { connect: { id: ip.credentialId.trim() } } }
+                  : {}),
               })),
             },
           }
@@ -106,6 +124,14 @@ export class AssetsService {
                     credential.password ?? '',
                   ),
                 })),
+            },
+          }
+        : {}),
+      ...(dto.componentIds !== undefined
+        ? {
+            componentLinks: {
+              deleteMany: {},
+              create: dto.componentIds.map((componentId) => ({ componentId })),
             },
           }
         : {}),
@@ -136,13 +162,25 @@ export class AssetsService {
   }
 
   async create(createAssetDto: CreateAssetDto, userId: string) {
+    if (createAssetDto.componentIds?.length) {
+      const ids = [...new Set(createAssetDto.componentIds)];
+      const count = await this.prisma.applicationComponent.count({
+        where: { id: { in: ids } },
+      });
+      if (count !== ids.length)
+        throw new BadRequestException(
+          'Asset component links must reference existing application components',
+        );
+    }
     const {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       ips: _ips,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       credentials: _credentials,
+      componentIds: _componentIds,
       ...assetData
     } = createAssetDto;
+    void _componentIds;
 
     const created = await this.prisma.asset.create({
       data: {
@@ -158,6 +196,7 @@ export class AssetsService {
         parent: true,
         children: true,
         credentials: true,
+        componentLinks: true,
         notes: {
           include: {
             createdByUser: {
@@ -294,6 +333,7 @@ export class AssetsService {
               lastChangedDate: true,
             },
           },
+          componentLinks: true,
           notes: {
             include: {
               createdByUser: {
@@ -482,6 +522,7 @@ export class AssetsService {
         parent: true,
         children: true,
         credentials: true,
+        componentLinks: true,
         notes: {
           include: {
             createdByUser: {
@@ -530,7 +571,17 @@ export class AssetsService {
   async update(id: string, updateAssetDto: UpdateAssetDto, userId: string) {
     await this.findOne(id);
 
-    const { ips, credentials, ...assetData } = updateAssetDto;
+    const { ips, credentials, componentIds, ...assetData } = updateAssetDto;
+    if (componentIds?.length) {
+      const ids = [...new Set(componentIds)];
+      const count = await this.prisma.applicationComponent.count({
+        where: { id: { in: ids } },
+      });
+      if (count !== ids.length)
+        throw new BadRequestException(
+          'Asset component links must reference existing application components',
+        );
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       return tx.asset.update({
@@ -544,11 +595,14 @@ export class AssetsService {
                   updateAssetDto.customMetadata as Prisma.InputJsonValue,
               }
             : {}),
-          ...(ips !== undefined || credentials !== undefined
+          ...(ips !== undefined ||
+          credentials !== undefined ||
+          componentIds !== undefined
             ? this.buildReplaceRelations({
                 ...updateAssetDto,
                 ips: updateAssetDto.ips ?? [],
                 credentials: updateAssetDto.credentials ?? [],
+                componentIds,
               })
             : {}),
         },
@@ -558,6 +612,7 @@ export class AssetsService {
           parent: true,
           children: true,
           credentials: true,
+          componentLinks: true,
           notes: {
             include: {
               createdByUser: {

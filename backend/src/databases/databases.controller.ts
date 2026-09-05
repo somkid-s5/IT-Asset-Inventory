@@ -125,4 +125,14 @@ export class DatabasesController {
   ) {
     return this.databasesService.revealPassword(id, accountId, req.user.id);
   }
+
+  @Roles(Role.ADMIN, Role.EDITOR)
+  @Post(':id/accounts/:accountId/copy')
+  recordCopy(
+    @Param('id') id: string,
+    @Param('accountId') accountId: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.databasesService.recordCopy(id, accountId, req.user.id);
+  }
 }

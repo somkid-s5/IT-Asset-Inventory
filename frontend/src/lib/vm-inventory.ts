@@ -1,7 +1,7 @@
 export type VmPowerState = 'RUNNING' | 'STOPPED' | 'SUSPENDED';
 export type VmInventoryEnvironment = 'PROD' | 'TEST' | 'UAT';
 export type VmDiscoveryState = 'NEEDS_CONTEXT' | 'READY_TO_PROMOTE' | 'DRIFTED';
-export type VmLifecycleState = 'DRAFT' | 'ACTIVE' | 'DELETED_IN_VCENTER';
+export type VmLifecycleState = 'DRAFT' | 'ACTIVE' | 'DELETED_IN_VCENTER' | 'ARCHIVED';
 export type VmCriticality = 'MISSION_CRITICAL' | 'BUSINESS_CRITICAL' | 'STANDARD';
 export type VmSyncState = 'Synced' | 'Missing from source' | 'Ready to sync' | 'Connection failed';
 export type VmPlacementResolution = 'DIRECT_VM' | 'SOURCE_SINGLE_HOST' | 'SOURCE_SINGLE_CLUSTER' | 'UNKNOWN';
@@ -122,6 +122,7 @@ export interface VmInventoryDetail extends VmInventoryItem {
   notes: string;
   sourceHistory: VmSourceHistoryItem[];
   guestAccounts: VmGuestAccount[];
+  components?: Array<{ id: string; name: string; environment: VmInventoryEnvironment; application: { id: string; name: string } }>;
 }
 
 export const VM_ENVIRONMENT_FILTERS: Array<{ label: string; value: 'ALL' | VmInventoryEnvironment }> = [
@@ -149,6 +150,7 @@ export const VM_LIFECYCLE_FILTERS: Array<{ label: string; value: 'ALL' | VmLifec
   { label: 'Draft', value: 'DRAFT' },
   { label: 'Active', value: 'ACTIVE' },
   { label: 'Deleted', value: 'DELETED_IN_VCENTER' },
+  { label: 'Archived', value: 'ARCHIVED' },
 ];
 
 export const VM_CRITICALITY_OPTIONS: Array<{ label: string; value: VmCriticality }> = [

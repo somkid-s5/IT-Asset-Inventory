@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { KnowledgeDocumentLinks, type KnowledgeDocumentLinkValues } from '@/components/KnowledgeDocumentLinks';
 
 const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
   ssr: false,
@@ -45,6 +46,12 @@ export default function ArticleFormPage() {
     content: '',
     categoryId: categoryParam,
   });
+  const [links, setLinks] = useState<KnowledgeDocumentLinkValues>({
+    applications: [],
+    assets: [],
+    vms: [],
+    databases: [],
+  });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['kb-categories'],
@@ -63,6 +70,12 @@ export default function ArticleFormPage() {
         title: existingArticle.title,
         content: existingArticle.content,
         categoryId: existingArticle.categoryId,
+      });
+      setLinks({
+        applications: existingArticle.applicationLinks?.map((link) => link.application.id) ?? [],
+        assets: existingArticle.assetLinks?.map((link) => link.asset.id) ?? [],
+        vms: existingArticle.vmLinks?.map((link) => link.vm.id) ?? [],
+        databases: existingArticle.databaseLinks?.map((link) => link.database.id) ?? [],
       });
     }
   }, [existingArticle]);
@@ -96,10 +109,10 @@ export default function ArticleFormPage() {
     setIsSubmitting(true);
     try {
       if (editId) {
-        await kbService.updateDocument(editId, formData);
+        await kbService.updateDocument(editId, { ...formData, applicationIds: links.applications, assetIds: links.assets, vmIds: links.vms, databaseIds: links.databases });
         toast.success('Document updated');
       } else {
-        await kbService.createDocument(formData);
+        await kbService.createDocument({ ...formData, applicationIds: links.applications, assetIds: links.assets, vmIds: links.vms, databaseIds: links.databases });
         toast.success('Document published');
       }
       router.push('/dashboard/docs');
@@ -168,6 +181,7 @@ export default function ArticleFormPage() {
                 </TabsContent>
               </Tabs>
            </Card>
+           <KnowledgeDocumentLinks value={links} onChange={setLinks} />
         </div>
 
         <div className="space-y-6">

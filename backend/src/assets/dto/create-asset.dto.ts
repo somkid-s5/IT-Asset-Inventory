@@ -33,6 +33,10 @@ class IpAllocationDto {
   @IsOptional()
   @IsString()
   version?: string;
+
+  @IsOptional()
+  @IsString()
+  credentialId?: string;
 }
 
 class AssetCredentialDto {
@@ -150,4 +154,9 @@ export class CreateAssetDto {
   @IsOptional()
   @IsString()
   dependencies?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  componentIds?: string[];
 }

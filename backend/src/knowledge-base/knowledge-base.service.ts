@@ -317,6 +317,24 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
         author: {
           select: { id: true, displayName: true, username: true },
         },
+        applicationLinks: {
+          include: { application: { select: { id: true, name: true } } },
+        },
+        assetLinks: {
+          include: {
+            asset: { select: { id: true, name: true, assetId: true } },
+          },
+        },
+        vmLinks: {
+          include: {
+            vm: { select: { id: true, systemName: true, primaryIp: true } },
+          },
+        },
+        databaseLinks: {
+          include: {
+            database: { select: { id: true, name: true, engine: true } },
+          },
+        },
       },
     });
 

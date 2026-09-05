@@ -112,6 +112,26 @@ export class CredentialsService {
     };
   }
 
+  async recordCopy(id: string, userId: string) {
+    const credential = await this.prisma.credential.findUnique({
+      where: { id },
+      select: { id: true, username: true, assetId: true },
+    });
+    if (!credential) throw new NotFoundException(`Credential ${id} not found`);
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.COPY_PASSWORD,
+        targetId: id,
+        details: JSON.stringify({
+          username: credential.username,
+          assetId: credential.assetId,
+        }),
+      },
+    });
+    return { recorded: true };
+  }
+
   async update(
     id: string,
     updateCredentialDto: UpdateCredentialDto,

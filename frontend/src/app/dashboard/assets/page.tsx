@@ -8,9 +8,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronsUpDown,
   Database, FolderTree, HardDrive, LoaderCircle,
-  Pencil, Plus, Search, Server, Shield, Trash2,
+  Pencil, Plus, Search, Server, Shield,
   Box, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon,
-  MoreHorizontal, Columns, AlertTriangle, Download, ArrowUp, ArrowDown
+  MoreHorizontal, Columns, AlertTriangle, Download, ArrowUp, ArrowDown,
+  Archive, ArchiveRestore
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssetFormDialog } from '@/components/LazyLoadedDialogs';
@@ -121,6 +122,7 @@ export default function AssetsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialType = searchParams.get('type') as AssetType | null;
+  const [showArchived, setShowArchived] = useState(() => searchParams.get('archived') === 'true');
   const [activeTab, setActiveTab] = useState<'ALL' | AssetType>(initialType && ['SERVER', 'STORAGE', 'SWITCH', 'SP', 'NETWORK'].includes(initialType) ? initialType : 'ALL');
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm.trim());
@@ -156,6 +158,7 @@ export default function AssetsPage() {
       pagination.pageIndex,
       pagination.pageSize,
       sorting,
+      showArchived,
     ],
     queryFn: async () => {
       const response = await api.get<AssetsResponse>('/assets', {
@@ -166,6 +169,7 @@ export default function AssetsPage() {
           limit: pagination.pageSize,
           sortBy: sorting[0]?.id || 'assetId',
           sortDir: sorting[0]?.desc ? 'desc' : 'asc',
+          status: showArchived ? 'ARCHIVED' : undefined,
         },
       });
       return response.data;
@@ -175,12 +179,12 @@ export default function AssetsPage() {
 
   const assets = assetsResponse.data;
   const totalPages = Math.max(1, assetsResponse.totalPages);
-  const hasActiveAssetFilter = Boolean(debouncedSearchTerm) || activeTab !== 'ALL';
+  const hasActiveAssetFilter = Boolean(debouncedSearchTerm) || activeTab !== 'ALL' || showArchived;
 
   useEffect(() => {
     setPagination((current) => ({ ...current, pageIndex: 0 }));
     setRowSelection({});
-  }, [activeTab, debouncedSearchTerm, sorting]);
+  }, [activeTab, debouncedSearchTerm, sorting, showArchived]);
 
   const applyBulkUpdate = async () => {
     const ids = table.getSelectedRowModel().rows.map((row) => row.original.id);
@@ -326,20 +330,24 @@ export default function AssetsPage() {
                 <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(`/dashboard/assets/${asset.id}`)}>
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
-                  onClick={() => setAssetPendingDelete(asset)}
-                >
-                  Delete Asset
-                </DropdownMenuItem>
+                {user?.role === 'ADMIN' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className={cn('cursor-pointer', showArchived ? 'text-primary focus:text-primary focus:bg-primary/5' : 'text-destructive focus:text-destructive focus:bg-destructive/5')}
+                      onClick={() => setAssetPendingDelete(asset)}
+                    >
+                      {showArchived ? 'Restore Asset' : 'Archive Asset'}
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         ) : null;
       }
     }
-  ], [user, loadingEditId, router, setAssetPendingDelete]);
+  ], [user, loadingEditId, router, showArchived]);
 
   const table = useReactTable({
     data: assets,
@@ -386,10 +394,17 @@ export default function AssetsPage() {
     if (!assetPendingDelete) return;
     setDeletingId(assetPendingDelete.id);
     try {
-      await api.delete(`/assets/${assetPendingDelete.id}`);
-      toast.success('Asset deleted successfully');
+      if (showArchived) {
+        await api.patch(`/assets/${assetPendingDelete.id}/restore`);
+        toast.success('Asset restored successfully');
+      } else {
+        await api.patch(`/assets/${assetPendingDelete.id}/archive`);
+        toast.success('Asset archived successfully');
+      }
       setAssetPendingDelete(null);
       void refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || `Failed to ${showArchived ? 'restore' : 'archive'} asset`);
     } finally {
       setDeletingId(null);
     }
@@ -482,6 +497,18 @@ export default function AssetsPage() {
           <p className="text-xs text-muted-foreground text-pretty">Manage your physical and network assets</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {user?.role === 'ADMIN' && (
+            <Button
+              variant={showArchived ? 'secondary' : 'outline'}
+              size="sm"
+              className="h-9 shadow-sm bg-card"
+              onClick={() => setShowArchived((value) => !value)}
+              aria-pressed={showArchived}
+            >
+              {showArchived ? <ArchiveRestore className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+              {showArchived ? 'Active Assets' : 'Archived Assets'}
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -602,7 +629,7 @@ export default function AssetsPage() {
                         title="No assets found"
                         description={!hasActiveAssetFilter && assetsResponse.total === 0
                           ? "You haven't added any infrastructure assets yet. Start by adding your first server or switch."
-                          : "No assets match your current search or filter criteria."
+                          : showArchived ? "No archived assets match your current search or type filter." : "No assets match your current search or filter criteria."
                         }
                         action={!hasActiveAssetFilter && assets.length === 0 ? {
                           label: "Add Your First Asset",
@@ -676,23 +703,25 @@ export default function AssetsPage() {
       {/* Delete Confirmation */}
       <Dialog open={!!assetPendingDelete} onOpenChange={(open) => !open && setAssetPendingDelete(null)}>
         <DialogContent className="sm:max-w-[425px] rounded-[24px] border-none p-0 overflow-hidden">
-          <Alert variant="destructive" className="rounded-none border-none py-6">
-            <AlertTitle className="text-xl">Confirm Delete</AlertTitle>
+          <Alert variant={showArchived ? 'default' : 'destructive'} className="rounded-none border-none py-6">
+            <AlertTitle className="text-xl">Confirm {showArchived ? 'Restore' : 'Archive'}</AlertTitle>
             <AlertDescription className="text-sm opacity-90">
-              You are about to delete asset <span className="font-bold underline">{assetPendingDelete?.name}</span>
+              You are about to {showArchived ? 'restore' : 'archive'} asset <span className="font-bold underline">{assetPendingDelete?.name}</span>
             </AlertDescription>
           </Alert>
 
           <div className="p-6 pt-2 space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              This action cannot be undone and all related data will be permanently removed from the infrastructure database.
+              {showArchived
+                ? 'The asset will return to the active inventory and its related data will remain available.'
+                : 'The asset will be removed from the active inventory. You can restore it later from Archived Assets.'}
             </p>
 
             <div className="flex justify-end gap-3 pt-2">
               <Button variant="ghost" onClick={() => setAssetPendingDelete(null)} className="rounded-xl">Cancel</Button>
-              <Button variant="destructive" onClick={confirmDeleteAsset} disabled={!!deletingId} className="rounded-xl shadow-lg shadow-destructive/20">
-                {deletingId ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                Confirm Delete
+              <Button variant={showArchived ? 'default' : 'destructive'} onClick={confirmDeleteAsset} disabled={!!deletingId} className="rounded-xl shadow-lg shadow-destructive/20">
+                {deletingId ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : showArchived ? <ArchiveRestore className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+                Confirm {showArchived ? 'Restore' : 'Archive'}
               </Button>
             </div>
           </div>

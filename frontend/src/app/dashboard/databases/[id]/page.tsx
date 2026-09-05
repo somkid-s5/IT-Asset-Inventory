@@ -129,6 +129,7 @@ export default function DatabaseDetailPage() {
       }
       if (pwdToCopy) {
         await navigator.clipboard.writeText(pwdToCopy);
+        await api.post(`/databases/${database.id}/accounts/${accountId}/copy`);
         toast.success("Copied password");
       }
     } catch {

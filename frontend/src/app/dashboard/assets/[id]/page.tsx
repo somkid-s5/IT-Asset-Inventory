@@ -2268,6 +2268,7 @@ export default function AssetDetailsPage() {
                                                 navigator.clipboard.writeText(
                                                   cred.password,
                                                 );
+                                                void api.post(`/credentials/${cred.id}/copy`);
                                                 toast.success(
                                                   "Password copied",
                                                 );

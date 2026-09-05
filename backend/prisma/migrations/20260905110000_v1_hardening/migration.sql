@@ -11,8 +11,11 @@ ALTER TABLE "DatabaseInventory" ADD COLUMN "responsibleParty" TEXT;
 ALTER TABLE "DatabaseInventory" ADD COLUMN "hostAssetId" TEXT;
 ALTER TABLE "DatabaseInventory" ADD COLUMN "hostVmId" TEXT;
 ALTER TABLE "VmInventory" ADD COLUMN "responsibleParty" TEXT;
+ALTER TABLE "IPAllocation" ADD COLUMN "credentialId" TEXT;
 CREATE INDEX "DatabaseInventory_hostAssetId_idx" ON "DatabaseInventory"("hostAssetId");
 CREATE INDEX "DatabaseInventory_hostVmId_idx" ON "DatabaseInventory"("hostVmId");
+CREATE INDEX "IPAllocation_credentialId_idx" ON "IPAllocation"("credentialId");
+ALTER TABLE "IPAllocation" ADD CONSTRAINT "IPAllocation_credentialId_fkey" FOREIGN KEY ("credentialId") REFERENCES "Credential"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 CREATE TABLE "ApplicationComponentAsset" (
   "id" TEXT NOT NULL,

@@ -248,19 +248,22 @@ model ApplicationCredential {
 }
 
 model IPAllocation {
-  id         String  @id @default(uuid())
-  address    String // e.g. 192.168.1.50
-  type       String? // e.g. Management, VIP, Backup, Data, IPMI, Host, Service Processor
-  nodeLabel  String?
-  manageType String? // e.g. WEB, SSH, API
-  version    String? // e.g. iLO 2.81, ESXi 8.0.3
-  assetId    String
-  asset      Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  id           String      @id @default(uuid())
+  address      String // e.g. 192.168.1.50
+  type         String? // e.g. Management, VIP, Backup, Data, IPMI, Host, Service Processor
+  nodeLabel    String?
+  manageType   String? // e.g. WEB, SSH, API
+  version      String? // e.g. iLO 2.81, ESXi 8.0.3
+  assetId      String
+  asset        Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  credentialId String?
+  credential   Credential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([address, assetId])
+  @@index([credentialId])
 }
 
 model Asset {
@@ -330,9 +333,10 @@ model PatchInfo {
 }
 
 model Credential {
-  id      String @id @default(uuid())
-  assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  id           String         @id @default(uuid())
+  assetId      String
+  asset        Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  accessPoints IPAllocation[]
 
   username          String
   encryptedPassword String

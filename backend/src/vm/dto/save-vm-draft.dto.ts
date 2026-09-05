@@ -123,4 +123,9 @@ export class SaveVmDraftDto {
     { each: true },
   )
   managedFields?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  componentIds?: string[];
 }

@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { KnowledgeDocumentLinks, type KnowledgeDocumentLinkValues } from '@/components/KnowledgeDocumentLinks';
 
 const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
   ssr: false,
@@ -44,6 +45,12 @@ export default function EditArticlePage() {
     content: '',
     categoryId: '',
   });
+  const [links, setLinks] = useState<KnowledgeDocumentLinkValues>({
+    applications: [],
+    assets: [],
+    vms: [],
+    databases: [],
+  });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['kb-categories'],
@@ -62,6 +69,12 @@ export default function EditArticlePage() {
         title: document.title,
         content: document.content,
         categoryId: document.categoryId,
+      });
+      setLinks({
+        applications: document.applicationLinks?.map((link) => link.application.id) ?? [],
+        assets: document.assetLinks?.map((link) => link.asset.id) ?? [],
+        vms: document.vmLinks?.map((link) => link.vm.id) ?? [],
+        databases: document.databaseLinks?.map((link) => link.database.id) ?? [],
       });
     }
   }, [document]);
@@ -86,7 +99,7 @@ export default function EditArticlePage() {
 
     setIsSubmitting(true);
     try {
-      await kbService.updateDocument(id as string, formData);
+      await kbService.updateDocument(id as string, { ...formData, applicationIds: links.applications, assetIds: links.assets, vmIds: links.vms, databaseIds: links.databases });
       queryClient.invalidateQueries({ queryKey: ['kb-document', id] });
       queryClient.invalidateQueries({ queryKey: ['kb-recent-documents'] });
       queryClient.invalidateQueries({ queryKey: ['kb-category'] });
@@ -181,6 +194,7 @@ export default function EditArticlePage() {
                 </TabsContent>
               </Tabs>
            </Card>
+           <KnowledgeDocumentLinks value={links} onChange={setLinks} />
         </div>
 
         <div className="space-y-6">

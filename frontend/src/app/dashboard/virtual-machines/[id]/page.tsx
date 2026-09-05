@@ -15,6 +15,7 @@ import type { VmInventoryDetail } from '@/lib/vm-inventory';
 import { archiveVmInventory, getVmInventoryById, revealVmGuestAccountPassword } from '@/services/vm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import api from '@/services/api';
 
 export default function VmDetailPage() {
   const params = useParams();
@@ -102,7 +103,8 @@ export default function VmDetailPage() {
         return;
       }
     }
-    void copyValue(pwd, 'Password');
+    await copyValue(pwd, 'Password');
+    await api.post(`/vm/guest-accounts/${accountId}/copy`);
   };
 
   if (loading) {

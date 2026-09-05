@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle, CheckCircle2, Clock3, Monitor, RefreshCw, Search, Server, 
   ChevronLeft, ChevronRight, Columns, Download, ShieldAlert,
-  LoaderCircle, Box
+  LoaderCircle, Box, Archive, ArchiveRestore
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
@@ -21,7 +21,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type VmDiscoveryItem, type VmInventoryItem } from '@/lib/vm-inventory';
-import { getVmDiscoveries, getVmDiscovery, getVmInventory } from '@/services/vm';
+import { archiveVmInventory, getVmDiscoveries, getVmDiscovery, getVmInventory, restoreVmInventory } from '@/services/vm';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -38,7 +39,7 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { fadeInUp } from '@/lib/animations';
 
-type InventoryView = 'PENDING' | 'ACTIVE' | 'ORPHANED';
+type InventoryView = 'PENDING' | 'ACTIVE' | 'ORPHANED' | 'ARCHIVED';
 
 const VIEW_COPY: Record<InventoryView, { title: string; shortLabel: string; description: string; searchPlaceholder: string; }> = {
   PENDING: {
@@ -59,14 +60,22 @@ const VIEW_COPY: Record<InventoryView, { title: string; shortLabel: string; desc
     description: 'Previously active virtual machines no longer present in recent source syncs, kept as historical records.',
     searchPlaceholder: 'Search VM name...',
   },
+  ARCHIVED: {
+    title: 'Archived Inventory',
+    shortLabel: 'Archived',
+    description: 'Virtual machine records archived from the active inventory and retained for reference.',
+    searchPlaceholder: 'Search archived VM...',
+  },
 };
 
 export default function VmPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const { setHeader } = usePageHeader();
   const initialView = searchParams.get('view') as InventoryView | null;
-  const [activeView, setActiveView] = useState<InventoryView>(initialView && ['PENDING', 'ACTIVE', 'ORPHANED'].includes(initialView) ? initialView : 'ACTIVE');
+  const [activeView, setActiveView] = useState<InventoryView>(initialView && ['PENDING', 'ACTIVE', 'ORPHANED', 'ARCHIVED'].includes(initialView) ? initialView : 'ACTIVE');
+  const [includeArchived, setIncludeArchived] = useState(initialView === 'ARCHIVED' || searchParams.get('archived') === 'true');
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
   
   // Dialog functionality state
@@ -75,11 +84,11 @@ export default function VmPage() {
   const [openingPendingId, setOpeningPendingId] = useState<string | null>(null);
 
   const { data: vmData, isLoading, refetch } = useQuery({
-    queryKey: ['vm-data'],
+    queryKey: ['vm-data', includeArchived],
     queryFn: async () => {
       const [discoveryRecords, inventoryRecords] = await Promise.all([
         getVmDiscoveries(),
-        getVmInventory(),
+        getVmInventory(includeArchived),
       ]);
       return { discoveries: discoveryRecords, inventory: inventoryRecords };
     },
@@ -118,7 +127,33 @@ export default function VmPage() {
 
   const pendingQueue = useMemo(() => discoveries.filter(vm => vm.state !== 'DRIFTED'), [discoveries]);
   const activeQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ACTIVE' && vm.syncState !== 'Missing from source'), [inventory]);
-  const orphanedQueue = useMemo(() => inventory.filter(vm => vm.syncState === 'Missing from source' || vm.lifecycleState === 'DELETED_IN_VCENTER'), [inventory]);
+  const orphanedQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState !== 'ARCHIVED' && (vm.syncState === 'Missing from source' || vm.lifecycleState === 'DELETED_IN_VCENTER')), [inventory]);
+  const archivedQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ARCHIVED'), [inventory]);
+
+  const handleViewChange = useCallback((view: InventoryView) => {
+    setActiveView(view);
+    setIncludeArchived(view === 'ARCHIVED');
+  }, []);
+
+  const handleArchive = useCallback(async (id: string) => {
+    try {
+      await archiveVmInventory(id);
+      toast.success('VM archived successfully');
+      void refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to archive VM');
+    }
+  }, [refetch]);
+
+  const handleRestore = useCallback(async (id: string) => {
+    try {
+      await restoreVmInventory(id);
+      toast.success('VM restored successfully');
+      void refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to restore VM');
+    }
+  }, [refetch]);
 
   useEffect(() => {
     for (const vm of inventory) {
@@ -130,7 +165,8 @@ export default function VmPage() {
     ACTIVE: activeQueue.length,
     PENDING: pendingQueue.length,
     ORPHANED: orphanedQueue.length,
-  }), [activeQueue.length, pendingQueue.length, orphanedQueue.length]);
+    ARCHIVED: archivedQueue.length,
+  }), [activeQueue.length, pendingQueue.length, orphanedQueue.length, archivedQueue.length]);
 
   return (
     <motion.div 
@@ -164,11 +200,13 @@ export default function VmPage() {
         ) : (
           <>
             {activeView === 'PENDING' ? (
-              <PendingTable data={pendingQueue} onOpen={openPendingSetup} openingId={openingPendingId} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
+              <PendingTable data={pendingQueue} onOpen={openPendingSetup} openingId={openingPendingId} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={handleViewChange} stats={stats} />
             ) : activeView === 'ACTIVE' ? (
-              <ActiveTable data={activeQueue} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
+              <ActiveTable data={activeQueue} onOpen={openInventoryDetail} onArchive={user?.role === 'ADMIN' ? handleArchive : undefined} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={handleViewChange} stats={stats} />
+            ) : activeView === 'ORPHANED' ? (
+              <OrphanedTable data={orphanedQueue} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={handleViewChange} stats={stats} />
             ) : (
-              <OrphanedTable data={orphanedQueue} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={setActiveView} stats={stats} />
+              <OrphanedTable data={archivedQueue} archived onRestore={user?.role === 'ADMIN' ? handleRestore : undefined} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={handleViewChange} stats={stats} />
             )}
           </>
         )}
@@ -305,6 +343,7 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
             { key: 'ACTIVE', label: VIEW_COPY.ACTIVE.shortLabel, icon: CheckCircle2, iconClassName: 'text-success' },
             { key: 'PENDING', label: VIEW_COPY.PENDING.shortLabel, icon: Clock3, iconClassName: 'text-warning' },
             { key: 'ORPHANED', label: VIEW_COPY.ORPHANED.shortLabel, icon: AlertTriangle, iconClassName: 'text-critical' },
+            { key: 'ARCHIVED', label: VIEW_COPY.ARCHIVED.shortLabel, icon: Archive, iconClassName: 'text-muted-foreground' },
           ] as const
         ).map((tab) => (
           <button
@@ -498,7 +537,7 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
 // -------------------------------------------------------------
 // ACTIVE TABLE
 // -------------------------------------------------------------
-function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, stats }: any) {
+function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view, setView, stats }: any) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   
@@ -546,12 +585,17 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
     {
       id: 'actions',
       cell: ({ row }) => (
-        <div className="text-right">
+        <div className="flex items-center justify-end gap-1 text-right">
           <Button size="sm" variant="ghost" className="h-8 shadow-none" onClick={(e) => { e.stopPropagation(); onOpen(row.original.id); }}>Details</Button>
+          {onArchive && (
+            <Button size="sm" variant="ghost" className="h-8 text-destructive" onClick={(e) => { e.stopPropagation(); void onArchive(row.original.id); }}>
+              <Archive className="mr-1 h-3.5 w-3.5" /> Archive
+            </Button>
+          )}
         </div>
       )
     }
-  ], [onOpen]);
+  ], [onOpen, onArchive]);
 
   const table = useReactTable({
     data, columns, state: { sorting, globalFilter: searchTerm, columnVisibility },
@@ -610,7 +654,7 @@ function ActiveTable({ data, onOpen, searchTerm, onSearchChange, view, setView, 
 // -------------------------------------------------------------
 // ORPHANED TABLE
 // -------------------------------------------------------------
-function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView, stats }: any) {
+function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, onSearchChange, view, setView, stats }: any) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   
@@ -621,7 +665,7 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-critical/20 bg-critical/10 text-critical">
-            <ShieldAlert className="h-4 w-4" />
+            {archived ? <Archive className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
           </div>
           <span className="font-semibold text-foreground line-through opacity-60 group-hover:opacity-100 transition-opacity">{row.original.displayName || row.original.name}</span>
         </div>
@@ -634,12 +678,17 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
     {
       id: 'actions',
       cell: ({ row }) => (
-        <div className="text-right">
-          <Button size="sm" variant="ghost" className="h-8 text-critical" onClick={(e) => { e.stopPropagation(); onOpen(row.original.id); }}>Review</Button>
+        <div className="flex items-center justify-end gap-1 text-right">
+          <Button size="sm" variant="ghost" className="h-8 text-critical" onClick={(e) => { e.stopPropagation(); onOpen(row.original.id); }}>{archived ? 'Details' : 'Review'}</Button>
+          {archived && onRestore && (
+            <Button size="sm" variant="ghost" className="h-8 text-primary" onClick={(e) => { e.stopPropagation(); void onRestore(row.original.id); }}>
+              <ArchiveRestore className="mr-1 h-3.5 w-3.5" /> Restore
+            </Button>
+          )}
         </div>
       )
     }
-  ], [onOpen]);
+  ], [onOpen, onRestore, archived]);
 
   const table = useReactTable({
     data, columns, state: { sorting, globalFilter: searchTerm, columnVisibility },
@@ -676,10 +725,10 @@ function OrphanedTable({ data, onOpen, searchTerm, onSearchChange, view, setView
                   <div className="flex items-center justify-center h-full">
                     <EmptyState
                       icon={Server}
-                      title="No orphaned VMs found"
+                      title={archived ? 'No archived VMs found' : 'No orphaned VMs found'}
                       description={data.length === 0
-                        ? "No orphaned or missing virtual machines detected in your sources."
-                        : "No orphaned virtual machines match your current search criteria."
+                        ? archived ? "No virtual machines have been archived from active inventory." : "No orphaned or missing virtual machines detected in your sources."
+                        : archived ? "No archived virtual machines match your current search criteria." : "No orphaned virtual machines match your current search criteria."
                       }
                       className="w-full max-w-md border-none bg-transparent"
                     />

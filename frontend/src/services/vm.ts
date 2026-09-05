@@ -3,7 +3,7 @@ import type { VmDiscoveryItem, VmInventoryDetail, VmInventoryItem, VmVCenterSour
 
 export type SaveVmDraftPayload = {
   systemName: string;
-  environment: 'PROD' | 'TEST' | 'UAT';
+  environment?: 'PROD' | 'TEST' | 'UAT';
   owner?: string;
   businessUnit?: string;
   slaTier?: string;
@@ -21,6 +21,7 @@ export type SaveVmDraftPayload = {
     note?: string;
   }>;
   managedFields?: string[];
+  componentIds?: string[];
 };
 
 export type SaveVmSourcePayload = {
@@ -108,8 +109,10 @@ export async function archiveVmDiscovery(id: string) {
   await api.post(`/vm/discoveries/${id}/archive`);
 }
 
-export async function getVmInventory() {
-  const response = await api.get<VmInventoryItem[]>('/vm/inventory');
+export async function getVmInventory(includeArchived = false) {
+  const response = await api.get<VmInventoryItem[]>('/vm/inventory', {
+    params: includeArchived ? { includeArchived: 'true' } : undefined,
+  });
   return response.data;
 }
 
@@ -125,6 +128,11 @@ export async function updateVmInventory(id: string, payload: SaveVmDraftPayload)
 
 export async function archiveVmInventory(id: string) {
   await api.post(`/vm/inventory/${id}/archive`);
+}
+
+export async function restoreVmInventory(id: string) {
+  const response = await api.post<VmInventoryDetail>(`/vm/inventory/${id}/restore`);
+  return response.data;
 }
 
 export async function revealVmGuestAccountPassword(id: string) {

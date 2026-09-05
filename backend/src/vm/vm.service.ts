@@ -40,6 +40,17 @@ type VmSourceWithCounts = Prisma.VmVCenterSourceGetPayload<{
 const VM_INVENTORY_INCLUDE = {
   source: true,
   guestAccounts: true,
+  componentLinks: {
+    include: {
+      component: {
+        include: {
+          environment: {
+            include: { application: { select: { id: true, name: true } } },
+          },
+        },
+      },
+    },
+  },
 };
 
 type VmInventoryWithRelations = Prisma.VmInventoryGetPayload<{
@@ -524,6 +535,12 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         accessMethod: account.accessMethod,
         role: account.role,
         note: account.note,
+      })),
+      components: inventory.componentLinks.map((link) => ({
+        id: link.component.id,
+        name: link.component.name,
+        application: link.component.environment.application,
+        environment: link.component.environment.name,
       })),
       sourceHistory: inventory.source
         ? [
@@ -1080,27 +1097,6 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private inferEnvironment(sourceName: string, vmName: string) {
-    const haystack = `${sourceName} ${vmName}`.toLowerCase();
-    if (haystack.includes('prod')) {
-      return VmEnvironment.PROD;
-    }
-    if (haystack.includes('uat')) {
-      return VmEnvironment.UAT;
-    }
-    if (haystack.includes('test') || haystack.includes('qa')) {
-      return VmEnvironment.TEST;
-    }
-    return VmEnvironment.UAT;
-  }
-
-  private inferCriticality(environment: VmEnvironment) {
-    if (environment === VmEnvironment.PROD) {
-      return VmCriticality.BUSINESS_CRITICAL;
-    }
-    return VmCriticality.STANDARD;
-  }
-
   private async fetchSourceInventory(source: VmVCenterSource) {
     const session = await this.authenticateVcenter(
       source.endpoint,
@@ -1146,7 +1142,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
 
         const disks = detail ? this.extractDisks(detail) : [];
         const storageGb = disks.reduce((total, disk) => total + disk.sizeGb, 0);
-        const environment = this.inferEnvironment(source.name, summary.name);
+        // vCenter facts do not establish business context. Keep environment
+        // unset until an operator explicitly curates it; retain any heuristic
+        // only as a display suggestion in the UI is intentionally avoided.
+        const environment = undefined;
 
         return {
           moid: summary.vm,
@@ -1191,7 +1190,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             detail?.power_state ?? summary.power_state,
           ),
           environment,
-          criticality: this.inferCriticality(environment),
+          criticality: VmCriticality.STANDARD,
         };
       }),
     );
@@ -1804,6 +1803,17 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             : ((discovery.disks ?? undefined) as
                 | Prisma.InputJsonValue
                 | undefined);
+        const componentIds = [...new Set(dto.componentIds ?? [])];
+        if (componentIds.length) {
+          const componentCount = await tx.applicationComponent.count({
+            where: { id: { in: componentIds } },
+          });
+          if (componentCount !== componentIds.length) {
+            throw new BadRequestException(
+              'VM component links must reference existing application components',
+            );
+          }
+        }
 
         await tx.vmDiscovery.update({
           where: { id },
@@ -1877,6 +1887,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             guestAccounts: {
               create: guestAccounts,
             },
+            ...(componentIds.length
+              ? {
+                  componentLinks: {
+                    create: componentIds.map((componentId) => ({
+                      componentId,
+                    })),
+                  },
+                }
+              : {}),
           },
           include: VM_INVENTORY_INCLUDE,
         });
@@ -1914,15 +1933,13 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return { success: true };
   }
 
-  async findInventory() {
+  async findInventory(includeArchived = false) {
     this.ensureSeedData();
     const inventories = await this.prisma.vmInventory.findMany({
       take: 1000,
-      where: {
-        lifecycleState: {
-          not: VmLifecycleState.ARCHIVED,
-        },
-      },
+      where: includeArchived
+        ? undefined
+        : { lifecycleState: { not: VmLifecycleState.ARCHIVED } },
       include: VM_INVENTORY_INCLUDE,
       orderBy: { updatedAt: 'desc' },
     });
@@ -1993,6 +2010,19 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       include: {
         source: true,
         guestAccounts: true,
+        componentLinks: {
+          include: {
+            component: {
+              include: {
+                environment: {
+                  include: {
+                    application: { select: { id: true, name: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -2022,6 +2052,17 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       description,
       guestAccountsCount: guestAccounts.length,
     });
+    const componentIds = [...new Set(dto.componentIds ?? [])];
+    if (componentIds.length) {
+      const componentCount = await this.prisma.applicationComponent.count({
+        where: { id: { in: componentIds } },
+      });
+      if (componentCount !== componentIds.length) {
+        throw new BadRequestException(
+          'VM component links must reference existing application components',
+        );
+      }
+    }
     const updated = await this.prisma.vmInventory.update({
       where: { id },
       data: {
@@ -2048,6 +2089,14 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           deleteMany: {},
           create: guestAccounts,
         },
+        ...(dto.componentIds !== undefined
+          ? {
+              componentLinks: {
+                deleteMany: {},
+                create: componentIds.map((componentId) => ({ componentId })),
+              },
+            }
+          : {}),
       },
       include: VM_INVENTORY_INCLUDE,
     });
@@ -2135,5 +2184,31 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return {
       password: this.credentialsService.decrypt(account.encryptedPassword),
     };
+  }
+
+  async recordGuestAccountCopy(id: string, userId: string) {
+    const account = await this.prisma.vmGuestAccount.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        inventoryId: true,
+        discoveryId: true,
+      },
+    });
+    if (!account)
+      throw new NotFoundException(`VM Guest Account ${id} not found`);
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.COPY_PASSWORD,
+        targetId: id,
+        details: JSON.stringify({
+          username: account.username,
+          vmId: account.inventoryId || account.discoveryId,
+        }),
+      },
+    });
+    return { recorded: true };
   }
 }

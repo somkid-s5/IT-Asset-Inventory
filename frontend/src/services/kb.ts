@@ -11,6 +11,10 @@ export interface KBDocument {
   viewCount: number;
   createdAt: string;
   updatedAt: string;
+  applicationLinks?: Array<{ application: { id: string; name: string } }>;
+  assetLinks?: Array<{ asset: { id: string; name: string; assetId?: string | null } }>;
+  vmLinks?: Array<{ vm: { id: string; systemName: string; primaryIp?: string | null } }>;
+  databaseLinks?: Array<{ database: { id: string; name: string; engine?: string | null } }>;
 }
 
 export interface KBCategory {
@@ -56,11 +60,27 @@ export const kbService = {
     const res = await api.delete(`/knowledge-base/categories/${id}`);
     return res.data;
   },
-  createDocument: async (data: { title: string; content: string; categoryId: string }) => {
+  createDocument: async (data: {
+    title: string;
+    content: string;
+    categoryId: string;
+    applicationIds?: string[];
+    assetIds?: string[];
+    vmIds?: string[];
+    databaseIds?: string[];
+  }) => {
     const res = await api.post<KBDocument>('/knowledge-base/documents', data);
     return res.data;
   },
-  updateDocument: async (id: string, data: any) => {
+  updateDocument: async (id: string, data: {
+    title: string;
+    content: string;
+    categoryId: string;
+    applicationIds?: string[];
+    assetIds?: string[];
+    vmIds?: string[];
+    databaseIds?: string[];
+  }) => {
     const res = await api.patch<KBDocument>(`/knowledge-base/documents/${id}`, data);
     return res.data;
   },

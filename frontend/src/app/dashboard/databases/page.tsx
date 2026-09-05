@@ -10,8 +10,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowDown, ArrowUp, Box, ChevronsUpDown, Code2,
   Database, FlaskConical, LoaderCircle, Pencil, Plus,
-  Search, ShieldCheck, Trash2, Columns, ChevronLeft,
-  ChevronRight, MoreHorizontal, Download
+  Search, ShieldCheck, Columns, ChevronLeft,
+  ChevronRight, MoreHorizontal, Download, Archive, ArchiveRestore
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,12 +79,15 @@ export default function DbPage() {
     setMounted(true);
   }, []);
   const initialEnvironment = searchParams.get('environment') as DatabaseEnvironment | null;
+  const [showArchived, setShowArchived] = useState(() => searchParams.get('archived') === 'true');
   const [activeEnvironment, setActiveEnvironment] = useState<'ALL' | DatabaseEnvironment>(initialEnvironment && ['PROD', 'TEST', 'DEV'].includes(initialEnvironment) ? initialEnvironment : 'ALL');
 
   const { data: databases = [], isLoading, refetch } = useQuery({
-    queryKey: ['databases'],
+    queryKey: ['databases', showArchived],
     queryFn: async () => {
-      const response = await api.get<DatabaseInventoryItem[]>('/databases');
+      const response = await api.get<DatabaseInventoryItem[]>('/databases', {
+        params: { includeArchived: showArchived ? 'true' : undefined },
+      });
       return response.data;
     },
   });
@@ -120,9 +123,9 @@ export default function DbPage() {
   }, [setHeader]);
 
   const filteredData = useMemo(() => {
-    let result = databases;
+    let result = showArchived ? databases : databases.filter((database) => database.status !== 'ARCHIVED');
     if (activeEnvironment !== 'ALL') {
-      result = databases.filter(d => d.environment === activeEnvironment);
+      result = result.filter(d => d.environment === activeEnvironment);
     }
 
     if (searchTerm) {
@@ -151,8 +154,8 @@ export default function DbPage() {
     }
 
     return result;
-  }, [databases, activeEnvironment, searchTerm]);
-  const hasActiveDatabaseFilter = Boolean(searchTerm.trim()) || activeEnvironment !== 'ALL';
+  }, [databases, activeEnvironment, searchTerm, showArchived]);
+  const hasActiveDatabaseFilter = Boolean(searchTerm.trim()) || activeEnvironment !== 'ALL' || showArchived;
 
   const countsByEnvironment = useMemo<Record<'ALL' | DatabaseEnvironment, number>>(() => ({
     ALL: databases.length,
@@ -238,6 +241,7 @@ export default function DbPage() {
       cell: ({ row }) => {
         const db = row.original;
         const isWritable = mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR');
+        const isAdmin = mounted && !loading && user?.role === 'ADMIN';
         return (
           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
             {isWritable && (
@@ -261,14 +265,14 @@ export default function DbPage() {
                 <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(`/dashboard/databases/${db.id}`)}>
                   View Details
                 </DropdownMenuItem>
-                {isWritable && (
+                {isAdmin && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                       className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer"
+                       className={cn('cursor-pointer', db.status === 'ARCHIVED' ? 'text-primary focus:text-primary focus:bg-primary/5' : 'text-destructive focus:text-destructive focus:bg-destructive/5')}
                        onClick={() => setDeleteTarget(db)}
                     >
-                      Delete Database
+                      {db.status === 'ARCHIVED' ? 'Restore Database' : 'Archive Database'}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -309,10 +313,17 @@ export default function DbPage() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      await api.delete(`/databases/${deleteTarget.id}`);
-      toast.success('Database deleted successfully');
+      if (deleteTarget.status === 'ARCHIVED') {
+        await api.patch(`/databases/${deleteTarget.id}/restore`);
+        toast.success('Database restored successfully');
+      } else {
+        await api.patch(`/databases/${deleteTarget.id}/archive`);
+        toast.success('Database archived successfully');
+      }
       setDeleteTarget(null);
       void refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || `Failed to ${deleteTarget.status === 'ARCHIVED' ? 'restore' : 'archive'} database`);
     } finally {
       setDeleteLoading(false);
     }
@@ -399,6 +410,18 @@ export default function DbPage() {
           <p className="text-xs text-muted-foreground text-pretty">Monitor and manage all database instances</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+           {mounted && !loading && user?.role === 'ADMIN' && (
+             <Button
+               variant={showArchived ? 'secondary' : 'outline'}
+               size="sm"
+               className="h-9 shadow-sm bg-card"
+               onClick={() => setShowArchived((value) => !value)}
+               aria-pressed={showArchived}
+             >
+               {showArchived ? <ArchiveRestore className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+               {showArchived ? 'Active Databases' : 'Archived Databases'}
+             </Button>
+           )}
            <Button variant="outline" size="sm" className="h-9 shadow-sm bg-card" onClick={handleExport}>
              <Download className="h-4 w-4 mr-2" />
              Export
@@ -518,7 +541,7 @@ export default function DbPage() {
                         title="No databases found"
                         description={!hasActiveDatabaseFilter && databases.length === 0
                           ? "You haven't added any database records yet. Start by adding your first database."
-                          : "No databases match your current search or filter criteria."
+                          : showArchived ? "No archived databases match your current search or environment filter." : "No databases match your current search or filter criteria."
                         }
                         action={!hasActiveDatabaseFilter && databases.length === 0 && mounted && !loading && (user?.role === 'ADMIN' || user?.role === 'EDITOR') ? {
                           label: "Add Your First Database",
@@ -578,16 +601,18 @@ export default function DbPage() {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-destructive">Delete Database</DialogTitle>
+          <DialogTitle className={deleteTarget?.status === 'ARCHIVED' ? 'text-primary' : 'text-destructive'}>
+            {deleteTarget?.status === 'ARCHIVED' ? 'Restore Database' : 'Archive Database'}
+          </DialogTitle>
           </DialogHeader>
           <div className="py-4 text-sm text-muted-foreground">
-            Are you sure you want to delete database <span className="font-bold text-foreground">{deleteTarget?.name}</span> and all associated accounts?
+            Are you sure you want to {deleteTarget?.status === 'ARCHIVED' ? 'restore' : 'archive'} database <span className="font-bold text-foreground">{deleteTarget?.name}</span> and keep all associated accounts?
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteLoading}>
+            <Button variant={deleteTarget?.status === 'ARCHIVED' ? 'default' : 'destructive'} onClick={handleDelete} disabled={deleteLoading}>
               {deleteLoading ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : null}
-              Confirm Delete
+              Confirm {deleteTarget?.status === 'ARCHIVED' ? 'Restore' : 'Archive'}
             </Button>
           </div>
         </DialogContent>
