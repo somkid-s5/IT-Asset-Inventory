@@ -74,6 +74,7 @@ function CommandInput({
         data-slot="command-input"
         className={cn(
           "flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+          "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
           className
         )}
         {...props}
