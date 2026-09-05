@@ -10,6 +10,8 @@ type DatabaseWithAccounts = Prisma.DatabaseInventoryGetPayload<{
   include: {
     accounts: true;
     logicalDatabases: { include: { components: true } };
+    hostAsset: { select: { id: true; name: true; assetId: true } };
+    hostVm: { select: { id: true; name: true; systemName: true } };
     createdByUser: true;
   };
 }>;
@@ -40,6 +42,7 @@ export class DatabasesService {
           .map((privilege) => privilege.trim())
           .filter(Boolean),
         note: this.sanitizeText(account.note),
+        scope: this.sanitizeText(account.scope) ?? 'INSTANCE',
       }));
   }
 
@@ -61,6 +64,9 @@ export class DatabasesService {
       maintenanceWindow: database.maintenanceWindow,
       status: database.status,
       note: database.note,
+      responsibleParty: database.responsibleParty,
+      hostAsset: database.hostAsset,
+      hostVm: database.hostVm,
       accountsCount: database.accounts.length,
       logicalDatabases: database.logicalDatabases.map((logicalDatabase) => ({
         id: logicalDatabase.id,
@@ -115,6 +121,9 @@ export class DatabasesService {
           ? (this.sanitizeText(createDatabaseDto.status) as DatabaseStatus)
           : undefined,
         note: this.sanitizeText(createDatabaseDto.note),
+        responsibleParty: this.sanitizeText(createDatabaseDto.responsibleParty),
+        hostAssetId: this.sanitizeText(createDatabaseDto.hostAssetId),
+        hostVmId: this.sanitizeText(createDatabaseDto.hostVmId),
         createdByUserId: userId,
         accounts: {
           create: this.buildAccounts(createDatabaseDto.accounts).map(
@@ -141,6 +150,8 @@ export class DatabasesService {
       include: {
         accounts: true,
         logicalDatabases: { include: { components: true } },
+        hostAsset: { select: { id: true, name: true, assetId: true } },
+        hostVm: { select: { id: true, name: true, systemName: true } },
         createdByUser: true,
       },
     });
@@ -161,9 +172,12 @@ export class DatabasesService {
     return this.toDetail(created);
   }
 
-  async findAll() {
+  async findAll(includeArchived = false) {
     const databases = await this.prisma.databaseInventory.findMany({
       take: 1000,
+      where: includeArchived
+        ? {}
+        : { status: { not: DatabaseStatus.ARCHIVED } },
       include: {
         accounts: {
           select: { id: true },
@@ -180,6 +194,7 @@ export class DatabasesService {
 
   async getDataQualitySummary() {
     const databases = await this.prisma.databaseInventory.findMany({
+      where: { status: { not: DatabaseStatus.ARCHIVED } },
       select: {
         id: true,
         name: true,
@@ -225,6 +240,8 @@ export class DatabasesService {
       include: {
         accounts: true,
         logicalDatabases: { include: { components: true } },
+        hostAsset: { select: { id: true, name: true, assetId: true } },
+        hostVm: { select: { id: true, name: true, systemName: true } },
         createdByUser: true,
       },
     });
@@ -305,6 +322,19 @@ export class DatabasesService {
         ...(updateDatabaseDto.note !== undefined
           ? { note: this.sanitizeText(updateDatabaseDto.note) }
           : {}),
+        ...(updateDatabaseDto.responsibleParty !== undefined
+          ? {
+              responsibleParty: this.sanitizeText(
+                updateDatabaseDto.responsibleParty,
+              ),
+            }
+          : {}),
+        ...(updateDatabaseDto.hostAssetId !== undefined
+          ? { hostAssetId: this.sanitizeText(updateDatabaseDto.hostAssetId) }
+          : {}),
+        ...(updateDatabaseDto.hostVmId !== undefined
+          ? { hostVmId: this.sanitizeText(updateDatabaseDto.hostVmId) }
+          : {}),
         ...(updateDatabaseDto.accounts !== undefined
           ? {
               accounts: {
@@ -341,6 +371,8 @@ export class DatabasesService {
       include: {
         accounts: true,
         logicalDatabases: { include: { components: true } },
+        hostAsset: { select: { id: true, name: true, assetId: true } },
+        hostVm: { select: { id: true, name: true, systemName: true } },
         createdByUser: true,
       },
     });
@@ -362,8 +394,9 @@ export class DatabasesService {
 
   async remove(id: string, userId: string) {
     const db = await this.findOne(id);
-    const deleted = await this.prisma.databaseInventory.delete({
+    const archived = await this.prisma.databaseInventory.update({
       where: { id },
+      data: { status: DatabaseStatus.ARCHIVED },
     });
 
     await this.prisma.auditLog.create({
@@ -378,7 +411,27 @@ export class DatabasesService {
       },
     });
 
-    return deleted;
+    return archived;
+  }
+
+  async restore(id: string, userId: string) {
+    const restored = await this.prisma.databaseInventory.update({
+      where: { id },
+      data: { status: DatabaseStatus.ACTIVE },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_DATABASE,
+        targetId: id,
+        details: JSON.stringify({
+          name: restored.name,
+          status: DatabaseStatus.ACTIVE,
+          restored: true,
+        }),
+      },
+    });
+    return this.findOne(id);
   }
 
   async createLogicalDatabase(

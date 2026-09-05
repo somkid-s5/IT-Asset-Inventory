@@ -27,6 +27,7 @@ import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
 import { Public } from '../auth/public.decorator';
 import { UpdateKnowledgeBaseDto } from './dto/update-knowledge-base.dto';
+import { CreateKnowledgeBaseDto } from './dto/create-knowledge-base.dto';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -177,13 +178,7 @@ export class KnowledgeBaseController {
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post('documents')
   createDocument(
-    @Body()
-    data: {
-      title: string;
-      content: string;
-      categoryId: string;
-      authorId: string;
-    },
+    @Body() data: CreateKnowledgeBaseDto,
     @Request() req: AuthRequest,
   ) {
     return this.knowledgeBaseService.createDocument({

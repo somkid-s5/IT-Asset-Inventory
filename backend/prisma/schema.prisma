@@ -30,6 +30,7 @@ enum AssetStatus {
   INACTIVE
   MAINTENANCE
   DECOMMISSIONED
+  ARCHIVED
 }
 
 enum VmPowerState {
@@ -68,6 +69,7 @@ enum DatabaseStatus {
   ACTIVE
   INACTIVE
   MAINTENANCE
+  ARCHIVED
 }
 
 enum ApplicationStatus {
@@ -162,18 +164,19 @@ model User {
 }
 
 model Application {
-  id              String                   @id @default(uuid())
-  name            String                   @unique
+  id              String                         @id @default(uuid())
+  name            String                         @unique
   technicalOwner  String?
   businessUnit    String?
   description     String?
-  status          ApplicationStatus        @default(ACTIVE)
+  status          ApplicationStatus              @default(ACTIVE)
   createdByUserId String
-  createdByUser   User                     @relation(fields: [createdByUserId], references: [id])
+  createdByUser   User                           @relation(fields: [createdByUserId], references: [id])
   environments    ApplicationEnvironment[]
   access          ApplicationAccess[]
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
+  documentLinks   KnowledgeDocumentApplication[]
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
 
   @@index([status])
   @@index([technicalOwner])
@@ -188,6 +191,7 @@ model ApplicationEnvironment {
   noDatabase    Boolean                    @default(false)
   sortOrder     Int                        @default(0)
   components    ApplicationComponent[]
+  access        ApplicationAccess[]
   createdAt     DateTime                   @default(now())
   updatedAt     DateTime                   @updatedAt
 
@@ -196,15 +200,17 @@ model ApplicationEnvironment {
 }
 
 model ApplicationComponent {
-  id               String                 @id @default(uuid())
+  id               String                      @id @default(uuid())
   environmentId    String
-  environment      ApplicationEnvironment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environment      ApplicationEnvironment      @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   name             String
   description      String?
-  sortOrder        Int                    @default(0)
+  sortOrder        Int                         @default(0)
   logicalDatabases LogicalDatabase[]
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
+  assetLinks       ApplicationComponentAsset[]
+  vmLinks          ApplicationComponentVm[]
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
 
   @@unique([environmentId, name])
   @@index([environmentId, sortOrder])
@@ -212,8 +218,10 @@ model ApplicationComponent {
 
 model ApplicationAccess {
   id            String                  @id @default(uuid())
-  applicationId String
-  application   Application             @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String?
+  application   Application?            @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  environmentId String?
+  environment   ApplicationEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
   label         String
   address       String
   method        String
@@ -222,6 +230,7 @@ model ApplicationAccess {
   updatedAt     DateTime                @updatedAt
 
   @@index([applicationId])
+  @@index([environmentId])
 }
 
 model ApplicationCredential {
@@ -255,19 +264,23 @@ model IPAllocation {
 }
 
 model Asset {
-  id             String      @id @default(uuid())
-  assetId        String?     @unique // e.g., '6303-0003'
-  name           String
-  type           AssetType
-  environment    String? // e.g., 'PROD', 'UAT', 'DEV'
-  location       String? // e.g., 'DC'
-  rack           String? // e.g., '1C-04'
-  osVersion      String? // e.g., 'Fabric OS: v8.2.1c'
-  manageType     String? // e.g., 'WEB/SSH'
-  brandModel     String? // e.g., 'HPE StoreFabric SN3600B'
-  sn             String? // Serial Number
-  customMetadata Json? // Flexible JSON structure for other specs
-  status         AssetStatus @default(ACTIVE)
+  id               String                      @id @default(uuid())
+  assetId          String?                     @unique // e.g., '6303-0003'
+  name             String
+  type             AssetType
+  environment      String? // e.g., 'PROD', 'UAT', 'DEV'
+  location         String? // e.g., 'DC'
+  rack             String? // e.g., '1C-04'
+  osVersion        String? // e.g., 'Fabric OS: v8.2.1c'
+  manageType       String? // e.g., 'WEB/SSH'
+  brandModel       String? // e.g., 'HPE StoreFabric SN3600B'
+  sn               String? // Serial Number
+  customMetadata   Json? // Flexible JSON structure for other specs
+  status           AssetStatus                 @default(ACTIVE)
+  responsibleParty String?
+  componentLinks   ApplicationComponentAsset[]
+  hostedDatabases  DatabaseInventory[]         @relation("DatabaseHostAsset")
+  documentLinks    KnowledgeDocumentAsset[]
 
   // Financial & Info
   owner              String?
@@ -371,18 +384,56 @@ model DatabaseInventory {
   maintenanceWindow String?
   status            DatabaseStatus? @default(ACTIVE)
   note              String?
+  responsibleParty  String?
+  hostAssetId       String?
+  hostAsset         Asset?          @relation("DatabaseHostAsset", fields: [hostAssetId], references: [id], onDelete: SetNull)
+  hostVmId          String?
+  hostVm            VmInventory?    @relation("DatabaseHostVm", fields: [hostVmId], references: [id], onDelete: SetNull)
 
   createdByUserId String
   createdByUser   User   @relation(fields: [createdByUserId], references: [id])
 
   accounts         DatabaseAccount[]
   logicalDatabases LogicalDatabase[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  documentLinks    KnowledgeDocumentDatabase[]
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
 
   @@index([status])
   @@index([engine])
   @@index([environment])
+  @@index([hostAssetId])
+  @@index([hostVmId])
+}
+
+model ApplicationComponentAsset {
+  id               String               @id @default(uuid())
+  componentId      String
+  component        ApplicationComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  assetId          String
+  asset            Asset                @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  relationType     String               @default("PRIMARY")
+  responsibleParty String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@unique([componentId, assetId])
+  @@index([assetId])
+}
+
+model ApplicationComponentVm {
+  id               String               @id @default(uuid())
+  componentId      String
+  component        ApplicationComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  vmId             String
+  vm               VmInventory          @relation(fields: [vmId], references: [id], onDelete: Cascade)
+  relationType     String               @default("PRIMARY")
+  responsibleParty String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@unique([componentId, vmId])
+  @@index([vmId])
 }
 
 model DatabaseAccount {
@@ -396,7 +447,7 @@ model DatabaseAccount {
   privileges        String[]
   note              String?
   scope             String            @default("INSTANCE")
-  logicalDatabases  LogicalDatabase[]
+  logicalDatabases  LogicalDatabase[] @relation("DatabaseAccountScopes")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -411,8 +462,7 @@ model LogicalDatabase {
   components          ApplicationComponent[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
-  DatabaseAccount     DatabaseAccount?       @relation(fields: [databaseAccountId], references: [id])
-  databaseAccountId   String?
+  accounts            DatabaseAccount[]      @relation("DatabaseAccountScopes")
 
   @@unique([databaseInventoryId, name])
   @@index([databaseInventoryId])
@@ -444,7 +494,7 @@ model VmDiscovery {
   id                   String           @id @default(uuid())
   name                 String
   systemName           String?
-  moid                 String           @unique
+  moid                 String
   sourceId             String
   source               VmVCenterSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   cluster              String
@@ -488,6 +538,7 @@ model VmDiscovery {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([sourceId, moid])
   @@index([state])
 }
 
@@ -499,8 +550,8 @@ model VmInventory {
   source            VmVCenterSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
   name              String
   systemName        String
-  moid              String           @unique
-  environment       VmEnvironment
+  moid              String
+  environment       VmEnvironment?
   cluster           String
   clusterResolution String           @default("UNKNOWN")
   host              String
@@ -515,6 +566,8 @@ model VmInventory {
   networkLabel      String
   powerState        VmPowerState
   lifecycleState    VmLifecycleState
+  discoveryState    VmDiscoveryState @default(NEEDS_CONTEXT)
+  responsibleParty  String?
   syncState         String
   owner             String
   businessUnit      String
@@ -531,11 +584,15 @@ model VmInventory {
   createdByUserId String?
   createdByUser   User?   @relation(fields: [createdByUserId], references: [id])
 
-  guestAccounts VmGuestAccount[]
+  guestAccounts   VmGuestAccount[]
+  componentLinks  ApplicationComponentVm[]
+  hostedDatabases DatabaseInventory[]      @relation("DatabaseHostVm")
+  documentLinks   KnowledgeDocumentVm[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([sourceId, moid])
   @@index([lifecycleState])
   @@index([environment])
   @@index([owner])
@@ -596,18 +653,62 @@ model KnowledgeCategory {
 }
 
 model KnowledgeDocument {
-  id         String            @id @default(uuid())
-  title      String
-  content    String
-  categoryId String
-  category   KnowledgeCategory @relation(fields: [categoryId], references: [id])
-  authorId   String
-  author     User              @relation(fields: [authorId], references: [id])
-  viewCount  Int               @default(0)
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  id               String                         @id @default(uuid())
+  title            String
+  content          String
+  categoryId       String
+  category         KnowledgeCategory              @relation(fields: [categoryId], references: [id])
+  authorId         String
+  author           User                           @relation(fields: [authorId], references: [id])
+  applicationLinks KnowledgeDocumentApplication[]
+  assetLinks       KnowledgeDocumentAsset[]
+  vmLinks          KnowledgeDocumentVm[]
+  databaseLinks    KnowledgeDocumentDatabase[]
+  viewCount        Int                            @default(0)
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
 
   @@index([categoryId])
+}
+
+model KnowledgeDocumentApplication {
+  documentId    String
+  document      KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  applicationId String
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, applicationId])
+  @@index([applicationId])
+}
+
+model KnowledgeDocumentAsset {
+  documentId String
+  document   KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  assetId    String
+  asset      Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, assetId])
+  @@index([assetId])
+}
+
+model KnowledgeDocumentVm {
+  documentId String
+  document   KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  vmId       String
+  vm         VmInventory       @relation(fields: [vmId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, vmId])
+  @@index([vmId])
+}
+
+model KnowledgeDocumentDatabase {
+  documentId String
+  document   KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  databaseId String
+  database   DatabaseInventory @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, databaseId])
+  @@index([databaseId])
 }
 
 model TokenBlocklist {

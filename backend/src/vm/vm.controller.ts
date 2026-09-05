@@ -112,10 +112,13 @@ export class VmController {
     return this.vmService.promoteDiscovery(id, dto, req.user.id);
   }
 
-  @Roles(Role.ADMIN, Role.EDITOR)
+  @Roles(Role.ADMIN)
   @Post('discoveries/:id/archive')
-  archiveDiscovery(@Param('id') id: string) {
-    return this.vmService.archiveDiscovery(id);
+  archiveDiscovery(
+    @Param('id') id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.vmService.archiveDiscovery(id, req.user.id);
   }
 
   @Get('inventory')
@@ -138,7 +141,7 @@ export class VmController {
     return this.vmService.updateInventory(id, dto, req.user.id);
   }
 
-  @Roles(Role.ADMIN, Role.EDITOR)
+  @Roles(Role.ADMIN)
   @Post('inventory/:id/archive')
   archiveInventory(
     @Param('id') id: string,
@@ -146,6 +149,15 @@ export class VmController {
     @Body('lifecycleState') lifecycleState?: VmLifecycleState,
   ) {
     return this.vmService.archiveInventory(id, req.user.id, lifecycleState);
+  }
+
+  @Roles(Role.ADMIN)
+  @Post('inventory/:id/restore')
+  restoreInventory(
+    @Param('id') id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.vmService.restoreInventory(id, req.user.id);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)

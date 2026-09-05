@@ -131,6 +131,10 @@ export class CreateAssetDto {
 
   @IsOptional()
   @IsString()
+  responsibleParty?: string;
+
+  @IsOptional()
+  @IsString()
   department?: string;
 
   @IsOptional()

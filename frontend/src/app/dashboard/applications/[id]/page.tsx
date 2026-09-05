@@ -105,7 +105,12 @@ export default function ApplicationDetailPage() {
               {env.components.length ? (
                 <ul className="mt-2 space-y-1 text-sm">
                   {env.components.map((component) => (
-                    <li key={component.id}>{component.name}</li>
+                    <li key={component.id} className="space-y-1">
+                      <p>{component.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(component.assets?.length ?? 0)} assets · {(component.virtualMachines?.length ?? 0)} VMs · {(component.logicalDatabases?.length ?? 0)} logical DBs
+                      </p>
+                    </li>
                   ))}
                 </ul>
               ) : (
@@ -113,6 +118,12 @@ export default function ApplicationDetailPage() {
                   No components yet.
                 </p>
               )}
+              {env.access?.length ? (
+                <div className="mt-4 border-t pt-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Access</p>
+                  {env.access.map((access) => <p key={access.id} className="mt-1 text-xs">{access.label} · {access.method} · {access.address}</p>)}
+                </div>
+              ) : null}
             </div>
           ))}
         </CardContent>

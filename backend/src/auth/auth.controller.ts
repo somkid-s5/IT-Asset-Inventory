@@ -11,6 +11,7 @@ import {
   UseGuards,
   Headers,
   UnauthorizedException,
+  ConflictException,
 } from '@nestjs/common';
 import * as express from 'express';
 import type { Response } from 'express';
@@ -38,14 +39,41 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Headers('x-registration-key') registrationKey?: string,
   ) {
-    const secret = process.env.REGISTRATION_SECRET;
+    const secret =
+      process.env.BOOTSTRAP_SECRET ?? process.env.REGISTRATION_SECRET;
     if (!secret || registrationKey !== secret) {
       throw new UnauthorizedException(
         'Registration is restricted. Valid registration key required.',
       );
     }
 
-    const result = await this.authService.register(registerDto);
+    if ((await this.authService.getUserCount()) > 0) {
+      throw new ConflictException(
+        'Self-registration is disabled after the initial administrator is created.',
+      );
+    }
+
+    const result = await this.authService.register(registerDto, true);
+    this.setAuthCookie(res, result.access_token);
+    return { user: result.user };
+  }
+
+  /** One-time bootstrap endpoint for the first administrator account. */
+  @Post('bootstrap')
+  async bootstrap(
+    @Body() registerDto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+    @Headers('x-bootstrap-key') bootstrapKey?: string,
+  ) {
+    const secret =
+      process.env.BOOTSTRAP_SECRET ?? process.env.REGISTRATION_SECRET;
+    if (!secret || bootstrapKey !== secret) {
+      throw new UnauthorizedException('Valid bootstrap key required.');
+    }
+    if ((await this.authService.getUserCount()) > 0) {
+      throw new ConflictException('Bootstrap has already been completed.');
+    }
+    const result = await this.authService.register(registerDto, true);
     this.setAuthCookie(res, result.access_token);
     return { user: result.user };
   }

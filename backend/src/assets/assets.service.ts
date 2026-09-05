@@ -250,6 +250,7 @@ export class AssetsService {
       ...(filters.location
         ? { location: { equals: filters.location, mode: 'insensitive' } }
         : {}),
+      ...(filters.status ? {} : { status: { not: AssetStatus.ARCHIVED } }),
       ...(searchConditions.length ? { OR: searchConditions } : {}),
     };
 
@@ -342,6 +343,7 @@ export class AssetsService {
         warrantyExpiration: true,
         ipAllocations: { select: { id: true } },
       },
+      where: { status: { not: AssetStatus.ARCHIVED } },
       orderBy: { updatedAt: 'desc' },
     });
     const today = new Date();
@@ -599,8 +601,9 @@ export class AssetsService {
   async remove(id: string, userId: string) {
     const asset = await this.findOne(id);
 
-    const deleted = await this.prisma.asset.delete({
+    const archived = await this.prisma.asset.update({
       where: { id },
+      data: { status: AssetStatus.ARCHIVED },
     });
 
     await this.prisma.auditLog.create({
@@ -615,6 +618,26 @@ export class AssetsService {
       },
     });
 
-    return deleted;
+    return archived;
+  }
+
+  async restore(id: string, userId: string) {
+    const asset = await this.prisma.asset.update({
+      where: { id },
+      data: { status: AssetStatus.ACTIVE },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_ASSET,
+        targetId: id,
+        details: JSON.stringify({
+          name: asset.name,
+          status: AssetStatus.ACTIVE,
+          restored: true,
+        }),
+      },
+    });
+    return this.findOne(id);
   }
 }

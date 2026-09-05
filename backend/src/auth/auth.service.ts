@@ -22,7 +22,7 @@ export class AuthService {
     return this.prisma.user.count();
   }
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto, bootstrapOnly = false) {
     const { username, displayName, password } = registerDto;
 
     const salt = await bcrypt.genSalt(10);
@@ -35,6 +35,9 @@ export class AuthService {
       if (existingUser) throw new ConflictException('Username already exists');
 
       const userCount = await tx.user.count();
+      if (bootstrapOnly && userCount > 0) {
+        throw new ConflictException('Bootstrap has already been completed.');
+      }
       const created = await tx.user.create({
         data: {
           username,

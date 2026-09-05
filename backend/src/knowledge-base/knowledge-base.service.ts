@@ -210,16 +210,56 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
     content: string;
     categoryId: string;
     authorId: string;
+    applicationIds?: string[];
+    assetIds?: string[];
+    vmIds?: string[];
+    databaseIds?: string[];
   }) {
     const sanitizedContent = sanitizeHtml(data.content);
     const document = await this.prisma.knowledgeDocument.create({
       data: {
-        ...data,
+        title: data.title,
+        categoryId: data.categoryId,
+        authorId: data.authorId,
         content: sanitizedContent,
+        applicationLinks: {
+          create: (data.applicationIds ?? []).map((applicationId) => ({
+            applicationId,
+          })),
+        },
+        assetLinks: {
+          create: (data.assetIds ?? []).map((assetId) => ({ assetId })),
+        },
+        vmLinks: {
+          create: (data.vmIds ?? []).map((vmId) => ({ vmId })),
+        },
+        databaseLinks: {
+          create: (data.databaseIds ?? []).map((databaseId) => ({
+            databaseId,
+          })),
+        },
       },
       include: {
         category: true,
         author: { select: { displayName: true } },
+        applicationLinks: {
+          include: { application: { select: { id: true, name: true } } },
+        },
+        assetLinks: {
+          include: {
+            asset: { select: { id: true, name: true, assetId: true } },
+          },
+        },
+        vmLinks: {
+          include: {
+            vm: { select: { id: true, systemName: true, primaryIp: true } },
+          },
+        },
+        databaseLinks: {
+          include: {
+            database: { select: { id: true, name: true, engine: true } },
+          },
+        },
       },
     });
 
@@ -245,6 +285,24 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
         category: true,
         author: {
           select: { id: true, displayName: true, username: true },
+        },
+        applicationLinks: {
+          include: { application: { select: { id: true, name: true } } },
+        },
+        assetLinks: {
+          include: {
+            asset: { select: { id: true, name: true, assetId: true } },
+          },
+        },
+        vmLinks: {
+          include: {
+            vm: { select: { id: true, systemName: true, primaryIp: true } },
+          },
+        },
+        databaseLinks: {
+          include: {
+            database: { select: { id: true, name: true, engine: true } },
+          },
         },
       },
       orderBy: { updatedAt: 'desc' },
@@ -275,10 +333,17 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
 
   async updateDocument(
     id: string,
-    data: Prisma.KnowledgeDocumentUpdateInput,
+    data: Prisma.KnowledgeDocumentUpdateInput & {
+      applicationIds?: string[];
+      assetIds?: string[];
+      vmIds?: string[];
+      databaseIds?: string[];
+    },
     userId?: string,
   ) {
-    const updateData = { ...data };
+    const { applicationIds, assetIds, vmIds, databaseIds, ...documentData } =
+      data;
+    const updateData = { ...documentData };
     if (typeof updateData.content === 'string') {
       updateData.content = sanitizeHtml(updateData.content);
     } else if (
@@ -292,9 +357,84 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
       }
     }
 
-    const updated = await this.prisma.knowledgeDocument.update({
-      where: { id },
-      data: updateData,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (applicationIds || assetIds || vmIds || databaseIds) {
+        await Promise.all([
+          applicationIds
+            ? tx.knowledgeDocumentApplication.deleteMany({
+                where: { documentId: id },
+              })
+            : Promise.resolve(),
+          assetIds
+            ? tx.knowledgeDocumentAsset.deleteMany({
+                where: { documentId: id },
+              })
+            : Promise.resolve(),
+          vmIds
+            ? tx.knowledgeDocumentVm.deleteMany({ where: { documentId: id } })
+            : Promise.resolve(),
+          databaseIds
+            ? tx.knowledgeDocumentDatabase.deleteMany({
+                where: { documentId: id },
+              })
+            : Promise.resolve(),
+        ]);
+      }
+
+      return tx.knowledgeDocument.update({
+        where: { id },
+        data: {
+          ...updateData,
+          ...(applicationIds
+            ? {
+                applicationLinks: {
+                  create: applicationIds.map((applicationId) => ({
+                    applicationId,
+                  })),
+                },
+              }
+            : {}),
+          ...(assetIds
+            ? {
+                assetLinks: {
+                  create: assetIds.map((assetId) => ({ assetId })),
+                },
+              }
+            : {}),
+          ...(vmIds
+            ? { vmLinks: { create: vmIds.map((vmId) => ({ vmId })) } }
+            : {}),
+          ...(databaseIds
+            ? {
+                databaseLinks: {
+                  create: databaseIds.map((databaseId) => ({ databaseId })),
+                },
+              }
+            : {}),
+        },
+        include: {
+          category: true,
+          author: { select: { id: true, displayName: true, username: true } },
+          applicationLinks: {
+            include: { application: { select: { id: true, name: true } } },
+          },
+          assetLinks: {
+            include: {
+              asset: { select: { id: true, name: true, assetId: true } },
+            },
+          },
+          vmLinks: {
+            include: {
+              vm: { select: { id: true, systemName: true, primaryIp: true } },
+            },
+          },
+          databaseLinks: {
+            include: {
+              database: { select: { id: true, name: true, engine: true } },
+            },
+          },
+        },
+      });
     });
 
     if (userId) {

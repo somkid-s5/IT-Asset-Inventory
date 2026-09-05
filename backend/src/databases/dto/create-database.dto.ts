@@ -32,6 +32,11 @@ class DatabaseAccountDto {
   note?: string;
 
   @IsOptional()
+  @IsString()
+  scope?: string;
+
+  @IsOptional()
+  @IsArray()
   @IsString({ each: true })
   logicalDatabaseIds?: string[];
 }
@@ -110,4 +115,16 @@ export class CreateDatabaseDto {
   @IsArray()
   @IsString({ each: true })
   logicalDatabases?: string[];
+
+  @IsOptional()
+  @IsString()
+  hostAssetId?: string;
+
+  @IsOptional()
+  @IsString()
+  hostVmId?: string;
+
+  @IsOptional()
+  @IsString()
+  responsibleParty?: string;
 }

@@ -40,16 +40,17 @@ services:
       dockerfile: Dockerfile
     container_name: infrapilot_backend
     restart: always
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       - JWT_SECRET=${JWT_SECRET}
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
-      - REGISTRATION_SECRET=${REGISTRATION_SECRET}
+      - BOOTSTRAP_SECRET=${BOOTSTRAP_SECRET:-${REGISTRATION_SECRET}}
       - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}
       - DEFAULT_EDITOR_PASSWORD=${DEFAULT_EDITOR_PASSWORD}
-      - FRONTEND_URL=${FRONTEND_URL}
+      - FRONTEND_URL=${FRONTEND_URL:-https://${APP_HOST:-localhost}}
+      - COOKIE_SECURE=${COOKIE_SECURE:-true}
       - PORT=3001
     command: sh -c "npx prisma migrate deploy && node dist/main"
     healthcheck:
@@ -69,17 +70,38 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
     container_name: infrapilot_frontend
     restart: always
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
     networks:
       - infrapilot_network
     depends_on:
       - backend
+
+  gateway:
+    image: caddy:2-alpine
+    container_name: infrapilot_gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_HOST: ${APP_HOST:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - infrapilot_network
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
 
 networks:
   infrapilot_network:
@@ -87,3 +109,5 @@ networks:
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:

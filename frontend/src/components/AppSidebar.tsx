@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ShieldCheck,
   ClipboardCheck,
+  Download,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { useState } from "react";
@@ -222,6 +223,11 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
                 title: "Audit Logs",
                 url: "/dashboard/audit-logs",
                 icon: Activity,
+              })}
+              {renderNavItem({
+                title: "Inventory Export",
+                url: "/dashboard/export",
+                icon: Download,
               })}
             </>
           ),

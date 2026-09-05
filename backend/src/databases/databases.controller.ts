@@ -8,6 +8,7 @@ import {
   Post,
   Request,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -33,8 +34,8 @@ export class DatabasesController {
   }
 
   @Get()
-  findAll() {
-    return this.databasesService.findAll();
+  findAll(@Query('includeArchived') includeArchived?: string) {
+    return this.databasesService.findAll(includeArchived === 'true');
   }
 
   @Get('data-quality/summary')
@@ -97,10 +98,22 @@ export class DatabasesController {
     );
   }
 
-  @Roles(Role.ADMIN, Role.EDITOR)
+  @Roles(Role.ADMIN)
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
     return this.databasesService.remove(id, req.user.id);
+  }
+
+  @Roles(Role.ADMIN)
+  @Patch(':id/archive')
+  archive(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.databasesService.remove(id, req.user.id);
+  }
+
+  @Roles(Role.ADMIN)
+  @Patch(':id/restore')
+  restore(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.databasesService.restore(id, req.user.id);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)

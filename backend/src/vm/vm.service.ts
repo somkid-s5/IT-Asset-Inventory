@@ -505,6 +505,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       networkLabel: inventory.networkLabel,
       powerState: inventory.powerState,
       lifecycleState: inventory.lifecycleState,
+      discoveryState: inventory.discoveryState,
       syncState: inventory.syncState,
       owner: inventory.owner,
       businessUnit: inventory.businessUnit,
@@ -1209,8 +1210,8 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
 
     await this.prisma.$transaction(async (tx) => {
       for (const record of records) {
-        const existingDiscovery = await tx.vmDiscovery.findUnique({
-          where: { moid: record.moid },
+        const existingDiscovery = await tx.vmDiscovery.findFirst({
+          where: { sourceId: source.id, moid: record.moid },
           include: { guestAccounts: true },
         });
 
@@ -1225,7 +1226,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         });
 
         await tx.vmDiscovery.upsert({
-          where: { moid: record.moid },
+          where: { sourceId_moid: { sourceId: source.id, moid: record.moid } },
           create: {
             name: record.name,
             moid: record.moid,
@@ -1718,15 +1719,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     const updated = await this.prisma.vmDiscovery.update({
       where: { id },
       data: {
-        systemName: dto.systemName.trim(),
+        systemName: dto.systemName?.trim() ?? '',
         owner: dto.owner?.trim() ?? '',
         environment: dto.environment,
         businessUnit: dto.businessUnit?.trim() ?? '',
         slaTier: dto.slaTier?.trim() ?? '',
-        serviceRole: dto.serviceRole.trim(),
+        serviceRole: dto.serviceRole?.trim() ?? '',
         criticality: dto.criticality ?? VmCriticality.STANDARD,
-        description: dto.description.trim(),
-        notes: dto.notes.trim(),
+        description: dto.description?.trim() ?? '',
+        notes: dto.notes?.trim() ?? '',
         tags: this.parseTags(dto.tags),
         disks: this.normalizeDisks(dto.disks),
         guestAccountsCount: guestAccounts.length,
@@ -1778,19 +1779,23 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           dto.guestAccounts,
           { discoveryId: id },
         );
+        const systemName =
+          dto.systemName?.trim() ||
+          discovery.systemName?.trim() ||
+          discovery.name;
+        const environment = dto.environment ?? discovery.environment ?? null;
+        const serviceRole =
+          dto.serviceRole?.trim() || discovery.serviceRole?.trim() || '';
+        const description =
+          dto.description?.trim() || discovery.description?.trim() || '';
+        const notes = dto.notes?.trim() || discovery.notes?.trim() || '';
         const completeness = this.computeCompleteness({
-          systemName: dto.systemName,
-          environment: dto.environment,
-          serviceRole: dto.serviceRole,
-          description: dto.description,
+          systemName,
+          environment,
+          serviceRole,
+          description,
           guestAccountsCount: guestAccounts.length,
         });
-
-        if (completeness.missingFields.length > 0) {
-          throw new BadRequestException(
-            `Complete required VM context before promotion: ${completeness.missingFields.join(', ')}`,
-          );
-        }
 
         const normalizedDisks = this.normalizeDisks(dto.disks);
         const promotedDisks =
@@ -1803,15 +1808,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         await tx.vmDiscovery.update({
           where: { id },
           data: {
-            systemName: dto.systemName.trim(),
+            systemName,
             owner: dto.owner?.trim() ?? '',
-            environment: dto.environment,
+            environment,
             businessUnit: dto.businessUnit?.trim() ?? '',
             slaTier: dto.slaTier?.trim() ?? '',
-            serviceRole: dto.serviceRole.trim(),
+            serviceRole,
             criticality: dto.criticality ?? VmCriticality.STANDARD,
-            description: dto.description.trim(),
-            notes: dto.notes.trim(),
+            description,
+            notes,
             tags: this.parseTags(dto.tags),
             disks: normalizedDisks,
             guestAccountsCount: guestAccounts.length,
@@ -1835,9 +1840,9 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             discoveryId: id,
             sourceId: discovery.sourceId,
             name: discovery.name,
-            systemName: dto.systemName.trim(),
+            systemName,
             moid: discovery.moid,
-            environment: dto.environment,
+            environment,
             cluster: discovery.cluster,
             clusterResolution: discovery.clusterResolution,
             host: discovery.host,
@@ -1856,14 +1861,18 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             owner: dto.owner?.trim() ?? '',
             businessUnit: dto.businessUnit?.trim() ?? '',
             slaTier: dto.slaTier?.trim() ?? '',
-            serviceRole: dto.serviceRole.trim(),
+            serviceRole,
             criticality: dto.criticality ?? VmCriticality.STANDARD,
-            description: dto.description.trim(),
+            description,
             tags: this.parseTags(dto.tags),
             lastSyncAt: new Date(),
             syncedFields: SYNCED_FIELDS,
             managedFields: dto.managedFields ?? MANAGED_FIELDS,
-            notes: dto.notes.trim(),
+            notes,
+            discoveryState:
+              completeness.missingFields.length > 0
+                ? VmDiscoveryState.NEEDS_CONTEXT
+                : VmDiscoveryState.READY_TO_PROMOTE,
             createdByUserId: userId,
             guestAccounts: {
               create: guestAccounts,
@@ -1888,11 +1897,19 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return this.mapInventory(promoted);
   }
 
-  async archiveDiscovery(id: string) {
+  async archiveDiscovery(id: string, userId: string) {
     this.ensureSeedData();
     await this.prisma.vmDiscovery.update({
       where: { id },
       data: { state: VmDiscoveryState.ARCHIVED },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_VM,
+        targetId: id,
+        details: JSON.stringify({ status: VmDiscoveryState.ARCHIVED }),
+      },
     });
     return { success: true };
   }
@@ -1987,25 +2004,41 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
 
   async updateInventory(id: string, dto: SaveVmDraftDto, userId: string) {
     this.ensureSeedData();
-    await this.findInventoryById(id);
+    const current = await this.findInventoryById(id);
 
     const guestAccounts = await this.buildVmGuestAccounts(dto.guestAccounts, {
       inventoryId: id,
     });
+    const systemName = dto.systemName?.trim() || current.systemName;
+    const environment = dto.environment ?? current.environment ?? null;
+    const serviceRole = dto.serviceRole?.trim() ?? current.serviceRole;
+    const description = dto.description?.trim() ?? current.description;
+    const notes = dto.notes?.trim() ?? '';
+    const completeness = this.computeCompleteness({
+      systemName,
+      environment,
+      serviceRole,
+      description,
+      guestAccountsCount: guestAccounts.length,
+    });
     const updated = await this.prisma.vmInventory.update({
       where: { id },
       data: {
-        systemName: dto.systemName.trim(),
-        environment: dto.environment,
+        systemName,
+        environment,
         owner: dto.owner?.trim() ?? '',
         businessUnit: dto.businessUnit?.trim() ?? '',
         slaTier: dto.slaTier?.trim() ?? '',
-        serviceRole: dto.serviceRole.trim(),
+        serviceRole,
         criticality: dto.criticality ?? VmCriticality.STANDARD,
-        description: dto.description.trim(),
-        notes: dto.notes.trim(),
+        description,
+        notes,
         tags: this.parseTags(dto.tags),
         lifecycleState: dto.lifecycleState ?? VmLifecycleState.ACTIVE,
+        discoveryState:
+          completeness.missingFields.length > 0
+            ? VmDiscoveryState.NEEDS_CONTEXT
+            : VmDiscoveryState.READY_TO_PROMOTE,
         disks: this.normalizeDisks(dto.disks),
         lastSyncAt: new Date(),
         createdByUserId: userId,
@@ -2033,16 +2066,45 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   async archiveInventory(
     id: string,
     userId: string,
-    lifecycleState?: VmLifecycleState,
+    _lifecycleState?: VmLifecycleState,
   ) {
+    void _lifecycleState;
     this.ensureSeedData();
     await this.prisma.vmInventory.update({
       where: { id },
       data: {
-        lifecycleState: lifecycleState ?? VmLifecycleState.ARCHIVED,
+        lifecycleState: VmLifecycleState.ARCHIVED,
+      },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_VM,
+        targetId: id,
+        details: JSON.stringify({ status: VmLifecycleState.ARCHIVED }),
       },
     });
     return { success: true };
+  }
+
+  async restoreInventory(id: string, userId: string) {
+    const updated = await this.prisma.vmInventory.update({
+      where: { id },
+      data: { lifecycleState: VmLifecycleState.ACTIVE },
+      include: VM_INVENTORY_INCLUDE,
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: AuditAction.UPDATE_VM,
+        targetId: id,
+        details: JSON.stringify({
+          status: VmLifecycleState.ACTIVE,
+          restored: true,
+        }),
+      },
+    });
+    return this.mapInventory(updated as unknown as VmInventoryWithRelations);
   }
 
   async revealGuestAccountPassword(id: string, userId: string) {

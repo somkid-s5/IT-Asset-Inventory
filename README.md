@@ -8,7 +8,7 @@ SysOps is an internal IT inventory registry for hardware assets, virtual machine
 - vCenter source management and VM discovery
 - Knowledge Base for internal technical documentation
 - Dashboard summary for records that need review
-- Asset CSV export and bulk Asset owner/status updates
+- Detailed encrypted inventory workbook export for team hand-off
 - Audit logging, encrypted credentials, JWT authentication, and role-based access control
 
 ## Stack
@@ -44,7 +44,7 @@ npm ci
 Set-Location ..
 ```
 
-Important settings include `DATABASE_URL`, `JWT_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`, `REGISTRATION_SECRET`, `FRONTEND_URL`, and the three `DEFAULT_*_PASSWORD` values. Keep the generated `.env` local and never commit it.
+Important settings include `DATABASE_URL`, `JWT_SECRET`, `CREDENTIAL_ENCRYPTION_KEY`, `BOOTSTRAP_SECRET`, `APP_HOST`, `FRONTEND_URL`, and the three `DEFAULT_*_PASSWORD` values. Keep the generated `.env` local and never commit it. `REGISTRATION_SECRET` remains a deprecated compatibility alias only.
 
 vCenter sync uses real HTTPS connections by default. The built-in sample adapter is development-only and opt-in: set `VCENTER_MOCK_ENABLED=true` only when intentionally testing against a known mock hostname such as `infrapilot.local`. It is rejected in production; leave it `false` or unset for real vCenter connections.
 
@@ -72,6 +72,16 @@ npm run dev
 The seed command is development-only, requires `ALLOW_DEVELOPMENT_SEED=true`, preserves existing records, and upserts repeatable fixtures. It refuses to run with `NODE_ENV=production`.
 
 Open `http://localhost:3000`; the API is available at `http://localhost:3001/api` and PostgreSQL is bound to `127.0.0.1:5435`. Use `/api/health/live` for process liveness and `/api/health/ready` for PostgreSQL readiness; readiness returns HTTP 503 when the database is unavailable.
+
+### Internal HTTPS deployment
+
+The full `docker-compose.yml` stack places the UI and API behind Caddy on ports 80/443. Caddy issues an internal self-signed certificate for `APP_HOST`; on the team network, open `https://<server-ip>` and accept/install that certificate once. Set `APP_HOST` to the DNS name or IP used by the team before starting:
+
+```powershell
+docker compose --env-file .env up -d --build
+```
+
+The first administrator is created once through `POST /api/auth/bootstrap` with the `x-bootstrap-key` header set to `BOOTSTRAP_SECRET`. Subsequent self-registration is rejected; create additional users from the Admin Users screen.
 
 ### Stop without deleting data
 

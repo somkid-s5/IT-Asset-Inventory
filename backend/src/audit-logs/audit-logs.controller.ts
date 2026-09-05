@@ -17,7 +17,7 @@ import { RecordExportDto } from './dto/record-export.dto';
 
 @Controller('api/audit-logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.EDITOR)
+@Roles(Role.ADMIN)
 export class AuditLogsController {
   constructor(private readonly auditLogsService: AuditLogsService) {}
 

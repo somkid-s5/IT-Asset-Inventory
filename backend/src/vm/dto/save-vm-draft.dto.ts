@@ -49,11 +49,13 @@ class VmGuestAccountDto {
 }
 
 export class SaveVmDraftDto {
+  @IsOptional()
   @IsString()
-  systemName: string;
+  systemName?: string;
 
+  @IsOptional()
   @IsEnum(VmEnvironment)
-  environment: VmEnvironment;
+  environment?: VmEnvironment;
 
   @IsOptional()
   @IsString()
@@ -67,18 +69,21 @@ export class SaveVmDraftDto {
   @IsString()
   slaTier?: string;
 
+  @IsOptional()
   @IsString()
-  serviceRole: string;
+  serviceRole?: string;
 
   @IsOptional()
   @IsEnum(VmCriticality)
   criticality?: VmCriticality;
 
+  @IsOptional()
   @IsString()
-  description: string;
+  description?: string;
 
+  @IsOptional()
   @IsString()
-  notes: string;
+  notes?: string;
 
   @IsOptional()
   @IsEnum(VmLifecycleState)

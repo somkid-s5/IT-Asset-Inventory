@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AppWindow, Plus, Search, ArchiveRestore } from "lucide-react";
+import { AppWindow, Plus, Search, ArchiveRestore, ExternalLink } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageHeader } from "@/contexts/PageHeaderContext";
@@ -22,6 +22,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function ApplicationsPage() {
   const { user } = useAuth();
@@ -177,63 +185,57 @@ export default function ApplicationsPage() {
           description="Create the first application to start mapping its environments and components."
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((app) => (
-            <Card
-              key={app.id}
-              className="transition-colors hover:border-primary/50"
-            >
-              <CardContent className="space-y-4 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="rounded-lg border bg-muted/30 p-2">
-                      <AppWindow className="h-4 w-4 text-primary" />
-                    </div>
-                    <Link
-                      href={`/dashboard/applications/${app.id}`}
-                      className="truncate font-semibold hover:text-primary"
-                    >
-                      {app.name}
-                    </Link>
-                  </div>
-                  <Badge
-                    variant={app.status === "ACTIVE" ? "default" : "secondary"}
-                  >
-                    {app.status}
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Environments
-                    </p>
-                    <p className="font-medium">{app.environments.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Access points
-                    </p>
-                    <p className="font-medium">{app.access.length}</p>
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Technical Owner: {app.technicalOwner || "Needs context"}
-                  <br />
-                  Business Unit: {app.businessUnit || "Needs context"}
-                </div>
-                {canEdit && app.status === "ACTIVE" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => archive.mutate(app.id)}
-                  >
-                    Archive
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card className="overflow-hidden p-0">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table className="min-w-[760px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Application</TableHead>
+                    <TableHead>Owner / Business unit</TableHead>
+                    <TableHead>Topology</TableHead>
+                    <TableHead>Completeness</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visible.map((app) => (
+                    <TableRow key={app.id} className="group">
+                      <TableCell>
+                        <Link href={`/dashboard/applications/${app.id}`} className="flex items-center gap-2 font-semibold hover:text-primary">
+                          <AppWindow className="h-4 w-4 text-primary" />
+                          {app.name}
+                          <ExternalLink className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        <div>{app.technicalOwner || "Needs context"}</div>
+                        <div>{app.businessUnit || "Needs context"}</div>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {app.environments.length} env · {app.environments.reduce((count, env) => count + env.components.length, 0)} components · {app.access.length} access
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={app.completeness?.complete ? "default" : "secondary"}>
+                          {app.completeness?.completeness ?? 0}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={app.status === "ACTIVE" ? "default" : "secondary"}>{app.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {user?.role === "ADMIN" && app.status === "ACTIVE" && (
+                          <Button variant="ghost" size="sm" onClick={() => archive.mutate(app.id)}>Archive</Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

@@ -97,9 +97,21 @@ export class AssetsController {
     return this.assetsService.update(id, updateAssetDto, req.user.id);
   }
 
-  @Roles(Role.ADMIN, Role.EDITOR)
+  @Roles(Role.ADMIN)
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: { user: { id: string } }) {
     return this.assetsService.remove(id, req.user.id);
+  }
+
+  @Roles(Role.ADMIN)
+  @Patch(':id/archive')
+  archive(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.assetsService.remove(id, req.user.id);
+  }
+
+  @Roles(Role.ADMIN)
+  @Patch(':id/restore')
+  restore(@Param('id') id: string, @Request() req: { user: { id: string } }) {
+    return this.assetsService.restore(id, req.user.id);
   }
 }

@@ -131,7 +131,7 @@ export class InventoryExportService {
           ...vms.map((vm) => [
             vm.name,
             vm.systemName,
-            vm.environment,
+            vm.environment ?? '',
             vm.host,
             vm.primaryIp,
             vm.powerState,

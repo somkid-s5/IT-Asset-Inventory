@@ -29,11 +29,14 @@ if (!fs.existsSync(envPath)) {
         DEFAULT_ADMIN_PASSWORD: generatePassword(),
         DEFAULT_EDITOR_PASSWORD: generatePassword(),
         DEFAULT_VIEWER_PASSWORD: generatePassword(),
+        BOOTSTRAP_SECRET: generateHex(32),
         REGISTRATION_SECRET: generateHex(32),
         VCENTER_ALLOWED_HOSTS: '',
         PGADMIN_DEFAULT_PASSWORD: generatePassword(),
         ALLOW_DEVELOPMENT_SEED: 'true',
-        COOKIE_SECURE: 'false',
+        APP_HOST: 'localhost',
+        COOKIE_SECURE: 'true',
+        NEXT_PUBLIC_API_URL: '/api',
     };
 
     for (const [key, value] of Object.entries(replacements)) {
