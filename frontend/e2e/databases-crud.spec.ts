@@ -7,7 +7,7 @@ test.describe('Databases CRUD Operations', () => {
     await page.goto('/dashboard/databases');
   });
 
-  test('should create, edit and delete database with confirmations', async ({ page }) => {
+  test('should create, edit and archive database with confirmations', async ({ page }) => {
     const dbUniqueName = `e2e-db-${Date.now()}`;
     const dbEditedName = `${dbUniqueName}-edited`;
 
@@ -61,18 +61,18 @@ test.describe('Databases CRUD Operations', () => {
     const editedRow = page.getByRole('row').filter({ hasText: dbEditedName });
     await expect(editedRow).toBeVisible();
 
-    // 3. Delete Database & cleanup within the same test
+    // 3. Archive Database & cleanup within the same test
     const menuBtn = editedRow.getByRole('button', { name: 'Database Actions' });
     await menuBtn.click();
-    await page.getByRole('menuitem', { name: 'Delete Database' }).click();
+    await page.getByRole('menuitem', { name: 'Archive Database' }).click();
 
     // Confirm Delete
-    const confirmBtn = page.getByRole('button', { name: 'Confirm Delete' });
+    const confirmBtn = page.getByRole('button', { name: 'Confirm Archive' });
     await expect(confirmBtn).toBeVisible();
     await confirmBtn.click();
 
-    // Verify delete absence
-    await expect(page.getByText('Database deleted successfully')).toBeVisible();
+    // Verify archive absence from the active list
+    await expect(page.getByText('Database archived successfully')).toBeVisible();
     await expect(editedRow).not.toBeVisible();
   });
 });

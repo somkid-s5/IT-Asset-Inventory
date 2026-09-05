@@ -8,7 +8,7 @@ test.describe('Assets CRUD Operations', () => {
     await expect(page.getByRole('button', { name: 'Add Asset' })).toBeVisible({ timeout: 10000 });
   });
 
-  test('should create, edit, and delete an asset successfully', async ({ page }) => {
+  test('should create, edit, and archive an asset successfully', async ({ page }) => {
     const assetName = `E2E Test Switch - ${Date.now()}`;
     const modifiedName = `${assetName} Modified`;
 
@@ -57,17 +57,17 @@ test.describe('Assets CRUD Operations', () => {
     const modifiedRow = page.getByRole('row').filter({ hasText: modifiedName });
     await expect(modifiedRow).toBeVisible();
 
-    // 3. Delete Asset
+    // 3. Archive Asset
     const menuBtn = modifiedRow.getByRole('button', { name: 'Asset Actions' });
     await menuBtn.click();
 
-    await page.getByRole('menuitem', { name: 'Delete Asset' }).click();
+    await page.getByRole('menuitem', { name: 'Archive Asset' }).click();
 
-    const confirmBtn = page.getByRole('button', { name: 'Confirm Delete' });
+    const confirmBtn = page.getByRole('button', { name: 'Confirm Archive' });
     await expect(confirmBtn).toBeVisible();
     await confirmBtn.click();
 
-    await expect(page.getByText('Asset deleted successfully')).toBeVisible();
+    await expect(page.getByText('Asset archived successfully')).toBeVisible();
     await expect(modifiedRow).not.toBeVisible();
   });
 });

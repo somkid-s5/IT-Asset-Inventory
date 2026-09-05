@@ -66,8 +66,8 @@ export async function updateVmSource(id: string, payload: SaveVmSourcePayload) {
   return response.data;
 }
 
-export async function deleteVmSource(id: string) {
-  await api.delete(`/vm/sources/${id}`);
+export async function archiveVmSource(id: string) {
+  await api.patch(`/vm/sources/${id}/archive`);
 }
 
 export async function syncAllVmSources() {

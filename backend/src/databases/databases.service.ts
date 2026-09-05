@@ -85,6 +85,37 @@ export class DatabasesService {
     }
   }
 
+  private async syncLogicalDatabases(databaseId: string, names: string[]) {
+    const desired = [
+      ...new Set(names.map((name) => name.trim()).filter(Boolean)),
+    ];
+    const existing = await this.prisma.logicalDatabase.findMany({
+      where: { databaseInventoryId: databaseId },
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { components: true, accounts: true } },
+      },
+    });
+    const existingByName = new Map(existing.map((item) => [item.name, item]));
+    for (const name of desired) {
+      if (!existingByName.has(name)) {
+        await this.prisma.logicalDatabase.create({
+          data: { databaseInventoryId: databaseId, name },
+        });
+      }
+    }
+    for (const item of existing) {
+      if (
+        !desired.includes(item.name) &&
+        item._count.components === 0 &&
+        item._count.accounts === 0
+      ) {
+        await this.prisma.logicalDatabase.delete({ where: { id: item.id } });
+      }
+    }
+  }
+
   private toListItem(database: DatabaseWithAccounts) {
     return {
       id: database.id,
@@ -430,16 +461,6 @@ export class DatabasesService {
               },
             }
           : {}),
-        ...(updateDatabaseDto.logicalDatabases !== undefined
-          ? {
-              logicalDatabases: {
-                deleteMany: {},
-                create: updateDatabaseDto.logicalDatabases
-                  .filter(Boolean)
-                  .map((name) => ({ name: name.trim() })),
-              },
-            }
-          : {}),
       },
       include: {
         accounts: {
@@ -456,6 +477,10 @@ export class DatabasesService {
         },
       },
     });
+
+    if (updateDatabaseDto.logicalDatabases !== undefined) {
+      await this.syncLogicalDatabases(id, updateDatabaseDto.logicalDatabases);
+    }
 
     await this.prisma.auditLog.create({
       data: {

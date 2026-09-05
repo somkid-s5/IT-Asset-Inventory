@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   AlertTriangle, PlugZap, CheckCircle2, Clock3,
   LoaderCircle, Pencil, Plus, RefreshCw, Server,
-  Trash2, Search, ChevronLeft, ChevronRight, ArrowLeft, Workflow,
+  Archive, Search, ChevronLeft, ChevronRight, ArrowLeft, Workflow,
   CircleAlert, Boxes, type LucideIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { VmVCenterSource } from '@/lib/vm-inventory';
-import { createVmSource, deleteVmSource, getVmSources, syncAllVmSources, syncVmSource, testVmSourceConnection, updateVmSource } from '@/services/vm';
+import { archiveVmSource, createVmSource, getVmSources, syncAllVmSources, syncVmSource, testVmSourceConnection, updateVmSource } from '@/services/vm';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { fadeInUp } from '@/lib/animations';
@@ -160,13 +160,13 @@ export default function VmSourcesPage() {
     } catch { toast.error(`Sync failed for ${source.name}`); } finally { setSyncingSourceIds(c => c.filter(id => id !== source.id)); }
   }, [refetch]);
 
-  const handleDeleteSource = useCallback(async () => {
+  const handleArchiveSource = useCallback(async () => {
     if (!deleteTarget) return;
     try {
-      await deleteVmSource(deleteTarget.id);
-      toast.success(`${deleteTarget.name} deleted`);
+      await archiveVmSource(deleteTarget.id);
+      toast.success(`${deleteTarget.name} archived`);
       setDeleteTarget(null); void refetch();
-    } catch { toast.error('Failed to delete source'); }
+    } catch { toast.error('Failed to archive source'); }
   }, [deleteTarget, refetch]);
 
   const columns = useMemo<ColumnDef<VmVCenterSource>[]>(() => [
@@ -216,8 +216,8 @@ export default function VmSourcesPage() {
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label={`Edit ${source.name}`} title="Edit source" disabled={isSyncing} onClick={() => openEditDialog(source)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label={`Delete ${source.name}`} title="Delete source" disabled={isSyncing} onClick={() => setDeleteTarget(source)}>
-              <Trash2 className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label={`Archive ${source.name}`} title="Archive source" disabled={isSyncing || source.status === 'ARCHIVED'} onClick={() => setDeleteTarget(source)}>
+              <Archive className="h-4 w-4" />
             </Button>
           </div>
         );
@@ -386,15 +386,15 @@ export default function VmSourcesPage() {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-destructive">Delete Source</DialogTitle>
+            <DialogTitle className="text-destructive">Archive Source</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. All data related to this source will be permanently removed.
+              The source and its VM history will be preserved and hidden from active sync operations.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4"><p className="text-sm text-muted-foreground">Are you sure you want to delete <span className="font-bold text-foreground">{deleteTarget?.name}</span>?</p></div>
+          <div className="py-4"><p className="text-sm text-muted-foreground">Are you sure you want to archive <span className="font-bold text-foreground">{deleteTarget?.name}</span>?</p></div>
           <div className="flex justify-end gap-3">
              <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-             <Button variant="destructive" onClick={handleDeleteSource}>Delete</Button>
+             <Button variant="destructive" onClick={handleArchiveSource}>Archive</Button>
           </div>
         </DialogContent>
       </Dialog>

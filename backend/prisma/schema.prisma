@@ -87,6 +87,7 @@ enum VmSourceStatus {
   READY_TO_SYNC
   HEALTHY
   CONNECTION_FAILED
+  ARCHIVED
 }
 
 enum AuditAction {

@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Patch,
@@ -49,12 +48,12 @@ export class VmController {
   }
 
   @Roles(Role.ADMIN)
-  @Delete('sources/:id')
-  removeSource(
+  @Patch('sources/:id/archive')
+  archiveSource(
     @Param('id') id: string,
     @Request() req: { user: { id: string } },
   ) {
-    return this.vmService.removeSource(id, req.user.id);
+    return this.vmService.archiveSource(id, req.user.id);
   }
 
   @Roles(Role.ADMIN, Role.EDITOR)

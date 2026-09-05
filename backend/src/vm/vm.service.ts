@@ -1537,7 +1537,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return this.mapSource(source);
   }
 
-  async removeSource(id: string, userId: string) {
+  async archiveSource(id: string, userId: string) {
     this.ensureSeedData();
     const source = await this.prisma.vmVCenterSource.findUnique({
       where: { id },
@@ -1546,18 +1546,21 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException(`VM source ${id} not found`);
     }
 
-    await this.prisma.vmVCenterSource.delete({ where: { id } });
+    await this.prisma.vmVCenterSource.update({
+      where: { id },
+      data: { status: VmSourceStatus.ARCHIVED },
+    });
 
     await this.prisma.auditLog.create({
       data: {
         userId,
-        action: AuditAction.DELETE_SOURCE || 'VCENTER_SYNC',
+        action: AuditAction.DELETE_SOURCE,
         targetId: id,
-        details: `Deleted vCenter source: ${source.name}`,
+        details: `Archived vCenter source: ${source.name}`,
       },
     });
 
-    return { success: true };
+    return { success: true, status: VmSourceStatus.ARCHIVED };
   }
 
   async syncAllSources() {
@@ -1567,20 +1570,22 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     });
 
     const results = await Promise.allSettled(
-      sources.map(async (source) => {
-        try {
-          return await this.syncSourceData(source);
-        } catch (error) {
-          await this.prisma.vmVCenterSource.update({
-            where: { id: source.id },
-            data: {
-              status: VmSourceStatus.CONNECTION_FAILED,
-            },
-          });
+      sources
+        .filter((source) => source.status !== VmSourceStatus.ARCHIVED)
+        .map(async (source) => {
+          try {
+            return await this.syncSourceData(source);
+          } catch (error) {
+            await this.prisma.vmVCenterSource.update({
+              where: { id: source.id },
+              data: {
+                status: VmSourceStatus.CONNECTION_FAILED,
+              },
+            });
 
-          throw error;
-        }
-      }),
+            throw error;
+          }
+        }),
     );
     const successCount = results.filter(
       (result) => result.status === 'fulfilled',

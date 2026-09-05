@@ -63,7 +63,7 @@ export class SearchService {
         }),
         this.prisma.databaseInventory.findMany({
           where: {
-            status: { not: 'INACTIVE' },
+            status: { not: 'ARCHIVED' },
             OR: [
               { name: contains },
               { host: contains },
