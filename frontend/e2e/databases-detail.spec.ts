@@ -22,10 +22,10 @@ test.describe('Database Detail View Specs', () => {
 
     // Select Environment
     await page.getByRole('combobox', { name: 'Environment' }).click();
-    await page.getByRole('option', { name: 'DEV', exact: true }).click();
+    await page.getByRole('option', { name: 'TEST', exact: true }).click();
 
     // Fill Connection Parameters
-    await page.getByLabel('Host').fill('detail-db-host.local');
+    await page.getByLabel('Host Name').fill('detail-db-host.local');
     await page.getByLabel('IP Address').fill('10.0.1.66');
 
     // Fill Account Username & Password

@@ -1,24 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { getE2eCredentials } from './auth-credentials';
 
-test.describe('Assets Export Spec', () => {
+test.describe('Assets legacy bulk/import/export regression guard', () => {
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/dashboard/export');
-    await expect(page.getByRole('heading', { name: 'Detailed inventory workbook' })).toBeVisible({ timeout: 10000 });
-  });
+  test('keeps superseded Asset bulk and ordinary export actions out of the V1 surface', async ({ page }) => {
+    await page.goto('/dashboard/assets');
+    await expect(page.getByRole('button', { name: /Add Asset/i })).toBeVisible({ timeout: 10000 });
 
-  test('should trigger download on export action', async ({ page }) => {
-    const credentials = getE2eCredentials('admin');
-    await page.getByLabel('Confirm your account password').fill(credentials.password);
-    await page.getByLabel('Workbook password', { exact: true }).fill('E2EWorkbookPassword2026!');
-    await page.getByLabel('Confirm workbook password').fill('E2EWorkbookPassword2026!');
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Download encrypted XLSX' }).click()
-    ]);
-    expect(download.suggestedFilename()).toContain('.xlsx');
+    await expect(page.getByRole('button', { name: /Import/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Bulk Update/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Export CSV/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Export Assets/i })).toHaveCount(0);
   });
-
 });

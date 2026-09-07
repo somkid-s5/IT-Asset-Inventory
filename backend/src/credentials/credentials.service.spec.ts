@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CredentialsService } from './credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
+import { AuditAction } from '@prisma/client';
 
 describe('CredentialsService', () => {
   let service: CredentialsService;
@@ -149,6 +150,31 @@ describe('CredentialsService', () => {
 
       expect(result.password).toBe(plaintext);
       expect(mockPrisma.auditLog.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('recordCopy', () => {
+    it('should write a COPY_PASSWORD audit record', async () => {
+      mockPrisma.credential.findUnique.mockResolvedValue({
+        id: 'cred-1',
+        username: 'admin',
+        assetId: 'asset-1',
+      });
+
+      const result = await service.recordCopy('cred-1', 'user-1');
+
+      expect(result).toEqual({ recorded: true });
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'user-1',
+          action: AuditAction.COPY_PASSWORD,
+          targetId: 'cred-1',
+          details: JSON.stringify({
+            username: 'admin',
+            assetId: 'asset-1',
+          }),
+        },
+      });
     });
   });
 

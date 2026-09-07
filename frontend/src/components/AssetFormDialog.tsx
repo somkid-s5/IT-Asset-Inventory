@@ -21,11 +21,26 @@ import {
 } from "@/components/ui/select";
 import { MultiCheckbox } from "@/components/ui/multi-checkbox";
 import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Check,
+  ChevronsUpDown,
   Database,
   Eye,
   EyeOff,
   FolderTree,
   HardDrive,
+  LoaderCircle,
   Plus,
   Shield,
   Trash2,
@@ -81,7 +96,6 @@ interface AccessPointFormValue {
   manageType: string;
   version: string;
   address: string;
-  credentialId?: string;
   users: AccessUserFormValue[];
 }
 
@@ -102,7 +116,9 @@ interface AssetIpAllocation {
   nodeLabel?: string | null;
   manageType?: string | null;
   version?: string | null;
+  /** @deprecated legacy compatibility */
   credentialId?: string | null;
+  credentialIds?: string[];
 }
 
 interface AssetFormAsset {
@@ -119,6 +135,7 @@ interface AssetFormAsset {
   status?: string | null;
   owner?: string | null;
   department?: string | null;
+  responsibleParty?: string | null;
   vendor?: string | null;
   purchaseDate?: string | null;
   warrantyExpiration?: string | null;
@@ -128,13 +145,21 @@ interface AssetFormAsset {
   customMetadata?: Record<string, unknown> | null;
   ipAllocations?: AssetIpAllocation[];
   credentials?: AssetCredential[];
-  componentLinks?: Array<{ componentId: string }>;
+  componentLinks?: Array<{
+    componentId: string;
+    relationType?: string | null;
+    responsibleParty?: string | null;
+  }>;
+  parent?: ParentAssetOption | null;
 }
 
 interface ParentAssetOption {
   id: string;
+  assetId?: string | null;
   name: string;
   type: string;
+  location?: string | null;
+  parentId?: string | null;
 }
 
 interface AssetFormDialogProps {
@@ -142,11 +167,10 @@ interface AssetFormDialogProps {
   onOpenChange: (open: boolean) => void;
   assetToEdit?: AssetFormAsset;
   onSuccess: () => void;
-  availableParents: ParentAssetOption[];
 }
 
 function createEmptyUser(): AccessUserFormValue {
-  return { username: "", password: "" };
+  return { id: crypto.randomUUID(), username: "", password: "" };
 }
 
 function createEmptyAccessPoint(): AccessPointFormValue {
@@ -172,10 +196,10 @@ const DEFAULT_FORM_STATE = {
   status: "ACTIVE",
   owner: "",
   department: "",
+  responsibleParty: "",
   vendor: "",
   purchaseDate: "",
   warrantyExpiration: "",
-  environment: "DEV",
   dependencies: "",
   osVersion: "",
 };
@@ -205,13 +229,15 @@ export function AssetFormDialog({
   onOpenChange,
   assetToEdit,
   onSuccess,
-  availableParents,
 }: AssetFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
   const [accessPoints, setAccessPoints] = useState<AccessPointFormValue[]>([
     createEmptyAccessPoint(),
   ]);
+  const [detachedCredentials, setDetachedCredentials] = useState<
+    AssetCredential[]
+  >([]);
   const [hardwareSpecs, setHardwareSpecs] = useState<HardwareSpecifications>(
     () => createEmptyHardwareSpecifications(),
   );
@@ -227,17 +253,27 @@ export function AssetFormDialog({
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>(
     {},
   );
-  const [componentIds, setComponentIds] = useState<string[]>([]);
+  const [primaryComponentId, setPrimaryComponentId] = useState("");
+  const [sharedComponentIds, setSharedComponentIds] = useState<string[]>([]);
   const [availableComponents, setAvailableComponents] = useState<
     Array<{ id: string; label: string }>
   >([]);
+  const [parentPickerOpen, setParentPickerOpen] = useState(false);
+  const [parentSearch, setParentSearch] = useState("");
+  const [parentOptions, setParentOptions] = useState<ParentAssetOption[]>([]);
+  const [parentLookupLoading, setParentLookupLoading] = useState(false);
+  const [parentLookupError, setParentLookupError] = useState<string | null>(
+    null,
+  );
+  const [parentLookupRevision, setParentLookupRevision] = useState(0);
   const { confirmDiscard } = useUnsavedChanges(open, {
     formData,
     accessPoints,
     hardwareSpecs,
     metadataExtras,
     assetMode,
-    componentIds,
+    primaryComponentId,
+    sharedComponentIds,
   });
   const requestClose = () => {
     if (loading || !confirmDiscard()) return;
@@ -252,17 +288,27 @@ export function AssetFormDialog({
     if (!assetToEdit) {
       setFormData(DEFAULT_FORM_STATE);
       setAccessPoints([createEmptyAccessPoint()]);
+      setDetachedCredentials([]);
       setHardwareSpecs(createEmptyHardwareSpecifications());
       setMetadataExtras({});
       setAssetMode("single");
       setNodeLabels([]);
       setFormErrors({});
       setTouchedFields({});
-      setComponentIds([]);
+      setPrimaryComponentId("");
+      setSharedComponentIds([]);
       return;
     }
 
     const groupedMap = new Map<string, AccessPointFormValue>();
+    const credentialById = new Map(
+      (assetToEdit.credentials ?? [])
+        .filter((credential): credential is AssetCredential & { id: string } =>
+          Boolean(credential.id),
+        )
+        .map((credential) => [credential.id, credential]),
+    );
+    const linkedCredentialIds = new Set<string>();
     const makeAccessKey = (
       nodeLabel?: string | null,
       type?: string | null,
@@ -287,75 +333,42 @@ export function AssetFormDialog({
           ip.version,
           ip.address,
         ) || `${ip.type ?? "general"}-${ip.address}-${index}`;
+      const explicitCredentialIds = [
+        ...(ip.credentialIds ?? []),
+        ...(ip.credentialId ? [ip.credentialId] : []),
+      ].filter(
+        (id, credentialIndex, ids) => ids.indexOf(id) === credentialIndex,
+      );
+      const users = explicitCredentialIds.flatMap((credentialId) => {
+        linkedCredentialIds.add(credentialId);
+        const credential = credentialById.get(credentialId);
+        return credential
+          ? [
+              {
+                id: credential.id,
+                username: credential.username,
+                password: credential.password ?? "",
+              },
+            ]
+          : [];
+      });
+
       groupedMap.set(key, {
         nodeLabel: ip.nodeLabel ?? "",
         type: ip.type ?? "",
         manageType: ip.manageType ?? assetToEdit.manageType ?? "",
         version: ip.version ?? "",
         address: ip.address,
-        credentialId: ip.credentialId ?? undefined,
-        users: [],
+        users: users.length > 0 ? users : [createEmptyUser()],
       });
     });
 
-    (assetToEdit.credentials ?? []).forEach((credential, index) => {
-      const key = makeAccessKey(
-        credential.nodeLabel,
-        credential.type,
-        credential.manageType,
-        credential.version,
-        null,
-      );
-      const matchedEntry =
-        Array.from(groupedMap.values()).find(
-          (value) => value.credentialId === credential.id,
-        ) ??
-        groupedMap.get(key) ??
-        Array.from(groupedMap.values()).find(
-          (value) =>
-            (value.nodeLabel || "").toLowerCase() ===
-              (credential.nodeLabel || "").toLowerCase() &&
-            (value.type || "").toLowerCase() ===
-              (credential.type || "").toLowerCase() &&
-            (value.manageType || "").toLowerCase() ===
-              (credential.manageType || "").toLowerCase() &&
-            (value.version || "").toLowerCase() ===
-              (credential.version || "").toLowerCase(),
-        );
-
-      if (matchedEntry) {
-        matchedEntry.manageType =
-          matchedEntry.manageType || credential.manageType || "";
-        matchedEntry.version = matchedEntry.version || credential.version || "";
-        matchedEntry.users.push({
-          id: credential.id,
-          username: credential.username,
-          password: credential.password ?? "",
-        });
-        if (!matchedEntry.credentialId)
-          matchedEntry.credentialId = credential.id;
-        return;
-      }
-
-      groupedMap.set(
-        key || `credential-${credential.type ?? "general"}-${index}`,
-        {
-          nodeLabel: credential.nodeLabel ?? "",
-          type: credential.type ?? "",
-          manageType: credential.manageType ?? assetToEdit.manageType ?? "",
-          version: credential.version ?? "",
-          address: "",
-          credentialId: credential.id,
-          users: [
-            {
-              id: credential.id,
-              username: credential.username,
-              password: credential.password ?? "",
-            },
-          ],
-        },
-      );
-    });
+    setDetachedCredentials(
+      (assetToEdit.credentials ?? []).filter(
+        (credential) =>
+          !credential.id || !linkedCredentialIds.has(credential.id),
+      ),
+    );
 
     setFormData({
       name: assetToEdit.name || "",
@@ -369,6 +382,7 @@ export function AssetFormDialog({
       status: assetToEdit.status || "ACTIVE",
       owner: assetToEdit.owner || "",
       department: assetToEdit.department || "",
+      responsibleParty: assetToEdit.responsibleParty || "",
       vendor: assetToEdit.vendor || "",
       purchaseDate: assetToEdit.purchaseDate
         ? new Date(assetToEdit.purchaseDate).toISOString().split("T")[0]
@@ -376,7 +390,6 @@ export function AssetFormDialog({
       warrantyExpiration: assetToEdit.warrantyExpiration
         ? new Date(assetToEdit.warrantyExpiration).toISOString().split("T")[0]
         : "",
-      environment: assetToEdit.environment || "DEV",
       dependencies: assetToEdit.dependencies || "",
       osVersion: assetToEdit.osVersion || "",
     });
@@ -391,14 +404,11 @@ export function AssetFormDialog({
     );
 
     const existingNodeLabels = Array.from(
-      new Set([
-        ...(assetToEdit.ipAllocations ?? [])
+      new Set(
+        (assetToEdit.ipAllocations ?? [])
           .map((item) => item.nodeLabel?.trim())
-          .filter(Boolean),
-        ...(assetToEdit.credentials ?? [])
-          .map((item) => item.nodeLabel?.trim())
-          .filter(Boolean),
-      ] as string[]),
+          .filter(Boolean) as string[],
+      ),
     );
     setAssetMode(existingNodeLabels.length > 0 ? "multi" : "single");
     setNodeLabels(existingNodeLabels);
@@ -451,10 +461,61 @@ export function AssetFormDialog({
     });
     setHardwareSpecs(nextHardwareSpecs);
     setMetadataExtras(nextMetadataExtras);
-    setComponentIds(
-      assetToEdit.componentLinks?.map((link) => link.componentId) ?? [],
+    const existingPrimaryLink = assetToEdit.componentLinks?.find(
+      (link) => (link.relationType || "PRIMARY").toUpperCase() === "PRIMARY",
+    );
+    setPrimaryComponentId(existingPrimaryLink?.componentId ?? "");
+    setSharedComponentIds(
+      assetToEdit.componentLinks
+        ?.filter(
+          (link) => link.componentId !== existingPrimaryLink?.componentId,
+        )
+        .map((link) => link.componentId) ?? [],
     );
   }, [assetToEdit, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    setParentSearch("");
+    setParentPickerOpen(false);
+    setParentLookupError(null);
+  }, [assetToEdit?.id, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setParentLookupLoading(true);
+      setParentLookupError(null);
+      try {
+        const response = await api.get<ParentAssetOption[]>("/assets/lookup", {
+          params: {
+            q: parentSearch.trim() || undefined,
+            limit: 25,
+            excludeId: assetToEdit?.id || undefined,
+          },
+        });
+        if (!cancelled) setParentOptions(response.data);
+      } catch (error: unknown) {
+        if (!cancelled) {
+          setParentOptions([]);
+          setParentLookupError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load parent assets",
+          );
+        }
+      } finally {
+        if (!cancelled) setParentLookupLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [assetToEdit?.id, open, parentLookupRevision, parentSearch]);
 
   useEffect(() => {
     if (!open) return;
@@ -660,14 +721,6 @@ export function AssetFormDialog({
         delete customMetadata.hardwareSpecifications;
       }
 
-      const credentialIds = new Set(
-        accessPoints.flatMap((item) =>
-          item.users
-            .filter((user) => user.username.trim())
-            .map((user) => user.id)
-            .filter((id): id is string => Boolean(id)),
-        ),
-      );
       const finalIps = accessPoints
         .filter((item) => item.address.trim())
         .map((item) => ({
@@ -679,32 +732,65 @@ export function AssetFormDialog({
               : undefined,
           manageType: item.manageType.trim() || undefined,
           version: item.version.trim() || undefined,
-          credentialId:
-            item.credentialId && credentialIds.has(item.credentialId)
-              ? item.credentialId
-              : undefined,
+          credentialIds: item.users
+            .filter((user) => user.username.trim() && user.id)
+            .map((user) => user.id as string),
         }));
 
-      const finalCredentials = accessPoints.flatMap((item) =>
+      const credentialMap = new Map<
+        string,
+        {
+          id: string;
+          username: string;
+          password: string;
+          type?: string;
+          nodeLabel?: string;
+          manageType?: string;
+          version?: string;
+        }
+      >();
+      accessPoints.forEach((item) => {
         item.users
-          .filter((user) => user.username.trim())
-          .map((user) => ({
-            id: user.id,
-            username: user.username.trim(),
-            password: user.password,
-            type: item.type.trim() || undefined,
-            nodeLabel:
-              assetMode === "multi"
-                ? item.nodeLabel.trim() || undefined
-                : undefined,
-            manageType: item.manageType.trim() || undefined,
-            version: item.version.trim() || undefined,
-          })),
-      );
+          .filter((user) => user.username.trim() && user.id)
+          .forEach((user) => {
+            const id = user.id as string;
+            if (credentialMap.has(id)) return;
+            credentialMap.set(id, {
+              id,
+              username: user.username.trim(),
+              password: user.password,
+              type: item.type.trim() || undefined,
+              nodeLabel:
+                assetMode === "multi"
+                  ? item.nodeLabel.trim() || undefined
+                  : undefined,
+              manageType: item.manageType.trim() || undefined,
+              version: item.version.trim() || undefined,
+            });
+          });
+      });
+      detachedCredentials.forEach((credential) => {
+        if (
+          !credential.id ||
+          !credential.username.trim() ||
+          credentialMap.has(credential.id)
+        ) {
+          return;
+        }
+        credentialMap.set(credential.id, {
+          id: credential.id,
+          username: credential.username.trim(),
+          password: credential.password ?? "",
+          type: credential.type ?? undefined,
+          nodeLabel: credential.nodeLabel ?? undefined,
+          manageType: credential.manageType ?? undefined,
+          version: credential.version ?? undefined,
+        });
+      });
+      const finalCredentials = [...credentialMap.values()];
 
-      const { environment: _env, ...cleanedFormData } = formData;
       const payload = {
-        ...cleanedFormData,
+        ...formData,
         assetId: formData.assetId.trim() || undefined,
         rack: formData.rack.trim() || undefined,
         location: formData.location.trim() || undefined,
@@ -712,9 +798,9 @@ export function AssetFormDialog({
         sn: formData.sn.trim() || undefined,
         parentId: formData.parentId ? formData.parentId : null,
         status: formData.status || undefined,
-        environment: formData.environment || undefined,
         owner: formData.owner?.trim() || undefined,
         department: formData.department?.trim() || undefined,
+        responsibleParty: formData.responsibleParty?.trim() || undefined,
         vendor: formData.vendor?.trim() || undefined,
         purchaseDate: formData.purchaseDate
           ? new Date(formData.purchaseDate)
@@ -728,7 +814,17 @@ export function AssetFormDialog({
         credentials: finalCredentials,
         customMetadata:
           Object.keys(customMetadata).length > 0 ? customMetadata : undefined,
-        componentIds,
+        componentLinks: [
+          ...(primaryComponentId
+            ? [{ componentId: primaryComponentId, relationType: "PRIMARY" }]
+            : []),
+          ...sharedComponentIds
+            .filter((componentId) => componentId !== primaryComponentId)
+            .map((componentId) => ({
+              componentId,
+              relationType: "SHARED",
+            })),
+        ],
       };
 
       if (assetToEdit) {
@@ -810,6 +906,13 @@ export function AssetFormDialog({
       ),
     );
   };
+
+  const selectedParent = formData.parentId
+    ? (parentOptions.find((parent) => parent.id === formData.parentId) ??
+      (assetToEdit?.parent?.id === formData.parentId
+        ? assetToEdit.parent
+        : undefined))
+    : undefined;
 
   return (
     <Dialog
@@ -1003,74 +1106,130 @@ export function AssetFormDialog({
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ACTIVE">
-                      Under MA (อยู่ในสัญญา MA)
-                    </SelectItem>
-                    <SelectItem value="INACTIVE">
-                      MA Expired (หมดสัญญา MA)
-                    </SelectItem>
-                    <SelectItem value="MAINTENANCE">
-                      Under Maintenance (อยู่ระหว่างซ่อมบำรุง)
-                    </SelectItem>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
                     <SelectItem value="DECOMMISSIONED">
-                      Decommissioned (จำหน่ายออก/เลิกใช้งาน)
+                      Decommissioned
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="asset-environment">Environment (Env)</Label>
-                <Select
-                  value={formData.environment || "DEV"}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, environment: value })
-                  }
+                <Label optional>Parent Asset</Label>
+                <Popover
+                  open={parentPickerOpen}
+                  onOpenChange={setParentPickerOpen}
                 >
-                  <SelectTrigger id="asset-environment" className="bg-card/50">
-                    <SelectValue placeholder="Select env" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PROD">PROD</SelectItem>
-                    <SelectItem value="UAT">UAT</SelectItem>
-                    <SelectItem value="DEV">DEV</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="asset-parent" optional>
-                  Parent Asset
-                </Label>
-                <Select
-                  value={formData.parentId || "none"}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      parentId: value === "none" ? "" : value,
-                    })
-                  }
-                >
-                  <SelectTrigger id="asset-parent" className="bg-card/50">
-                    <div className="flex items-center gap-2">
-                      <FolderTree className="h-3.5 w-3.5 text-muted-foreground" />
-                      <SelectValue placeholder="Select parent" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Parent (Standalone)</SelectItem>
-                    {availableParents
-                      .filter((p) => p.id !== assetToEdit?.id)
-                      .map((parent) => (
-                        <SelectItem key={parent.id} value={parent.id}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground uppercase font-bold">
-                              {parent.type}
-                            </span>
-                            <span>{parent.name}</span>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-label="Parent Asset"
+                      aria-expanded={parentPickerOpen}
+                      className="w-full justify-between bg-card/50 font-normal"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <FolderTree className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">
+                          {selectedParent
+                            ? `${selectedParent.name}${selectedParent.assetId ? ` · ${selectedParent.assetId}` : ""}`
+                            : "No Parent (Standalone)"}
+                        </span>
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[var(--radix-popover-trigger-width)] p-0"
+                    align="start"
+                  >
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        aria-label="Search parent assets"
+                        placeholder="Search name or Asset ID..."
+                        value={parentSearch}
+                        onValueChange={setParentSearch}
+                      />
+                      <CommandList>
+                        <CommandItem
+                          value="standalone"
+                          onSelect={() => {
+                            setFormData({ ...formData, parentId: "" });
+                            setParentPickerOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={`h-4 w-4 ${formData.parentId ? "opacity-0" : "opacity-100"}`}
+                          />
+                          <span>No Parent (Standalone)</span>
+                        </CommandItem>
+
+                        {parentLookupLoading ? (
+                          <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                            Searching parent assets...
                           </div>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                        ) : parentLookupError ? (
+                          <div className="space-y-2 px-3 py-4 text-xs">
+                            <p className="text-destructive">
+                              Unable to load parent assets.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() =>
+                                setParentLookupRevision((value) => value + 1)
+                              }
+                            >
+                              Retry
+                            </Button>
+                          </div>
+                        ) : parentOptions.length === 0 ? (
+                          <CommandEmpty>
+                            No matching parent assets.
+                          </CommandEmpty>
+                        ) : (
+                          parentOptions.map((parent) => (
+                            <CommandItem
+                              key={parent.id}
+                              value={`${parent.name} ${parent.assetId ?? ""}`}
+                              onSelect={() => {
+                                setFormData({
+                                  ...formData,
+                                  parentId: parent.id,
+                                });
+                                setParentPickerOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={`h-4 w-4 ${formData.parentId === parent.id ? "opacity-100" : "opacity-0"}`}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate font-medium">
+                                    {parent.name}
+                                  </span>
+                                  <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
+                                    {parent.type}
+                                  </span>
+                                </div>
+                                <p className="truncate text-[10px] text-muted-foreground">
+                                  {[parent.assetId, parent.location]
+                                    .filter(Boolean)
+                                    .join(" · ") || "No additional identifier"}
+                                </p>
+                              </div>
+                            </CommandItem>
+                          ))
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-1.5">
@@ -1109,6 +1268,77 @@ export function AssetFormDialog({
             </div>
           </section>
 
+          <section className="muted-panel p-4">
+            <div className="flex items-center gap-2 border-b border-border/70 pb-3 mb-4">
+              <p className="workspace-subtle">Governance Context</p>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="asset-owner" optional>
+                  Owner
+                </Label>
+                <Input
+                  id="asset-owner"
+                  autoComplete="off"
+                  value={formData.owner}
+                  onChange={(event) =>
+                    setFormData({ ...formData, owner: event.target.value })
+                  }
+                  placeholder="Person or team owning this asset"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="asset-department" optional>
+                  Department
+                </Label>
+                <Input
+                  id="asset-department"
+                  autoComplete="off"
+                  value={formData.department}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      department: event.target.value,
+                    })
+                  }
+                  placeholder="Owning department"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="asset-responsible-party" optional>
+                  Responsible Party
+                </Label>
+                <Input
+                  id="asset-responsible-party"
+                  autoComplete="off"
+                  value={formData.responsibleParty}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      responsibleParty: event.target.value,
+                    })
+                  }
+                  placeholder="Operationally responsible person or team"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="asset-vendor" optional>
+                  Vendor
+                </Label>
+                <Input
+                  id="asset-vendor"
+                  autoComplete="off"
+                  value={formData.vendor}
+                  onChange={(event) =>
+                    setFormData({ ...formData, vendor: event.target.value })
+                  }
+                  placeholder="Supplier or vendor"
+                />
+              </div>
+            </div>
+          </section>
+
           <section className="muted-panel space-y-3 p-4">
             <div>
               <p className="workspace-subtle">Application Components</p>
@@ -1116,7 +1346,51 @@ export function AssetFormDialog({
                 Link this asset to the applications it supports.
               </p>
             </div>
-            <MultiCheckbox label="Application components" options={availableComponents} value={componentIds} onChange={setComponentIds} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="asset-primary-component" optional>
+                  Primary Application Component
+                </Label>
+                <Select
+                  value={primaryComponentId || "none"}
+                  onValueChange={(value) => {
+                    const nextPrimary = value === "none" ? "" : value;
+                    setPrimaryComponentId(nextPrimary);
+                    if (nextPrimary) {
+                      setSharedComponentIds((current) =>
+                        current.filter(
+                          (componentId) => componentId !== nextPrimary,
+                        ),
+                      );
+                    }
+                  }}
+                >
+                  <SelectTrigger id="asset-primary-component">
+                    <SelectValue placeholder="Select primary component" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No primary component</SelectItem>
+                    {availableComponents.map((component) => (
+                      <SelectItem key={component.id} value={component.id}>
+                        {component.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  The main Application/Environment/Component this asset serves.
+                </p>
+              </div>
+
+              <MultiCheckbox
+                label="Shared application components"
+                options={availableComponents.filter(
+                  (component) => component.id !== primaryComponentId,
+                )}
+                value={sharedComponentIds}
+                onChange={setSharedComponentIds}
+              />
+            </div>
           </section>
 
           <section className="muted-panel p-4">
@@ -1209,6 +1483,7 @@ export function AssetFormDialog({
               {accessPoints.map((point, index) => (
                 <div
                   key={`${point.type}-${index}`}
+                  data-testid={`asset-access-point-${index + 1}`}
                   className="rounded-[24px] border border-border/70 bg-card/72 p-4"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
@@ -1272,7 +1547,9 @@ export function AssetFormDialog({
                           updateAccessPoint(index, "type", value)
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger
+                          aria-label={`Access point ${index + 1} type`}
+                        >
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1296,7 +1573,9 @@ export function AssetFormDialog({
                           updateAccessPoint(index, "manageType", value)
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger
+                          aria-label={`Access point ${index + 1} method`}
+                        >
                           <SelectValue placeholder="Select method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1326,6 +1605,7 @@ export function AssetFormDialog({
                           )
                         }
                         placeholder="IP address"
+                        aria-label={`Access point ${index + 1} IP address`}
                         className={
                           formErrors.accessPoints?.[index]?.address
                             ? "border-destructive focus-visible:ring-destructive"
@@ -1353,6 +1633,7 @@ export function AssetFormDialog({
                           )
                         }
                         placeholder="Version or firmware"
+                        aria-label={`Access point ${index + 1} version`}
                       />
                     </div>
                   </div>
@@ -1368,6 +1649,7 @@ export function AssetFormDialog({
                         variant="outline"
                         size="sm"
                         className="h-7 px-2.5 text-xs"
+                        aria-label={`Add user to access point ${index + 1}`}
                         onClick={() =>
                           setAccessPoints((current) =>
                             current.map((item, itemIndex) =>
@@ -1386,47 +1668,9 @@ export function AssetFormDialog({
                       </Button>
                     </div>
 
-                    <div className="mb-3 max-w-md space-y-1.5">
-                      <Label optional>Credential linked to this IP</Label>
-                      <Select
-                        value={point.credentialId ?? "none"}
-                        onValueChange={(value) =>
-                          setAccessPoints((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? {
-                                    ...item,
-                                    credentialId:
-                                      value === "none" ? undefined : value,
-                                  }
-                                : item,
-                            ),
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a linked account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">
-                            No linked credential
-                          </SelectItem>
-                          {point.users
-                            .filter((user) => user.id && user.username.trim())
-                            .map((user) => (
-                              <SelectItem
-                                key={user.id}
-                                value={user.id as string}
-                              >
-                                {user.username}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-[11px] text-muted-foreground">
-                        Link one account to this address. Other accounts remain
-                        available on the access point.
-                      </p>
+                    <div className="mb-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+                      Every account listed below is explicitly linked to this
+                      Access Point.
                     </div>
 
                     <div className="space-y-2">
@@ -1447,6 +1691,7 @@ export function AssetFormDialog({
                               )
                             }
                             placeholder="Username"
+                            aria-label={`Access point ${index + 1} username ${userIndex + 1}`}
                           />
                           <div className="relative">
                             <Input
@@ -1466,6 +1711,7 @@ export function AssetFormDialog({
                                 )
                               }
                               placeholder="Password"
+                              aria-label={`Access point ${index + 1} password ${userIndex + 1}`}
                             />
                             <button
                               type="button"

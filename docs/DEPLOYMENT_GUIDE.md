@@ -1,104 +1,250 @@
-# คู่มือ Deploy SysOps (Internal IP + HTTPS)
+# Deploy InfraPilot V1 on an Internal IP with HTTPS
 
-เอกสารนี้เป็นขั้นตอน deploy สำหรับทีม System Admin ภายในเครือข่ายเดียวกัน โดยใช้ Docker Compose ชุดเดียวกับที่อยู่ใน repository ปัจจุบัน ระบบไม่มี application-managed backup/restore; การปกป้อง VM และข้อมูลให้ใช้ NetBackup ของทีมตามกระบวนการเดิม
+This runbook deploys the accepted V1 stack on one internal VM using Docker Compose. The production runtime is intentionally limited to PostgreSQL, Backend, Frontend, and Caddy. Application-managed backup/restore, DNS, Kubernetes, pgAdmin, and NetBackup configuration are outside this workflow.
 
-## สิ่งที่ต้องเตรียม
+## 1. Prerequisites
 
-- Deployment VM ที่ติดตั้ง Docker Engine และ Docker Compose v2
-- IP ภายในของ VM เช่น `192.168.1.50` และให้เครื่องลูกข่ายเข้าถึง TCP `80/443` ได้
-- ไฟล์ `.env` ที่มีค่าจริง (ห้าม commit)
-- ค่า secret แบบสุ่ม: `JWT_SECRET`, `BOOTSTRAP_SECRET`, `CREDENTIAL_ENCRYPTION_KEY` (64 ตัวอักษร hex) และรหัสผ่านเริ่มต้นที่แข็งแรง
+Prepare a deployment VM with:
 
-PostgreSQL และ pgAdmin อยู่เฉพาะใน Docker network และไม่มีการ publish port ออก LAN
+- Docker Engine and Docker Compose v2;
+- a stable internal IP or internal DNS name;
+- TCP 80 and 443 reachable from approved client machines;
+- the repository checked out locally;
+- a production `.env` that is never committed.
 
-## ตั้งค่า `.env`
+The production Compose stack does not publish PostgreSQL to the LAN.
+
+## 2. Create the production environment file
+
+From the repository root:
 
 ```bash
-cp .env.example .env
-nano .env
+cp deploy/.env.production.example .env
 ```
 
-ค่าที่ต้องกำหนดอย่างน้อย:
+Replace every placeholder. Required values are:
 
 ```dotenv
 POSTGRES_USER=infrapilot
-POSTGRES_PASSWORD=<สุ่มค่าใหม่>
+POSTGRES_PASSWORD=<long-random-password>
 POSTGRES_DB=infrapilot_db
-JWT_SECRET=<สุ่มค่าใหม่>
-CREDENTIAL_ENCRYPTION_KEY=<64-character-hex>
-BOOTSTRAP_SECRET=<สุ่มค่าใหม่>
-DEFAULT_ADMIN_PASSWORD=<รหัสผ่าน Admin ชั่วคราว>
-DEFAULT_EDITOR_PASSWORD=<รหัสผ่าน Editor สำหรับ dev seed เท่านั้น>
-DEFAULT_VIEWER_PASSWORD=<รหัสผ่าน Viewer สำหรับ dev seed เท่านั้น>
+JWT_SECRET=<long-random-secret>
+CREDENTIAL_ENCRYPTION_KEY=<exactly-64-hex-characters>
+BOOTSTRAP_SECRET=<long-random-one-time-bootstrap-secret>
 APP_HOST=192.168.1.50
 FRONTEND_URL=https://192.168.1.50
-COOKIE_SECURE=true
 NEXT_PUBLIC_API_URL=/api
+VCENTER_ALLOWED_HOSTS=vcenter.example.internal
 ```
 
-`APP_HOST` ต้องเป็น IP หรือ DNS name ที่ทีมใช้เปิดเว็บจริง หากใช้ IP ให้เปิด `https://<APP_HOST>` เท่านั้น
+Production does **not** use `DEFAULT_ADMIN_PASSWORD`, `DEFAULT_EDITOR_PASSWORD`, `DEFAULT_VIEWER_PASSWORD`, development seed accounts, or vCenter mock mode.
 
-## Start / update stack
+`APP_HOST` must be the exact IP address or internal DNS name users will open. `NEXT_PUBLIC_API_URL=/api` keeps browser API, downloads, and image requests on the same HTTPS origin.
 
-จากโฟลเดอร์ repository:
+Before deployment, run the static production check:
+
+```powershell
+pwsh -File scripts/verify-production-compose.ps1 -EnvFile .env
+```
+
+## 3. Build and start the stack
+
+From the repository root:
 
 ```bash
-docker compose --env-file .env up -d --build
+docker compose --env-file .env up -d --build --remove-orphans
+```
+
+Startup is bounded by health dependencies:
+
+1. PostgreSQL becomes healthy.
+2. Backend runs `prisma migrate deploy`, starts, and becomes database-ready.
+3. Frontend starts and becomes healthy.
+4. Caddy starts after Backend and Frontend are healthy.
+
+Check status:
+
+```bash
 docker compose --env-file .env ps
 ```
 
-Backend จะรัน `prisma migrate deploy` ก่อน start โดยอัตโนมัติ ตรวจ health ได้ดังนี้:
+Expected runtime services are exactly:
+
+- `postgres`
+- `backend`
+- `frontend`
+- `gateway`
+
+## 4. Liveness and readiness
+
+These endpoints intentionally answer different questions:
 
 ```bash
 curl -k https://192.168.1.50/api/health/live
 curl -k https://192.168.1.50/api/health/ready
 ```
 
-`live` ยืนยันว่า process ทำงาน ส่วน `ready` ยืนยันว่าเชื่อมต่อ PostgreSQL ได้
+- `/api/health/live` means the Backend process is alive.
+- `/api/health/ready` means required dependencies, currently PostgreSQL, are ready.
 
-## Bootstrap ผู้ดูแลระบบครั้งแรก
+A database outage can therefore make readiness return HTTP 503 while liveness still reports the process as alive.
 
-สร้าง Administrator เพียงครั้งเดียวผ่านหน้า Login หรือ API โดยส่ง `BOOTSTRAP_SECRET` ใน header `x-bootstrap-key` ไปยัง `POST /api/auth/bootstrap` จากนั้นให้เปลี่ยนรหัสผ่านตามนโยบายทีมและสร้างบัญชีผู้ใช้เพิ่มจากหน้า Admin Users การสมัครเองภายหลังจะถูกปิด
+## 5. Bootstrap the first Administrator exactly once
 
-ห้ามนำค่า secret หรือรหัสผ่านจริงใส่ในเอกสาร, log, issue หรือ commit
+There is no production default account and no self-registration flow. The first Administrator is created through the bootstrap API.
 
-## การยอมรับ certificate และการเข้าใช้งาน
+Before the Caddy root CA is trusted, use `-k` only for this controlled setup request:
 
-Caddy ใน stack ออก internal certificate ให้ `APP_HOST` และ redirect HTTP ไป HTTPS อัตโนมัติ เปิด `https://<internal-ip>` จากเครื่องใน LAN แล้วเลือกยอมรับ/ติดตั้ง certificate ตามนโยบายเครื่องลูกข่ายครั้งแรก หลังจากนั้นใช้ลิงก์ HTTPS เดิมแชร์ให้ทีมได้
+```bash
+curl -k -X POST "https://192.168.1.50/api/auth/bootstrap" \
+  -H "Content-Type: application/json" \
+  -H "x-bootstrap-key: <BOOTSTRAP_SECRET>" \
+  -d '{
+    "username": "admin",
+    "displayName": "Infrastructure Administrator",
+    "password": "<strong-initial-password>"
+  }'
+```
 
-ตรวจว่า HTTP redirect สำเร็จ:
+After the first user exists, the same bootstrap endpoint rejects another bootstrap attempt. Normal user creation is then Administrator-managed through the Users workflow.
+
+Do not put `BOOTSTRAP_SECRET`, user passwords, JWT material, or the credential-encryption key in tickets, screenshots, shell history shared with others, or committed files.
+
+## 6. Trust the Caddy internal CA
+
+Caddy uses `tls internal`. Its CA state is persisted in the `caddy_data` volume and server certificates are renewed automatically while that volume is preserved.
+
+Copy **only the public root certificate** from the running gateway:
+
+```bash
+docker compose --env-file .env cp gateway:/data/caddy/pki/authorities/local/root.crt ./deploy/infrapilot-caddy-root.crt
+```
+
+Never copy, distribute, or commit:
+
+```text
+/data/caddy/pki/authorities/local/root.key
+```
+
+That file is the CA private key.
+
+### Windows client trust
+
+Run an elevated Command Prompt or PowerShell on each managed client:
+
+```powershell
+certutil -addstore -f Root .\infrapilot-caddy-root.crt
+```
+
+For centrally managed Windows endpoints, distribute the public root certificate through the organization's normal certificate-management mechanism instead of installing it manually on every machine.
+
+### Debian/Ubuntu client trust
+
+```bash
+sudo cp infrapilot-caddy-root.crt /usr/local/share/ca-certificates/infrapilot-caddy-root.crt
+sudo update-ca-certificates
+```
+
+### RHEL-compatible client trust
+
+```bash
+sudo cp infrapilot-caddy-root.crt /etc/pki/ca-trust/source/anchors/infrapilot-caddy-root.crt
+sudo update-ca-trust
+```
+
+After trust is installed, reopen the browser and use only:
+
+```text
+https://<APP_HOST>
+```
+
+Do not delete `caddy_data` during normal upgrades. Deleting that volume creates a new internal CA and requires redistributing a new root certificate.
+
+## 7. Verify HTTP redirects to HTTPS
 
 ```bash
 curl -I http://192.168.1.50
 ```
 
-ควรได้สถานะ `301` หรือ `308` ไปยัง `https://192.168.1.50/`
+Expected result is a permanent redirect, normally HTTP 301 or 308, to the same host over HTTPS.
 
-## Restart และหยุดระบบ
+After the root CA is trusted, verify without `-k`:
 
-การ restart ปกติไม่ลบข้อมูล เพราะ PostgreSQL ใช้ named volume:
+```bash
+curl https://192.168.1.50/api/health/ready
+```
+
+## 8. Verify Secure authentication cookies and same-origin content
+
+Log in through `https://<APP_HOST>`, then inspect the `access_token` cookie in browser developer tools. It must be:
+
+- `HttpOnly`
+- `Secure`
+- `SameSite=Lax`
+- scoped to `/`
+
+The production frontend uses `/api`, so API calls, Sensitive Inventory downloads, and Knowledge Base images remain on the same HTTPS origin. Treat any browser mixed-content warning as a release blocker.
+
+## 9. Restart and persistence acceptance
+
+Normal restart operations preserve PostgreSQL, uploaded Asset/Knowledge Base files, and Caddy state through named volumes:
 
 ```bash
 docker compose --env-file .env restart
+```
+
+A full container recreation without volume deletion must also preserve state:
+
+```bash
 docker compose --env-file .env down
 docker compose --env-file .env up -d
 ```
 
-ห้ามใช้ `docker compose down -v` ใน deployment จริง เพราะจะลบ volume ฐานข้อมูล
+After restart, verify that previously created users, Inventory records, relationships, Documents, archived states, and encrypted credentials still work.
 
-## ตรวจสอบหลัง deploy
-
-1. `docker compose ps` แสดง `postgres`, `backend`, `frontend`, `gateway` เป็น running/healthy ตามลำดับ
-2. เปิด HTTPS ด้วย IP แล้ว login ได้
-3. ตรวจสร้าง/แก้ไข/Archive รายการ Asset, VM, Database และ Document
-4. ตรวจ Global Search, Data Quality และ Export workbook
-5. restart stack แล้วตรวจว่าผู้ใช้และข้อมูลเดิมยังอยู่
-
-ดู log เฉพาะ service ที่เกี่ยวข้องได้ด้วย:
+**Never use this in production unless intentional data destruction is approved:**
 
 ```bash
-docker compose logs --tail=200 backend
-docker compose logs --tail=200 gateway
+docker compose down -v
 ```
 
-สำหรับชุดตรวจพัฒนาและ E2E ให้ดูคำสั่งใน [README.md](../README.md) และใช้ `docker compose` ใน environment ที่ Docker daemon พร้อมใช้งาน
+`-v` deletes the PostgreSQL, Backend uploads, and Caddy named volumes.
+
+## 10. Upgrade workflow
+
+For an application update:
+
+```bash
+git pull --ff-only
+pwsh -File scripts/verify-production-compose.ps1 -EnvFile .env
+docker compose --env-file .env up -d --build --remove-orphans
+```
+
+Backend startup applies committed production migrations with `prisma migrate deploy`. Do not use `prisma db push` on the production stack.
+
+## 11. Operational checks
+
+Useful commands:
+
+```bash
+docker compose --env-file .env ps
+docker compose --env-file .env logs --tail=200 backend
+docker compose --env-file .env logs --tail=200 frontend
+docker compose --env-file .env logs --tail=200 gateway
+```
+
+The release acceptance sequence must also verify Login, Application topology, Assets, VM lifecycle, Databases, Documents, Global Search, Data Quality, archive/restore, role restrictions, Audit Logs, and the encrypted Sensitive Inventory Export.
+
+## 12. What this runbook intentionally does not provide
+
+V1 does not add:
+
+- application-managed database backup or restore;
+- NetBackup configuration;
+- DNS automation;
+- Kubernetes deployment;
+- public Internet exposure;
+- production pgAdmin;
+- production seed users.
+
+Protect the deployment VM and its Docker volumes using the infrastructure team's approved backup process outside this application.

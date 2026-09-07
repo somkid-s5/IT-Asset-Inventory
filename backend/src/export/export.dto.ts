@@ -6,6 +6,10 @@ export class InventoryExportDto {
   passphrase: string;
 
   @IsString()
+  @MinLength(8)
+  confirmPassphrase: string;
+
+  @IsString()
   @MinLength(1)
   currentPassword: string;
 }

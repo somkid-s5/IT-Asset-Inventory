@@ -175,6 +175,14 @@ export class KnowledgeBaseController {
     return this.knowledgeBaseService.findAllDocuments(categoryId);
   }
 
+  @Get('search/documents')
+  searchDocuments(@Query('q') q?: string, @Query('limit') limit?: string) {
+    return this.knowledgeBaseService.searchDocuments(
+      q ?? '',
+      limit ? parseInt(limit, 10) : 50,
+    );
+  }
+
   @Roles(Role.ADMIN, Role.EDITOR)
   @Post('documents')
   createDocument(
@@ -187,10 +195,15 @@ export class KnowledgeBaseController {
     });
   }
 
-  @Public()
   @Get('documents/:id')
   findDocument(@Param('id') id: string) {
     return this.knowledgeBaseService.findDocument(id);
+  }
+
+  @Public()
+  @Get('public/documents/:id')
+  findPublicDocument(@Param('id') id: string) {
+    return this.knowledgeBaseService.findPublicDocument(id);
   }
 
   @Get('recent/documents')

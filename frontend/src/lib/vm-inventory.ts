@@ -1,10 +1,14 @@
-export type VmPowerState = 'RUNNING' | 'STOPPED' | 'SUSPENDED';
-export type VmInventoryEnvironment = 'PROD' | 'TEST' | 'UAT';
-export type VmDiscoveryState = 'NEEDS_CONTEXT' | 'READY_TO_PROMOTE' | 'DRIFTED';
-export type VmLifecycleState = 'DRAFT' | 'ACTIVE' | 'DELETED_IN_VCENTER' | 'ARCHIVED';
-export type VmCriticality = 'MISSION_CRITICAL' | 'BUSINESS_CRITICAL' | 'STANDARD';
-export type VmSyncState = 'Synced' | 'Missing from source' | 'Ready to sync' | 'Connection failed';
-export type VmPlacementResolution = 'DIRECT_VM' | 'SOURCE_SINGLE_HOST' | 'SOURCE_SINGLE_CLUSTER' | 'UNKNOWN';
+export type VmPowerState = "RUNNING" | "STOPPED" | "SUSPENDED";
+export type VmInventoryEnvironment = "PROD" | "TEST" | "UAT";
+export type VmDiscoveryState = "NEEDS_CONTEXT" | "READY_TO_PROMOTE" | "DRIFTED";
+export type VmLifecycleState =
+  "DRAFT" | "ACTIVE" | "DELETED_IN_VCENTER" | "ARCHIVED";
+export type VmCriticality =
+  "MISSION_CRITICAL" | "BUSINESS_CRITICAL" | "STANDARD";
+export type VmSyncState =
+  "Synced" | "Missing from source" | "Ready to sync" | "Connection failed";
+export type VmPlacementResolution =
+  "DIRECT_VM" | "SOURCE_SINGLE_HOST" | "SOURCE_SINGLE_CLUSTER" | "UNKNOWN";
 
 export interface VmGuestAccount {
   id?: string;
@@ -114,7 +118,6 @@ export interface VmInventoryItem {
   tags: string[];
   lastSyncAt: string;
   syncedFields: string[];
-  managedFields: string[];
   guestAccountsCount: number;
 }
 
@@ -122,47 +125,63 @@ export interface VmInventoryDetail extends VmInventoryItem {
   notes: string;
   sourceHistory: VmSourceHistoryItem[];
   guestAccounts: VmGuestAccount[];
-  components?: Array<{ id: string; name: string; environment: VmInventoryEnvironment; application: { id: string; name: string } }>;
+  components?: Array<{
+    id: string;
+    name: string;
+    environment: VmInventoryEnvironment;
+    application: { id: string; name: string };
+    relationType: "PRIMARY" | "SHARED";
+    responsibleParty?: string | null;
+  }>;
   documentLinks?: Array<{ id: string; title: string; updatedAt?: string }>;
 }
 
-export const VM_ENVIRONMENT_FILTERS: Array<{ label: string; value: 'ALL' | VmInventoryEnvironment }> = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Production', value: 'PROD' },
-  { label: 'Test', value: 'TEST' },
-  { label: 'UAT', value: 'UAT' },
+export const VM_ENVIRONMENT_FILTERS: Array<{
+  label: string;
+  value: "ALL" | VmInventoryEnvironment;
+}> = [
+  { label: "All", value: "ALL" },
+  { label: "Production", value: "PROD" },
+  { label: "Test", value: "TEST" },
+  { label: "UAT", value: "UAT" },
 ];
 
 export const VM_SERVICE_ROLE_OPTIONS = [
-  'Web Server',
-  'Application Server',
-  'API Runtime',
-  'Database Server',
-  'File Server',
-  'Jump Host',
-  'Batch Server',
-  'Monitoring Node',
-  'Backup Server',
-  'Domain Controller',
+  "Web Server",
+  "Application Server",
+  "API Runtime",
+  "Database Server",
+  "File Server",
+  "Jump Host",
+  "Batch Server",
+  "Monitoring Node",
+  "Backup Server",
+  "Domain Controller",
 ] as const;
 
-export const VM_LIFECYCLE_FILTERS: Array<{ label: string; value: 'ALL' | VmLifecycleState }> = [
-  { label: 'All states', value: 'ALL' },
-  { label: 'Draft', value: 'DRAFT' },
-  { label: 'Active', value: 'ACTIVE' },
-  { label: 'Deleted', value: 'DELETED_IN_VCENTER' },
-  { label: 'Archived', value: 'ARCHIVED' },
+export const VM_LIFECYCLE_FILTERS: Array<{
+  label: string;
+  value: "ALL" | VmLifecycleState;
+}> = [
+  { label: "All states", value: "ALL" },
+  { label: "Draft", value: "DRAFT" },
+  { label: "Active", value: "ACTIVE" },
+  { label: "Deleted", value: "DELETED_IN_VCENTER" },
+  { label: "Archived", value: "ARCHIVED" },
 ];
 
-export const VM_CRITICALITY_OPTIONS: Array<{ label: string; value: VmCriticality }> = [
-  { label: 'Mission Critical', value: 'MISSION_CRITICAL' },
-  { label: 'Business Critical', value: 'BUSINESS_CRITICAL' },
-  { label: 'Standard', value: 'STANDARD' },
+export const VM_CRITICALITY_OPTIONS: Array<{
+  label: string;
+  value: VmCriticality;
+}> = [
+  { label: "Mission Critical", value: "MISSION_CRITICAL" },
+  { label: "Business Critical", value: "BUSINESS_CRITICAL" },
+  { label: "Standard", value: "STANDARD" },
 ];
 
 export const VM_SOURCE_FILTERS = [
-  { label: 'All sources', value: 'ALL' },
-  { label: 'vc-prod-01', value: 'vc-prod-01' },
-  { label: 'vc-test-01', value: 'vc-test-01' },
-  { label: 'vc-lab-01', value: 'vc-lab-01' },
+  { label: "All sources", value: "ALL" },
+  { label: "vc-prod-01", value: "vc-prod-01" },
+  { label: "vc-test-01", value: "vc-test-01" },
+  { label: "vc-lab-01", value: "vc-lab-01" },
 ];

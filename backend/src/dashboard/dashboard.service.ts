@@ -104,6 +104,71 @@ export class DashboardService {
       }),
     ]);
 
+    const [recentApplications, recentAssets, recentVms, recentDatabases] =
+      await Promise.all([
+        this.prisma.application.findMany({
+          where: { status: ApplicationStatus.ACTIVE },
+          select: { id: true, name: true, updatedAt: true },
+          orderBy: { updatedAt: 'desc' },
+          take: 5,
+        }),
+        this.prisma.asset.findMany({
+          where: { status: { not: AssetStatus.ARCHIVED } },
+          select: { id: true, name: true, assetId: true, updatedAt: true },
+          orderBy: { updatedAt: 'desc' },
+          take: 5,
+        }),
+        this.prisma.vmInventory.findMany({
+          where: { lifecycleState: { not: VmLifecycleState.ARCHIVED } },
+          select: { id: true, name: true, systemName: true, updatedAt: true },
+          orderBy: { updatedAt: 'desc' },
+          take: 5,
+        }),
+        this.prisma.databaseInventory.findMany({
+          where: { status: { not: DatabaseStatus.ARCHIVED } },
+          select: { id: true, name: true, engine: true, updatedAt: true },
+          orderBy: { updatedAt: 'desc' },
+          take: 5,
+        }),
+      ]);
+
+    const recentlyUpdated = [
+      ...recentApplications.map((record) => ({
+        id: record.id,
+        kind: 'application' as const,
+        name: record.name,
+        metadata: 'Application',
+        updatedAt: record.updatedAt,
+        href: `/dashboard/applications/${record.id}`,
+      })),
+      ...recentAssets.map((record) => ({
+        id: record.id,
+        kind: 'asset' as const,
+        name: record.name,
+        metadata: record.assetId ?? 'Asset',
+        updatedAt: record.updatedAt,
+        href: `/dashboard/assets/${record.id}`,
+      })),
+      ...recentVms.map((record) => ({
+        id: record.id,
+        kind: 'vm' as const,
+        name: record.name,
+        metadata: record.systemName ?? 'Virtual Machine',
+        updatedAt: record.updatedAt,
+        href: `/dashboard/virtual-machines/${record.id}`,
+      })),
+      ...recentDatabases.map((record) => ({
+        id: record.id,
+        kind: 'database' as const,
+        name: record.name,
+        metadata: record.engine,
+        updatedAt: record.updatedAt,
+        href: `/dashboard/databases/${record.id}`,
+      })),
+    ]
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, 8);
+
     return {
       assets: {
         total: totalAssets,
@@ -135,6 +200,7 @@ export class DashboardService {
         active: activeApplications,
         archived: Math.max(0, totalApplications - activeApplications),
       },
+      recentlyUpdated,
       users: {
         total: totalUsers,
         admins: adminUsers,

@@ -1,17 +1,22 @@
-import api from '@/services/api';
-import type { VmDiscoveryItem, VmInventoryDetail, VmInventoryItem, VmVCenterSource } from '@/lib/vm-inventory';
+import api from "@/services/api";
+import type {
+  VmDiscoveryItem,
+  VmInventoryDetail,
+  VmInventoryItem,
+  VmVCenterSource,
+} from "@/lib/vm-inventory";
 
 export type SaveVmDraftPayload = {
-  systemName: string;
-  environment?: 'PROD' | 'TEST' | 'UAT';
+  systemName?: string;
+  environment?: "PROD" | "TEST" | "UAT";
   owner?: string;
   businessUnit?: string;
   slaTier?: string;
-  serviceRole: string;
-  criticality?: 'MISSION_CRITICAL' | 'BUSINESS_CRITICAL' | 'STANDARD';
-  description: string;
-  notes: string;
-  lifecycleState?: 'DRAFT' | 'ACTIVE' | 'DELETED_IN_VCENTER' | 'ARCHIVED';
+  serviceRole?: string;
+  criticality?: "MISSION_CRITICAL" | "BUSINESS_CRITICAL" | "STANDARD";
+  description?: string;
+  notes?: string;
+  lifecycleState?: "DRAFT" | "ACTIVE" | "DELETED_IN_VCENTER" | "ARCHIVED";
   tags?: string;
   guestAccounts?: Array<{
     username: string;
@@ -20,7 +25,12 @@ export type SaveVmDraftPayload = {
     role: string;
     note?: string;
   }>;
-  managedFields?: string[];
+  componentLinks?: Array<{
+    componentId: string;
+    relationType: "PRIMARY" | "SHARED";
+    responsibleParty?: string;
+  }>;
+  /** @deprecated compatibility for pre-V1 clients */
   componentIds?: string[];
 };
 
@@ -44,7 +54,7 @@ export type VmSourceActionResult = {
   message: string;
   detail?: string;
   statusCode?: number;
-  apiFamily?: 'api' | 'rest';
+  apiFamily?: "api" | "rest";
   version?: string;
   successCount?: number;
   failedCount?: number;
@@ -52,17 +62,20 @@ export type VmSourceActionResult = {
 };
 
 export async function getVmSources() {
-  const response = await api.get<VmVCenterSource[]>('/vm/sources');
+  const response = await api.get<VmVCenterSource[]>("/vm/sources");
   return response.data;
 }
 
 export async function createVmSource(payload: SaveVmSourcePayload) {
-  const response = await api.post<VmVCenterSource>('/vm/sources', payload);
+  const response = await api.post<VmVCenterSource>("/vm/sources", payload);
   return response.data;
 }
 
 export async function updateVmSource(id: string, payload: SaveVmSourcePayload) {
-  const response = await api.patch<VmVCenterSource>(`/vm/sources/${id}`, payload);
+  const response = await api.patch<VmVCenterSource>(
+    `/vm/sources/${id}`,
+    payload,
+  );
   return response.data;
 }
 
@@ -75,22 +88,29 @@ export async function restoreVmSource(id: string) {
 }
 
 export async function syncAllVmSources() {
-  const response = await api.post<VmSourceActionResult>('/vm/sources/sync-all');
+  const response = await api.post<VmSourceActionResult>("/vm/sources/sync-all");
   return response.data;
 }
 
-export async function testVmSourceConnection(payload: TestVmSourceConnectionPayload) {
-  const response = await api.post<VmSourceActionResult>('/vm/sources/test-connection', payload);
+export async function testVmSourceConnection(
+  payload: TestVmSourceConnectionPayload,
+) {
+  const response = await api.post<VmSourceActionResult>(
+    "/vm/sources/test-connection",
+    payload,
+  );
   return response.data;
 }
 
 export async function syncVmSource(id: string) {
-  const response = await api.post<VmSourceActionResult>(`/vm/sources/${id}/sync`);
+  const response = await api.post<VmSourceActionResult>(
+    `/vm/sources/${id}/sync`,
+  );
   return response.data;
 }
 
 export async function getVmDiscoveries() {
-  const response = await api.get<VmDiscoveryItem[]>('/vm/discoveries');
+  const response = await api.get<VmDiscoveryItem[]>("/vm/discoveries");
   return response.data;
 }
 
@@ -99,13 +119,25 @@ export async function getVmDiscovery(id: string) {
   return response.data;
 }
 
-export async function updateVmDiscovery(id: string, payload: SaveVmDraftPayload) {
-  const response = await api.patch<VmDiscoveryItem>(`/vm/discoveries/${id}`, payload);
+export async function updateVmDiscovery(
+  id: string,
+  payload: SaveVmDraftPayload,
+) {
+  const response = await api.patch<VmDiscoveryItem>(
+    `/vm/discoveries/${id}`,
+    payload,
+  );
   return response.data;
 }
 
-export async function promoteVmDiscovery(id: string, payload: SaveVmDraftPayload) {
-  const response = await api.post<VmInventoryDetail>(`/vm/discoveries/${id}/promote`, payload);
+export async function promoteVmDiscovery(
+  id: string,
+  payload: SaveVmDraftPayload,
+) {
+  const response = await api.post<VmInventoryDetail>(
+    `/vm/discoveries/${id}/promote`,
+    payload,
+  );
   return response.data;
 }
 
@@ -114,8 +146,8 @@ export async function archiveVmDiscovery(id: string) {
 }
 
 export async function getVmInventory(includeArchived = false) {
-  const response = await api.get<VmInventoryItem[]>('/vm/inventory', {
-    params: includeArchived ? { includeArchived: 'true' } : undefined,
+  const response = await api.get<VmInventoryItem[]>("/vm/inventory", {
+    params: includeArchived ? { includeArchived: "true" } : undefined,
   });
   return response.data;
 }
@@ -125,8 +157,14 @@ export async function getVmInventoryById(id: string) {
   return response.data;
 }
 
-export async function updateVmInventory(id: string, payload: SaveVmDraftPayload) {
-  const response = await api.patch<VmInventoryDetail>(`/vm/inventory/${id}`, payload);
+export async function updateVmInventory(
+  id: string,
+  payload: SaveVmDraftPayload,
+) {
+  const response = await api.patch<VmInventoryDetail>(
+    `/vm/inventory/${id}`,
+    payload,
+  );
   return response.data;
 }
 
@@ -135,11 +173,15 @@ export async function archiveVmInventory(id: string) {
 }
 
 export async function restoreVmInventory(id: string) {
-  const response = await api.post<VmInventoryDetail>(`/vm/inventory/${id}/restore`);
+  const response = await api.post<VmInventoryDetail>(
+    `/vm/inventory/${id}/restore`,
+  );
   return response.data;
 }
 
 export async function revealVmGuestAccountPassword(id: string) {
-  const response = await api.get<{ password: string }>(`/vm/guest-accounts/${id}/reveal`);
+  const response = await api.get<{ password: string }>(
+    `/vm/guest-accounts/${id}/reveal`,
+  );
   return response.data;
 }

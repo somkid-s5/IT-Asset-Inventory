@@ -1,15 +1,11 @@
-
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: infrapilot_db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-#    ports:
-#      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,46 +13,37 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+      start_period: 5s
     networks:
       - infrapilot_network
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: infrapilot_pgadmin
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-#    ports:
-#      - "5050:80"
-    networks:
-      - infrapilot_network
-    depends_on:
-      - postgres
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: infrapilot_backend
-    restart: always
+    restart: unless-stopped
+    init: true
     expose:
       - "3001"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
-      - JWT_SECRET=${JWT_SECRET}
-      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
-      - BOOTSTRAP_SECRET=${BOOTSTRAP_SECRET:-${REGISTRATION_SECRET}}
-      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}
-      - DEFAULT_EDITOR_PASSWORD=${DEFAULT_EDITOR_PASSWORD}
-      - DEFAULT_VIEWER_PASSWORD=${DEFAULT_VIEWER_PASSWORD}
-      - ALLOW_DEVELOPMENT_SEED=${ALLOW_DEVELOPMENT_SEED:-false}
-      - FRONTEND_URL=${FRONTEND_URL:-https://${APP_HOST:-localhost}}
-      - COOKIE_SECURE=${COOKIE_SECURE:-true}
-      - PORT=3001
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY}
+      BOOTSTRAP_SECRET: ${BOOTSTRAP_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL}
+      COOKIE_SECURE: "true"
+      VCENTER_ALLOWED_HOSTS: ${VCENTER_ALLOWED_HOSTS}
+      VCENTER_MOCK_ENABLED: "false"
+      PORT: "3001"
     command: sh -c "npx prisma migrate deploy && node dist/main"
+    volumes:
+      - backend_uploads:/app/uploads
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/api/health/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3001/api/health/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -72,36 +59,56 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
-    container_name: infrapilot_frontend
-    restart: always
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+    restart: unless-stopped
+    init: true
     expose:
       - "3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     networks:
       - infrapilot_network
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   gateway:
     image: caddy:2-alpine
-    container_name: infrapilot_gateway
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     environment:
-      APP_HOST: ${APP_HOST:-localhost}
+      APP_HOST: ${APP_HOST}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:2019/config/ >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
     networks:
       - infrapilot_network
     depends_on:
       frontend:
-        condition: service_started
+        condition: service_healthy
       backend:
         condition: service_healthy
 
@@ -111,5 +118,6 @@ networks:
 
 volumes:
   postgres_data:
+  backend_uploads:
   caddy_data:
   caddy_config:

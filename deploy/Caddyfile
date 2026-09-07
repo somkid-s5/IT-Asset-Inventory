@@ -1,15 +1,19 @@
+{
+	default_sni {$APP_HOST}
+}
+
 {$APP_HOST} {
-    tls internal
+	tls internal
 
-    handle /api/* {
-        reverse_proxy backend:3001
-    }
+	handle /api/* {
+		reverse_proxy backend:3001
+	}
 
-    handle {
-        reverse_proxy frontend:3000
-    }
+	handle {
+		reverse_proxy frontend:3000
+	}
 }
 
 :80 {
-    redir https://{host}{uri} permanent
+	redir https://{host}{uri} permanent
 }

@@ -16,8 +16,6 @@ import { Roles } from '../auth/roles.decorator';
 import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
-import { BulkImportAssetsDto } from './dto/bulk-import-assets.dto';
-import { BulkUpdateAssetsDto } from './dto/bulk-update-assets.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/assets')
@@ -33,22 +31,17 @@ export class AssetsController {
     return this.assetsService.create(createAssetDto, req.user.id);
   }
 
-  @Roles(Role.ADMIN, Role.EDITOR)
-  @Post('bulk-import')
-  bulkImport(
-    @Body() dto: BulkImportAssetsDto,
-    @Request() req: { user: { id: string } },
+  @Get('lookup')
+  lookup(
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+    @Query('excludeId') excludeId?: string,
   ) {
-    return this.assetsService.bulkImport(dto.rows, req.user.id);
-  }
-
-  @Roles(Role.ADMIN, Role.EDITOR)
-  @Patch('bulk-update')
-  bulkUpdate(
-    @Body() dto: BulkUpdateAssetsDto,
-    @Request() req: { user: { id: string } },
-  ) {
-    return this.assetsService.bulkUpdate(dto, req.user.id);
+    return this.assetsService.lookup(
+      q ?? '',
+      limit ? parseInt(limit, 10) : 20,
+      excludeId,
+    );
   }
 
   @Get()

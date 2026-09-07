@@ -1,30 +1,61 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CircleOff, Eye, EyeOff, Monitor, Server, ShieldCheck, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { VmFormDialog } from '@/components/VmFormDialog';
-import { VM_CRITICALITY_OPTIONS, type VmDiscoveryItem } from '@/lib/vm-inventory';
-import { archiveVmDiscovery, getVmDiscovery, promoteVmDiscovery } from '@/services/vm';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  ArrowLeft,
+  CircleOff,
+  Eye,
+  EyeOff,
+  Monitor,
+  Server,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { VmFormDialog } from "@/components/VmFormDialog";
+import {
+  VM_CRITICALITY_OPTIONS,
+  type VmDiscoveryItem,
+} from "@/lib/vm-inventory";
+import {
+  archiveVmDiscovery,
+  getVmDiscovery,
+  promoteVmDiscovery,
+} from "@/services/vm";
 
-function getPlacementResolutionCopy(resolution: string | undefined, scope: 'host' | 'cluster') {
-  if (resolution === 'DIRECT_VM') {
+function getPlacementResolutionCopy(
+  resolution: string | undefined,
+  scope: "host" | "cluster",
+) {
+  if (resolution === "DIRECT_VM") {
     return `Exact per-VM ${scope} from vCenter`;
   }
 
-  if (resolution === 'SOURCE_SINGLE_HOST' || resolution === 'SOURCE_SINGLE_CLUSTER') {
+  if (
+    resolution === "SOURCE_SINGLE_HOST" ||
+    resolution === "SOURCE_SINGLE_CLUSTER"
+  ) {
     return `Fallback from source-level ${scope} inventory`;
   }
 
-  return `${scope === 'host' ? 'Host' : 'Cluster'} placement was not returned by the source`;
+  return `${scope === "host" ? "Host" : "Cluster"} placement was not returned by the source`;
 }
 
 export default function VmSourceDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
+  const canEdit = user?.role === "ADMIN" || user?.role === "EDITOR";
+  const canAdmin = user?.role === "ADMIN";
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [revealedNotes, setRevealedNotes] = useState(false);
@@ -32,7 +63,7 @@ export default function VmSourceDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const loadDraft = useCallback(async () => {
-    if (typeof params.id !== 'string') {
+    if (typeof params.id !== "string") {
       setDraft(null);
       setLoading(false);
       return;
@@ -65,67 +96,52 @@ export default function VmSourceDetailPage() {
   }, [draft]);
 
   if (loading) {
-    return <div className="surface-panel p-4 text-sm text-muted-foreground">Loading VM discovery...</div>;
+    return (
+      <div className="surface-panel p-4 text-sm text-muted-foreground">
+        Loading VM discovery...
+      </div>
+    );
   }
 
   if (!draft) {
     return (
       <div className="space-y-4 pb-8">
         <button
-          onClick={() => router.push('/dashboard/virtual-machines/sources')}
+          onClick={() => router.push("/dashboard/virtual-machines/sources")}
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to vCenter Sources
         </button>
-        <div className="surface-panel p-4 text-sm text-muted-foreground">Discovery record not found.</div>
+        <div className="surface-panel p-4 text-sm text-muted-foreground">
+          Discovery record not found.
+        </div>
       </div>
     );
   }
 
   const stateLabel =
-    draft.state === 'READY_TO_PROMOTE'
-      ? 'Ready to promote'
-      : draft.state === 'DRIFTED'
-        ? 'Needs review'
-        : 'Needs context';
+    draft.state === "READY_TO_PROMOTE"
+      ? "Ready to promote"
+      : draft.state === "DRIFTED"
+        ? "Needs review"
+        : "Needs context";
 
   const stateClassName =
-    draft.state === 'READY_TO_PROMOTE'
-      ? 'border-success/25 bg-success/10 text-success'
-      : draft.state === 'DRIFTED'
-        ? 'border-warning/25 bg-warning/10 text-warning'
-        : 'border-low/25 bg-low/10 text-low';
+    draft.state === "READY_TO_PROMOTE"
+      ? "border-success/25 bg-success/10 text-success"
+      : draft.state === "DRIFTED"
+        ? "border-warning/25 bg-warning/10 text-warning"
+        : "border-low/25 bg-low/10 text-low";
   const suggestedCriticalityLabel =
     VM_CRITICALITY_OPTIONS.find(
       (item) => item.value === draft.suggestedCriticality,
-    )?.label ?? '--';
-
-  const buildPromotePayload = () => ({
-    systemName: draft.systemName ?? '',
-    environment: draft.environment ?? draft.suggestedEnvironment ?? 'PROD',
-    owner: draft.owner ?? draft.suggestedOwner ?? '',
-    businessUnit: draft.businessUnit ?? '',
-    slaTier: draft.slaTier ?? '',
-    serviceRole: draft.serviceRole ?? draft.suggestedServiceRole ?? '',
-    criticality: draft.criticality ?? draft.suggestedCriticality ?? 'STANDARD',
-    description: draft.description ?? draft.note ?? '',
-    notes: draft.notes ?? '',
-    lifecycleState: 'ACTIVE' as const,
-    tags: draft.tags.join(', '),
-    guestAccounts: (draft.guestAccounts ?? []).map((account) => ({
-      username: account.username,
-      password: account.password,
-      accessMethod: account.accessMethod,
-      role: account.role,
-      note: account.note ?? '',
-    })),
-  });
+    )?.label ?? "--";
 
   return (
     <div className="space-y-4 pb-8">
       <button
-        onClick={() => router.push('/dashboard/virtual-machines/sources')}
+        onClick={() => router.push("/dashboard/virtual-machines/sources")}
         className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -142,15 +158,21 @@ export default function VmSourceDetailPage() {
 
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="truncate font-display text-xl font-semibold uppercase tracking-[0.06em] text-foreground">{draft.name}</h1>
-                  <span className={`rounded-full border px-2.5 py-0.5 text-xs ${stateClassName}`}>{stateLabel}</span>
+                  <h1 className="truncate font-display text-xl font-semibold uppercase tracking-[0.06em] text-foreground">
+                    {draft.name}
+                  </h1>
+                  <span
+                    className={`rounded-full border px-2.5 py-0.5 text-xs ${stateClassName}`}
+                  >
+                    {stateLabel}
+                  </span>
                   <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs text-muted-foreground">
                     {draft.sourceName}
                   </span>
                 </div>
 
                 <div className="text-sm font-semibold text-foreground">
-                  {draft.systemName || 'System name not set'}
+                  {draft.systemName || "System name not set"}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
@@ -161,7 +183,9 @@ export default function VmSourceDetailPage() {
                   <span>{draft.host}</span>
                 </div>
 
-                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{draft.note}</p>
+                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                  {draft.note}
+                </p>
               </div>
             </div>
           </div>
@@ -169,45 +193,61 @@ export default function VmSourceDetailPage() {
           <div className="stats-grid sm:grid-cols-3">
             <div className="stat-tile">
               <div className="stat-kicker">Completeness</div>
-              <div className="mt-2 text-lg font-semibold text-foreground">{draftStats.completeness}%</div>
+              <div className="mt-2 text-lg font-semibold text-foreground">
+                {draftStats.completeness}%
+              </div>
             </div>
             <div className="stat-tile">
               <div className="stat-kicker">Missing Fields</div>
-              <div className="mt-2 text-lg font-semibold text-foreground">{draftStats.missing}</div>
+              <div className="mt-2 text-lg font-semibold text-foreground">
+                {draftStats.missing}
+              </div>
             </div>
             <div className="stat-tile">
               <div className="stat-kicker">Guest Accounts</div>
-              <div className="mt-2 text-lg font-semibold text-foreground">{draftStats.accounts}</div>
+              <div className="mt-2 text-lg font-semibold text-foreground">
+                {draftStats.accounts}
+              </div>
             </div>
           </div>
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-3">
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            Complete Draft
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={async () => {
-              if (draft.completeness < 100) {
-                toast.error('Complete all required VM context fields before approval');
-                return;
-              }
-              try {
-                const inventory = await promoteVmDiscovery(draft.id, buildPromotePayload());
-                toast.success('VM promoted to active inventory');
-                router.push(`/dashboard/virtual-machines/${inventory.id}`);
-              } catch {
-                toast.error('Failed to promote VM');
-              }
-            }}
-          >
-            Approve
-          </Button>
-          <Button variant="destructive" size="sm" onClick={() => setArchiveOpen(true)}>
-            Archive
-          </Button>
+          {canEdit ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditOpen(true)}
+              >
+                Complete Draft
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const inventory = await promoteVmDiscovery(draft.id, {});
+                    toast.success("VM promoted to inventory");
+                    router.push(`/dashboard/virtual-machines/${inventory.id}`);
+                  } catch {
+                    toast.error("Failed to promote VM");
+                  }
+                }}
+              >
+                Promote to Inventory
+              </Button>
+            </>
+          ) : null}
+          {canAdmin ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setArchiveOpen(true)}
+            >
+              Archive
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -215,7 +255,9 @@ export default function VmSourceDetailPage() {
         <div className="space-y-4">
           <section className="surface-panel p-4">
             <div className="border-b border-border/70 pb-3">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">Discovered From vCenter</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
+                Discovered From vCenter
+              </h2>
             </div>
 
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -224,9 +266,15 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Source</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.sourceName}</div>
-                  <div className="text-[11px] text-muted-foreground">Connected vCenter source</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Source
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.sourceName}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Connected vCenter source
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -234,9 +282,15 @@ export default function VmSourceDetailPage() {
                   <CircleOff className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">MoID</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.moid}</div>
-                  <div className="text-[11px] text-muted-foreground">Unique VM identity</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    MoID
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.moid}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Unique VM identity
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -244,9 +298,15 @@ export default function VmSourceDetailPage() {
                   <Monitor className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Runtime</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.powerState}</div>
-                  <div className="text-[11px] text-muted-foreground">{draft.lastSeen}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Runtime
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.powerState}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {draft.lastSeen}
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -254,9 +314,15 @@ export default function VmSourceDetailPage() {
                   <Monitor className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Guest OS</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.guestOs}</div>
-                  <div className="text-[11px] text-muted-foreground">{draft.primaryIp}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Guest OS
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.guestOs}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {draft.primaryIp}
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -264,9 +330,15 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">CPU / Memory</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.cpuCores} vCPU / {draft.memoryGb} GB</div>
-                  <div className="text-[11px] text-muted-foreground">Read-only from source sync</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    CPU / Memory
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.cpuCores} vCPU / {draft.memoryGb} GB
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Read-only from source sync
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -274,9 +346,15 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Storage / Network</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.storageGb} GB</div>
-                  <div className="text-[11px] text-muted-foreground">{draft.networkLabel}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Storage / Network
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.storageGb} GB
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {draft.networkLabel}
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -284,9 +362,15 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Host</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.host}</div>
-                  <div className="text-[11px] text-muted-foreground">{getPlacementResolutionCopy(draft.hostResolution, 'host')}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Host
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.host}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {getPlacementResolutionCopy(draft.hostResolution, "host")}
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -294,39 +378,62 @@ export default function VmSourceDetailPage() {
                   <Server className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Cluster</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.cluster}</div>
-                  <div className="text-[11px] text-muted-foreground">{getPlacementResolutionCopy(draft.clusterResolution, 'cluster')}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Cluster
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.cluster}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {getPlacementResolutionCopy(
+                      draft.clusterResolution,
+                      "cluster",
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
               <div className="muted-panel px-4 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Missing Fields</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Missing Fields
+                </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {draft.missingFields.length > 0 ? (
                     draft.missingFields.map((field) => (
-                      <span key={field} className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground">
+                      <span
+                        key={field}
+                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground"
+                      >
                         {field}
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-muted-foreground">No missing fields.</span>
+                    <span className="text-xs text-muted-foreground">
+                      No missing fields.
+                    </span>
                   )}
                 </div>
               </div>
               <div className="muted-panel px-4 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tags</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Tags
+                </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {draft.tags.length > 0 ? (
                     draft.tags.map((tag) => (
-                      <span key={tag} className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                      <span
+                        key={tag}
+                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground"
+                      >
                         {tag}
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-muted-foreground">No tags returned by the source.</span>
+                    <span className="text-xs text-muted-foreground">
+                      No tags returned by the source.
+                    </span>
                   )}
                 </div>
               </div>
@@ -336,7 +443,9 @@ export default function VmSourceDetailPage() {
           <section className="surface-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">AssetOps Context To Fill</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                AssetOps Context To Fill
+              </h3>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-2">
@@ -345,8 +454,12 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">System Name</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.systemName || '--'}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    System Name
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.systemName || "--"}
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -354,8 +467,12 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Owner</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.suggestedOwner || '--'}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Suggested Owner
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.suggestedOwner || "--"}
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -363,8 +480,12 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Environment</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.suggestedEnvironment || '--'}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Suggested Environment
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.suggestedEnvironment || "--"}
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -372,8 +493,12 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Service Role</div>
-                  <div className="text-sm font-semibold text-foreground">{draft.suggestedServiceRole || '--'}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Suggested Service Role
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {draft.suggestedServiceRole || "--"}
+                  </div>
                 </div>
               </div>
               <div className="metric-pair">
@@ -381,24 +506,36 @@ export default function VmSourceDetailPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Suggested Criticality</div>
-                  <div className="text-sm font-semibold text-foreground">{suggestedCriticalityLabel}</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Suggested Criticality
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {suggestedCriticalityLabel}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-3 muted-panel px-4 py-3">
               <div className="flex items-center justify-between gap-2">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Discovery Note</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Discovery Note
+                </div>
                 <button
                   type="button"
                   onClick={() => setRevealedNotes((current) => !current)}
                   className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
-                  {revealedNotes ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {revealedNotes ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{revealedNotes ? draft.note || '--' : 'Hidden until reviewed'}</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {revealedNotes ? draft.note || "--" : "Hidden until reviewed"}
+              </p>
             </div>
           </section>
         </div>
@@ -407,7 +544,9 @@ export default function VmSourceDetailPage() {
           <section className="surface-panel p-4">
             <div className="flex items-center gap-2">
               <Server className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Promotion Steps</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                Promotion Steps
+              </h3>
             </div>
             <div className="mt-3 space-y-2 text-xs leading-5 text-muted-foreground">
               <p>1. Review the discovered VM data from vCenter.</p>
@@ -419,16 +558,26 @@ export default function VmSourceDetailPage() {
           <section className="surface-panel p-4">
             <div className="flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Queue Summary</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                Queue Summary
+              </h3>
             </div>
             <div className="mt-3 space-y-3">
               <div className="muted-panel px-3 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Completeness</div>
-                <div className="mt-2 text-sm font-semibold text-foreground">{draft.completeness}%</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Completeness
+                </div>
+                <div className="mt-2 text-sm font-semibold text-foreground">
+                  {draft.completeness}%
+                </div>
               </div>
               <div className="muted-panel px-3 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Guest Accounts</div>
-                <div className="mt-2 text-sm font-semibold text-foreground">{draft.guestAccountsCount}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Guest Accounts
+                </div>
+                <div className="mt-2 text-sm font-semibold text-foreground">
+                  {draft.guestAccountsCount}
+                </div>
               </div>
             </div>
           </section>
@@ -436,7 +585,7 @@ export default function VmSourceDetailPage() {
       </section>
 
       <VmFormDialog
-        key={`draft-edit-${draft.id}-${editOpen ? 'open' : 'closed'}`}
+        key={`draft-edit-${draft.id}-${editOpen ? "open" : "closed"}`}
         open={editOpen}
         onOpenChange={setEditOpen}
         discoveryVm={draft}
@@ -450,7 +599,9 @@ export default function VmSourceDetailPage() {
           </DialogHeader>
           <div className="space-y-4 px-5 py-5">
             <p className="text-sm text-muted-foreground">
-              Archive <span className="font-medium text-foreground">{draft.name}</span> from the discovery queue?
+              Archive{" "}
+              <span className="font-medium text-foreground">{draft.name}</span>{" "}
+              from the discovery queue?
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setArchiveOpen(false)}>
@@ -462,10 +613,10 @@ export default function VmSourceDetailPage() {
                   try {
                     await archiveVmDiscovery(draft.id);
                     setArchiveOpen(false);
-                    toast.success('Discovery item archived');
-                    router.push('/dashboard/virtual-machines/sources');
+                    toast.success("Discovery item archived");
+                    router.push("/dashboard/virtual-machines/sources");
                   } catch {
-                    toast.error('Failed to archive discovery item');
+                    toast.error("Failed to archive discovery item");
                   }
                 }}
               >

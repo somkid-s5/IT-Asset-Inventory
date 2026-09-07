@@ -1,27 +1,20 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { kbService } from '@/services/kb';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import EditArticlePage from './edit/page';
-import {
-  Calendar,
-  Eye,
-  Edit,
-  ChevronLeft,
-  Clock,
-  Share2,
-  Bookmark
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { MarkdownRenderer } from '@/components/MarkdownRenderer';
-import { motion } from 'framer-motion';
-import { fadeInUp } from '@/lib/animations';
+import { useQuery } from "@tanstack/react-query";
+import { kbService } from "@/services/kb";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import EditArticlePage from "./edit/page";
+import { Calendar, Eye, Edit, ChevronLeft, Clock, Share2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { motion } from "framer-motion";
+import { fadeInUp } from "@/lib/animations";
 
 export default function ArticlePage() {
   const { id } = useParams();
@@ -37,20 +30,25 @@ export default function ArticlePage() {
 
   useEffect(() => {
     const handleDocumentSaved = () => setIsEditing(false);
-    window.addEventListener('kb-document-saved', handleDocumentSaved);
-    return () => window.removeEventListener('kb-document-saved', handleDocumentSaved);
+    window.addEventListener("kb-document-saved", handleDocumentSaved);
+    return () =>
+      window.removeEventListener("kb-document-saved", handleDocumentSaved);
   }, []);
 
   const { data: document, isLoading } = useQuery({
-    queryKey: ['kb-document', id],
+    queryKey: ["kb-document", id],
     queryFn: () => kbService.getDocument(id as string),
     enabled: !!id,
   });
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     const publicUrl = `${window.location.origin}/docs/${id}`;
-    navigator.clipboard.writeText(publicUrl);
-    toast.success('Public share link copied to clipboard!');
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      toast.success("Public share link copied to clipboard!");
+    } catch {
+      toast.error("Unable to copy the public share link");
+    }
   };
 
   if (isLoading) {
@@ -71,8 +69,13 @@ export default function ArticlePage() {
   if (!document) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
-        <p className="text-muted-foreground font-medium uppercase tracking-widest">Document not found</p>
-        <Button onClick={() => router.push('/dashboard/docs')} variant="outline">
+        <p className="text-muted-foreground font-medium uppercase tracking-widest">
+          Document not found
+        </p>
+        <Button
+          onClick={() => router.push("/dashboard/docs")}
+          variant="outline"
+        >
           Return to Library
         </Button>
       </div>
@@ -82,6 +85,31 @@ export default function ArticlePage() {
   if (isEditing) {
     return <EditArticlePage />;
   }
+
+  const relatedInventory = [
+    ...(document.applicationLinks ?? []).map((link) => ({
+      kind: "Application",
+      label: link.application.name,
+      href: `/dashboard/applications/${link.application.id}`,
+    })),
+    ...(document.assetLinks ?? []).map((link) => ({
+      kind: "Asset",
+      label: link.asset.assetId
+        ? `${link.asset.name} (${link.asset.assetId})`
+        : link.asset.name,
+      href: `/dashboard/assets/${link.asset.id}`,
+    })),
+    ...(document.vmLinks ?? []).map((link) => ({
+      kind: "VM",
+      label: link.vm.systemName || link.vm.id,
+      href: `/dashboard/virtual-machines/${link.vm.id}`,
+    })),
+    ...(document.databaseLinks ?? []).map((link) => ({
+      kind: "Database",
+      label: link.database.name,
+      href: `/dashboard/databases/${link.database.id}`,
+    })),
+  ];
 
   return (
     <motion.div
@@ -103,9 +131,12 @@ export default function ArticlePage() {
         </Button>
 
         <div className="flex items-center gap-2">
-           <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest bg-primary/5 text-primary border-primary/10">
-              {document.category.name}
-           </Badge>
+          <Badge
+            variant="outline"
+            className="text-[10px] font-black uppercase tracking-widest bg-primary/5 text-primary border-primary/10"
+          >
+            {document.category.name}
+          </Badge>
         </div>
       </div>
 
@@ -116,13 +147,16 @@ export default function ArticlePage() {
             {/* Header Metadata */}
             <header className="mb-8 space-y-5">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase tracking-wider text-[10px] px-3">
+                <Badge
+                  variant="secondary"
+                  className="bg-primary/5 text-primary border-primary/10 font-bold uppercase tracking-wider text-[10px] px-3"
+                >
                   {document.category.name}
                 </Badge>
                 <div className="h-1 w-1 rounded-full bg-border" />
                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-tight">
                   <Clock className="h-3.5 w-3.5" />
-                  {Math.ceil(document.content.split(' ').length / 200)} min read
+                  {Math.ceil(document.content.split(" ").length / 200)} min read
                 </div>
               </div>
 
@@ -133,15 +167,18 @@ export default function ArticlePage() {
               <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/40 pt-5">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-muted border border-border overflow-hidden">
-                     {/* Avatar Placeholder */}
-                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold">
-                       {document.author.displayName.charAt(0)}
-                     </div>
+                    {/* Avatar Placeholder */}
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold">
+                      {document.author.displayName.charAt(0)}
+                    </div>
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-bold uppercase tracking-tight">{document.author.displayName}</p>
+                    <p className="truncate text-xs font-bold uppercase tracking-tight">
+                      {document.author.displayName}
+                    </p>
                     <p className="text-[10px] text-muted-foreground font-medium">
-                      Published on {new Date(document.createdAt).toLocaleDateString()}
+                      Published on{" "}
+                      {new Date(document.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -151,15 +188,15 @@ export default function ArticlePage() {
                     variant="ghost"
                     size="icon"
                     className="h-9 w-9 rounded-xl hover:bg-primary/5 text-muted-foreground hover:text-primary"
-                    onClick={handleCopyLink}
+                    onClick={() => {
+                      void handleCopyLink();
+                    }}
                     title="Copy Public Link"
+                    aria-label="Copy public document link"
                   >
                     <Share2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/5 text-muted-foreground hover:text-primary">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                  {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
+                  {(user?.role === "ADMIN" || user?.role === "EDITOR") && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -176,6 +213,43 @@ export default function ArticlePage() {
 
             {/* Markdown Content */}
             <MarkdownRenderer content={document.content} />
+
+            <section className="mt-10 border-t border-border/40 pt-6">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-bold">Related inventory</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Canonical links to the inventory records this document
+                    supports.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px]">
+                  {relatedInventory.length} links
+                </Badge>
+              </div>
+              {relatedInventory.length ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {relatedInventory.map((item) => (
+                    <Link
+                      key={`${item.kind}-${item.href}`}
+                      href={item.href}
+                      className="rounded-xl border border-border/50 bg-background/50 px-3 py-2 transition-colors hover:bg-muted/40"
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        {item.kind}
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-semibold text-primary">
+                        {item.label}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No inventory records are linked to this document yet.
+                </p>
+              )}
+            </section>
           </article>
         </div>
 
@@ -183,51 +257,64 @@ export default function ArticlePage() {
         <aside className="hidden w-64 shrink-0 border-l border-border/40 bg-muted/5 p-5 xl:block">
           <div className="sticky top-20 space-y-6">
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Details</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                Details
+              </h4>
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-xs">
                   <Eye className="h-4 w-4 opacity-40" />
-                  <span className="text-muted-foreground font-medium">{document.viewCount} views</span>
+                  <span className="text-muted-foreground font-medium">
+                    {document.viewCount} views
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   <Calendar className="h-4 w-4 opacity-40" />
-                  <span className="text-muted-foreground font-medium">Updated {new Date(document.updatedAt).toLocaleDateString()}</span>
+                  <span className="text-muted-foreground font-medium">
+                    Updated {new Date(document.updatedAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Actions</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                Actions
+              </h4>
               <div className="grid grid-cols-1 gap-2">
-                 <Button
+                <Button
                   variant="outline"
                   className="w-full justify-start rounded-xl text-[11px] font-bold h-9 border-2"
-                  onClick={handleCopyLink}
-                 >
-                   <Share2 className="h-3.5 w-3.5 mr-2 opacity-60" /> Copy Public Share Link
-                 </Button>
-                 <Button variant="outline" className="w-full justify-start rounded-xl text-[11px] font-bold h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-500/5 border-rose-500/10">
-                   Report Outdated
-                 </Button>
-                 {(user?.role === 'ADMIN' || user?.role === 'EDITOR') && (
-                   <Button
-                     variant="outline"
-                     className="w-full justify-start rounded-xl text-[11px] font-bold h-9 text-rose-500 hover:text-white hover:bg-rose-600 border-rose-500/20"
-                     onClick={async () => {
-                       if (window.confirm('Are you sure you want to delete this document?')) {
-                         try {
-                           await kbService.deleteDocument(id as string);
-                           toast.success('Document deleted successfully');
-                           router.push('/dashboard/docs');
-                         } catch {
-                           toast.error('Failed to delete document');
-                         }
-                       }
-                     }}
-                   >
-                     Delete Document
-                   </Button>
-                 )}
+                  onClick={() => {
+                    void handleCopyLink();
+                  }}
+                  aria-label="Copy public document link"
+                >
+                  <Share2 className="h-3.5 w-3.5 mr-2 opacity-60" /> Copy Public
+                  Share Link
+                </Button>
+                {(user?.role === "ADMIN" || user?.role === "EDITOR") && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start rounded-xl text-[11px] font-bold h-9 text-rose-500 hover:text-white hover:bg-rose-600 border-rose-500/20"
+                    onClick={async () => {
+                      if (
+                        window.confirm(
+                          "Are you sure you want to delete this document?",
+                        )
+                      ) {
+                        try {
+                          await kbService.deleteDocument(id as string);
+                          toast.success("Document deleted successfully");
+                          router.push("/dashboard/docs");
+                        } catch {
+                          toast.error("Failed to delete document");
+                        }
+                      }
+                    }}
+                  >
+                    Delete Document
+                  </Button>
+                )}
               </div>
             </div>
           </div>

@@ -11,7 +11,7 @@ test.describe('Databases List Spec', () => {
   test('should display default list page heading and environment tabs', async ({ page }) => {
     await expect(page.getByRole('button').filter({ hasText: 'Production' })).toBeVisible();
     await expect(page.getByRole('button').filter({ hasText: 'Testing' })).toBeVisible();
-    await expect(page.getByRole('button').filter({ hasText: 'Development' })).toBeVisible();
+    await expect(page.getByRole('button').filter({ hasText: 'UAT' })).toBeVisible();
   });
 
   test('should trigger search filter in real-time', async ({ page }) => {

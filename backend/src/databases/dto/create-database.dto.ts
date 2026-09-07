@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayNotEmpty,
   IsArray,
   IsEnum,
   IsNotEmpty,
@@ -10,9 +9,13 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { DatabaseStatus } from '@prisma/client';
+import { DatabaseAccountScope, DatabaseStatus } from '@prisma/client';
 
 class DatabaseAccountDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   @IsNotEmpty()
   username: string;
@@ -20,8 +23,9 @@ class DatabaseAccountDto {
   @IsString()
   role: string;
 
+  @IsOptional()
   @IsString()
-  password: string;
+  password?: string;
 
   @IsArray()
   @IsString({ each: true })
@@ -32,8 +36,8 @@ class DatabaseAccountDto {
   note?: string;
 
   @IsOptional()
-  @IsString()
-  scope?: string;
+  @IsEnum(DatabaseAccountScope)
+  scope?: DatabaseAccountScope;
 
   @IsOptional()
   @IsArray()
@@ -58,14 +62,14 @@ export class CreateDatabaseDto {
   @IsString()
   environment?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  host: string;
+  host?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @IsIP()
-  ipAddress: string;
+  ipAddress?: string;
 
   @IsOptional()
   @IsString()
@@ -105,11 +109,11 @@ export class CreateDatabaseDto {
   @IsString()
   note?: string;
 
+  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => DatabaseAccountDto)
-  accounts: DatabaseAccountDto[];
+  accounts?: DatabaseAccountDto[];
 
   @IsOptional()
   @IsArray()

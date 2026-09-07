@@ -29,3 +29,18 @@ Auto-waiting web-first assertions only (`toBeVisible`, `toHaveURL`, `toHaveText`
 
 ## Adding tests (AI agents start here)
 To add E2E coverage for feature X: copy the shape of `e2e/login.spec.ts`, add locators only via the Locator Mapping Table workflow, then run `npm run test:e2e`.
+
+## Product / Data / UX completeness gate
+
+Before planning or implementing product-facing work, read `docs/agents/ORCHESTRATION_FLOW.md`.
+
+For substantial feature, screen, table, schema, API, or workflow work, use the project-local skills when available:
+- `.agents/skills/prd-plan/SKILL.md`
+- `.agents/skills/product-design-and-ux/SKILL.md`
+- `.agents/skills/production-app-completeness/SKILL.md`
+
+Use them together with the installed AI Hero flow: `grill-with-docs` -> `to-spec` -> `to-tickets` -> `implement`/`tdd` -> `code-review`.
+
+Hard rule: rendering is not completion. A feature is not done until its operational purpose, data model, relationships, states, permissions, API/persistence trace, realistic data behavior, downstream usage, and acceptance evidence are covered. Tickets should be vertical slices across schema/API/UI/tests where applicable.
+
+Model policy: use GPT-5.6 Luna High for implementation workers and routine ticket execution. Auditor/reviewer roles (including Product/Data Audit, UX Audit, architecture/completeness review, and spec-vs-code review) may use GPT-5.6 Sol when deeper reasoning materially improves review quality. Do not silently upgrade ordinary implementation workers to Sol.

@@ -34,9 +34,15 @@ class IpAllocationDto {
   @IsString()
   version?: string;
 
+  /** @deprecated Legacy single-credential link. New clients should use credentialIds. */
   @IsOptional()
   @IsString()
   credentialId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  credentialIds?: string[];
 }
 
 class AssetCredentialDto {
@@ -66,6 +72,20 @@ class AssetCredentialDto {
   @IsOptional()
   @IsString()
   version?: string;
+}
+
+class AssetComponentLinkDto {
+  @IsString()
+  @IsNotEmpty()
+  componentId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  relationType: string;
+
+  @IsOptional()
+  @IsString()
+  responsibleParty?: string;
 }
 
 export class CreateAssetDto {
@@ -158,6 +178,12 @@ export class CreateAssetDto {
   @IsOptional()
   @IsString()
   dependencies?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AssetComponentLinkDto)
+  componentLinks?: AssetComponentLinkDto[];
 
   @IsOptional()
   @IsArray()

@@ -39,6 +39,8 @@ Thumbs.db
 .superpowers/
 todos/
 .antigravitycli/
+.scratch/
+.serena/
 
 # Lint & build artifacts
 lint_results.txt

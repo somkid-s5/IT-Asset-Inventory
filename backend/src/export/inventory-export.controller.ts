@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
+  BadRequestException,
   Body,
   Controller,
   Post,
@@ -30,6 +30,11 @@ export class InventoryExportController {
     @Request() req: { user: { id: string } },
     @Res() res: Response,
   ) {
+    if (dto.passphrase !== dto.confirmPassphrase) {
+      throw new BadRequestException(
+        'Export passphrase confirmation does not match.',
+      );
+    }
     await this.authService.verifyCurrentPassword(
       req.user.id,
       dto.currentPassword,
@@ -46,6 +51,8 @@ export class InventoryExportController {
       'Content-Disposition',
       'attachment; filename="inventory-export.xlsx"',
     );
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.setHeader('Pragma', 'no-cache');
     res.send(workbook);
   }
 }

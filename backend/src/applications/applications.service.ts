@@ -27,7 +27,14 @@ const include = {
               vm: { select: { id: true, name: true, systemName: true } },
             },
           },
-          logicalDatabases: { select: { id: true, name: true } },
+          logicalDatabases: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              databaseInventory: { select: { id: true, name: true } },
+            },
+          },
         },
         orderBy: { sortOrder: 'asc' as const },
       },
@@ -122,7 +129,139 @@ export class ApplicationsService {
     };
   }
 
-  private nested(dto: CreateApplicationDto | UpdateApplicationDto) {
+  private async findExistingPrimaryAssetIds(
+    assetIds: string[],
+    options: {
+      excludeApplicationId?: string;
+      excludeComponentId?: string;
+    } = {},
+  ) {
+    const uniqueAssetIds = [...new Set(assetIds.filter(Boolean))];
+    if (!uniqueAssetIds.length) return new Set<string>();
+
+    const excludedComponentIds = new Set<string>();
+    if (options.excludeApplicationId) {
+      const components = await this.prisma.applicationComponent.findMany({
+        where: { environment: { applicationId: options.excludeApplicationId } },
+        select: { id: true },
+      });
+      components.forEach((component) => excludedComponentIds.add(component.id));
+    }
+    if (options.excludeComponentId) {
+      excludedComponentIds.add(options.excludeComponentId);
+    }
+
+    const links = await this.prisma.applicationComponentAsset.findMany({
+      where: {
+        assetId: { in: uniqueAssetIds },
+        relationType: 'PRIMARY',
+        ...(excludedComponentIds.size
+          ? { componentId: { notIn: [...excludedComponentIds] } }
+          : {}),
+      },
+      select: { assetId: true },
+    });
+
+    return new Set(links.map((link) => link.assetId));
+  }
+
+  private async buildComponentAssetLinks(
+    assetIds: string[] | undefined,
+    options: { excludeComponentId?: string } = {},
+  ) {
+    if (!assetIds) return undefined;
+    const uniqueAssetIds = [...new Set(assetIds.filter(Boolean))];
+    const existingPrimaryAssetIds = await this.findExistingPrimaryAssetIds(
+      uniqueAssetIds,
+      options,
+    );
+
+    return uniqueAssetIds.map((assetId) => ({
+      assetId,
+      relationType: existingPrimaryAssetIds.has(assetId) ? 'SHARED' : 'PRIMARY',
+    }));
+  }
+
+  private async findExistingPrimaryVmIds(
+    vmIds: string[],
+    options: {
+      excludeApplicationId?: string;
+      excludeComponentId?: string;
+    } = {},
+  ) {
+    const uniqueVmIds = [...new Set(vmIds.filter(Boolean))];
+    if (!uniqueVmIds.length) return new Set<string>();
+
+    const excludedComponentIds = new Set<string>();
+    if (options.excludeApplicationId) {
+      const components = await this.prisma.applicationComponent.findMany({
+        where: { environment: { applicationId: options.excludeApplicationId } },
+        select: { id: true },
+      });
+      components.forEach((component) => excludedComponentIds.add(component.id));
+    }
+    if (options.excludeComponentId) {
+      excludedComponentIds.add(options.excludeComponentId);
+    }
+
+    const links = await this.prisma.applicationComponentVm.findMany({
+      where: {
+        vmId: { in: uniqueVmIds },
+        relationType: 'PRIMARY',
+        ...(excludedComponentIds.size
+          ? { componentId: { notIn: [...excludedComponentIds] } }
+          : {}),
+      },
+      select: { vmId: true },
+    });
+
+    return new Set(links.map((link) => link.vmId));
+  }
+
+  private async buildComponentVmLinks(
+    vmIds: string[] | undefined,
+    options: { excludeComponentId?: string } = {},
+  ) {
+    if (!vmIds) return undefined;
+    const uniqueVmIds = [...new Set(vmIds.filter(Boolean))];
+    const existingPrimaryVmIds = await this.findExistingPrimaryVmIds(
+      uniqueVmIds,
+      options,
+    );
+
+    return uniqueVmIds.map((vmId) => ({
+      vmId,
+      relationType: existingPrimaryVmIds.has(vmId) ? 'SHARED' : 'PRIMARY',
+    }));
+  }
+
+  private async nested(
+    dto: CreateApplicationDto | UpdateApplicationDto,
+    applicationId?: string,
+  ) {
+    const requestedAssetIds =
+      dto.environments?.flatMap((environment) =>
+        (environment.components ?? []).flatMap(
+          (component) => component.assetIds ?? [],
+        ),
+      ) ?? [];
+    const existingPrimaryAssetIds = await this.findExistingPrimaryAssetIds(
+      requestedAssetIds,
+      applicationId ? { excludeApplicationId: applicationId } : {},
+    );
+    const assignedPrimaryAssetIds = new Set<string>();
+    const requestedVmIds =
+      dto.environments?.flatMap((environment) =>
+        (environment.components ?? []).flatMap(
+          (component) => component.vmIds ?? [],
+        ),
+      ) ?? [];
+    const existingPrimaryVmIds = await this.findExistingPrimaryVmIds(
+      requestedVmIds,
+      applicationId ? { excludeApplicationId: applicationId } : {},
+    );
+    const assignedPrimaryVmIds = new Set<string>();
+
     const environments = dto.environments?.map((env, index) => ({
       name: env.name,
       noDatabase: Boolean(env.noDatabase),
@@ -137,18 +276,36 @@ export class ApplicationsService {
             ...(c.assetIds?.length
               ? {
                   assetLinks: {
-                    create: c.assetIds.map((assetId) => ({
-                      asset: { connect: { id: assetId } },
-                    })),
+                    create: [...new Set(c.assetIds)].map((assetId) => {
+                      const relationType =
+                        existingPrimaryAssetIds.has(assetId) ||
+                        assignedPrimaryAssetIds.has(assetId)
+                          ? 'SHARED'
+                          : 'PRIMARY';
+                      assignedPrimaryAssetIds.add(assetId);
+                      return {
+                        asset: { connect: { id: assetId } },
+                        relationType,
+                      };
+                    }),
                   },
                 }
               : {}),
             ...(c.vmIds?.length
               ? {
                   vmLinks: {
-                    create: c.vmIds.map((vmId) => ({
-                      vm: { connect: { id: vmId } },
-                    })),
+                    create: [...new Set(c.vmIds)].map((vmId) => {
+                      const relationType =
+                        existingPrimaryVmIds.has(vmId) ||
+                        assignedPrimaryVmIds.has(vmId)
+                          ? 'SHARED'
+                          : 'PRIMARY';
+                      assignedPrimaryVmIds.add(vmId);
+                      return {
+                        vm: { connect: { id: vmId } },
+                        relationType,
+                      };
+                    }),
                   },
                 }
               : {}),
@@ -256,8 +413,10 @@ export class ApplicationsService {
       },
       orderBy: { updatedAt: 'desc' },
     });
-    const issues = applications.flatMap((app) => {
-      const completeness = evaluateApplicationCompleteness({
+
+    const evaluations = applications.map((app) => ({
+      app,
+      evaluation: evaluateApplicationCompleteness({
         name: app.name,
         description: app.description,
         technicalOwner: app.technicalOwner,
@@ -271,21 +430,34 @@ export class ApplicationsService {
             logicalDatabaseCount: component.logicalDatabases.length,
           })),
         })),
-      });
-      return completeness.missingFields.length
-        ? [{ id: app.id, name: app.name, issues: completeness.missingFields }]
-        : [];
-    });
+      }),
+    }));
+
+    const issues = evaluations.flatMap(({ app, evaluation }) =>
+      evaluation.needsContext
+        ? [
+            {
+              id: app.id,
+              name: app.name,
+              issues: evaluation.missingFields,
+              reasons: evaluation.reasons,
+            },
+          ]
+        : [],
+    );
+
     return {
       totalApplications: applications.length,
       completeApplications: applications.length - issues.length,
       issueCount: issues.length,
       issues,
+      operationalIssues: [],
+      operationalIssueCount: 0,
     };
   }
 
   async create(dto: CreateApplicationDto, userId: string) {
-    const nested = this.nested(dto);
+    const nested = await this.nested(dto);
     const app = await this.prisma.application.create({
       data: {
         name: dto.name.trim(),
@@ -313,7 +485,7 @@ export class ApplicationsService {
 
   async update(id: string, dto: UpdateApplicationDto, userId: string) {
     await this.findOne(id);
-    const nested = this.nested(dto);
+    const nested = await this.nested(dto, id);
     const app = await this.prisma.application.update({
       where: { id },
       data: {
@@ -616,6 +788,8 @@ export class ApplicationsService {
     });
     if (!environment)
       throw new NotFoundException('Application environment not found');
+    const assetLinks = await this.buildComponentAssetLinks(dto.assetIds);
+    const vmLinks = await this.buildComponentVmLinks(dto.vmIds);
     await this.prisma.applicationComponent.create({
       data: {
         environmentId,
@@ -626,16 +800,14 @@ export class ApplicationsService {
           (await this.prisma.applicationComponent.count({
             where: { environmentId },
           })),
-        ...(dto.assetIds?.length
+        ...(assetLinks?.length
           ? {
               assetLinks: {
-                create: dto.assetIds.map((assetId) => ({ assetId })),
+                create: assetLinks,
               },
             }
           : {}),
-        ...(dto.vmIds?.length
-          ? { vmLinks: { create: dto.vmIds.map((vmId) => ({ vmId })) } }
-          : {}),
+        ...(vmLinks?.length ? { vmLinks: { create: vmLinks } } : {}),
         ...(dto.logicalDatabaseIds?.length
           ? {
               logicalDatabases: {
@@ -664,25 +836,31 @@ export class ApplicationsService {
     });
     if (!component)
       throw new NotFoundException('Application component not found');
+    const assetLinks = await this.buildComponentAssetLinks(dto.assetIds, {
+      excludeComponentId: componentId,
+    });
+    const vmLinks = await this.buildComponentVmLinks(dto.vmIds, {
+      excludeComponentId: componentId,
+    });
     await this.prisma.applicationComponent.update({
       where: { id: componentId },
       data: {
         name: dto.name.trim(),
         description: this.text(dto.description),
         ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
-        ...(dto.assetIds
+        ...(assetLinks !== undefined
           ? {
               assetLinks: {
                 deleteMany: {},
-                create: dto.assetIds.map((assetId) => ({ assetId })),
+                create: assetLinks,
               },
             }
           : {}),
-        ...(dto.vmIds
+        ...(vmLinks !== undefined
           ? {
               vmLinks: {
                 deleteMany: {},
-                create: dto.vmIds.map((vmId) => ({ vmId })),
+                create: vmLinks,
               },
             }
           : {}),

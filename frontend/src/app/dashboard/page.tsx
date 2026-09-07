@@ -1,23 +1,24 @@
 "use client";
 
-import { useMemo, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, type ComponentType } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
+  AppWindow,
+  ArrowUpRight,
+  Clock3,
   Database,
+  Monitor,
   RefreshCw,
   Server,
-  ShieldCheck,
-  Monitor,
   ShieldAlert,
-  Laptop,
-  AppWindow,
-  Activity,
-  ArrowUpRight,
-  AlertCircle,
-  ClipboardCheck,
 } from "lucide-react";
+import { motion } from "framer-motion";
+import api from "@/services/api";
+import { usePageHeader } from "@/contexts/PageHeaderContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -25,22 +26,49 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import api from "@/services/api";
 import { DashboardSkeleton } from "@/components/Skeletons";
-import { motion, Variants } from "framer-motion";
-import { PieChart, Pie, Tooltip as RechartsTooltip, Legend } from "recharts";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import { cn } from "@/lib/utils";
-import { usePageHeader } from "@/contexts/PageHeaderContext";
-import { useQuery } from "@tanstack/react-query";
+import { containerVariants, itemVariants } from "@/lib/animations";
+
+type QualityReason = {
+  code: string;
+  label: string;
+  guidance: string;
+  category: "context" | "operational";
+};
+
+type QualityIssue = {
+  id: string;
+  name: string;
+  issues: string[];
+  reasons?: QualityReason[];
+  assetId?: string | null;
+  type?: string;
+  engine?: string;
+  kind?: "discovery" | "inventory";
+};
+
+type DomainQualitySummary = {
+  issueCount: number;
+  issues: QualityIssue[];
+  operationalIssueCount?: number;
+  operationalIssues?: QualityIssue[];
+};
+
+type DataQualityOverview = {
+  applications: DomainQualitySummary;
+  assets: DomainQualitySummary;
+  databases: DomainQualitySummary;
+  vms: DomainQualitySummary;
+};
+
+type RecentlyUpdatedItem = {
+  id: string;
+  kind: "application" | "asset" | "vm" | "database";
+  name: string;
+  metadata: string;
+  updatedAt: string;
+  href: string;
+};
 
 interface DashboardOverview {
   assets: {
@@ -48,10 +76,6 @@ interface DashboardOverview {
     active: number;
     nonActive: number;
     eolCount: number;
-    breakdown: Array<{
-      label: string;
-      count: number;
-    }>;
   };
   vm: {
     sources: number;
@@ -68,48 +92,98 @@ interface DashboardOverview {
     production: number;
     accounts: number;
   };
-  users: {
-    total: number;
-    admins: number;
-    nonAdmins: number;
-  };
   applications: {
     total: number;
     active: number;
     archived: number;
   };
+  recentlyUpdated: RecentlyUpdatedItem[];
 }
 
-interface DataQualityOverview {
-  applications: { issueCount: number };
-  assets: { issueCount: number };
-  databases: { issueCount: number };
-  vms: { issueCount: number };
+type AttentionItem = {
+  id: string;
+  title: string;
+  detail: string;
+  href: string;
+  tone: "context" | "operational";
+};
+
+function qualityIssueHref(
+  domain: keyof DataQualityOverview,
+  issue: QualityIssue,
+) {
+  if (domain === "applications") return `/dashboard/applications/${issue.id}`;
+  if (domain === "assets") return `/dashboard/assets/${issue.id}`;
+  if (domain === "databases") return `/dashboard/databases/${issue.id}`;
+  return issue.kind === "inventory"
+    ? `/dashboard/virtual-machines/${issue.id}`
+    : `/dashboard/virtual-machines?view=PENDING&q=${encodeURIComponent(issue.name)}`;
 }
 
-import { containerVariants, itemVariants } from "@/lib/animations";
+function buildContextAttention(
+  quality: DataQualityOverview | undefined,
+): AttentionItem[] {
+  if (!quality) return [];
+  const labels: Record<keyof DataQualityOverview, string> = {
+    applications: "Application",
+    assets: "Asset",
+    databases: "Database",
+    vms: "VM",
+  };
+
+  return (Object.keys(labels) as Array<keyof DataQualityOverview>).flatMap(
+    (domain) =>
+      quality[domain].issues.map((issue) => ({
+        id: `context-${domain}-${issue.kind ?? "record"}-${issue.id}`,
+        title: `${labels[domain]} · ${issue.name}`,
+        detail: issue.issues.join(" · "),
+        href: qualityIssueHref(domain, issue),
+        tone: "context" as const,
+      })),
+  );
+}
+
+function buildOperationalAttention(
+  overview: DashboardOverview | undefined,
+  quality: DataQualityOverview | undefined,
+): AttentionItem[] {
+  const items: AttentionItem[] = [];
+
+  for (const issue of quality?.assets.operationalIssues ?? []) {
+    items.push({
+      id: `operational-asset-${issue.id}`,
+      title: `Asset · ${issue.name}`,
+      detail: issue.issues.join(" · "),
+      href: `/dashboard/assets/${issue.id}`,
+      tone: "operational",
+    });
+  }
+  for (const issue of quality?.vms.operationalIssues ?? []) {
+    items.push({
+      id: `operational-vm-${issue.id}`,
+      title: `VM · ${issue.name}`,
+      detail: issue.issues.join(" · "),
+      href: `/dashboard/virtual-machines/${issue.id}`,
+      tone: "operational",
+    });
+  }
+  if ((overview?.vm.connectionFailedSources ?? 0) > 0) {
+    items.push({
+      id: "operational-vcenter-source-failure",
+      title: "vCenter source sync failure",
+      detail: `${overview?.vm.connectionFailedSources ?? 0} source(s) require connection review`,
+      href: "/dashboard/virtual-machines/sources",
+      tone: "operational",
+    });
+  }
+
+  return items;
+}
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { setHeader } = usePageHeader();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 0);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    for (const route of [
-      "/dashboard/virtual-machines",
-      "/dashboard/assets",
-      "/dashboard/databases",
-    ]) {
-      void router.prefetch(route);
-    }
-  }, [router]);
-
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const overviewQuery = useQuery({
     queryKey: ["dashboard-overview"],
     queryFn: async () => {
       const response = await api.get<DashboardOverview>("/dashboard/overview");
@@ -117,24 +191,24 @@ export default function DashboardPage() {
     },
   });
 
-  const { data: qualityData } = useQuery({
+  const qualityQuery = useQuery({
     queryKey: ["dashboard-data-quality"],
     queryFn: async () => {
       const [applications, assets, databases, vms] = await Promise.all([
-        api.get("/applications/data-quality/summary"),
-        api.get("/assets/data-quality/summary"),
-        api.get("/databases/data-quality/summary"),
-        api.get("/vm/data-quality/summary"),
+        api.get<DomainQualitySummary>("/applications/data-quality/summary"),
+        api.get<DomainQualitySummary>("/assets/data-quality/summary"),
+        api.get<DomainQualitySummary>("/databases/data-quality/summary"),
+        api.get<DomainQualitySummary>("/vm/data-quality/summary"),
       ]);
-
       return {
         applications: applications.data,
         assets: assets.data,
         databases: databases.data,
         vms: vms.data,
-      } as DataQualityOverview;
+      } satisfies DataQualityOverview;
     },
     retry: false,
+    refetchOnMount: "always",
   });
 
   useEffect(() => {
@@ -147,498 +221,287 @@ export default function DashboardPage() {
     });
   }, [setHeader]);
 
-  const chartConfig = useMemo(() => {
-    if (!data?.assets.breakdown) return {};
-    const config: any = {};
-    const colors = [
-      "hsl(var(--primary))",
-      "hsl(var(--success))",
-      "hsl(var(--info))",
-      "hsl(var(--warning))",
-      "hsl(var(--destructive))",
-    ];
-    data.assets.breakdown.forEach((b, i) => {
-      config[b.label] = {
-        label: b.label.toUpperCase(),
-        color: colors[i % colors.length],
-      };
-    });
-    return config;
-  }, [data]);
+  const contextAttention = useMemo(
+    () => buildContextAttention(qualityQuery.data),
+    [qualityQuery.data],
+  );
+  const operationalAttention = useMemo(
+    () => buildOperationalAttention(overviewQuery.data, qualityQuery.data),
+    [overviewQuery.data, qualityQuery.data],
+  );
+  const attentionItems = [...operationalAttention, ...contextAttention];
+  const contextIssueCount =
+    (qualityQuery.data?.applications.issueCount ?? 0) +
+    (qualityQuery.data?.assets.issueCount ?? 0) +
+    (qualityQuery.data?.databases.issueCount ?? 0) +
+    (qualityQuery.data?.vms.issueCount ?? 0);
 
-  const assetChartData = useMemo(() => {
-    if (!data?.assets.breakdown) return [];
-    return data.assets.breakdown.map((b) => ({
-      name: b.label,
-      value: b.count,
-      fill: `var(--color-${b.label})`,
-    }));
-  }, [data]);
+  const refreshAll = async () => {
+    await Promise.all([overviewQuery.refetch(), qualityQuery.refetch()]);
+  };
 
-  const attentionItems = useMemo(() => {
-    if (!data) return [];
-    const items = [];
-    if (data.vm.pendingSetup > 0)
-      items.push({
-        id: "pending-vm",
-        title: `${data.vm.pendingSetup} VMs Pending Setup`,
-        route: "/dashboard/virtual-machines",
-        variant: "warning",
-      });
-    if (data.vm.connectionFailedSources > 0)
-      items.push({
-        id: "vm-err",
-        title: `vCenter Sync Failed`,
-        route: "/dashboard/virtual-machines/sources",
-        variant: "destructive",
-      });
-    return items;
-  }, [data]);
+  if (overviewQuery.isLoading) return <DashboardSkeleton />;
 
-  // Asset Health parameters
-  const eolCount = data?.assets?.eolCount ?? 0;
-  const nonActiveCount = data?.assets?.nonActive ?? 0;
-  const failedSyncCount = data?.vm?.connectionFailedSources ?? 0;
-  const dataQualityIssues =
-    (qualityData?.applications?.issueCount ?? 0) +
-    (qualityData?.assets?.issueCount ?? 0) +
-    (qualityData?.databases?.issueCount ?? 0) +
-    (qualityData?.vms?.issueCount ?? 0);
-  const dataQualitySubtitle = qualityData
-    ? `${qualityData.applications.issueCount} apps · ${qualityData.assets.issueCount} assets · ${qualityData.databases.issueCount} DBs · ${qualityData.vms.issueCount} VMs`
-    : "Checking records...";
-  const score = data?.assets?.total
-    ? Math.round(((data.assets.active ?? 0) / data.assets.total) * 100)
-    : 0;
-  const radius = 42;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
-  const strokeColor =
-    score < 60
-      ? "stroke-destructive"
-      : score < 85
-        ? "stroke-warning"
-        : "stroke-success";
-  const textColor =
-    score < 60
-      ? "text-destructive"
-      : score < 85
-        ? "text-warning"
-        : "text-success";
-
-  if (isLoading) return <DashboardSkeleton />;
+  const data = overviewQuery.data;
 
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 pt-0"
+      className="space-y-6"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-foreground">
-            Inventory health at a glance
+            Inventory summary
           </h2>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Current records, operational exceptions, and data-quality work for
-            your team.
+            Current non-archived inventory first, followed by work that needs
+            attention.
           </p>
         </div>
-        <motion.div variants={itemVariants} className="flex items-center gap-3">
-          <Badge
-            variant="outline"
-            className="px-3 py-1 font-medium bg-card/50 border-border/50"
-          >
-            <Activity className="mr-2 h-3 w-3 text-success" />
-            <span className="text-success">Inventory online</span>
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shadow-sm bg-card h-9"
-            onClick={() => void refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw
-              className={cn("mr-2 h-3.5 w-3.5", isFetching && "animate-spin")}
-            />
-            {isFetching ? "Refreshing..." : "Refresh dashboard"}
-          </Button>
-        </motion.div>
-      </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void refreshAll()}
+          disabled={overviewQuery.isFetching || qualityQuery.isFetching}
+          aria-label="Refresh dashboard"
+        >
+          <RefreshCw
+            className={
+              overviewQuery.isFetching || qualityQuery.isFetching
+                ? "animate-spin"
+                : ""
+            }
+          />
+          {overviewQuery.isFetching || qualityQuery.isFetching
+            ? "Refreshing..."
+            : "Refresh dashboard"}
+        </Button>
+      </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard
-          title="Applications"
-          value={data?.applications.total}
-        icon={AppWindow}
-          subtitle={`${data?.applications.active} active · ${data?.applications.archived} archived`}
-          color="primary"
-          href="/dashboard/applications"
-        />
-        <StatCard
-          title="Infrastructure"
-          value={data?.assets.total}
-          icon={Server}
-          subtitle={`${data?.assets.active} active · ${data?.assets.nonActive} non-active`}
-          color="info"
-          href="/dashboard/assets"
-        />
-        <StatCard
-          title="Virtual Machines"
-          value={data?.vm.activeInventory}
-          icon={Monitor}
-          subtitle={`${data?.vm.pendingSetup} setup · ${data?.vm.orphaned} orphaned`}
-          color="success"
-          href="/dashboard/virtual-machines"
-        />
-        <StatCard
-          title="Databases"
-          value={data?.databases.total}
-          icon={Database}
-          subtitle={`${data?.databases.production} prod · ${data?.databases.accounts} accounts`}
-          color="success"
-          href="/dashboard/databases"
-        />
-        <StatCard
-          title="Needs Review"
-          value={dataQualityIssues}
-          icon={ClipboardCheck}
-          subtitle={dataQualitySubtitle}
-          color={dataQualityIssues > 0 ? "warning" : "success"}
-          href="/dashboard/data-quality"
-        />
-      </div>
+      <motion.section
+        variants={itemVariants}
+        aria-label="Inventory summary counts"
+      >
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <SummaryCard
+            title="Applications"
+            value={data?.applications.active ?? 0}
+            subtitle={`${data?.applications.archived ?? 0} archived`}
+            icon={AppWindow}
+            href="/dashboard/applications"
+          />
+          <SummaryCard
+            title="Physical Assets"
+            value={data?.assets.total ?? 0}
+            subtitle={`${data?.assets.active ?? 0} active status`}
+            icon={Server}
+            href="/dashboard/assets"
+          />
+          <SummaryCard
+            title="Virtual Machines"
+            value={data?.vm.activeInventory ?? 0}
+            subtitle={`${data?.vm.orphaned ?? 0} missing/deleted`}
+            icon={Monitor}
+            href="/dashboard/virtual-machines"
+          />
+          <SummaryCard
+            title="Databases"
+            value={data?.databases.total ?? 0}
+            subtitle={`${data?.databases.production ?? 0} PROD`}
+            icon={Database}
+            href="/dashboard/databases"
+          />
+          <SummaryCard
+            title="Needs Context"
+            value={contextIssueCount}
+            subtitle="Central Data Quality model"
+            icon={ShieldAlert}
+            href="/dashboard/data-quality"
+          />
+        </div>
+      </motion.section>
 
-      <div className="grid gap-6 lg:grid-cols-12">
-        {/* CMDB Distribution (5 Cols) */}
-        <motion.div variants={itemVariants} className="lg:col-span-5">
-          <Card
-            role="region"
-            aria-label="CMDB Distribution"
-            className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm"
-          >
-            <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Laptop className="h-5 w-5 text-primary" />
-                CMDB Distribution
-              </CardTitle>
-              <CardDescription>
-                Visual breakdown of Configuration Items (CIs)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 min-h-[320px] relative p-6">
-              {mounted && assetChartData.length > 0 ? (
-                <div
-                  role="img"
-                  aria-label="CMDB Distribution Chart"
-                  className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center pt-8"
+      <motion.section
+        variants={itemVariants}
+        aria-labelledby="needs-attention-title"
+      >
+        <Card className="gap-0 overflow-hidden p-0">
+          <CardHeader className="border-b border-border/60 bg-muted/25 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle
+                  id="needs-attention-title"
+                  className="flex items-center gap-2 text-base"
                 >
-                  <ChartContainer
-                    config={chartConfig}
-                    className="w-full max-w-[320px] h-full aspect-square"
-                  >
-                    <PieChart>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
-                      />
-                      <Pie
-                        data={assetChartData}
-                        innerRadius={80}
-                        outerRadius={105}
-                        paddingAngle={5}
-                        dataKey="value"
-                        nameKey="name"
-                        cornerRadius={6}
-                      />
-                      <ChartLegend
-                        content={<ChartLegendContent />}
-                        className="flex-wrap gap-2 text-[10px] pb-4"
-                      />
-                    </PieChart>
-                  </ChartContainer>
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-                  No CI data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Recorded inventory status (3 Cols) */}
-        <motion.div variants={itemVariants} className="lg:col-span-3">
-          <Card className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm">
-            <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Activity className="h-5 w-5 text-success" />
-                Recorded asset status
-              </CardTitle>
-              <CardDescription>
-                Calculated from saved status only; not live availability
-                telemetry
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col items-center justify-between p-6 min-h-[320px]">
-              {/* Circular Gauge */}
-              <div className="relative flex items-center justify-center w-36 h-36 mt-2">
-                <svg
-                  viewBox="0 0 100 100"
-                  className="w-full h-full transform -rotate-90"
-                >
-                  <circle
-                    className="text-muted/20 stroke-current"
-                    strokeWidth="8"
-                    fill="transparent"
-                    r={radius}
-                    cx="50"
-                    cy="50"
-                  />
-                  <circle
-                    className={cn(
-                      "stroke-current transition-all duration-1000 ease-out",
-                      strokeColor,
-                    )}
-                    strokeWidth="10"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    fill="transparent"
-                    r={radius}
-                    cx="50"
-                    cy="50"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span
-                    className={cn(
-                      "text-3xl font-bold font-mono tracking-tighter",
-                      textColor,
-                    )}
-                  >
-                    {score}%
-                  </span>
-                  <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
-                    active-status share
-                  </span>
-                </div>
+                  <ShieldAlert className="h-4 w-4 text-warning" />
+                  Needs Attention
+                </CardTitle>
+                <CardDescription>
+                  Missing context and operational exceptions are shown
+                  separately but resolved from here.
+                </CardDescription>
               </div>
-
-              {/* Breakdown Details */}
-              <div className="w-full space-y-3 mt-4">
-                <div className="flex items-center justify-between text-xs border-b border-border/50 pb-1.5">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        failedSyncCount > 0
-                          ? "bg-destructive animate-pulse"
-                          : "bg-success",
-                      )}
-                    ></span>
-                    Sync Issues
-                  </span>
-                  <span className="font-mono font-semibold">
-                    {failedSyncCount} failed
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs border-b border-border/50 pb-1.5">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        nonActiveCount > 0 ? "bg-warning" : "bg-success",
-                      )}
-                    ></span>
-                    Non-active records
-                  </span>
-                  <span className="font-mono font-semibold">
-                    {nonActiveCount} records
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs pb-0.5">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        eolCount > 0
-                          ? "bg-destructive animate-pulse"
-                          : "bg-success",
-                      )}
-                    ></span>
-                    EOL Platforms
-                  </span>
-                  <span className="font-mono font-semibold">
-                    {eolCount} warnings
-                  </span>
-                </div>
+              <Link
+                href="/dashboard/data-quality"
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Open Data Quality
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {qualityQuery.isError ? (
+              <div className="flex items-start gap-3 p-5 text-sm text-destructive">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                Data Quality could not be loaded. Refresh the dashboard to
+                retry.
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Inventory attention (4 Cols) */}
-        <motion.div variants={itemVariants} className="lg:col-span-4">
-          <Card
-            role="region"
-            aria-label="Inventory attention"
-            className="h-full border border-border/60 bg-card flex flex-col rounded-2xl overflow-hidden p-0 gap-0 shadow-sm"
-          >
-            <CardHeader className="pb-2 border-b border-border/40 bg-muted/30 px-6 py-5">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ShieldAlert className="h-5 w-5 text-warning" />
-                Inventory attention
-              </CardTitle>
-              <CardDescription>Records that need review</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-4 p-6 overflow-y-auto max-h-[340px]">
-              {attentionItems.length > 0 ? (
-                attentionItems.map((item: any) => (
+            ) : attentionItems.length === 0 ? (
+              <div className="p-6 text-sm text-muted-foreground">
+                No active inventory attention items.
+              </div>
+            ) : (
+              <div className="divide-y divide-border/60">
+                {attentionItems.slice(0, 10).map((item) => (
                   <Link
                     key={item.id}
-                    href={item.route}
-                    className="group block rounded-xl focus-visible:ring-2 focus-visible:ring-primary"
+                    href={item.href}
+                    className="group flex items-start gap-3 p-4 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                   >
-                    <Alert
-                      variant={item.variant || "warning"}
-                      className="cursor-pointer transition-all group-hover:bg-muted/20"
+                    <div
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                        item.tone === "operational"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-warning/10 text-warning"
+                      }`}
                     >
-                      <div className="flex w-full items-center justify-between">
-                        <div>
-                          <AlertTitle className="text-sm">
-                            {item.title}
-                          </AlertTitle>
-                          <AlertDescription className="text-xs">
-                            Review this exception and confirm the next action.
-                          </AlertDescription>
-                        </div>
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
+                      {item.tone === "operational" ? (
+                        <AlertTriangle className="h-4 w-4" />
+                      ) : (
+                        <ShieldAlert className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">
+                          {item.title}
+                        </p>
+                        <Badge
+                          variant={
+                            item.tone === "operational"
+                              ? "destructive"
+                              : "warning"
+                          }
+                        >
+                          {item.tone === "operational"
+                            ? "Operational"
+                            : "Needs Context"}
+                        </Badge>
                       </div>
-                    </Alert>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {item.detail}
+                      </p>
+                    </div>
+                    <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
                   </Link>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
-                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center text-success">
-                    <ShieldCheck className="h-6 w-6" />
+                ))}
+                {attentionItems.length > 10 ? (
+                  <div className="p-4 text-center text-xs text-muted-foreground">
+                    {attentionItems.length - 10} more item(s) are available in
+                    Data Quality or the relevant inventory view.
                   </div>
-                  <p className="text-sm font-medium">No inventory alerts</p>
-                  <p className="text-xs text-muted-foreground px-6">
-                    No records currently need setup or source-connection
-                    attention.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+                ) : null}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.section>
+
+      <motion.section
+        variants={itemVariants}
+        aria-labelledby="recently-updated-title"
+      >
+        <Card className="gap-0 overflow-hidden p-0">
+          <CardHeader className="border-b border-border/60 bg-muted/25 p-5">
+            <CardTitle
+              id="recently-updated-title"
+              className="flex items-center gap-2 text-base"
+            >
+              <Clock3 className="h-4 w-4 text-primary" />
+              Recently Updated
+            </CardTitle>
+            <CardDescription>
+              Latest changes across active Applications and Inventory.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="divide-y divide-border/60 p-0">
+            {(data?.recentlyUpdated ?? []).length === 0 ? (
+              <div className="p-6 text-sm text-muted-foreground">
+                No recent inventory updates.
+              </div>
+            ) : (
+              data?.recentlyUpdated.map((item) => (
+                <Link
+                  key={`${item.kind}-${item.id}`}
+                  href={item.href}
+                  className="group flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">
+                      {item.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {item.metadata} ·{" "}
+                      {new Date(item.updatedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </motion.section>
     </motion.div>
   );
 }
 
-function StatCard({ title, value, icon: Icon, subtitle, color, href }: any) {
-  const styles: any = {
-    primary: {
-      bg: "group-hover:bg-primary/5",
-      border: "group-hover:border-primary/50",
-      text: "text-primary",
-      dot: "bg-primary",
-      gradient: "from-primary/20 via-primary/5 to-transparent",
-    },
-    success: {
-      bg: "group-hover:bg-success/5",
-      border: "group-hover:border-success/50",
-      text: "text-success",
-      dot: "bg-success",
-      gradient: "from-success/20 via-success/5 to-transparent",
-    },
-    info: {
-      bg: "group-hover:bg-info/5",
-      border: "group-hover:border-info/50",
-      text: "text-info",
-      dot: "bg-info",
-      gradient: "from-info/20 via-info/5 to-transparent",
-    },
-    warning: {
-      bg: "group-hover:bg-warning/5",
-      border: "group-hover:border-warning/50",
-      text: "text-warning",
-      dot: "bg-warning",
-      gradient: "from-warning/20 via-warning/5 to-transparent",
-    },
-    destructive: {
-      bg: "group-hover:bg-destructive/5",
-      border: "group-hover:border-destructive/50",
-      text: "text-destructive",
-      dot: "bg-destructive",
-      gradient: "from-destructive/20 via-destructive/5 to-transparent",
-    },
-  };
-  const theme = styles[color] || styles.primary;
-
+function SummaryCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  href,
+}: {
+  title: string;
+  value: number;
+  subtitle: string;
+  icon: ComponentType<{ className?: string }>;
+  href: string;
+}) {
   return (
-    <motion.div variants={itemVariants} className="h-full">
-      <Link
-        href={href}
-        aria-label={`${title}: ${value?.toLocaleString() || 0}`}
-        className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-      >
-        <Card
-          className={cn(
-            "group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-0 gap-0",
-            theme.border,
-          )}
-        >
-          <div
-            className={cn(
-              "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700",
-              theme.gradient,
-            )}
-          />
-          <div
-            className={cn(
-              "absolute inset-0 transition-colors duration-500",
-              theme.bg,
-            )}
-          />
-
-          <div className="p-4 relative z-10 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div
-                  className={cn(
-                    "p-1.5 rounded-lg bg-background border border-border/50",
-                    theme.text,
-                  )}
-                >
-                  <Icon className="h-4 w-4" strokeWidth={2.5} />
-                </div>
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                  {title}
-                </span>
-              </div>
-            </div>
-            <div className="pl-1">
-              <div className="text-3xl font-bold font-mono tracking-tight text-foreground">
-                {value?.toLocaleString() || 0}
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-1 font-medium flex items-center gap-1.5">
-                <span
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full shadow-sm",
-                    theme.dot,
-                  )}
-                ></span>
-                {subtitle}
-              </p>
-            </div>
+    <Link
+      href={href}
+      aria-label={`${title}: ${value.toLocaleString()}`}
+      className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    >
+      <Card className="h-full gap-0 rounded-2xl border border-border/60 p-0 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/15">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              {title}
+            </p>
+            <Icon className="h-4 w-4 text-primary" />
           </div>
-        </Card>
-      </Link>
-    </motion.div>
+          <p className="mt-3 font-mono text-3xl font-bold tracking-tight text-foreground">
+            {value.toLocaleString()}
+          </p>
+          <p className="mt-1 text-[10px] text-muted-foreground">{subtitle}</p>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

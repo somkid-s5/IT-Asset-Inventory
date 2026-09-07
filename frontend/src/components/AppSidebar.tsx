@@ -225,7 +225,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
                 icon: Activity,
               })}
               {renderNavItem({
-                title: "Inventory Export",
+                title: "Sensitive Inventory Export",
                 url: "/dashboard/export",
                 icon: Download,
               })}

@@ -70,7 +70,8 @@ import {
 } from "@/components/ui/dialog";
 
 type AssetType = "SERVER" | "STORAGE" | "SWITCH" | "SP" | "NETWORK";
-type AssetStatus = "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "RETIRED";
+type AssetStatus =
+  "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED" | "ARCHIVED";
 
 interface AssetCredential {
   id: string;
@@ -90,7 +91,9 @@ interface AssetIpAllocation {
   nodeLabel?: string | null;
   manageType?: string | null;
   version?: string | null;
+  /** @deprecated legacy compatibility */
   credentialId?: string | null;
+  credentialIds?: string[];
 }
 
 interface NoteAuthor {
@@ -134,6 +137,7 @@ interface Asset {
   environment?: string | null;
   department?: string | null;
   owner?: string | null;
+  responsibleParty?: string | null;
   vendor?: string | null;
   purchaseDate?: string | null;
   warrantyExpiration?: string | null;
@@ -144,6 +148,25 @@ interface Asset {
   parentId?: string | null;
   parent?: { id: string; name: string; type: AssetType } | null;
   children?: { id: string; name: string; type: AssetType }[];
+  componentLinks?: Array<{
+    componentId: string;
+    relationType: string;
+    responsibleParty?: string | null;
+    component: {
+      id: string;
+      name: string;
+      environment: {
+        id: string;
+        name: string;
+        application: {
+          id: string;
+          name: string;
+          technicalOwner?: string | null;
+          businessUnit?: string | null;
+        };
+      };
+    };
+  }>;
   notes?: AssetNote[];
   attachments?: AssetAttachment[];
   documentLinks?: Array<{ id: string; title: string; updatedAt?: string }>;
@@ -224,12 +247,12 @@ function getStatusBadge(status?: AssetStatus | null) {
   switch (status) {
     case "ACTIVE":
       return {
-        label: "Under MA",
+        label: "Active",
         class: "border-success/30 bg-success/10 text-success",
       };
     case "INACTIVE":
       return {
-        label: "MA Expired",
+        label: "Inactive",
         class: "border-destructive/30 bg-destructive/10 text-destructive",
       };
     case "MAINTENANCE":
@@ -237,16 +260,20 @@ function getStatusBadge(status?: AssetStatus | null) {
         label: "Maintenance",
         class: "border-warning/30 bg-warning/10 text-warning",
       };
-    case "RETIRED":
-    case "DECOMMISSIONED" as any:
+    case "DECOMMISSIONED":
       return {
         label: "Decommissioned",
         class: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
       };
+    case "ARCHIVED":
+      return {
+        label: "Archived",
+        class: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
+      };
     default:
       return {
-        label: "Under MA",
-        class: "border-success/30 bg-success/10 text-success",
+        label: "Unknown",
+        class: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
       };
   }
 }
@@ -1790,6 +1817,28 @@ export default function AssetDetailsPage() {
     }
   };
 
+  const handleCopyPassword = async (credId: string) => {
+    try {
+      let password = revealedPasswords[credId];
+      if (!password) {
+        const res = await api.get<{ password: string }>(
+          `/credentials/${credId}/reveal`,
+        );
+        password = res.data.password;
+        setRevealedPasswords((prev) => ({ ...prev, [credId]: password }));
+      }
+      await navigator.clipboard.writeText(password);
+      await api.post(`/credentials/${credId}/copy`);
+      toast.success("Password copied");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to copy password";
+      toast.error(msg);
+    }
+  };
+
   const assetId = typeof params.id === "string" ? params.id : "";
   const returnTo = searchParams?.get("returnTo");
 
@@ -1832,7 +1881,14 @@ export default function AssetDetailsPage() {
   const accessRows = useMemo<AccessRow[]>(() => {
     if (!asset) return [];
     const groups = new Map<string, AccessRow>();
+    const credentialById = new Map(
+      (asset.credentials ?? []).map((credential) => [
+        credential.id,
+        credential,
+      ]),
+    );
     const explicitlyLinkedCredentialIds = new Set<string>();
+
     (asset.ipAllocations ?? []).forEach((ip) => {
       const nodeLabel = ip.nodeLabel?.trim() || "Primary";
       const label = ip.type?.trim() || "Primary";
@@ -1847,10 +1903,13 @@ export default function AssetDetailsPage() {
         credentials: [],
       };
       existing.addresses.push(ip.address);
-      if (ip.credentialId) {
-        const credential = asset.credentials?.find(
-          (item) => item.id === ip.credentialId,
-        );
+
+      const credentialIds = [
+        ...(ip.credentialIds ?? []),
+        ...(ip.credentialId ? [ip.credentialId] : []),
+      ].filter((id, index, ids) => ids.indexOf(id) === index);
+      credentialIds.forEach((credentialId) => {
+        const credential = credentialById.get(credentialId);
         if (
           credential &&
           !existing.credentials.some((item) => item.id === credential.id)
@@ -1858,7 +1917,8 @@ export default function AssetDetailsPage() {
           existing.credentials.push(credential);
           explicitlyLinkedCredentialIds.add(credential.id);
         }
-      }
+      });
+
       existing.methods =
         existing.methods.length > 0
           ? existing.methods
@@ -1866,29 +1926,21 @@ export default function AssetDetailsPage() {
       existing.version = existing.version || ip.version?.trim() || undefined;
       groups.set(key, existing);
     });
-    (asset.credentials ?? []).forEach((credential) => {
-      if (explicitlyLinkedCredentialIds.has(credential.id)) return;
-      const nodeLabel = credential.nodeLabel?.trim() || "Primary";
-      const label = credential.type?.trim() || "Primary";
-      const key = `${nodeLabel.toLowerCase()}::${label.toLowerCase()}`;
-      const existing = groups.get(key) ?? {
-        key,
-        nodeLabel,
-        label,
+
+    const unassignedCredentials = (asset.credentials ?? []).filter(
+      (credential) => !explicitlyLinkedCredentialIds.has(credential.id),
+    );
+    if (unassignedCredentials.length) {
+      groups.set("__unassigned_credentials__", {
+        key: "__unassigned_credentials__",
+        nodeLabel: "Unassigned",
+        label: "Credential accounts",
         addresses: [],
-        methods: extractMethods(credential.manageType, asset.manageType),
-        version: credential.version?.trim() || undefined,
-        credentials: [],
-      };
-      existing.credentials.push(credential);
-      existing.methods =
-        existing.methods.length > 0
-          ? existing.methods
-          : extractMethods(credential.manageType, asset.manageType);
-      existing.version =
-        existing.version || credential.version?.trim() || undefined;
-      groups.set(key, existing);
-    });
+        methods: [],
+        credentials: unassignedCredentials,
+      });
+    }
+
     return Array.from(groups.values()).map((row) => ({
       ...row,
       addresses: Array.from(new Set(row.addresses)),
@@ -2136,6 +2188,47 @@ export default function AssetDetailsPage() {
                   </span>
                 </div>
               </div>
+
+              <div className="mt-3 flex items-center gap-2 px-1">
+                <User className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-bold tracking-tight text-foreground">
+                  Governance Context
+                </h2>
+              </div>
+              <div className="glass-card divide-y divide-border/40 overflow-hidden">
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Owner
+                  </span>
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                    {asset.owner || "--"}
+                  </span>
+                </div>
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Department
+                  </span>
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                    {asset.department || "--"}
+                  </span>
+                </div>
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Responsible Party
+                  </span>
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                    {asset.responsibleParty || "--"}
+                  </span>
+                </div>
+                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Vendor
+                  </span>
+                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                    {asset.vendor || "--"}
+                  </span>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -2320,6 +2413,7 @@ export default function AssetDetailsPage() {
                                               onClick={() =>
                                                 handleRevealPassword(cred.id)
                                               }
+                                              aria-label={`Reveal password for ${cred.username}`}
                                               className="p-1 rounded hover:bg-background transition-colors"
                                             >
                                               {revealed.has(cred.id) ? (
@@ -2330,23 +2424,10 @@ export default function AssetDetailsPage() {
                                             </button>
                                           </div>
                                           <button
-                                            onClick={() => {
-                                              if (cred.password) {
-                                                navigator.clipboard.writeText(
-                                                  cred.password,
-                                                );
-                                                void api.post(
-                                                  `/credentials/${cred.id}/copy`,
-                                                );
-                                                toast.success(
-                                                  "Password copied",
-                                                );
-                                              } else {
-                                                toast.error(
-                                                  "Password not available",
-                                                );
-                                              }
-                                            }}
+                                            onClick={() =>
+                                              handleCopyPassword(cred.id)
+                                            }
+                                            aria-label={`Copy password for ${cred.username}`}
                                             className="h-7 w-7 flex items-center justify-center rounded-lg bg-background border border-border/60 hover:bg-muted transition-colors"
                                           >
                                             <Copy className="h-3 w-3" />
@@ -2367,6 +2448,83 @@ export default function AssetDetailsPage() {
               )}
             </div>
           </section>
+
+          {asset.componentLinks && asset.componentLinks.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <Boxes className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-bold tracking-tight text-foreground">
+                  Application Relationships
+                </h2>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {[...asset.componentLinks]
+                  .sort((left, right) =>
+                    left.relationType === right.relationType
+                      ? left.component.environment.application.name.localeCompare(
+                          right.component.environment.application.name,
+                        )
+                      : left.relationType === "PRIMARY"
+                        ? -1
+                        : 1,
+                  )
+                  .map((link) => {
+                    const environment = link.component.environment;
+                    const application = environment.application;
+                    const isPrimary = link.relationType === "PRIMARY";
+                    return (
+                      <button
+                        key={link.componentId}
+                        type="button"
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/applications/${application.id}`,
+                          )
+                        }
+                        className={cn(
+                          "glass-card flex w-full items-start gap-3 p-4 text-left transition-all hover:border-primary/40 hover:shadow-md",
+                          isPrimary && "border-primary/30 bg-primary/[0.03]",
+                        )}
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Boxes className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate text-sm font-bold text-foreground">
+                              {application.name}
+                            </span>
+                            <Badge variant={isPrimary ? "default" : "outline"}>
+                              {isPrimary ? "Primary" : "Shared"}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            {environment.name} · {link.component.name}
+                          </p>
+                          {(application.technicalOwner ||
+                            application.businessUnit) && (
+                            <p className="mt-2 truncate text-[11px] text-muted-foreground">
+                              {[
+                                application.technicalOwner,
+                                application.businessUnit,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                          {link.responsibleParty && (
+                            <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                              Responsible: {link.responsibleParty}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                      </button>
+                    );
+                  })}
+              </div>
+            </section>
+          )}
 
           {/* Relations Section */}
           {(asset.parent || (asset.children && asset.children.length > 0)) && (

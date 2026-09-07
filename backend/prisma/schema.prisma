@@ -72,6 +72,11 @@ enum DatabaseStatus {
   ARCHIVED
 }
 
+enum DatabaseAccountScope {
+  INSTANCE
+  LOGICAL_DATABASES
+}
+
 enum ApplicationStatus {
   ACTIVE
   ARCHIVED
@@ -249,16 +254,19 @@ model ApplicationCredential {
 }
 
 model IPAllocation {
-  id           String      @id @default(uuid())
-  address      String // e.g. 192.168.1.50
-  type         String? // e.g. Management, VIP, Backup, Data, IPMI, Host, Service Processor
-  nodeLabel    String?
-  manageType   String? // e.g. WEB, SSH, API
-  version      String? // e.g. iLO 2.81, ESXi 8.0.3
-  assetId      String
-  asset        Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  credentialId String?
-  credential   Credential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  id              String                   @id @default(uuid())
+  address         String // e.g. 192.168.1.50
+  type            String? // e.g. Management, VIP, Backup, Data, IPMI, Host, Service Processor
+  nodeLabel       String?
+  manageType      String? // e.g. WEB, SSH, API
+  version         String? // e.g. iLO 2.81, ESXi 8.0.3
+  assetId         String
+  asset           Asset                    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  // Legacy single-credential link retained temporarily for migration compatibility.
+  // New application behavior uses credentialLinks below.
+  credentialId    String?
+  credential      Credential?              @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  credentialLinks IPAllocationCredential[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -278,7 +286,7 @@ model Asset {
   osVersion        String? // e.g., 'Fabric OS: v8.2.1c'
   manageType       String? // e.g., 'WEB/SSH'
   brandModel       String? // e.g., 'HPE StoreFabric SN3600B'
-  sn               String? // Serial Number
+  sn               String?                     @unique // Serial Number
   customMetadata   Json? // Flexible JSON structure for other specs
   status           AssetStatus                 @default(ACTIVE)
   responsibleParty String?
@@ -334,10 +342,11 @@ model PatchInfo {
 }
 
 model Credential {
-  id           String         @id @default(uuid())
-  assetId      String
-  asset        Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  accessPoints IPAllocation[]
+  id               String                   @id @default(uuid())
+  assetId          String
+  asset            Asset                    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  accessPoints     IPAllocation[]
+  accessPointLinks IPAllocationCredential[]
 
   username          String
   encryptedPassword String
@@ -352,6 +361,17 @@ model Credential {
   updatedAt DateTime @updatedAt
 
   @@index([assetId])
+}
+
+model IPAllocationCredential {
+  ipAllocationId String
+  credentialId   String
+  ipAllocation   IPAllocation @relation(fields: [ipAllocationId], references: [id], onDelete: Cascade)
+  credential     Credential   @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@id([ipAllocationId, credentialId])
+  @@index([credentialId])
 }
 
 model AuditLog {
@@ -378,8 +398,8 @@ model DatabaseInventory {
   engine            String
   version           String?
   environment       String?
-  host              String
-  ipAddress         String
+  host              String?
+  ipAddress         String?
   port              String?
   serviceName       String?
   owner             String?
@@ -451,11 +471,13 @@ model DatabaseAccount {
   encryptedPassword String
   privileges        String[]
   note              String?
-  scope             String            @default("INSTANCE")
+  scope             DatabaseAccountScope @default(INSTANCE)
   logicalDatabases  LogicalDatabase[] @relation("DatabaseAccountScopes")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([databaseInventoryId, username])
 }
 
 model LogicalDatabase {
@@ -464,6 +486,7 @@ model LogicalDatabase {
   databaseInventory   DatabaseInventory      @relation(fields: [databaseInventoryId], references: [id], onDelete: Cascade)
   name                String
   description         String?
+  status              DatabaseStatus         @default(ACTIVE)
   components          ApplicationComponent[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
@@ -471,6 +494,7 @@ model LogicalDatabase {
 
   @@unique([databaseInventoryId, name])
   @@index([databaseInventoryId])
+  @@index([status])
 }
 
 model VmVCenterSource {

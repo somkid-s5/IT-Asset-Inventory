@@ -1,28 +1,23 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { kbService } from '@/services/kb';
-import { useParams, useRouter } from 'next/navigation';
-import { 
-  Clock,
-  Share2,
-  Bookmark,
-  ShieldCheck
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion';
-import { BrandMark } from '@/components/BrandMark';
-import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { useQuery } from "@tanstack/react-query";
+import { kbService } from "@/services/kb";
+import { useParams, useRouter } from "next/navigation";
+import { Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
+import { BrandMark } from "@/components/BrandMark";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 export default function PublicArticlePage() {
   const { id } = useParams();
   const router = useRouter();
 
   const { data: document, isLoading } = useQuery({
-    queryKey: ['kb-document-public', id],
-    queryFn: () => kbService.getDocument(id as string),
+    queryKey: ["kb-document-public", id],
+    queryFn: () => kbService.getPublicDocument(id as string),
     enabled: !!id,
   });
 
@@ -46,8 +41,14 @@ export default function PublicArticlePage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <BrandMark className="mb-8 scale-125" />
         <h1 className="text-2xl font-black mb-2">404 - Document Not Found</h1>
-        <p className="text-muted-foreground mb-8">The requested guide may have been moved or deleted.</p>
-        <Button onClick={() => router.push('/')} variant="outline" className="rounded-xl px-8">
+        <p className="text-muted-foreground mb-8">
+          The requested guide may have been moved or deleted.
+        </p>
+        <Button
+          onClick={() => router.push("/")}
+          variant="outline"
+          className="rounded-xl px-8"
+        >
           Return Home
         </Button>
       </div>
@@ -60,21 +61,20 @@ export default function PublicArticlePage() {
       <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-             <BrandMark className="h-8" />
-             <div className="h-4 w-[1px] bg-border/60" />
-             <div className="flex items-center gap-2 text-muted-foreground font-medium text-sm">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <span>Verified System Document</span>
-             </div>
+            <BrandMark className="h-8" />
+            <div className="h-4 w-[1px] bg-border/60" />
+            <div className="text-sm font-medium text-muted-foreground">
+              Shared Knowledge Document
+            </div>
           </div>
-          <div className="hidden md:flex items-center gap-3">
-             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Secure Operations Center</p>
+          <div className="hidden md:block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Read-only direct link
           </div>
         </div>
       </nav>
 
       <main className="max-w-4xl mx-auto px-6 py-12 md:py-20">
-        <motion.article 
+        <motion.article
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-card/30 border border-border/40 rounded-[40px] p-8 md:p-12 shadow-2xl relative overflow-hidden"
@@ -91,7 +91,7 @@ export default function PublicArticlePage() {
               <div className="h-1 w-1 rounded-full bg-border" />
               <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-tight">
                 <Clock className="h-3.5 w-3.5" />
-                {Math.ceil(document.content.split(' ').length / 200)} min read
+                {Math.ceil(document.content.split(" ").length / 200)} min read
               </div>
             </div>
 
@@ -102,23 +102,21 @@ export default function PublicArticlePage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-8 border-t border-border/40">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-lg shadow-inner border border-primary/10">
-                   {document.author.displayName.charAt(0)}
+                  {document.author.displayName.charAt(0)}
                 </div>
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-tight">{document.author.displayName}</p>
+                  <p className="text-sm font-bold uppercase tracking-tight">
+                    {document.author.displayName}
+                  </p>
                   <p className="text-xs text-muted-foreground font-medium">
-                    IT Infrastructure Team • {new Date(document.createdAt).toLocaleDateString()}
+                    IT Infrastructure Team •{" "}
+                    {new Date(document.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="rounded-xl h-10 border-2 font-bold text-xs">
-                  <Share2 className="h-4 w-4 mr-2" /> Share
-                </Button>
-                <Button variant="outline" size="sm" className="rounded-xl h-10 border-2 font-bold text-xs">
-                  <Bookmark className="h-4 w-4 mr-2" /> Save
-                </Button>
+              <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+                Read-only shared view
               </div>
             </div>
           </header>
@@ -127,13 +125,14 @@ export default function PublicArticlePage() {
           <MarkdownRenderer content={document.content} />
 
           <footer className="mt-20 pt-10 border-t border-border/40 flex flex-col items-center gap-4 text-center">
-             <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center mb-2">
-                <BrandMark className="h-6 opacity-40 grayscale" />
-             </div>
-             <p className="text-xs text-muted-foreground font-medium">
-               This is an official technical document from the InfraPilot Knowledge Base.<br />
-               Internal use only. Unauthorized distribution is prohibited.
-             </p>
+            <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center mb-2">
+              <BrandMark className="h-6 opacity-40 grayscale" />
+            </div>
+            <p className="text-xs text-muted-foreground font-medium">
+              Shared read-only Knowledge Base document.
+              <br />
+              Browse, search, editing, and inventory access require sign-in.
+            </p>
           </footer>
         </motion.article>
       </main>

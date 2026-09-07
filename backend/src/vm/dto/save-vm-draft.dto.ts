@@ -2,28 +2,12 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
-  IsInt,
   IsIn,
   IsOptional,
   IsString,
-  Min,
   ValidateNested,
 } from 'class-validator';
 import { VmCriticality, VmEnvironment, VmLifecycleState } from '@prisma/client';
-
-class VmDiskDto {
-  @IsString()
-  label: string;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  sizeGb: number;
-
-  @IsOptional()
-  @IsString()
-  datastore?: string;
-}
 
 class VmGuestAccountDto {
   @IsOptional()
@@ -46,6 +30,18 @@ class VmGuestAccountDto {
   @IsOptional()
   @IsString()
   note?: string;
+}
+
+class VmComponentLinkDto {
+  @IsString()
+  componentId: string;
+
+  @IsIn(['PRIMARY', 'SHARED'])
+  relationType: 'PRIMARY' | 'SHARED';
+
+  @IsOptional()
+  @IsString()
+  responsibleParty?: string;
 }
 
 export class SaveVmDraftDto {
@@ -102,28 +98,10 @@ export class SaveVmDraftDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => VmDiskDto)
-  disks?: VmDiskDto[];
+  @Type(() => VmComponentLinkDto)
+  componentLinks?: VmComponentLinkDto[];
 
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @IsIn(
-    [
-      'name',
-      'primaryIp',
-      'cpuCores',
-      'memoryGb',
-      'storageGb',
-      'networkLabel',
-      'powerState',
-      'host',
-      'cluster',
-    ],
-    { each: true },
-  )
-  managedFields?: string[];
-
+  /** @deprecated compatibility for pre-V1 clients */
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

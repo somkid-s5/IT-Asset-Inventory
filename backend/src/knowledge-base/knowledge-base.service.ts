@@ -309,6 +309,35 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
     });
   }
 
+  async searchDocuments(q: string, limit = 50) {
+    const query = q.trim();
+    if (!query) return [];
+
+    return this.prisma.knowledgeDocument.findMany({
+      where: {
+        OR: [
+          { title: { contains: query, mode: 'insensitive' } },
+          { content: { contains: query, mode: 'insensitive' } },
+          { category: { name: { contains: query, mode: 'insensitive' } } },
+        ],
+      },
+      take: Math.min(Math.max(limit, 1), 100),
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        viewCount: true,
+        createdAt: true,
+        updatedAt: true,
+        categoryId: true,
+        category: { select: { id: true, name: true, icon: true } },
+        authorId: true,
+        author: { select: { displayName: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
   async findDocument(id: string) {
     const doc = await this.prisma.knowledgeDocument.findUnique({
       where: { id },
@@ -341,6 +370,31 @@ Step-by-step instructions for installing GlobalProtect VPN and registering MFA v
     if (!doc) throw new NotFoundException('Document not found');
 
     // Increment view count (optional but good practice)
+    await this.prisma.knowledgeDocument.update({
+      where: { id },
+      data: { viewCount: { increment: 1 } },
+    });
+
+    return doc;
+  }
+
+  async findPublicDocument(id: string) {
+    const doc = await this.prisma.knowledgeDocument.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        categoryId: true,
+        category: { select: { id: true, name: true, icon: true } },
+        author: { select: { displayName: true } },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!doc) throw new NotFoundException('Document not found');
+
     await this.prisma.knowledgeDocument.update({
       where: { id },
       data: { viewCount: { increment: 1 } },

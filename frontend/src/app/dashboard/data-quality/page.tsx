@@ -26,11 +26,19 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { DashboardSkeleton } from "@/components/Skeletons";
 
+type QualityReason = {
+  code: string;
+  label: string;
+  guidance: string;
+  category: "context" | "operational";
+};
+
 type QualityIssue = {
   id: string;
   name: string;
   issues: string[];
-  assetId?: string;
+  reasons?: QualityReason[];
+  assetId?: string | null;
   type?: string;
   engine?: string;
   kind?: string;
@@ -41,6 +49,7 @@ type QualitySummary = {
   total: number;
   complete?: number;
   issues: QualityIssue[];
+  operationalIssues?: QualityIssue[];
   icon: ComponentType<{ className?: string }>;
   href: (issue: QualityIssue) => string;
 };
@@ -74,6 +83,7 @@ export default function DataQualityPage() {
           total: applications.data.totalApplications,
           complete: applications.data.completeApplications,
           issues: applications.data.issues,
+          operationalIssues: applications.data.operationalIssues ?? [],
           icon: AppWindow,
           href: (issue: QualityIssue) => `/dashboard/applications/${issue.id}`,
         },
@@ -82,6 +92,7 @@ export default function DataQualityPage() {
           total: assets.data.totalAssets,
           complete: assets.data.completeAssets,
           issues: assets.data.issues,
+          operationalIssues: assets.data.operationalIssues ?? [],
           icon: Server,
           href: (issue: QualityIssue) => `/dashboard/assets/${issue.id}`,
         },
@@ -90,6 +101,7 @@ export default function DataQualityPage() {
           total: databases.data.totalDatabases,
           complete: databases.data.completeDatabases,
           issues: databases.data.issues,
+          operationalIssues: databases.data.operationalIssues ?? [],
           icon: Database,
           href: (issue: QualityIssue) => `/dashboard/databases/${issue.id}`,
         },
@@ -97,11 +109,12 @@ export default function DataQualityPage() {
           label: "Virtual Machines",
           total: vms.data.totalVms,
           issues: vms.data.issues,
+          operationalIssues: vms.data.operationalIssues ?? [],
           icon: Monitor,
           href: (issue: QualityIssue) =>
             issue.kind === "inventory"
               ? `/dashboard/virtual-machines/${issue.id}`
-              : "/dashboard/virtual-machines",
+              : `/dashboard/virtual-machines?view=PENDING&q=${encodeURIComponent(issue.name)}`,
         },
       ] satisfies QualitySummary[];
     },
@@ -109,7 +122,7 @@ export default function DataQualityPage() {
 
   if (qualityQuery.isLoading) return <DashboardSkeleton />;
 
-  const summaries = qualityQuery.data ?? [];
+  const summaries: QualitySummary[] = qualityQuery.data ?? [];
   const totalRecords = summaries.reduce(
     (sum, summary) => sum + summary.total,
     0,
@@ -117,6 +130,12 @@ export default function DataQualityPage() {
   const totalIssues = summaries.reduce(
     (sum, summary) => sum + summary.issues.length,
     0,
+  );
+  const operationalItems = summaries.flatMap((summary) =>
+    (summary.operationalIssues ?? []).map((issue) => ({
+      summary,
+      issue,
+    })),
   );
   const readyRecords = summaries.reduce(
     (sum, summary) =>
@@ -161,7 +180,7 @@ export default function DataQualityPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard
           label="Inventory readiness"
           value={`${completionRate}%`}
@@ -169,10 +188,16 @@ export default function DataQualityPage() {
           tone="success"
         />
         <MetricCard
-          label="Needs review"
+          label="Needs context"
           value={totalIssues.toLocaleString()}
-          detail="Records with one or more issues"
+          detail="Records with missing business or operational context"
           tone={totalIssues > 0 ? "warning" : "success"}
+        />
+        <MetricCard
+          label="Operational attention"
+          value={operationalItems.length.toLocaleString()}
+          detail="Lifecycle or support exceptions, separate from completeness"
+          tone={operationalItems.length > 0 ? "warning" : "success"}
         />
         {summaries.slice(0, 2).map((summary) => (
           <MetricCard
@@ -184,6 +209,65 @@ export default function DataQualityPage() {
           />
         ))}
       </div>
+
+      {operationalItems.length > 0 ? (
+        <Card className="gap-0 overflow-hidden p-0 border-destructive/20">
+          <CardHeader className="border-b border-border/60 bg-destructive/5 p-5">
+            <CardTitle
+              role="heading"
+              aria-level={2}
+              className="flex items-center gap-2 text-base"
+            >
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              Operational attention
+            </CardTitle>
+            <CardDescription>
+              Lifecycle and support exceptions are actionable, but they do not
+              reduce Data Quality completeness.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="divide-y divide-border/60 p-0">
+            {operationalItems.map(({ summary, issue }) => (
+              <Link
+                key={`operational-${summary.label}-${issue.id}`}
+                href={summary.href(issue)}
+                className="group block p-4 transition-colors hover:bg-muted/35"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">
+                      {issue.name}
+                    </p>
+                    <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {summary.label}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs font-semibold text-primary">
+                    Review
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {issue.issues.map((item) => {
+                    const reason = issue.reasons?.find(
+                      (candidate) => candidate.label === item,
+                    );
+                    return (
+                      <Badge
+                        key={item}
+                        variant="outline"
+                        title={reason?.guidance}
+                        className="border-destructive/30 bg-destructive/5 text-[10px] text-destructive"
+                      >
+                        {item}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {totalIssues === 0 ? (
         <EmptyState
@@ -278,15 +362,21 @@ function QualitySection({ summary }: { summary: QualitySummary }) {
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {issue.issues.map((item) => (
-                  <Badge
-                    key={item}
-                    variant="outline"
-                    className="border-warning/30 bg-warning/5 text-[10px] text-warning"
-                  >
-                    {item}
-                  </Badge>
-                ))}
+                {issue.issues.map((item) => {
+                  const reason = issue.reasons?.find(
+                    (candidate) => candidate.label === item,
+                  );
+                  return (
+                    <Badge
+                      key={item}
+                      variant="outline"
+                      title={reason?.guidance}
+                      className="border-warning/30 bg-warning/5 text-[10px] text-warning"
+                    >
+                      {item}
+                    </Badge>
+                  );
+                })}
               </div>
             </Link>
           ))

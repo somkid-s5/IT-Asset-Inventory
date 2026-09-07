@@ -1,9 +1,13 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { Injectable } from '@nestjs/common';
 import { AuditAction } from '@prisma/client';
 import XlsxPopulate from 'xlsx-populate';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialsService } from '../credentials/credentials.service';
+
+type WorkbookSheet = [
+  name: string,
+  rows: Array<Array<string | number | boolean>>,
+];
 
 @Injectable()
 export class InventoryExportService {
@@ -12,10 +16,33 @@ export class InventoryExportService {
     private readonly credentials: CredentialsService,
   ) {}
 
+  private text(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (value instanceof Date) return value.toISOString();
+    if (Array.isArray(value))
+      return value.map((item) => this.text(item)).join(', ');
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      typeof value === 'bigint'
+    ) {
+      return `${value}`;
+    }
+    return JSON.stringify(value);
+  }
+
   async createWorkbook(passphrase: string, userId: string) {
+    const generatedAt = new Date();
     const [assets, applications, databases, vms, sources] = await Promise.all([
       this.prisma.asset.findMany({
-        include: { ipAllocations: true, credentials: true },
+        include: {
+          ipAllocations: { include: { credentialLinks: true } },
+          credentials: true,
+          patchInfo: true,
+          parent: { select: { id: true, name: true, assetId: true } },
+        },
+        orderBy: { name: 'asc' },
       }),
       this.prisma.application.findMany({
         include: {
@@ -25,7 +52,13 @@ export class InventoryExportService {
                 include: {
                   assetLinks: true,
                   vmLinks: true,
-                  logicalDatabases: true,
+                  logicalDatabases: {
+                    select: {
+                      id: true,
+                      name: true,
+                      databaseInventoryId: true,
+                    },
+                  },
                 },
               },
               access: { include: { credentials: true } },
@@ -33,14 +66,32 @@ export class InventoryExportService {
           },
           access: { include: { credentials: true, environment: true } },
         },
+        orderBy: { name: 'asc' },
       }),
       this.prisma.databaseInventory.findMany({
         include: {
-          accounts: true,
-          logicalDatabases: true,
+          accounts: { include: { logicalDatabases: true } },
+          logicalDatabases: {
+            include: {
+              components: {
+                select: {
+                  id: true,
+                  name: true,
+                  environment: {
+                    select: {
+                      id: true,
+                      name: true,
+                      application: { select: { id: true, name: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
           hostAsset: { select: { id: true, name: true, assetId: true } },
           hostVm: { select: { id: true, name: true, systemName: true } },
         },
+        orderBy: { name: 'asc' },
       }),
       this.prisma.vmInventory.findMany({
         include: {
@@ -48,240 +99,802 @@ export class InventoryExportService {
           source: { select: { id: true, name: true, endpoint: true } },
           componentLinks: true,
         },
+        orderBy: { name: 'asc' },
       }),
-      this.prisma.vmVCenterSource.findMany(),
+      this.prisma.vmVCenterSource.findMany({ orderBy: { name: 'asc' } }),
     ]);
-    const workbook = await XlsxPopulate.fromBlankAsync();
-    const sheets: Array<[string, string[][]]> = [
+
+    const accessRows = applications.flatMap((app) => {
+      const applicationAccess = app.access.map((access) => ({
+        app,
+        environmentName: access.environment?.name ?? '',
+        scope: access.environmentId ? 'ENVIRONMENT' : 'APPLICATION',
+        access,
+      }));
+      const environmentAccess = app.environments.flatMap((environment) =>
+        environment.access.map((access) => ({
+          app,
+          environmentName: environment.name,
+          scope: 'ENVIRONMENT',
+          access,
+        })),
+      );
+      const seen = new Set<string>();
+      return [...applicationAccess, ...environmentAccess].filter(
+        ({ access }) => {
+          if (seen.has(access.id)) return false;
+          seen.add(access.id);
+          return true;
+        },
+      );
+    });
+
+    const sheets: WorkbookSheet[] = [
       [
-        'Assets',
+        'Export Metadata',
         [
+          ['Field', 'Value'],
+          ['Export Type', 'Sensitive Inventory Workbook'],
+          ['Generated At (UTC)', generatedAt.toISOString()],
+          ['Generated By User ID', userId],
+          ['File Encryption', 'XLSX password encryption enabled'],
+          ['Archived Records', 'Included'],
           [
-            'Name',
-            'Asset ID',
-            'Type',
-            'Environment',
-            'Status',
-            'Location',
-            'Owner',
-            'Serial Number',
-            'IP Addresses',
-            'Responsible Party',
+            'Credential Passwords',
+            'Included in plaintext inside encrypted workbook',
           ],
-          ...assets.map((asset) => [
-            asset.name,
-            asset.assetId ?? '',
-            asset.type,
-            asset.environment ?? '',
-            asset.status,
-            asset.location ?? '',
-            asset.owner ?? '',
-            asset.sn ?? '',
-            asset.ipAllocations.map((ip) => ip.address).join(', '),
-            asset.responsibleParty ?? '',
-          ]),
+          [
+            'Excluded Content',
+            'Knowledge Base content; Document metadata; attachments; JWT material; credential-encryption keys; sessions; runtime secrets; export passphrase',
+          ],
+          [
+            'Handling',
+            'Sensitive: deliver passphrase separately from workbook',
+          ],
+        ],
+      ],
+      [
+        'Field Definitions',
+        [
+          ['Sheet', 'Field / Concept', 'Definition'],
+          [
+            'Applications',
+            'Status',
+            'Application operational lifecycle, including archived records.',
+          ],
+          [
+            'Environments',
+            'No Database',
+            'Intentional declaration that the Application Environment has no Database.',
+          ],
+          [
+            'Components',
+            'Component',
+            'Application runtime or infrastructure component within one Environment.',
+          ],
+          [
+            'Application Access',
+            'Scope',
+            'APPLICATION or ENVIRONMENT ownership of the access point.',
+          ],
+          [
+            'Assets',
+            'Status',
+            'Physical Asset lifecycle; not warranty/support status.',
+          ],
+          [
+            'Asset Access Points',
+            'Access Point',
+            'Host or management network endpoint belonging to one Asset.',
+          ],
+          [
+            'Virtual Machines',
+            'Lifecycle',
+            'VM Inventory lifecycle independent of Data Quality.',
+          ],
+          [
+            'Database Instances',
+            'Host Identity',
+            'Host text, physical Asset relation, or VM relation.',
+          ],
+          [
+            'Logical Databases',
+            'Logical Database',
+            'Database/schema/service boundary inside one Database Instance.',
+          ],
+          [
+            'Relationships',
+            'Relation Type',
+            'PRIMARY/SHARED where the domain records that distinction.',
+          ],
+          [
+            'Credentials',
+            'Password',
+            'Decrypted operational password protected by workbook file encryption.',
+          ],
+          [
+            'Credentials',
+            'Scope',
+            'Operational scope such as access point, whole Database Instance, or selected Logical Databases.',
+          ],
         ],
       ],
       [
         'Applications',
         [
           [
+            'Application ID',
             'Name',
+            'Status',
             'Technical Owner',
             'Business Unit',
-            'Environment',
-            'Components',
-            'Access Points',
             'Description',
-            'Status',
+            'Created At',
+            'Updated At',
           ],
           ...applications.map((app) => [
+            app.id,
             app.name,
+            app.status,
             app.technicalOwner ?? '',
             app.businessUnit ?? '',
-            app.environments.map((env) => env.name).join(', '),
-            app.environments
-              .flatMap((env) =>
-                env.components.map(
-                  (component) => `${env.name}: ${component.name}`,
-                ),
-              )
-              .join('; '),
-            [
-              ...app.access,
-              ...app.environments.flatMap((environment) => environment.access),
-            ]
-              .map(
-                (access) =>
-                  `${access.label} (${access.method}) ${access.address}`,
-              )
-              .join('; '),
             app.description ?? '',
-            app.status,
+            app.createdAt.toISOString(),
+            app.updatedAt.toISOString(),
           ]),
         ],
       ],
       [
-        'Databases',
+        'Environments',
         [
           [
-            'Instance',
-            'Engine',
-            'Version',
-            'Host',
-            'IP',
-            'Port',
-            'Logical Databases',
-            'Accounts',
-            'Host Asset',
-            'Host VM',
-            'Status',
+            'Environment ID',
+            'Application ID',
+            'Application',
+            'Environment',
+            'No Database',
+            'Sort Order',
+            'Created At',
+            'Updated At',
           ],
-          ...databases.map((db) => [
-            db.name,
-            db.engine,
-            db.version ?? '',
-            db.host,
-            db.ipAddress,
-            db.port ?? '',
-            db.logicalDatabases.map((logical) => logical.name).join(', '),
-            db.accounts
-              .map((account) => `${account.username} [${account.scope}]`)
-              .join(', '),
-            db.hostAsset?.name ?? '',
-            db.hostVm?.systemName ?? '',
-            db.status ?? '',
+          ...applications.flatMap((app) =>
+            app.environments.map((environment) => [
+              environment.id,
+              app.id,
+              app.name,
+              environment.name,
+              environment.noDatabase,
+              environment.sortOrder,
+              environment.createdAt.toISOString(),
+              environment.updatedAt.toISOString(),
+            ]),
+          ),
+        ],
+      ],
+      [
+        'Components',
+        [
+          [
+            'Component ID',
+            'Application ID',
+            'Application',
+            'Environment ID',
+            'Environment',
+            'Component',
+            'Description',
+            'Sort Order',
+            'Created At',
+            'Updated At',
+          ],
+          ...applications.flatMap((app) =>
+            app.environments.flatMap((environment) =>
+              environment.components.map((component) => [
+                component.id,
+                app.id,
+                app.name,
+                environment.id,
+                environment.name,
+                component.name,
+                component.description ?? '',
+                component.sortOrder,
+                component.createdAt.toISOString(),
+                component.updatedAt.toISOString(),
+              ]),
+            ),
+          ),
+        ],
+      ],
+      [
+        'Application Access',
+        [
+          [
+            'Access ID',
+            'Application ID',
+            'Application',
+            'Scope',
+            'Environment',
+            'Label',
+            'Address',
+            'Method',
+            'Created At',
+            'Updated At',
+          ],
+          ...accessRows.map(({ app, environmentName, scope, access }) => [
+            access.id,
+            app.id,
+            app.name,
+            scope,
+            environmentName,
+            access.label,
+            access.address,
+            access.method,
+            access.createdAt.toISOString(),
+            access.updatedAt.toISOString(),
           ]),
+        ],
+      ],
+      [
+        'Assets',
+        [
+          [
+            'Asset UUID',
+            'Asset ID',
+            'Name',
+            'Type',
+            'Legacy Environment',
+            'Status',
+            'Location',
+            'Rack',
+            'OS / Firmware',
+            'Manage Type',
+            'Brand / Model',
+            'Serial Number',
+            'Owner',
+            'Department',
+            'Responsible Party',
+            'Vendor',
+            'Purchase Date',
+            'Warranty Expiration',
+            'Parent Asset UUID',
+            'Parent Asset',
+            'Dependencies',
+            'Custom Metadata JSON',
+            'Patch Current',
+            'Patch Latest',
+            'EOL Date',
+            'Last Patched',
+            'Created At',
+            'Updated At',
+          ],
+          ...assets.map((asset) => [
+            asset.id,
+            asset.assetId ?? '',
+            asset.name,
+            asset.type,
+            asset.environment ?? '',
+            asset.status,
+            asset.location ?? '',
+            asset.rack ?? '',
+            asset.osVersion ?? '',
+            asset.manageType ?? '',
+            asset.brandModel ?? '',
+            asset.sn ?? '',
+            asset.owner ?? '',
+            asset.department ?? '',
+            asset.responsibleParty ?? '',
+            asset.vendor ?? '',
+            this.text(asset.purchaseDate),
+            this.text(asset.warrantyExpiration),
+            asset.parentId ?? '',
+            asset.parent?.name ?? '',
+            asset.dependencies ?? '',
+            this.text(asset.customMetadata),
+            asset.patchInfo?.currentVersion ?? '',
+            asset.patchInfo?.latestVersion ?? '',
+            this.text(asset.patchInfo?.eolDate),
+            this.text(asset.patchInfo?.lastPatchedDate),
+            asset.createdAt.toISOString(),
+            asset.updatedAt.toISOString(),
+          ]),
+        ],
+      ],
+      [
+        'Asset Access Points',
+        [
+          [
+            'Access Point ID',
+            'Asset UUID',
+            'Asset ID',
+            'Asset',
+            'Address',
+            'Type',
+            'Node Label',
+            'Manage Type',
+            'Version',
+            'Created At',
+            'Updated At',
+          ],
+          ...assets.flatMap((asset) =>
+            asset.ipAllocations.map((accessPoint) => [
+              accessPoint.id,
+              asset.id,
+              asset.assetId ?? '',
+              asset.name,
+              accessPoint.address,
+              accessPoint.type ?? '',
+              accessPoint.nodeLabel ?? '',
+              accessPoint.manageType ?? '',
+              accessPoint.version ?? '',
+              accessPoint.createdAt.toISOString(),
+              accessPoint.updatedAt.toISOString(),
+            ]),
+          ),
         ],
       ],
       [
         'Virtual Machines',
         [
           [
+            'VM UUID',
             'Name',
             'System Name',
+            'MoID',
             'Environment',
+            'Cluster',
             'Host',
+            'Computer Name',
+            'Guest OS',
             'Primary IP',
+            'CPU Cores',
+            'Memory GB',
+            'Storage GB',
+            'Network',
             'Power State',
             'Lifecycle',
-            'Owner',
             'Discovery State',
-            'Source',
+            'Sync State',
+            'Owner',
+            'Business Unit',
+            'SLA Tier',
+            'Service Role',
+            'Criticality',
             'Responsible Party',
+            'Description',
+            'Tags',
+            'Source ID',
+            'Source',
+            'Last Sync At',
+            'Created At',
+            'Updated At',
           ],
           ...vms.map((vm) => [
+            vm.id,
             vm.name,
             vm.systemName,
+            vm.moid,
             vm.environment ?? '',
+            vm.cluster,
             vm.host,
+            vm.computerName ?? '',
+            vm.guestOs,
             vm.primaryIp,
+            vm.cpuCores,
+            vm.memoryGb,
+            vm.storageGb,
+            vm.networkLabel,
             vm.powerState,
             vm.lifecycleState,
-            vm.owner,
             vm.discoveryState,
-            vm.source?.name ?? '',
+            vm.syncState,
+            vm.owner,
+            vm.businessUnit,
+            vm.slaTier,
+            vm.serviceRole,
+            vm.criticality,
             vm.responsibleParty ?? '',
+            vm.description,
+            vm.tags.join(', '),
+            vm.sourceId ?? '',
+            vm.source?.name ?? '',
+            vm.lastSyncAt.toISOString(),
+            vm.createdAt.toISOString(),
+            vm.updatedAt.toISOString(),
           ]),
+        ],
+      ],
+      [
+        'Database Instances',
+        [
+          [
+            'Database UUID',
+            'Name',
+            'Engine',
+            'Version',
+            'Environment',
+            'Host Text',
+            'Host Asset UUID',
+            'Host Asset',
+            'Host VM UUID',
+            'Host VM',
+            'IP Address',
+            'Port',
+            'Service Name',
+            'Owner',
+            'Backup Policy',
+            'Replication',
+            'Maintenance Window',
+            'Status',
+            'Responsible Party',
+            'Operational Client IP Metadata',
+            'Note',
+            'Created At',
+            'Updated At',
+          ],
+          ...databases.map((database) => [
+            database.id,
+            database.name,
+            database.engine,
+            database.version ?? '',
+            database.environment ?? '',
+            database.host ?? '',
+            database.hostAssetId ?? '',
+            database.hostAsset?.name ?? '',
+            database.hostVmId ?? '',
+            database.hostVm?.systemName ?? '',
+            database.ipAddress ?? '',
+            database.port ?? '',
+            database.serviceName ?? '',
+            database.owner ?? '',
+            database.backupPolicy ?? '',
+            database.replication ?? '',
+            database.maintenanceWindow ?? '',
+            database.status ?? '',
+            database.responsibleParty ?? '',
+            database.linkedApps.join(', '),
+            database.note ?? '',
+            database.createdAt.toISOString(),
+            database.updatedAt.toISOString(),
+          ]),
+        ],
+      ],
+      [
+        'Logical Databases',
+        [
+          [
+            'Logical DB UUID',
+            'Database UUID',
+            'Database Instance',
+            'Name',
+            'Status',
+            'Description',
+            'Created At',
+            'Updated At',
+          ],
+          ...databases.flatMap((database) =>
+            database.logicalDatabases.map((logicalDatabase) => [
+              logicalDatabase.id,
+              database.id,
+              database.name,
+              logicalDatabase.name,
+              logicalDatabase.status,
+              logicalDatabase.description ?? '',
+              logicalDatabase.createdAt.toISOString(),
+              logicalDatabase.updatedAt.toISOString(),
+            ]),
+          ),
         ],
       ],
       [
         'Relationships',
         [
           [
+            'Relationship',
+            'Source UUID',
+            'Source',
+            'Target UUID',
+            'Target',
             'Application',
             'Environment',
             'Component',
-            'Assets',
-            'VMs',
-            'Logical Databases',
+            'Relation Type',
+            'Responsible Party',
           ],
           ...applications.flatMap((app) =>
             app.environments.flatMap((environment) =>
-              environment.components.map((component) => [
-                app.name,
-                environment.name,
-                component.name,
-                component.assetLinks.map((link) => link.assetId).join(', '),
-                component.vmLinks.map((link) => link.vmId).join(', '),
-                component.logicalDatabases
-                  .map((database) => database.name)
-                  .join(', '),
+              environment.components.flatMap((component) => [
+                ...component.assetLinks.map((link) => {
+                  const asset = assets.find(
+                    (candidate) => candidate.id === link.assetId,
+                  );
+                  return [
+                    'COMPONENT_ASSET',
+                    component.id,
+                    component.name,
+                    link.assetId,
+                    asset?.name ?? link.assetId,
+                    app.name,
+                    environment.name,
+                    component.name,
+                    link.relationType,
+                    link.responsibleParty ?? '',
+                  ];
+                }),
+                ...component.vmLinks.map((link) => {
+                  const vm = vms.find(
+                    (candidate) => candidate.id === link.vmId,
+                  );
+                  return [
+                    'COMPONENT_VM',
+                    component.id,
+                    component.name,
+                    link.vmId,
+                    vm?.name ?? link.vmId,
+                    app.name,
+                    environment.name,
+                    component.name,
+                    link.relationType,
+                    link.responsibleParty ?? '',
+                  ];
+                }),
+                ...component.logicalDatabases.map((logicalDatabase) => {
+                  const database = databases.find(
+                    (candidate) =>
+                      candidate.id === logicalDatabase.databaseInventoryId,
+                  );
+                  return [
+                    'COMPONENT_LOGICAL_DATABASE',
+                    component.id,
+                    component.name,
+                    logicalDatabase.id,
+                    `${database?.name ?? logicalDatabase.databaseInventoryId} · ${logicalDatabase.name}`,
+                    app.name,
+                    environment.name,
+                    component.name,
+                    '',
+                    '',
+                  ];
+                }),
               ]),
             ),
           ),
+          ...assets.flatMap((asset) =>
+            asset.ipAllocations.flatMap((accessPoint) =>
+              accessPoint.credentialLinks.map((link) => [
+                'ACCESS_POINT_CREDENTIAL',
+                accessPoint.id,
+                `${asset.name} · ${accessPoint.address}`,
+                link.credentialId,
+                asset.credentials.find(
+                  (credential) => credential.id === link.credentialId,
+                )?.username ?? link.credentialId,
+                '',
+                '',
+                '',
+                '',
+                '',
+              ]),
+            ),
+          ),
+          ...assets.flatMap((asset) =>
+            asset.parentId
+              ? [
+                  [
+                    'ASSET_PARENT',
+                    asset.id,
+                    asset.name,
+                    asset.parentId,
+                    asset.parent?.name ?? asset.parentId,
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                  ],
+                ]
+              : [],
+          ),
+          ...databases.flatMap((database) => [
+            ...(database.hostAssetId
+              ? [
+                  [
+                    'DATABASE_HOST_ASSET',
+                    database.id,
+                    database.name,
+                    database.hostAssetId,
+                    database.hostAsset?.name ?? database.hostAssetId,
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                  ],
+                ]
+              : []),
+            ...(database.hostVmId
+              ? [
+                  [
+                    'DATABASE_HOST_VM',
+                    database.id,
+                    database.name,
+                    database.hostVmId,
+                    database.hostVm?.name ?? database.hostVmId,
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                  ],
+                ]
+              : []),
+            ...database.accounts.flatMap((account) =>
+              account.logicalDatabases.map((logicalDatabase) => [
+                'DATABASE_ACCOUNT_LOGICAL_SCOPE',
+                account.id,
+                account.username,
+                logicalDatabase.id,
+                `${database.name} · ${logicalDatabase.name}`,
+                '',
+                '',
+                '',
+                account.scope,
+                '',
+              ]),
+            ),
+          ]),
         ],
       ],
       [
         'vCenter Sources',
         [
           [
+            'Source UUID',
             'Name',
             'Endpoint',
             'Version',
             'Status',
-            'Sync Interval',
-            'VM Count',
+            'Sync Interval Minutes',
+            'Last Sync At',
+            'Notes',
+            'Created At',
+            'Updated At',
           ],
           ...sources.map((source) => [
+            source.id,
             source.name,
             source.endpoint,
             source.version,
             source.status,
-            String(source.syncInterval),
-            String(vms.filter((vm) => vm.sourceId === source.id).length),
+            source.syncInterval,
+            this.text(source.lastSyncAt),
+            source.notes ?? '',
+            source.createdAt.toISOString(),
+            source.updatedAt.toISOString(),
           ]),
         ],
       ],
       [
         'Credentials',
         [
-          ['Record Type', 'Record Name', 'Username', 'Password'],
+          [
+            'Credential Type',
+            'Credential UUID',
+            'Record UUID',
+            'Record Name',
+            'Context / Access Point',
+            'Username',
+            'Password',
+            'Role / Type',
+            'Scope',
+            'Logical Database Scope',
+            'Access Method',
+            'Version',
+            'Last Changed',
+            'Note',
+          ],
           ...assets.flatMap((asset) =>
-            asset.credentials.map((credential) => [
-              'Asset',
-              asset.name,
-              credential.username,
-              this.credentials.decrypt(credential.encryptedPassword),
-            ]),
-          ),
-          ...applications.flatMap((app) =>
-            [
-              ...app.access,
-              ...app.environments.flatMap((environment) => environment.access),
-            ].flatMap((access) =>
-              access.credentials.map((credential) => [
-                'Application Access',
-                `${app.name} / ${access.label}`,
+            asset.credentials.map((credential) => {
+              const accessPoints = asset.ipAllocations.filter((accessPoint) =>
+                accessPoint.credentialLinks.some(
+                  (link) => link.credentialId === credential.id,
+                ),
+              );
+              return [
+                'ASSET',
+                credential.id,
+                asset.id,
+                asset.name,
+                accessPoints
+                  .map(
+                    (accessPoint) =>
+                      `${accessPoint.type ?? 'Access'} ${accessPoint.address}`,
+                  )
+                  .join('; '),
                 credential.username,
                 this.credentials.decrypt(credential.encryptedPassword),
-              ]),
-            ),
+                credential.type ?? '',
+                accessPoints.length ? 'ACCESS_POINTS' : 'UNASSIGNED',
+                '',
+                credential.manageType ?? '',
+                credential.version ?? '',
+                this.text(credential.lastChangedDate),
+                '',
+              ];
+            }),
           ),
-          ...databases.flatMap((db) =>
-            db.accounts.map((account) => [
-              'Database',
-              db.name,
+          ...accessRows.flatMap(({ app, environmentName, scope, access }) =>
+            access.credentials.map((credential) => [
+              'APPLICATION_ACCESS',
+              credential.id,
+              access.id,
+              app.name,
+              `${scope}${environmentName ? ` · ${environmentName}` : ''} · ${access.label} · ${access.address}`,
+              credential.username,
+              this.credentials.decrypt(credential.encryptedPassword),
+              credential.role ?? '',
+              scope,
+              '',
+              access.method,
+              '',
+              this.text(credential.lastChangedDate),
+              '',
+            ]),
+          ),
+          ...databases.flatMap((database) =>
+            database.accounts.map((account) => [
+              'DATABASE',
+              account.id,
+              database.id,
+              database.name,
+              database.serviceName ?? database.ipAddress ?? '',
               account.username,
               this.credentials.decrypt(account.encryptedPassword),
+              account.role ?? '',
+              account.scope,
+              account.logicalDatabases
+                .map((logical) => logical.name)
+                .join(', '),
+              '',
+              '',
+              '',
+              account.note ?? '',
             ]),
           ),
           ...vms.flatMap((vm) =>
             vm.guestAccounts.map((account) => [
-              'VM Guest',
+              'VM_GUEST',
+              account.id,
+              vm.id,
               vm.name,
+              vm.systemName,
               account.username,
               this.credentials.decrypt(account.encryptedPassword),
+              account.role,
+              'VM_GUEST',
+              '',
+              account.accessMethod,
+              '',
+              '',
+              account.note ?? '',
             ]),
           ),
           ...sources.flatMap((source) =>
             source.encryptedPassword
               ? [
                   [
-                    'vCenter Source',
+                    'VCENTER_SOURCE',
+                    source.id,
+                    source.id,
                     source.name,
+                    source.endpoint,
                     source.username ?? '',
                     this.credentials.decrypt(source.encryptedPassword),
+                    '',
+                    'VCENTER_SOURCE',
+                    '',
+                    'HTTPS/API',
+                    source.version,
+                    '',
+                    source.notes ?? '',
                   ],
                 ]
               : [],
@@ -289,17 +902,27 @@ export class InventoryExportService {
         ],
       ],
     ];
+
+    const workbook = await XlsxPopulate.fromBlankAsync();
     sheets.forEach(([name, rows], index) => {
       const sheet = index === 0 ? workbook.sheet(0) : workbook.addSheet(name);
       sheet.name(name);
       sheet.cell('A1').value(rows);
       sheet.row(1).style({ bold: true, fill: '1F4E78', fontColor: 'FFFFFF' });
       sheet.usedRange().style({ verticalAlignment: 'center' });
-      sheet.column('A').width(26);
-      sheet.column('B').width(26);
-      sheet.column('C').width(22);
-      sheet.column('D').width(32);
+      sheet.column('A').width(28);
+      sheet.column('B').width(30);
+      sheet.column('C').width(30);
+      sheet.column('D').width(34);
     });
+
+    // xlsx-populate performs OOXML file encryption when `password` is supplied.
+    // No plaintext workbook is written to disk; the encrypted output exists only
+    // as the returned in-memory buffer.
+    const encryptedWorkbook = await workbook.outputAsync({
+      password: passphrase,
+    });
+
     await this.prisma.auditLog.create({
       data: {
         userId,
@@ -307,10 +930,12 @@ export class InventoryExportService {
         details: JSON.stringify({
           format: 'xlsx',
           encrypted: true,
-          sheets: sheets.map(([name]) => name),
+          sheetCount: sheets.length,
+          generatedAt: generatedAt.toISOString(),
         }),
       },
     });
-    return workbook.outputAsync({ password: passphrase });
+
+    return encryptedWorkbook;
   }
 }

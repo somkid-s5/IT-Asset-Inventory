@@ -33,9 +33,37 @@ export class DatabasesController {
     return this.databasesService.create(createDatabaseDto, req.user.id);
   }
 
+  @Get('host-options')
+  getHostOptions(@Query('q') q?: string) {
+    return this.databasesService.getHostOptions(q ?? '');
+  }
+
+  @Get('logical-options')
+  getLogicalDatabaseOptions() {
+    return this.databasesService.getLogicalDatabaseOptions();
+  }
+
   @Get()
-  findAll(@Query('includeArchived') includeArchived?: string) {
-    return this.databasesService.findAll(includeArchived === 'true');
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+    @Query('environment') environment?: string,
+    @Query('includeArchived') includeArchived?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
+  ) {
+    return this.databasesService.findAll(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+      {
+        q,
+        environment,
+        includeArchived: includeArchived === 'true',
+        sortBy,
+        sortDir,
+      },
+    );
   }
 
   @Get('data-quality/summary')
@@ -92,6 +120,20 @@ export class DatabasesController {
     @Request() req: { user: { id: string } },
   ) {
     return this.databasesService.deleteLogicalDatabase(
+      id,
+      logicalId,
+      req.user.id,
+    );
+  }
+
+  @Roles(Role.ADMIN)
+  @Patch(':id/logical-databases/:logicalId/restore')
+  restoreLogicalDatabase(
+    @Param('id') id: string,
+    @Param('logicalId') logicalId: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.databasesService.restoreLogicalDatabase(
       id,
       logicalId,
       req.user.id,

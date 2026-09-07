@@ -1,49 +1,66 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { usePageHeader } from '@/contexts/PageHeaderContext';
-import { kbService } from '@/services/kb';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { usePageHeader } from "@/contexts/PageHeaderContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { kbService } from "@/services/kb";
+import { useQuery } from "@tanstack/react-query";
 import {
-  ChevronLeft, Eye, Layout, Save, Loader2, FileText
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+  ChevronLeft,
+  Eye,
+  Layout,
+  Save,
+  Loader2,
+  FileText,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
-import dynamic from 'next/dynamic';
-import { MarkdownRenderer } from '@/components/MarkdownRenderer';
-import { KnowledgeDocumentLinks, type KnowledgeDocumentLinkValues } from '@/components/KnowledgeDocumentLinks';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import dynamic from "next/dynamic";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import {
+  KnowledgeDocumentLinks,
+  type KnowledgeDocumentLinkValues,
+} from "@/components/KnowledgeDocumentLinks";
 
-const NotionEditor = dynamic(() => import('@/components/NotionEditor'), {
+const NotionEditor = dynamic(() => import("@/components/NotionEditor"), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-[420px] w-full items-center justify-center rounded-xl border border-dashed border-border/40 bg-muted/20 animate-pulse">
       <div className="flex flex-col items-center gap-2 opacity-20">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-widest">Loading Editor...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest">
+          Loading Editor...
+        </p>
       </div>
     </div>
-  )
+  ),
 });
 
 export default function ArticleFormPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const editId = searchParams?.get('edit');
-  const categoryParam = searchParams?.get('categoryId') ?? '';
+  const editId = searchParams?.get("edit");
+  const categoryParam = searchParams?.get("categoryId") ?? "";
   const { setHeader } = usePageHeader();
+  const { user, loading: authLoading } = useAuth();
+  const canAuthor = user?.role === "ADMIN" || user?.role === "EDITOR";
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    title: '',
-    content: '',
+    title: "",
+    content: "",
     categoryId: categoryParam,
   });
   const [links, setLinks] = useState<KnowledgeDocumentLinkValues>({
@@ -54,12 +71,12 @@ export default function ArticleFormPage() {
   });
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['kb-categories'],
+    queryKey: ["kb-categories"],
     queryFn: kbService.getCategories,
   });
 
   const { data: existingArticle } = useQuery({
-    queryKey: ['kb-document', editId],
+    queryKey: ["kb-document", editId],
     queryFn: () => kbService.getDocument(editId!),
     enabled: !!editId,
   });
@@ -72,65 +89,98 @@ export default function ArticleFormPage() {
         categoryId: existingArticle.categoryId,
       });
       setLinks({
-        applications: existingArticle.applicationLinks?.map((link) => link.application.id) ?? [],
+        applications:
+          existingArticle.applicationLinks?.map(
+            (link) => link.application.id,
+          ) ?? [],
         assets: existingArticle.assetLinks?.map((link) => link.asset.id) ?? [],
         vms: existingArticle.vmLinks?.map((link) => link.vm.id) ?? [],
-        databases: existingArticle.databaseLinks?.map((link) => link.database.id) ?? [],
+        databases:
+          existingArticle.databaseLinks?.map((link) => link.database.id) ?? [],
       });
     }
   }, [existingArticle]);
 
   useEffect(() => {
     if (!editId && categoryParam) {
-      setFormData((previous) => previous.categoryId
-        ? previous
-        : { ...previous, categoryId: categoryParam });
+      setFormData((previous) =>
+        previous.categoryId
+          ? previous
+          : { ...previous, categoryId: categoryParam },
+      );
     }
   }, [categoryParam, editId]);
 
   useEffect(() => {
     setHeader({
-      title: editId ? 'Edit Document' : 'New Knowledge Base Document',
+      title: editId ? "Edit Document" : "New Knowledge Base Document",
       breadcrumbs: [
-        { label: 'Workspace', href: '/dashboard' },
-        { label: 'Documentation', href: '/dashboard/docs' },
-        { label: editId ? 'Edit' : 'New' },
+        { label: "Workspace", href: "/dashboard" },
+        { label: "Documentation", href: "/dashboard/docs" },
+        { label: editId ? "Edit" : "New" },
       ],
     });
   }, [editId, setHeader]);
 
+  useEffect(() => {
+    if (!authLoading && !canAuthor) {
+      router.replace("/dashboard/docs");
+    }
+  }, [authLoading, canAuthor, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.content || !formData.categoryId) {
-      toast.error('Please fill all required fields');
+      toast.error("Please fill all required fields");
       return;
     }
 
     setIsSubmitting(true);
     try {
       if (editId) {
-        await kbService.updateDocument(editId, { ...formData, applicationIds: links.applications, assetIds: links.assets, vmIds: links.vms, databaseIds: links.databases });
-        toast.success('Document updated');
+        await kbService.updateDocument(editId, {
+          ...formData,
+          applicationIds: links.applications,
+          assetIds: links.assets,
+          vmIds: links.vms,
+          databaseIds: links.databases,
+        });
+        toast.success("Document updated");
       } else {
-        await kbService.createDocument({ ...formData, applicationIds: links.applications, assetIds: links.assets, vmIds: links.vms, databaseIds: links.databases });
-        toast.success('Document published');
+        await kbService.createDocument({
+          ...formData,
+          applicationIds: links.applications,
+          assetIds: links.assets,
+          vmIds: links.vms,
+          databaseIds: links.databases,
+        });
+        toast.success("Document published");
       }
-      router.push('/dashboard/docs');
+      router.push("/dashboard/docs");
     } catch (error) {
-      toast.error('Failed to save document');
+      toast.error("Failed to save document");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (authLoading || !canAuthor) return null;
+
   return (
     <div className="max-w-6xl mx-auto pb-12">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex min-w-0 items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-9 w-9 shrink-0 rounded-xl">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            className="h-9 w-9 shrink-0 rounded-xl"
+          >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h1 className="truncate text-xl sm:text-2xl font-black">{editId ? 'Edit Document' : 'Write Documentation'}</h1>
+          <h1 className="truncate text-xl sm:text-2xl font-black">
+            {editId ? "Edit Document" : "Write Documentation"}
+          </h1>
         </div>
         <Button
           onClick={handleSubmit}
@@ -138,82 +188,119 @@ export default function ArticleFormPage() {
           className="h-10 rounded-xl px-5 shadow-md shadow-primary/15 font-bold"
         >
           <Save className="h-4 w-4 mr-2" />
-          {isSubmitting ? 'Saving...' : (editId ? 'Save Changes' : 'Publish Document')}
+          {isSubmitting
+            ? "Saving..."
+            : editId
+              ? "Save Changes"
+              : "Publish Document"}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         {/* Editor Main */}
         <div className="min-w-0 space-y-5">
-           <Card className="space-y-5 rounded-2xl border shadow-sm p-4 sm:p-5 bg-card">
-              <div className="space-y-2">
-                <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Document Title</Label>
-                <Input
-                  placeholder="e.g. How to configure the core switch..."
-                  value={formData.title}
-                  onChange={e => setFormData({ ...formData, title: e.target.value })}
-                  className="h-11 rounded-xl border-none bg-transparent px-0 text-xl font-black shadow-none focus-visible:ring-0 sm:text-2xl"
-                />
+          <Card className="space-y-5 rounded-2xl border shadow-sm p-4 sm:p-5 bg-card">
+            <div className="space-y-2">
+              <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                Document Title
+              </Label>
+              <Input
+                placeholder="e.g. How to configure the core switch..."
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                className="h-11 rounded-xl border-none bg-transparent px-0 text-xl font-black shadow-none focus-visible:ring-0 sm:text-2xl"
+              />
+            </div>
+
+            <Tabs defaultValue="write" className="w-full">
+              <div className="mb-3 flex w-fit items-center justify-between rounded-lg bg-muted/50 p-1">
+                <TabsList className="bg-transparent h-8">
+                  <TabsTrigger
+                    value="write"
+                    className="rounded-lg text-xs gap-2"
+                  >
+                    <Layout className="h-3 w-3" /> Write
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="preview"
+                    className="rounded-lg text-xs gap-2"
+                  >
+                    <Eye className="h-3 w-3" /> Preview
+                  </TabsTrigger>
+                </TabsList>
               </div>
 
-              <Tabs defaultValue="write" className="w-full">
-                <div className="mb-3 flex w-fit items-center justify-between rounded-lg bg-muted/50 p-1">
-                   <TabsList className="bg-transparent h-8">
-                      <TabsTrigger value="write" className="rounded-lg text-xs gap-2"><Layout className="h-3 w-3" /> Write</TabsTrigger>
-                      <TabsTrigger value="preview" className="rounded-lg text-xs gap-2"><Eye className="h-3 w-3" /> Preview</TabsTrigger>
-                   </TabsList>
-                </div>
+              <TabsContent value="write" className="mt-0">
+                <NotionEditor
+                  onChange={(markdown) =>
+                    setFormData((prev) => ({ ...prev, content: markdown }))
+                  }
+                />
+              </TabsContent>
 
-                <TabsContent value="write" className="mt-0">
-                   <NotionEditor
-                     onChange={(markdown) => setFormData(prev => ({ ...prev, content: markdown }))}
-                   />
-                </TabsContent>
-
-                <TabsContent value="preview" className="mt-0">
-                   <Card className="min-h-[420px] rounded-xl border p-5 sm:p-8">
-                      {formData.content && typeof formData.content === 'string' ? (
-                        <MarkdownRenderer content={formData.content} />
-                      ) : (
-                        <p className="text-muted-foreground italic text-center pt-20">Nothing to preview yet.</p>
-                      )}
-                   </Card>
-                </TabsContent>
-              </Tabs>
-           </Card>
-           <KnowledgeDocumentLinks value={links} onChange={setLinks} />
+              <TabsContent value="preview" className="mt-0">
+                <Card className="min-h-[420px] rounded-xl border p-5 sm:p-8">
+                  {formData.content && typeof formData.content === "string" ? (
+                    <MarkdownRenderer content={formData.content} />
+                  ) : (
+                    <p className="text-muted-foreground italic text-center pt-20">
+                      Nothing to preview yet.
+                    </p>
+                  )}
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </Card>
+          <KnowledgeDocumentLinks value={links} onChange={setLinks} />
         </div>
 
         <div className="space-y-6">
-           <Card className="space-y-5 rounded-2xl border shadow-sm p-4 sm:p-5 bg-muted/20">
-              <div className="space-y-3">
-                 <Label htmlFor="select-category" className="ml-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
-                    <FileText className="h-3 w-3" /> Category
-                 </Label>
-                 <Select
-                    value={formData.categoryId}
-                    onValueChange={(val) => setFormData({ ...formData, categoryId: val })}
-                 >
-                    <SelectTrigger id="select-category" className="h-10 rounded-xl border bg-card text-sm font-bold shadow-sm">
-                       <SelectValue placeholder="Select Category" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-2">
-                       {categories.map((cat) => (
-                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                       ))}
-                    </SelectContent>
-                 </Select>
-              </div>
+          <Card className="space-y-5 rounded-2xl border shadow-sm p-4 sm:p-5 bg-muted/20">
+            <div className="space-y-3">
+              <Label
+                htmlFor="select-category"
+                className="ml-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                <FileText className="h-3 w-3" /> Category
+              </Label>
+              <Select
+                value={formData.categoryId}
+                onValueChange={(val) =>
+                  setFormData({ ...formData, categoryId: val })
+                }
+              >
+                <SelectTrigger
+                  id="select-category"
+                  className="h-10 rounded-xl border bg-card text-sm font-bold shadow-sm"
+                >
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-2">
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-3 border-t border-border pt-4">
-                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Writing Help</p>
-                 <div className="space-y-2 text-[11px] leading-relaxed text-muted-foreground">
-                    <p>Type <code className="text-primary font-bold">/</code> to insert blocks (images, tables, lists).</p>
-                    <p>Highlight text to show the formatting menu.</p>
-                    <p>Images can be pasted directly into the editor.</p>
-                 </div>
+            <div className="space-y-3 border-t border-border pt-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                Writing Help
+              </p>
+              <div className="space-y-2 text-[11px] leading-relaxed text-muted-foreground">
+                <p>
+                  Type <code className="text-primary font-bold">/</code> to
+                  insert blocks (images, tables, lists).
+                </p>
+                <p>Highlight text to show the formatting menu.</p>
+                <p>Images can be pasted directly into the editor.</p>
               </div>
-           </Card>
+            </div>
+          </Card>
         </div>
       </div>
     </div>

@@ -109,6 +109,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         const verifyAuth = async () => {
+            // Public known-link documents are intentionally anonymous and must not
+            // trigger the workspace /auth/me guard (whose 401 interceptor redirects
+            // unauthenticated visitors to /login).
+            if (pathname.startsWith('/docs/')) {
+                return;
+            }
+
             // Skip verification if on login page and no user is stored locally
             // This prevents noisy 401 errors in the console on initial load
             if (pathname === '/login' && !localStorage.getItem('user')) {
