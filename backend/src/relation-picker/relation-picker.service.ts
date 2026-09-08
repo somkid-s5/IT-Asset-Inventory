@@ -465,39 +465,38 @@ export class RelationPickerService {
     page: number,
     pageSize: number,
   ) {
-    const search: Prisma.LogicalDatabaseWhereInput = searchText
-      ? {
-          OR: [
-            { name: { contains: searchText, mode: 'insensitive' } },
-            {
-              databaseInventory: {
-                name: { contains: searchText, mode: 'insensitive' },
-              },
+    const whereAnd: Prisma.LogicalDatabaseWhereInput[] = [];
+    if (lifecycle === RelationPickerLifecycleFilter.ARCHIVED) {
+      whereAnd.push({
+        OR: [
+          { status: DatabaseStatus.ARCHIVED },
+          { databaseInventory: { status: DatabaseStatus.ARCHIVED } },
+        ],
+      });
+    } else if (lifecycle === RelationPickerLifecycleFilter.ELIGIBLE) {
+      whereAnd.push({ status: { not: DatabaseStatus.ARCHIVED } });
+      whereAnd.push({
+        databaseInventory: { status: { not: DatabaseStatus.ARCHIVED } },
+      });
+    }
+    if (query.environment) {
+      whereAnd.push({ databaseInventory: { environment: query.environment } });
+    }
+    if (searchText) {
+      whereAnd.push({
+        OR: [
+          { name: { contains: searchText, mode: 'insensitive' } },
+          {
+            databaseInventory: {
+              name: { contains: searchText, mode: 'insensitive' },
             },
-          ],
-        }
+          },
+        ],
+      });
+    }
+    const where: Prisma.LogicalDatabaseWhereInput = whereAnd.length
+      ? { AND: whereAnd }
       : {};
-    const lifecycleWhere =
-      lifecycle === RelationPickerLifecycleFilter.ALL
-        ? {}
-        : lifecycle === RelationPickerLifecycleFilter.ARCHIVED
-          ? {
-              OR: [
-                { status: DatabaseStatus.ARCHIVED },
-                { databaseInventory: { status: DatabaseStatus.ARCHIVED } },
-              ],
-            }
-          : {
-              status: { not: DatabaseStatus.ARCHIVED },
-              databaseInventory: { status: { not: DatabaseStatus.ARCHIVED } },
-            };
-    const where: Prisma.LogicalDatabaseWhereInput = {
-      ...lifecycleWhere,
-      ...(query.environment
-        ? { databaseInventory: { environment: query.environment } }
-        : {}),
-      ...search,
-    };
     const select = {
       id: true,
       name: true,

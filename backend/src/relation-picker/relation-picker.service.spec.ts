@@ -113,6 +113,43 @@ describe('RelationPickerService', () => {
     expect(result.total).toBe(1001);
   });
 
+  it.each([
+    { name: 'environment filter', environment: 'PROD' },
+    { name: 'search filter', q: 'registry' },
+    {
+      name: 'environment and search filters',
+      environment: 'PROD',
+      q: 'registry',
+    },
+  ])(
+    'keeps archived logical databases excluded with $name',
+    async (filters) => {
+      const prisma = {
+        logicalDatabase: {
+          findMany: jest.fn().mockResolvedValue([]),
+          count: jest.fn().mockResolvedValue(0),
+        },
+      };
+      const service = new RelationPickerService(prisma as never);
+
+      await service.search(
+        query({
+          kind: RelationPickerResourceKind.LOGICAL_DATABASES,
+          ...filters,
+        }),
+      );
+
+      const where = JSON.stringify(prisma.logicalDatabase.findMany.mock.calls);
+      expect(where).toContain('"AND"');
+      expect(where).toContain('"status":{"not":"ARCHIVED"}');
+      expect(where).toContain(
+        '"databaseInventory":{"status":{"not":"ARCHIVED"}}',
+      );
+      if (filters.environment) expect(where).toContain('"environment":"PROD"');
+      if (filters.q) expect(where).toContain('"contains":"registry"');
+    },
+  );
+
   it('keeps selected archived records visible while excluding them from eligible results', async () => {
     const prisma = {
       asset: {
