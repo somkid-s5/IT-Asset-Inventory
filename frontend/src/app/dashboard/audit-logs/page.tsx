@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ArrowDown,
@@ -11,43 +11,46 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  LoaderCircle,
   Search,
   ShieldAlert,
   Trash2,
   Users,
   X,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { usePageHeader } from "@/contexts/PageHeaderContext";
+import { useAuth } from "@/contexts/AuthContext";
+import api from "@/services/api";
+import { fadeInUp } from "@/lib/animations";
+import { AccessDenied } from "@/components/access-denied";
+import { EmptyState } from "@/components/EmptyState";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
+import { UserAvatar } from "@/components/UserAvatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-} from '@tanstack/react-table';
-import { usePageHeader } from '@/contexts/PageHeaderContext';
-import { useAuth } from '@/contexts/AuthContext';
-import api from '@/services/api';
-import { fadeInUp } from '@/lib/animations';
-import { AccessDenied } from '@/components/access-denied';
-import { EmptyState } from '@/components/EmptyState';
-import { InventoryQueryStateView } from '@/components/inventory';
-import { useInventoryQueryState } from '@/lib/inventory-query-state';
-import { UserAvatar } from '@/components/UserAvatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { motion } from 'framer-motion';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { motion } from "framer-motion";
 
 interface UserInfo {
+  id: string;
   username: string;
   displayName: string;
   avatarSeed: string;
@@ -64,34 +67,114 @@ interface AuditLogRecord {
   user: UserInfo | null;
 }
 
+interface AuditLogResponse {
+  data: AuditLogRecord[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+  summary: {
+    totalEvents: number;
+    todayEvents: number;
+    deleteEvents: number;
+    uniqueActors: number;
+    scope: string;
+  };
+}
+
+const ACTION_OPTIONS = [
+  "CREATE_SOURCE",
+  "UPDATE_SOURCE",
+  "ARCHIVE_SOURCE",
+  "RESTORE_SOURCE",
+  "VCENTER_SYNC",
+  "CREATE_USER",
+  "UPDATE_USER_ROLE",
+  "RESET_USER_PASSWORD",
+  "CREATE_APPLICATION",
+  "UPDATE_APPLICATION",
+  "ARCHIVE_APPLICATION",
+  "RESTORE_APPLICATION",
+  "CREATE_ASSET",
+  "UPDATE_ASSET",
+  "DELETE_ASSET",
+  "CREATE_DATABASE",
+  "UPDATE_DATABASE",
+  "DELETE_DATABASE",
+] as const;
+
+function formatAction(action: string) {
+  return action
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function formatTimestamp(value: string) {
   const date = new Date(value);
   return {
-    date: date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-    time: date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    date: date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
+    time: date.toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }),
   };
 }
 
 function actionClasses(action: string) {
-  if (action.includes('DELETE')) return 'bg-destructive/10 text-destructive border-destructive/20';
-  if (action.includes('VIEW') || action.includes('LOGIN')) return 'bg-primary/10 text-primary border-primary/20';
-  if (action.includes('CREATE')) return 'bg-success/10 text-success border-success/20';
-  return 'bg-warning/10 text-warning border-warning/20';
+  if (action.includes("DELETE"))
+    return "bg-destructive/10 text-destructive border-destructive/20";
+  if (
+    action.includes("VIEW") ||
+    action.includes("LOGIN") ||
+    action.includes("COPY")
+  )
+    return "bg-primary/10 text-primary border-primary/20";
+  if (action.includes("CREATE"))
+    return "bg-success/10 text-success border-success/20";
+  return "bg-warning/10 text-warning border-warning/20";
 }
 
 function ActionBadge({ action }: { action: string }) {
-  const label = action || 'UNKNOWN';
-  return <Badge variant="outline" className={`text-[10px] font-bold tracking-tight ${actionClasses(label)}`}>{label}</Badge>;
+  return (
+    <Badge
+      variant="outline"
+      className={`text-[10px] font-bold tracking-tight ${actionClasses(action)}`}
+    >
+      {formatAction(action || "UNKNOWN")}
+    </Badge>
+  );
+}
+
+function redactDetails(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactDetails);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nested]) => [
+      key,
+      /password|secret|token|encrypted/i.test(key)
+        ? "[REDACTED]"
+        : redactDetails(nested),
+    ]),
+  );
+}
+
+function formatDetails(details: string) {
+  try {
+    return JSON.stringify(redactDetails(JSON.parse(details)), null, 2);
+  } catch {
+    return details.replace(
+      /((?:password|secret|token|encryptedPassword)\s*[:=]\s*)("[^"]*"|[^,\s}]+)/gi,
+      "$1[REDACTED]",
+    );
+  }
 }
 
 function LogDetailsDialog({ details }: { details: string }) {
-  let formattedDetails = details;
-  try {
-    formattedDetails = JSON.stringify(JSON.parse(details), null, 2);
-  } catch {
-    // Keep plain text details as-is.
-  }
-
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -106,83 +189,104 @@ function LogDetailsDialog({ details }: { details: string }) {
       <DialogContent className="max-w-md md:max-w-xl">
         <DialogHeader>
           <DialogTitle>Audit Log Details</DialogTitle>
-          <DialogDescription>Full details and metadata for this audit event.</DialogDescription>
+          <DialogDescription>
+            Full details and metadata for this audit event. Secret-shaped values
+            are redacted.
+          </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-x-auto overflow-y-auto rounded-xl bg-muted p-4">
-          <pre className="whitespace-pre-wrap text-xs font-mono text-muted-foreground">{formattedDetails}</pre>
+          <pre className="whitespace-pre-wrap text-xs font-mono text-muted-foreground">
+            {formatDetails(details)}
+          </pre>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function SortableHeader({ column, title }: { column: any; title: string }) {
-  const direction = column.getIsSorted();
-  return (
-    <button
-      type="button"
-      onClick={() => column.toggleSorting(direction === 'asc')}
-      className="group flex items-center gap-1 text-[10px] font-black uppercase tracking-wider transition-colors hover:text-foreground"
-    >
-      {title}
-      {direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : direction === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ChevronsUpDown className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />}
-    </button>
-  );
-}
-
-function SummaryTile({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: number; tone: string }) {
-  return (
-    <Card className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tone}`}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-        <p className="mt-1 text-xl font-black tracking-tight">{value.toLocaleString()}</p>
-      </div>
-    </Card>
-  );
-}
-
 function LogIdentity({ user }: { user: UserInfo | null }) {
-  if (!user) return <span className="text-xs italic text-muted-foreground">System / Deleted User</span>;
+  if (!user)
+    return (
+      <span className="text-xs italic text-muted-foreground">
+        System / Deleted User
+      </span>
+    );
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <UserAvatar seed={user.avatarSeed} imageUrl={user.avatarImage} label={user.displayName} className="h-7 w-7 rounded-lg" />
+      <UserAvatar
+        seed={user.avatarSeed}
+        imageUrl={user.avatarImage}
+        label={user.displayName}
+        className="h-7 w-7 rounded-lg"
+      />
       <div className="min-w-0">
         <p className="truncate text-xs font-semibold">{user.displayName}</p>
-        <p className="truncate font-mono text-[10px] text-muted-foreground">@{user.username}</p>
+        <p className="truncate font-mono text-[10px] text-muted-foreground">
+          @{user.username}
+        </p>
       </div>
     </div>
   );
 }
 
-function MobileLogCard({ log }: { log: AuditLogRecord }) {
-  const timestamp = formatTimestamp(log.timestamp);
+function SortButton({
+  label,
+  active,
+  direction,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  direction: "asc" | "desc";
+  onClick: () => void;
+}) {
   return (
-    <article className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <ActionBadge action={log.action} />
-        <time className="text-right text-[10px] text-muted-foreground">
-          <span className="block font-semibold">{timestamp.date}</span>
-          <span>{timestamp.time}</span>
-        </time>
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex items-center gap-1 text-[10px] font-black uppercase tracking-wider transition-colors hover:text-foreground"
+    >
+      {label}
+      {active ? (
+        direction === "asc" ? (
+          <ArrowUp className="h-3 w-3" />
+        ) : (
+          <ArrowDown className="h-3 w-3" />
+        )
+      ) : (
+        <ChevronsUpDown className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+      )}
+    </button>
+  );
+}
+
+function SummaryTile({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number;
+  tone: string;
+}) {
+  return (
+    <Card className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tone}`}
+      >
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/50 pt-3">
-        <div className="min-w-0">
-          <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">User</p>
-          <LogIdentity user={log.user} />
-        </div>
-        <div className="min-w-0">
-          <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">IP Address</p>
-          <p className="truncate font-mono text-xs">{log.ipAddress || '--'}</p>
-        </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+          {label}
+        </p>
+        <p className="mt-1 text-xl font-black tracking-tight">
+          {value.toLocaleString()}
+        </p>
       </div>
-      <div className="mt-3 border-t border-border/50 pt-3">
-        <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">Details</p>
-        {log.details ? <LogDetailsDialog details={log.details} /> : <span className="text-xs italic text-muted-foreground">No details</span>}
-      </div>
-    </article>
+    </Card>
   );
 }
 
@@ -190,115 +294,134 @@ export default function AuditLogsPage() {
   const router = useRouter();
   const { setHeader } = usePageHeader();
   const { user } = useAuth();
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'timestamp', desc: true }]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
-
-  const logsQuery = useQuery({
-    queryKey: ['audit-logs'],
-    queryFn: async () => {
-      const response = await api.get('/audit-logs');
-      const responseData = response.data as any;
-      return (responseData.data || responseData) as AuditLogRecord[];
-    },
-    enabled: !!user && user.role === 'ADMIN',
-  });
-  const logs = logsQuery.data ?? [];
-  const loading = logsQuery.isLoading;
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [action, setAction] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [sortBy, setSortBy] = useState<"timestamp" | "action" | "ipAddress">(
+    "timestamp",
+  );
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
-    if (user && user.role !== 'ADMIN') router.replace('/dashboard');
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      300,
+    );
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const queryKey = useMemo(
+    () => [
+      "audit-logs",
+      {
+        page,
+        limit,
+        search: debouncedSearch,
+        action,
+        from,
+        to,
+        sortBy,
+        sortDir,
+      },
+    ],
+    [page, limit, debouncedSearch, action, from, to, sortBy, sortDir],
+  );
+  const logsQuery = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const response = await api.get<AuditLogResponse>("/audit-logs", {
+        params: {
+          page,
+          limit,
+          ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          ...(action ? { action } : {}),
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
+          sortBy,
+          sortDir,
+        },
+      });
+      return response.data;
+    },
+    enabled: !!user && user.role === "ADMIN",
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+  const response = logsQuery.data;
+  const logs = response?.data ?? [];
+  const meta = response?.meta ?? { total: 0, page, limit, totalPages: 0 };
+  const summary = response?.summary;
+  const isFiltered = Boolean(debouncedSearch || action || from || to);
+  const queryState = useInventoryQueryState(logsQuery, {
+    hasData: response !== undefined,
+    hasRecords: logs.length > 0,
+    isFiltered,
+  });
+
+  useEffect(() => {
+    if (user && user.role !== "ADMIN") router.replace("/dashboard");
   }, [user, router]);
 
   useEffect(() => {
     setHeader({
-      title: 'Audit Logs',
-      breadcrumbs: [{ label: 'Workspace', href: '/dashboard' }, { label: 'Audit Logs' }],
+      title: "Audit Logs",
+      breadcrumbs: [
+        { label: "Workspace", href: "/dashboard" },
+        { label: "Audit Logs" },
+      ],
     });
     return () => setHeader(null);
   }, [setHeader]);
 
-  const columns = useMemo<ColumnDef<AuditLogRecord>[]>(() => [
-    {
-      accessorKey: 'timestamp',
-      header: ({ column }) => <SortableHeader column={column} title="Date & Time" />,
-      cell: ({ getValue }) => {
-        const timestamp = formatTimestamp(getValue() as string);
-        return <div className="flex flex-col"><span className="text-xs font-semibold">{timestamp.date}</span><span className="text-[10px] text-muted-foreground">{timestamp.time}</span></div>;
-      },
-    },
-    {
-      accessorKey: 'user',
-      header: 'User',
-      cell: ({ row }) => <LogIdentity user={row.original.user} />,
-      filterFn: (row, _id, value) => {
-        const recordUser = row.original.user;
-        if (!recordUser) return false;
-        return `${recordUser.displayName} ${recordUser.username}`.toLowerCase().includes(value.toLowerCase());
-      },
-    },
-    {
-      accessorKey: 'action',
-      header: ({ column }) => <SortableHeader column={column} title="Action" />,
-      cell: ({ getValue }) => <ActionBadge action={(getValue() as string) || 'UNKNOWN'} />,
-    },
-    {
-      accessorKey: 'details',
-      header: 'Details',
-      cell: ({ row }) => row.original.details ? <LogDetailsDialog details={row.original.details} /> : <span className="text-xs italic text-muted-foreground">No details</span>,
-    },
-    {
-      accessorKey: 'ipAddress',
-      header: 'IP Address',
-      cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) || '--'}</span>,
-    },
-  ], []);
+  const toggleSort = (nextField: "timestamp" | "action" | "ipAddress") => {
+    if (sortBy === nextField)
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+    else {
+      setSortBy(nextField);
+      setSortDir("asc");
+    }
+  };
 
-  const table = useReactTable({
-    data: logs,
-    columns,
-    state: { sorting, columnFilters, globalFilter },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    globalFilterFn: (row, _columnId, filterValue) => {
-      const recordUser = row.original.user;
-      const userText = recordUser ? `${recordUser.displayName} ${recordUser.username}` : 'system';
-      const searchText = `${userText} ${row.original.action || ''} ${row.original.details || ''} ${row.original.ipAddress || ''}`.toLowerCase();
-      return searchText.includes(filterValue.toLowerCase());
-    },
-  });
+  const resetFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setAction("");
+    setFrom("");
+    setTo("");
+    setPage(1);
+  };
 
-  const today = new Date();
-  const todayEvents = logs.filter((log) => {
-    const date = new Date(log.timestamp);
-    return date.toDateString() === today.toDateString();
-  }).length;
-  const deleteEvents = logs.filter((log) => log.action.includes('DELETE')).length;
-  const uniqueActors = new Set(logs.map((log) => log.user?.username || 'system')).size;
-  const filteredRows = table.getFilteredRowModel().rows;
-  const queryState = useInventoryQueryState(logsQuery, {
-    hasData: logsQuery.data !== undefined,
-    hasRecords: filteredRows.length > 0,
-    isFiltered: Boolean(globalFilter.trim()) || columnFilters.length > 0,
-  });
-
-  if (!user || user.role !== 'ADMIN') return <AccessDenied />;
+  if (!user || user.role !== "ADMIN") return <AccessDenied />;
 
   return (
-    <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="space-y-5 pb-8">
+    <motion.div
+      variants={fadeInUp}
+      initial="hidden"
+      animate="visible"
+      className="space-y-5 pb-8"
+    >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl"><Activity className="h-5 w-5 text-primary" />System Audit Logs</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Monitor system activity and changes in one place.</p>
+          <h2 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
+            <Activity className="h-5 w-5 text-primary" />
+            System Audit Logs
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Search and review the complete server-side audit history.
+          </p>
         </div>
-        {globalFilter && (
-          <Button variant="ghost" size="sm" onClick={() => setGlobalFilter('')} className="h-8 rounded-lg text-xs text-muted-foreground">
-            <X className="mr-1.5 h-3.5 w-3.5" /> Clear search
+        {isFiltered && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetFilters}
+            className="h-8 rounded-lg text-xs text-muted-foreground"
+          >
+            <X className="mr-1.5 h-3.5 w-3.5" /> Clear filters
           </Button>
         )}
       </div>
@@ -323,74 +446,290 @@ export default function AuditLogsPage() {
           />
         }
       >
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <SummaryTile icon={Activity} label="Total Events" value={logs.length} tone="bg-primary/10 text-primary" />
-        <SummaryTile icon={Clock3} label="Today" value={todayEvents} tone="bg-info/10 text-info" />
-        <SummaryTile icon={Trash2} label="Delete Events" value={deleteEvents} tone="bg-destructive/10 text-destructive" />
-        <SummaryTile icon={Users} label="Unique Actors" value={uniqueActors} tone="bg-primary/10 text-primary" />
-      </div>
-
-      <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search logs by user, action, or details..."
-              value={globalFilter}
-              onChange={(event) => setGlobalFilter(event.target.value)}
-              className="h-9 rounded-xl border-border/60 bg-card pl-9 text-xs"
-            />
-          </div>
-          <p className="text-[11px] font-semibold text-muted-foreground">{filteredRows.length} matching events</p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <SummaryTile
+            icon={Activity}
+            label="Filtered Events"
+            value={summary?.totalEvents ?? meta.total}
+            tone="bg-primary/10 text-primary"
+          />
+          <SummaryTile
+            icon={Clock3}
+            label="Filtered Today"
+            value={summary?.todayEvents ?? 0}
+            tone="bg-info/10 text-info"
+          />
+          <SummaryTile
+            icon={Trash2}
+            label="Delete Events"
+            value={summary?.deleteEvents ?? 0}
+            tone="bg-destructive/10 text-destructive"
+          />
+          <SummaryTile
+            icon={Users}
+            label="Unique Actors"
+            value={summary?.uniqueActors ?? 0}
+            tone="bg-primary/10 text-primary"
+          />
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
-                  {headerGroup.headers.map((header) => <TableHead key={header.id} className="px-4 py-2.5 text-muted-foreground">{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={columns.length} className="h-32 text-center"><div className="flex items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" /> Loading logs...</div></TableCell></TableRow>
-              ) : table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => <TableRow key={row.id} className="border-b border-border/60 transition-colors hover:bg-muted/40">{row.getVisibleCells().map((cell) => <TableCell key={cell.id} className="px-4 py-2.5">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)
-              ) : (
-                <TableRow><TableCell colSpan={columns.length} className="h-72 p-0"><EmptyState icon={ShieldAlert} title="No audit logs found" description={logs.length === 0 ? 'No system audit logs have been recorded yet.' : 'No audit logs match your current search criteria.'} className="border-none bg-transparent" /></TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="space-y-3 p-3 md:hidden">
-          {loading ? (
-            <div className="flex h-28 items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" /> Loading logs...</div>
-          ) : table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => <MobileLogCard key={row.id} log={row.original} />)
-          ) : (
-            <EmptyState icon={ShieldAlert} title="No audit logs found" description={logs.length === 0 ? 'No system audit logs have been recorded yet.' : 'No audit logs match your current search criteria.'} className="border-none bg-transparent" />
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-border/60 bg-muted/10 p-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:p-4">
-          <div className="text-muted-foreground">Showing {table.getRowModel().rows.length} of {filteredRows.length} records</div>
-          <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
-            <label htmlFor="audit-page-size" className="flex items-center gap-2 font-medium text-muted-foreground">Rows per page
-              <select id="audit-page-size" aria-label="Rows per page" value={table.getState().pagination.pageSize} onChange={(event) => table.setPageSize(Number(event.target.value))} className="h-8 w-16 rounded-lg border border-border bg-card px-2 text-xs outline-none focus:ring-1 focus:ring-primary">
-                {[10, 20, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
-              </select>
-            </label>
-            <span className="font-medium text-muted-foreground">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}</span>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" aria-label="Previous page" className="h-8 w-8 rounded-lg p-0" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}><ChevronLeft className="h-4 w-4" /></Button>
-              <Button variant="outline" aria-label="Next page" className="h-8 w-8 rounded-lg p-0" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}><ChevronRight className="h-4 w-4" /></Button>
+        <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/30 p-3 sm:p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative w-full lg:max-w-md">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search logs by user, action, or details..."
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 rounded-xl border-border/60 bg-card pl-9 text-xs"
+                />
+              </div>
+              <p className="text-[11px] font-semibold text-muted-foreground">
+                {meta.total.toLocaleString()} matching events ·{" "}
+                {summary?.scope ?? "server dataset"}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+                Action
+                <select
+                  aria-label="Filter by action"
+                  value={action}
+                  onChange={(event) => {
+                    setAction(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-8 min-w-44 rounded-lg border border-border bg-card px-2 text-xs text-foreground"
+                >
+                  <option value="">All actions</option>
+                  {ACTION_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {formatAction(option)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+                From
+                <Input
+                  aria-label="Audit date from"
+                  type="date"
+                  value={from}
+                  onChange={(event) => {
+                    setFrom(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-8 w-36 bg-card text-xs"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+                To
+                <Input
+                  aria-label="Audit date to"
+                  type="date"
+                  value={to}
+                  onChange={(event) => {
+                    setTo(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-8 w-36 bg-card text-xs"
+                />
+              </label>
             </div>
           </div>
-        </div>
-      </Card>
+
+          <div className="hidden overflow-x-auto md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="px-4 py-2.5 text-muted-foreground">
+                    <SortButton
+                      label="Date & Time"
+                      active={sortBy === "timestamp"}
+                      direction={sortDir}
+                      onClick={() => toggleSort("timestamp")}
+                    />
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5 text-muted-foreground">
+                    User
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5 text-muted-foreground">
+                    <SortButton
+                      label="Action"
+                      active={sortBy === "action"}
+                      direction={sortDir}
+                      onClick={() => toggleSort("action")}
+                    />
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5 text-muted-foreground">
+                    Details
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5 text-muted-foreground">
+                    <SortButton
+                      label="IP Address"
+                      active={sortBy === "ipAddress"}
+                      direction={sortDir}
+                      onClick={() => toggleSort("ipAddress")}
+                    />
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => {
+                  const timestamp = formatTimestamp(log.timestamp);
+                  return (
+                    <TableRow
+                      key={log.id}
+                      className="border-b border-border/60 transition-colors hover:bg-muted/40"
+                    >
+                      <TableCell className="px-4 py-2.5">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-semibold">
+                            {timestamp.date}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {timestamp.time}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5">
+                        <LogIdentity user={log.user} />
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5">
+                        <ActionBadge action={log.action || "UNKNOWN"} />
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5">
+                        {log.details ? (
+                          <LogDetailsDialog details={log.details} />
+                        ) : (
+                          <span className="text-xs italic text-muted-foreground">
+                            No details
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5">
+                        <span className="font-mono text-xs">
+                          {log.ipAddress || "Unknown"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="space-y-3 p-3 md:hidden">
+            {logs.map((log) => {
+              const timestamp = formatTimestamp(log.timestamp);
+              return (
+                <article
+                  key={log.id}
+                  className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <ActionBadge action={log.action || "UNKNOWN"} />
+                    <time className="text-right text-[10px] text-muted-foreground">
+                      <span className="block font-semibold">
+                        {timestamp.date}
+                      </span>
+                      <span>{timestamp.time}</span>
+                    </time>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/50 pt-3">
+                    <div className="min-w-0">
+                      <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                        User
+                      </p>
+                      <LogIdentity user={log.user} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                        IP Address
+                      </p>
+                      <p className="truncate font-mono text-xs">
+                        {log.ipAddress || "Unknown"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 border-t border-border/50 pt-3">
+                    <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                      Details
+                    </p>
+                    {log.details ? (
+                      <LogDetailsDialog details={log.details} />
+                    ) : (
+                      <span className="text-xs italic text-muted-foreground">
+                        No details
+                      </span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-border/60 bg-muted/10 p-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:p-4">
+            <div className="text-muted-foreground">
+              Showing {logs.length} of {meta.total.toLocaleString()} records
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+              <label
+                htmlFor="audit-page-size"
+                className="flex items-center gap-2 font-medium text-muted-foreground"
+              >
+                Rows per page
+                <select
+                  id="audit-page-size"
+                  aria-label="Rows per page"
+                  value={limit}
+                  onChange={(event) => {
+                    setLimit(Number(event.target.value));
+                    setPage(1);
+                  }}
+                  className="h-8 w-16 rounded-lg border border-border bg-card px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {[20, 50, 100].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="font-medium text-muted-foreground">
+                Page {meta.page} of {meta.totalPages || 1}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  aria-label="Previous page"
+                  className="h-8 w-8 rounded-lg p-0"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page <= 1 || logsQuery.isFetching}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  aria-label="Next page"
+                  className="h-8 w-8 rounded-lg p-0"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={
+                    meta.totalPages === 0 ||
+                    page >= meta.totalPages ||
+                    logsQuery.isFetching
+                  }
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
       </InventoryQueryStateView>
     </motion.div>
   );

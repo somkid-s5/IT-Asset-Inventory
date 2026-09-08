@@ -191,6 +191,7 @@ export default function DashboardPage() {
       const response = await api.get<DashboardOverview>("/dashboard/overview");
       return response.data;
     },
+    retry: false,
   });
 
   const qualityQuery = useQuery({
@@ -257,227 +258,227 @@ export default function DashboardPage() {
       onRetry={() => void overviewQuery.refetch()}
       loadingLabel="Loading dashboard overview…"
     >
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6"
-    >
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">
-            Inventory summary
-          </h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Current non-archived inventory first, followed by work that needs
-            attention.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void refreshAll()}
-          disabled={overviewQuery.isFetching || qualityQuery.isFetching}
-          aria-label="Refresh dashboard"
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-6"
+      >
+        <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">
+              Inventory summary
+            </h2>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Current non-archived inventory first, followed by work that needs
+              attention.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void refreshAll()}
+            disabled={overviewQuery.isFetching || qualityQuery.isFetching}
+            aria-label="Refresh dashboard"
+          >
+            <RefreshCw
+              className={
+                overviewQuery.isFetching || qualityQuery.isFetching
+                  ? "animate-spin"
+                  : ""
+              }
+            />
+            {overviewQuery.isFetching || qualityQuery.isFetching
+              ? "Refreshing..."
+              : "Refresh dashboard"}
+          </Button>
+        </section>
+
+        <motion.section
+          variants={itemVariants}
+          aria-label="Inventory summary counts"
         >
-          <RefreshCw
-            className={
-              overviewQuery.isFetching || qualityQuery.isFetching
-                ? "animate-spin"
-                : ""
-            }
-          />
-          {overviewQuery.isFetching || qualityQuery.isFetching
-            ? "Refreshing..."
-            : "Refresh dashboard"}
-        </Button>
-      </section>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <SummaryCard
+              title="Applications"
+              value={data?.applications.active ?? 0}
+              subtitle={`${data?.applications.archived ?? 0} archived`}
+              icon={AppWindow}
+              href="/dashboard/applications"
+            />
+            <SummaryCard
+              title="Physical Assets"
+              value={data?.assets.total ?? 0}
+              subtitle={`${data?.assets.active ?? 0} active status`}
+              icon={Server}
+              href="/dashboard/assets"
+            />
+            <SummaryCard
+              title="Virtual Machines"
+              value={data?.vm.activeInventory ?? 0}
+              subtitle={`${data?.vm.orphaned ?? 0} missing/deleted`}
+              icon={Monitor}
+              href="/dashboard/virtual-machines"
+            />
+            <SummaryCard
+              title="Databases"
+              value={data?.databases.total ?? 0}
+              subtitle={`${data?.databases.production ?? 0} PROD`}
+              icon={Database}
+              href="/dashboard/databases"
+            />
+            <SummaryCard
+              title="Needs Context"
+              value={contextIssueCount}
+              subtitle="Central Data Quality model"
+              icon={ShieldAlert}
+              href="/dashboard/data-quality"
+            />
+          </div>
+        </motion.section>
 
-      <motion.section
-        variants={itemVariants}
-        aria-label="Inventory summary counts"
-      >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <SummaryCard
-            title="Applications"
-            value={data?.applications.active ?? 0}
-            subtitle={`${data?.applications.archived ?? 0} archived`}
-            icon={AppWindow}
-            href="/dashboard/applications"
-          />
-          <SummaryCard
-            title="Physical Assets"
-            value={data?.assets.total ?? 0}
-            subtitle={`${data?.assets.active ?? 0} active status`}
-            icon={Server}
-            href="/dashboard/assets"
-          />
-          <SummaryCard
-            title="Virtual Machines"
-            value={data?.vm.activeInventory ?? 0}
-            subtitle={`${data?.vm.orphaned ?? 0} missing/deleted`}
-            icon={Monitor}
-            href="/dashboard/virtual-machines"
-          />
-          <SummaryCard
-            title="Databases"
-            value={data?.databases.total ?? 0}
-            subtitle={`${data?.databases.production ?? 0} PROD`}
-            icon={Database}
-            href="/dashboard/databases"
-          />
-          <SummaryCard
-            title="Needs Context"
-            value={contextIssueCount}
-            subtitle="Central Data Quality model"
-            icon={ShieldAlert}
-            href="/dashboard/data-quality"
-          />
-        </div>
-      </motion.section>
-
-      <motion.section
-        variants={itemVariants}
-        aria-labelledby="needs-attention-title"
-      >
-        <Card className="gap-0 overflow-hidden p-0">
-          <CardHeader className="border-b border-border/60 bg-muted/25 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle
-                  id="needs-attention-title"
-                  className="flex items-center gap-2 text-base"
-                >
-                  <ShieldAlert className="h-4 w-4 text-warning" />
-                  Needs Attention
-                </CardTitle>
-                <CardDescription>
-                  Missing context and operational exceptions are shown
-                  separately but resolved from here.
-                </CardDescription>
-              </div>
-              <Link
-                href="/dashboard/data-quality"
-                className="text-xs font-semibold text-primary hover:underline"
-              >
-                Open Data Quality
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {qualityQuery.isError ? (
-              <div className="flex items-start gap-3 p-5 text-sm text-destructive">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                Data Quality could not be loaded. Refresh the dashboard to
-                retry.
-              </div>
-            ) : attentionItems.length === 0 ? (
-              <div className="p-6 text-sm text-muted-foreground">
-                No active inventory attention items.
-              </div>
-            ) : (
-              <div className="divide-y divide-border/60">
-                {attentionItems.slice(0, 10).map((item) => (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className="group flex items-start gap-3 p-4 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+        <motion.section
+          variants={itemVariants}
+          aria-labelledby="needs-attention-title"
+        >
+          <Card className="gap-0 overflow-hidden p-0">
+            <CardHeader className="border-b border-border/60 bg-muted/25 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle
+                    id="needs-attention-title"
+                    className="flex items-center gap-2 text-base"
                   >
-                    <div
-                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                        item.tone === "operational"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-warning/10 text-warning"
-                      }`}
+                    <ShieldAlert className="h-4 w-4 text-warning" />
+                    Needs Attention
+                  </CardTitle>
+                  <CardDescription>
+                    Missing context and operational exceptions are shown
+                    separately but resolved from here.
+                  </CardDescription>
+                </div>
+                <Link
+                  href="/dashboard/data-quality"
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Open Data Quality
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {qualityQuery.isError ? (
+                <div className="flex items-start gap-3 p-5 text-sm text-destructive">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  Data Quality could not be loaded. Refresh the dashboard to
+                  retry.
+                </div>
+              ) : attentionItems.length === 0 ? (
+                <div className="p-6 text-sm text-muted-foreground">
+                  No active inventory attention items.
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {attentionItems.slice(0, 10).map((item) => (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className="group flex items-start gap-3 p-4 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                     >
-                      {item.tone === "operational" ? (
-                        <AlertTriangle className="h-4 w-4" />
-                      ) : (
-                        <ShieldAlert className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">
-                          {item.title}
-                        </p>
-                        <Badge
-                          variant={
-                            item.tone === "operational"
-                              ? "destructive"
-                              : "warning"
-                          }
-                        >
-                          {item.tone === "operational"
-                            ? "Operational"
-                            : "Needs Context"}
-                        </Badge>
+                      <div
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                          item.tone === "operational"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-warning/10 text-warning"
+                        }`}
+                      >
+                        {item.tone === "operational" ? (
+                          <AlertTriangle className="h-4 w-4" />
+                        ) : (
+                          <ShieldAlert className="h-4 w-4" />
+                        )}
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {item.detail}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">
+                            {item.title}
+                          </p>
+                          <Badge
+                            variant={
+                              item.tone === "operational"
+                                ? "destructive"
+                                : "warning"
+                            }
+                          >
+                            {item.tone === "operational"
+                              ? "Operational"
+                              : "Needs Context"}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {item.detail}
+                        </p>
+                      </div>
+                      <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                    </Link>
+                  ))}
+                  {attentionItems.length > 10 ? (
+                    <div className="p-4 text-center text-xs text-muted-foreground">
+                      {attentionItems.length - 10} more item(s) are available in
+                      Data Quality or the relevant inventory view.
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.section>
+
+        <motion.section
+          variants={itemVariants}
+          aria-labelledby="recently-updated-title"
+        >
+          <Card className="gap-0 overflow-hidden p-0">
+            <CardHeader className="border-b border-border/60 bg-muted/25 p-5">
+              <CardTitle
+                id="recently-updated-title"
+                className="flex items-center gap-2 text-base"
+              >
+                <Clock3 className="h-4 w-4 text-primary" />
+                Recently Updated
+              </CardTitle>
+              <CardDescription>
+                Latest changes across active Applications and Inventory.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="divide-y divide-border/60 p-0">
+              {(data?.recentlyUpdated ?? []).length === 0 ? (
+                <div className="p-6 text-sm text-muted-foreground">
+                  No recent inventory updates.
+                </div>
+              ) : (
+                data?.recentlyUpdated.map((item) => (
+                  <Link
+                    key={`${item.kind}-${item.id}`}
+                    href={item.href}
+                    className="group flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">
+                        {item.name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {item.metadata} ·{" "}
+                        {new Date(item.updatedAt).toLocaleString()}
                       </p>
                     </div>
-                    <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
                   </Link>
-                ))}
-                {attentionItems.length > 10 ? (
-                  <div className="p-4 text-center text-xs text-muted-foreground">
-                    {attentionItems.length - 10} more item(s) are available in
-                    Data Quality or the relevant inventory view.
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.section>
-
-      <motion.section
-        variants={itemVariants}
-        aria-labelledby="recently-updated-title"
-      >
-        <Card className="gap-0 overflow-hidden p-0">
-          <CardHeader className="border-b border-border/60 bg-muted/25 p-5">
-            <CardTitle
-              id="recently-updated-title"
-              className="flex items-center gap-2 text-base"
-            >
-              <Clock3 className="h-4 w-4 text-primary" />
-              Recently Updated
-            </CardTitle>
-            <CardDescription>
-              Latest changes across active Applications and Inventory.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="divide-y divide-border/60 p-0">
-            {(data?.recentlyUpdated ?? []).length === 0 ? (
-              <div className="p-6 text-sm text-muted-foreground">
-                No recent inventory updates.
-              </div>
-            ) : (
-              data?.recentlyUpdated.map((item) => (
-                <Link
-                  key={`${item.kind}-${item.id}`}
-                  href={item.href}
-                  className="group flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">
-                      {item.name}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {item.metadata} ·{" "}
-                      {new Date(item.updatedAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
-                </Link>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </motion.section>
-    </motion.div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </motion.section>
+      </motion.div>
     </InventoryQueryStateView>
   );
 }

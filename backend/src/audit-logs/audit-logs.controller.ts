@@ -25,8 +25,25 @@ export class AuditLogsController {
   findAll(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '100',
+    @Query('search') search?: string,
+    @Query('action') action?: string,
+    @Query('actorId') actorId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
   ) {
-    return this.auditLogsService.findAll(Number(page), Number(limit));
+    return this.auditLogsService.findAll({
+      page: Number(page),
+      limit: Number(limit),
+      search,
+      action,
+      actorId,
+      from,
+      to,
+      sortBy,
+      sortDir,
+    });
   }
 
   @Post('export')
