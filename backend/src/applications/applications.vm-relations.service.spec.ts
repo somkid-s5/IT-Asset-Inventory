@@ -29,6 +29,8 @@ type ApplicationUpdateArgs = {
   };
 };
 
+type VmLookupArgs = { where: { id: { in: string[] } } };
+
 const projectedApplication = {
   id: 'app-1',
   name: 'Example App',
@@ -50,7 +52,18 @@ describe('ApplicationsService VM relationship classification', () => {
     });
     const prisma = {
       applicationEnvironment: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'env-1' }),
+        findFirst: jest.fn().mockResolvedValue({ id: 'env-1', name: 'PROD' }),
+      },
+      vmInventory: {
+        findMany: jest.fn().mockImplementation(({ where }: VmLookupArgs) =>
+          Promise.resolve(
+            where.id.in.map((id: string) => ({
+              id,
+              environment: 'PROD',
+              lifecycleState: 'ACTIVE',
+            })),
+          ),
+        ),
       },
       applicationComponent: {
         count: jest.fn().mockResolvedValue(0),
@@ -105,6 +118,17 @@ describe('ApplicationsService VM relationship classification', () => {
       },
       applicationComponentAsset: { findMany: jest.fn().mockResolvedValue([]) },
       applicationComponentVm: { findMany: jest.fn().mockResolvedValue([]) },
+      vmInventory: {
+        findMany: jest.fn().mockImplementation(({ where }: VmLookupArgs) =>
+          Promise.resolve(
+            where.id.in.map((id: string) => ({
+              id,
+              environment: 'PROD',
+              lifecycleState: 'ACTIVE',
+            })),
+          ),
+        ),
+      },
       auditLog: { create: jest.fn().mockResolvedValue({}) },
     } as unknown as PrismaService;
     const service = new ApplicationsService(prisma, {} as CredentialsService);

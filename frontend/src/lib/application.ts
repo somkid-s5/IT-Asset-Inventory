@@ -18,12 +18,21 @@ export interface ApplicationComponent {
     systemName?: string;
     relationType?: string;
     responsibleParty?: string | null;
+    environment?: string | null;
+    lifecycleState?: string;
+    archived?: boolean;
   }>;
   logicalDatabases?: Array<{
     id: string;
     name: string;
     status?: string | null;
-    databaseInventory?: { id: string; name: string } | null;
+    archived?: boolean;
+    databaseInventory?: {
+      id: string;
+      name: string;
+      environment?: string | null;
+      status?: string | null;
+    } | null;
   }>;
 }
 export interface ApplicationEnvironment {
@@ -41,10 +50,14 @@ export interface ApplicationCredential {
 }
 export interface ApplicationAccess {
   id: string;
+  applicationId?: string;
   label: string;
   address: string;
   method: string;
-  environmentId?: string | null;
+  environmentId: string;
+  environment?: { id: string; name: ApplicationEnvironmentName } | null;
+  sortOrder: number;
+  isPrimary: boolean;
   credentials: ApplicationCredential[];
 }
 export interface Application {

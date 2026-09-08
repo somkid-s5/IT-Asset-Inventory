@@ -1,5 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ApplicationStatus, AuditAction, Prisma, Role } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  ApplicationStatus,
+  AuditAction,
+  DatabaseStatus,
+  Prisma,
+  Role,
+  VmLifecycleState,
+} from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
@@ -24,7 +36,15 @@ const include = {
           },
           vmLinks: {
             include: {
-              vm: { select: { id: true, name: true, systemName: true } },
+              vm: {
+                select: {
+                  id: true,
+                  name: true,
+                  systemName: true,
+                  environment: true,
+                  lifecycleState: true,
+                },
+              },
             },
           },
           logicalDatabases: {
@@ -32,19 +52,36 @@ const include = {
               id: true,
               name: true,
               status: true,
-              databaseInventory: { select: { id: true, name: true } },
+              databaseInventory: {
+                select: {
+                  id: true,
+                  name: true,
+                  environment: true,
+                  status: true,
+                },
+              },
             },
           },
         },
         orderBy: { sortOrder: 'asc' as const },
       },
-      access: true,
+      access: {
+        orderBy: [
+          { sortOrder: 'asc' as const },
+          { createdAt: 'asc' as const },
+          { id: 'asc' as const },
+        ],
+      },
     },
     orderBy: { sortOrder: 'asc' as const },
   },
   access: {
     include: { credentials: true, environment: true },
-    orderBy: { createdAt: 'asc' as const },
+    orderBy: [
+      { sortOrder: 'asc' as const },
+      { createdAt: 'asc' as const },
+      { id: 'asc' as const },
+    ],
   },
   documentLinks: {
     include: {
@@ -67,11 +104,122 @@ export class ApplicationsService {
   private text(value?: string | null) {
     return value?.trim() || null;
   }
+
+  private async validateAccessEnvironment(
+    applicationId: string,
+    environmentId: string,
+  ) {
+    const environment = await this.prisma.applicationEnvironment.findUnique({
+      where: { id: environmentId },
+      select: { id: true, applicationId: true, name: true },
+    });
+    if (!environment) {
+      throw new NotFoundException('Application environment not found');
+    }
+    if (environment.applicationId !== applicationId) {
+      throw new BadRequestException(
+        'Application access must belong to an environment owned by the application.',
+      );
+    }
+    return environment;
+  }
+
+  private async validateComponentRelations(
+    environmentName: string,
+    vmIds: string[] | undefined,
+    logicalDatabaseIds: string[] | undefined,
+    retained: { vmIds?: Set<string>; logicalDatabaseIds?: Set<string> } = {},
+  ) {
+    const uniqueVmIds = [...new Set(vmIds ?? [])];
+    if (uniqueVmIds.length) {
+      const vms = await this.prisma.vmInventory.findMany({
+        where: { id: { in: uniqueVmIds } },
+        select: { id: true, environment: true, lifecycleState: true },
+      });
+      if (vms.length !== uniqueVmIds.length) {
+        throw new BadRequestException(
+          'Every selected VM must exist before it can be linked to a component.',
+        );
+      }
+      for (const vm of vms) {
+        const isRetainedArchived =
+          vm.lifecycleState === VmLifecycleState.ARCHIVED &&
+          retained.vmIds?.has(vm.id);
+        if (
+          vm.lifecycleState === VmLifecycleState.ARCHIVED &&
+          !isRetainedArchived
+        ) {
+          throw new BadRequestException(
+            `Archived VM ${vm.id} cannot be newly linked to a component.`,
+          );
+        }
+        if (
+          vm.lifecycleState !== VmLifecycleState.ARCHIVED &&
+          vm.environment !== environmentName
+        ) {
+          throw new BadRequestException(
+            `VM ${vm.id} environment must match component environment ${environmentName}.`,
+          );
+        }
+      }
+    }
+
+    const uniqueLogicalDatabaseIds = [...new Set(logicalDatabaseIds ?? [])];
+    if (uniqueLogicalDatabaseIds.length) {
+      const logicalDatabases = await this.prisma.logicalDatabase.findMany({
+        where: { id: { in: uniqueLogicalDatabaseIds } },
+        select: {
+          id: true,
+          status: true,
+          databaseInventory: {
+            select: { id: true, environment: true, status: true },
+          },
+        },
+      });
+      if (logicalDatabases.length !== uniqueLogicalDatabaseIds.length) {
+        throw new BadRequestException(
+          'Every selected Logical Database must exist before it can be linked to a component.',
+        );
+      }
+      for (const logical of logicalDatabases) {
+        const isArchived =
+          logical.status === DatabaseStatus.ARCHIVED ||
+          logical.databaseInventory.status === DatabaseStatus.ARCHIVED;
+        const isRetainedArchived =
+          isArchived && retained.logicalDatabaseIds?.has(logical.id);
+        if (isArchived && !isRetainedArchived) {
+          throw new BadRequestException(
+            `Archived Logical Database ${logical.id} cannot be newly linked to a component.`,
+          );
+        }
+        if (
+          !isArchived &&
+          logical.databaseInventory.environment !== environmentName
+        ) {
+          throw new BadRequestException(
+            `Logical Database ${logical.id} parent Database environment must match component environment ${environmentName}.`,
+          );
+        }
+      }
+    }
+  }
+
   private project(app: ApplicationWithRelations, role: Role = Role.VIEWER) {
     const canViewSensitive = role === Role.ADMIN || role === Role.EDITOR;
     const projectAccess = (item: (typeof app.access)[number]) => ({
-      ...item,
+      id: item.id,
+      applicationId: item.applicationId,
+      environmentId: item.environmentId,
+      environment: item.environment
+        ? { id: item.environment.id, name: item.environment.name }
+        : null,
+      label: item.label,
       address: canViewSensitive ? item.address : '[restricted]',
+      method: item.method,
+      sortOrder: item.sortOrder,
+      isPrimary: item.isPrimary,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
       credentials: item.credentials.map((c) => ({
         id: c.id,
         username: c.username,
@@ -120,8 +268,14 @@ export class ApplicationsService {
             ...link.vm,
             relationType: link.relationType,
             responsibleParty: link.responsibleParty,
+            archived: link.vm.lifecycleState === VmLifecycleState.ARCHIVED,
           })),
-          logicalDatabases: component.logicalDatabases,
+          logicalDatabases: component.logicalDatabases.map((logical) => ({
+            ...logical,
+            archived:
+              logical.status === DatabaseStatus.ARCHIVED ||
+              logical.databaseInventory.status === DatabaseStatus.ARCHIVED,
+          })),
         })),
       })),
       access: app.access.map(projectAccess),
@@ -167,7 +321,10 @@ export class ApplicationsService {
 
   private async buildComponentAssetLinks(
     assetIds: string[] | undefined,
-    options: { excludeComponentId?: string } = {},
+    options: {
+      excludeComponentId?: string;
+      preserveComponentId?: string;
+    } = {},
   ) {
     if (!assetIds) return undefined;
     const uniqueAssetIds = [...new Set(assetIds.filter(Boolean))];
@@ -176,10 +333,31 @@ export class ApplicationsService {
       options,
     );
 
-    return uniqueAssetIds.map((assetId) => ({
-      assetId,
-      relationType: existingPrimaryAssetIds.has(assetId) ? 'SHARED' : 'PRIMARY',
-    }));
+    const existingLinks = options.preserveComponentId
+      ? await this.prisma.applicationComponentAsset.findMany({
+          where: { componentId: options.preserveComponentId },
+          select: { assetId: true, relationType: true, responsibleParty: true },
+        })
+      : [];
+    const existingByAssetId = new Map(
+      existingLinks.map((link) => [link.assetId, link]),
+    );
+
+    return uniqueAssetIds.map((assetId) => {
+      const existing = existingByAssetId.get(assetId);
+      return existing
+        ? {
+            assetId,
+            relationType: existing.relationType,
+            responsibleParty: existing.responsibleParty,
+          }
+        : {
+            assetId,
+            relationType: existingPrimaryAssetIds.has(assetId)
+              ? 'SHARED'
+              : 'PRIMARY',
+          };
+    });
   }
 
   private async findExistingPrimaryVmIds(
@@ -220,7 +398,10 @@ export class ApplicationsService {
 
   private async buildComponentVmLinks(
     vmIds: string[] | undefined,
-    options: { excludeComponentId?: string } = {},
+    options: {
+      excludeComponentId?: string;
+      preserveComponentId?: string;
+    } = {},
   ) {
     if (!vmIds) return undefined;
     const uniqueVmIds = [...new Set(vmIds.filter(Boolean))];
@@ -229,16 +410,54 @@ export class ApplicationsService {
       options,
     );
 
-    return uniqueVmIds.map((vmId) => ({
-      vmId,
-      relationType: existingPrimaryVmIds.has(vmId) ? 'SHARED' : 'PRIMARY',
-    }));
+    const existingLinks = options.preserveComponentId
+      ? await this.prisma.applicationComponentVm.findMany({
+          where: { componentId: options.preserveComponentId },
+          select: { vmId: true, relationType: true, responsibleParty: true },
+        })
+      : [];
+    const existingByVmId = new Map(
+      existingLinks.map((link) => [link.vmId, link]),
+    );
+
+    return uniqueVmIds.map((vmId) => {
+      const existing = existingByVmId.get(vmId);
+      return existing
+        ? {
+            vmId,
+            relationType: existing.relationType,
+            responsibleParty: existing.responsibleParty,
+          }
+        : {
+            vmId,
+            relationType: existingPrimaryVmIds.has(vmId) ? 'SHARED' : 'PRIMARY',
+          };
+    });
   }
 
   private async nested(
     dto: CreateApplicationDto | UpdateApplicationDto,
-    applicationId?: string,
+    applicationId: string,
   ) {
+    for (const environment of dto.environments ?? []) {
+      for (const component of environment.components ?? []) {
+        await this.validateComponentRelations(
+          environment.name,
+          component.vmIds,
+          component.logicalDatabaseIds,
+        );
+      }
+    }
+
+    for (const access of dto.access ?? []) {
+      if (!access.environmentId) {
+        throw new BadRequestException(
+          'Application access must specify an owning environment.',
+        );
+      }
+      await this.validateAccessEnvironment(applicationId, access.environmentId);
+    }
+
     const requestedAssetIds =
       dto.environments?.flatMap((environment) =>
         (environment.components ?? []).flatMap(
@@ -272,7 +491,7 @@ export class ApplicationsService {
           .map((c, componentIndex) => ({
             name: c.name.trim(),
             description: this.text(c.description),
-            sortOrder: componentIndex,
+            sortOrder: c.sortOrder ?? componentIndex,
             ...(c.assetIds?.length
               ? {
                   assetLinks: {
@@ -319,33 +538,85 @@ export class ApplicationsService {
           })),
       },
       access: {
-        create: this.buildAccess(env.access),
+        create: this.buildEnvironmentAccess(env.access, { applicationId }),
       },
     }));
-    const access = dto.access?.map((item) => this.buildAccess([item])[0]);
+    const access = dto.access ? this.buildAccess(dto.access) : undefined;
     return { environments, access };
   }
 
   private buildAccess(
-    items?: Array<{
-      label: string;
-      address: string;
-      method: string;
-      environmentId?: string;
-      credentials?: Array<{
-        username: string;
-        password: string;
-        role?: string;
-      }>;
-    }>,
+    items:
+      | Array<{
+          label: string;
+          address: string;
+          method: string;
+          environmentId?: string;
+          isPrimary?: boolean;
+          sortOrder?: number;
+          credentials?: Array<{
+            username: string;
+            password: string;
+            role?: string;
+          }>;
+        }>
+      | undefined,
   ) {
-    return (items ?? []).map((item) => ({
+    const primaryCount = (items ?? []).filter((item) => item.isPrimary).length;
+    if (primaryCount > 1) {
+      throw new BadRequestException(
+        'Only one Primary Access may be assigned to an environment.',
+      );
+    }
+    return (items ?? []).map((item, index) => ({
       label: item.label.trim(),
       address: item.address.trim(),
       method: item.method.trim(),
-      ...(item.environmentId
-        ? { environment: { connect: { id: item.environmentId } } }
-        : {}),
+      sortOrder: item.sortOrder ?? index,
+      isPrimary: item.isPrimary ?? false,
+      environment: { connect: { id: item.environmentId! } },
+      credentials: {
+        create: (item.credentials ?? [])
+          .filter((c) => c.username.trim())
+          .map((c) => ({
+            username: c.username.trim(),
+            encryptedPassword: this.credentials.encrypt(c.password ?? ''),
+            role: this.text(c.role),
+          })),
+      },
+    }));
+  }
+
+  private buildEnvironmentAccess(
+    items:
+      | Array<{
+          label: string;
+          address: string;
+          method: string;
+          isPrimary?: boolean;
+          sortOrder?: number;
+          credentials?: Array<{
+            username: string;
+            password: string;
+            role?: string;
+          }>;
+        }>
+      | undefined,
+    options: { applicationId: string },
+  ) {
+    const primaryCount = (items ?? []).filter((item) => item.isPrimary).length;
+    if (primaryCount > 1) {
+      throw new BadRequestException(
+        'Only one Primary Access may be assigned to an environment.',
+      );
+    }
+    return (items ?? []).map((item, index) => ({
+      label: item.label.trim(),
+      address: item.address.trim(),
+      method: item.method.trim(),
+      sortOrder: item.sortOrder ?? index,
+      isPrimary: item.isPrimary ?? false,
+      application: { connect: { id: options.applicationId } },
       credentials: {
         create: (item.credentials ?? [])
           .filter((c) => c.username.trim())
@@ -457,9 +728,11 @@ export class ApplicationsService {
   }
 
   async create(dto: CreateApplicationDto, userId: string) {
-    const nested = await this.nested(dto);
+    const applicationId = randomUUID();
+    const nested = await this.nested(dto, applicationId);
     const app = await this.prisma.application.create({
       data: {
+        id: applicationId,
         name: dto.name.trim(),
         technicalOwner: this.text(dto.technicalOwner),
         businessUnit: this.text(dto.businessUnit),
@@ -553,32 +826,41 @@ export class ApplicationsService {
 
   async createAccess(applicationId: string, dto: AccessDto, userId: string) {
     await this.findOne(applicationId);
-    if (dto.environmentId) {
-      const environment = await this.prisma.applicationEnvironment.findFirst({
-        where: { id: dto.environmentId, applicationId },
-      });
-      if (!environment)
-        throw new NotFoundException('Application environment not found');
-    }
-    await this.prisma.applicationAccess.create({
-      data: {
-        applicationId,
-        environmentId: dto.environmentId,
-        label: dto.label.trim(),
-        address: dto.address.trim(),
-        method: dto.method.trim(),
-        credentials: {
-          create: (dto.credentials ?? [])
-            .filter((credential) => credential.username.trim())
-            .map((credential) => ({
-              username: credential.username.trim(),
-              encryptedPassword: this.credentials.encrypt(
-                credential.password ?? '',
-              ),
-              role: this.text(credential.role),
-            })),
+    await this.validateAccessEnvironment(applicationId, dto.environmentId);
+    const lastAccess = await this.prisma.applicationAccess.findFirst({
+      where: { environmentId: dto.environmentId },
+      orderBy: [{ sortOrder: 'desc' }, { id: 'desc' }],
+      select: { sortOrder: true },
+    });
+    await this.prisma.$transaction(async (tx) => {
+      if (dto.isPrimary) {
+        await tx.applicationAccess.updateMany({
+          where: { environmentId: dto.environmentId, isPrimary: true },
+          data: { isPrimary: false },
+        });
+      }
+      await tx.applicationAccess.create({
+        data: {
+          applicationId,
+          environmentId: dto.environmentId,
+          label: dto.label.trim(),
+          address: dto.address.trim(),
+          method: dto.method.trim(),
+          sortOrder: dto.sortOrder ?? (lastAccess?.sortOrder ?? -1) + 1,
+          isPrimary: dto.isPrimary,
+          credentials: {
+            create: (dto.credentials ?? [])
+              .filter((credential) => credential.username.trim())
+              .map((credential) => ({
+                username: credential.username.trim(),
+                encryptedPassword: this.credentials.encrypt(
+                  credential.password ?? '',
+                ),
+                role: this.text(credential.role),
+              })),
+          },
         },
-      },
+      });
     });
     await this.recordTopologyAudit(userId, applicationId, {
       access: dto.label.trim(),
@@ -595,30 +877,41 @@ export class ApplicationsService {
   ) {
     const access = await this.prisma.applicationAccess.findFirst({
       where: { id: accessId, applicationId },
-      select: { id: true, label: true },
+      select: {
+        id: true,
+        label: true,
+        environmentId: true,
+        isPrimary: true,
+        sortOrder: true,
+      },
     });
     if (!access)
       throw new NotFoundException('Application access point not found');
 
-    if (dto.environmentId) {
-      const environment = await this.prisma.applicationEnvironment.findFirst({
-        where: { id: dto.environmentId, applicationId },
-        select: { id: true },
-      });
-      if (!environment)
-        throw new NotFoundException('Application environment not found');
-    }
+    const targetEnvironmentId = dto.environmentId ?? access.environmentId;
+    await this.validateAccessEnvironment(applicationId, targetEnvironmentId);
+    const targetIsPrimary = dto.isPrimary ?? access.isPrimary;
 
     await this.prisma.$transaction(async (tx) => {
+      if (targetIsPrimary) {
+        await tx.applicationAccess.updateMany({
+          where: {
+            environmentId: targetEnvironmentId,
+            isPrimary: true,
+            id: { not: accessId },
+          },
+          data: { isPrimary: false },
+        });
+      }
       const data: Prisma.ApplicationAccessUpdateInput = {
         ...(dto.label !== undefined ? { label: dto.label.trim() } : {}),
         ...(dto.address !== undefined ? { address: dto.address.trim() } : {}),
         ...(dto.method !== undefined ? { method: dto.method.trim() } : {}),
         ...(dto.environmentId !== undefined
-          ? dto.environmentId
-            ? { environment: { connect: { id: dto.environmentId } } }
-            : { environment: { disconnect: true } }
+          ? { environment: { connect: { id: dto.environmentId } } }
           : {}),
+        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+        ...(dto.isPrimary !== undefined ? { isPrimary: dto.isPrimary } : {}),
       };
       if (Object.keys(data).length) {
         await tx.applicationAccess.update({ where: { id: accessId }, data });
@@ -788,6 +1081,11 @@ export class ApplicationsService {
     });
     if (!environment)
       throw new NotFoundException('Application environment not found');
+    await this.validateComponentRelations(
+      environment.name,
+      dto.vmIds,
+      dto.logicalDatabaseIds,
+    );
     const assetLinks = await this.buildComponentAssetLinks(dto.assetIds);
     const vmLinks = await this.buildComponentVmLinks(dto.vmIds);
     await this.prisma.applicationComponent.create({
@@ -831,16 +1129,49 @@ export class ApplicationsService {
     dto: ComponentDto,
     userId: string,
   ) {
+    const environment = await this.prisma.applicationEnvironment.findFirst({
+      where: { id: environmentId, applicationId },
+      select: { id: true, name: true },
+    });
+    if (!environment)
+      throw new NotFoundException('Application environment not found');
     const component = await this.prisma.applicationComponent.findFirst({
       where: { id: componentId, environmentId, environment: { applicationId } },
     });
     if (!component)
       throw new NotFoundException('Application component not found');
+    const [existingVmLinks, existingLogicalDatabases] = await Promise.all([
+      dto.vmIds !== undefined
+        ? this.prisma.applicationComponentVm.findMany({
+            where: { componentId },
+            select: { vmId: true },
+          })
+        : Promise.resolve([]),
+      dto.logicalDatabaseIds !== undefined
+        ? this.prisma.logicalDatabase.findMany({
+            where: { components: { some: { id: componentId } } },
+            select: { id: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    await this.validateComponentRelations(
+      environment.name,
+      dto.vmIds,
+      dto.logicalDatabaseIds,
+      {
+        vmIds: new Set(existingVmLinks.map((link) => link.vmId)),
+        logicalDatabaseIds: new Set(
+          existingLogicalDatabases.map((logical) => logical.id),
+        ),
+      },
+    );
     const assetLinks = await this.buildComponentAssetLinks(dto.assetIds, {
       excludeComponentId: componentId,
+      preserveComponentId: componentId,
     });
     const vmLinks = await this.buildComponentVmLinks(dto.vmIds, {
       excludeComponentId: componentId,
+      preserveComponentId: componentId,
     });
     await this.prisma.applicationComponent.update({
       where: { id: componentId },
@@ -851,16 +1182,44 @@ export class ApplicationsService {
         ...(assetLinks !== undefined
           ? {
               assetLinks: {
-                deleteMany: {},
-                create: assetLinks,
+                deleteMany: dto.assetIds?.length
+                  ? { assetId: { notIn: [...new Set(dto.assetIds)] } }
+                  : {},
+                upsert: assetLinks.map((link) => ({
+                  where: {
+                    componentId_assetId: {
+                      componentId,
+                      assetId: link.assetId,
+                    },
+                  },
+                  update: {
+                    relationType: link.relationType,
+                    responsibleParty: link.responsibleParty ?? null,
+                  },
+                  create: link,
+                })),
               },
             }
           : {}),
         ...(vmLinks !== undefined
           ? {
               vmLinks: {
-                deleteMany: {},
-                create: vmLinks,
+                deleteMany: dto.vmIds?.length
+                  ? { vmId: { notIn: [...new Set(dto.vmIds)] } }
+                  : {},
+                upsert: vmLinks.map((link) => ({
+                  where: {
+                    componentId_vmId: {
+                      componentId,
+                      vmId: link.vmId,
+                    },
+                  },
+                  update: {
+                    relationType: link.relationType,
+                    responsibleParty: link.responsibleParty ?? null,
+                  },
+                  create: link,
+                })),
               },
             }
           : {}),

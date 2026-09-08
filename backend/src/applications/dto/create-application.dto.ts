@@ -1,10 +1,13 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { ApplicationEnvironmentName } from '@prisma/client';
@@ -20,6 +23,8 @@ class ApplicationAccessDto {
   @IsString() @IsNotEmpty() address: string;
   @IsString() @IsNotEmpty() method: string;
   @IsOptional() @IsString() environmentId?: string;
+  @IsOptional() @IsBoolean() isPrimary?: boolean;
+  @IsOptional() @IsInt() @Min(0) sortOrder?: number;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -36,6 +41,7 @@ class ApplicationComponentDto {
   @IsArray()
   @IsString({ each: true })
   logicalDatabaseIds?: string[];
+  @IsOptional() @IsInt() @Min(0) sortOrder?: number;
 }
 
 class ApplicationEnvironmentDto {

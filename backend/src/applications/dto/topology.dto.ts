@@ -33,7 +33,9 @@ export class AccessDto {
   @IsString() @IsNotEmpty() label: string;
   @IsString() @IsNotEmpty() address: string;
   @IsString() @IsNotEmpty() method: string;
-  @IsOptional() @IsString() environmentId?: string;
+  @IsString() @IsNotEmpty() environmentId: string;
+  @IsBoolean() isPrimary: boolean;
+  @IsOptional() @IsInt() @Min(0) sortOrder?: number;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -50,7 +52,9 @@ export class UpdateAccessDto {
   @IsOptional() @IsString() @IsNotEmpty() label?: string;
   @IsOptional() @IsString() @IsNotEmpty() address?: string;
   @IsOptional() @IsString() @IsNotEmpty() method?: string;
-  @IsOptional() @IsString() environmentId?: string | null;
+  @IsOptional() @IsString() @IsNotEmpty() environmentId?: string;
+  @IsOptional() @IsBoolean() isPrimary?: boolean;
+  @IsOptional() @IsInt() @Min(0) sortOrder?: number;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
