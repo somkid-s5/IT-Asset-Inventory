@@ -481,66 +481,73 @@ export class ApplicationsService {
     );
     const assignedPrimaryVmIds = new Set<string>();
 
-    const environments = dto.environments?.map((env, index) => ({
-      name: env.name,
-      noDatabase: Boolean(env.noDatabase),
-      sortOrder: index,
-      components: {
-        create: (env.components ?? [])
-          .filter((c) => c.name.trim())
-          .map((c, componentIndex) => ({
-            name: c.name.trim(),
-            description: this.text(c.description),
-            sortOrder: c.sortOrder ?? componentIndex,
-            ...(c.assetIds?.length
-              ? {
-                  assetLinks: {
-                    create: [...new Set(c.assetIds)].map((assetId) => {
-                      const relationType =
-                        existingPrimaryAssetIds.has(assetId) ||
-                        assignedPrimaryAssetIds.has(assetId)
-                          ? 'SHARED'
-                          : 'PRIMARY';
-                      assignedPrimaryAssetIds.add(assetId);
-                      return {
-                        asset: { connect: { id: assetId } },
-                        relationType,
-                      };
-                    }),
-                  },
-                }
-              : {}),
-            ...(c.vmIds?.length
-              ? {
-                  vmLinks: {
-                    create: [...new Set(c.vmIds)].map((vmId) => {
-                      const relationType =
-                        existingPrimaryVmIds.has(vmId) ||
-                        assignedPrimaryVmIds.has(vmId)
-                          ? 'SHARED'
-                          : 'PRIMARY';
-                      assignedPrimaryVmIds.add(vmId);
-                      return {
-                        vm: { connect: { id: vmId } },
-                        relationType,
-                      };
-                    }),
-                  },
-                }
-              : {}),
-            ...(c.logicalDatabaseIds?.length
-              ? {
-                  logicalDatabases: {
-                    connect: c.logicalDatabaseIds.map((id) => ({ id })),
-                  },
-                }
-              : {}),
-          })),
-      },
-      access: {
-        create: this.buildEnvironmentAccess(env.access, { applicationId }),
-      },
-    }));
+    const environments = dto.environments?.map((env, index) => {
+      const environmentId = randomUUID();
+      return {
+        id: environmentId,
+        name: env.name,
+        noDatabase: Boolean(env.noDatabase),
+        sortOrder: index,
+        components: {
+          create: (env.components ?? [])
+            .filter((c) => c.name.trim())
+            .map((c, componentIndex) => ({
+              name: c.name.trim(),
+              description: this.text(c.description),
+              sortOrder: c.sortOrder ?? componentIndex,
+              ...(c.assetIds?.length
+                ? {
+                    assetLinks: {
+                      create: [...new Set(c.assetIds)].map((assetId) => {
+                        const relationType =
+                          existingPrimaryAssetIds.has(assetId) ||
+                          assignedPrimaryAssetIds.has(assetId)
+                            ? 'SHARED'
+                            : 'PRIMARY';
+                        assignedPrimaryAssetIds.add(assetId);
+                        return {
+                          asset: { connect: { id: assetId } },
+                          relationType,
+                        };
+                      }),
+                    },
+                  }
+                : {}),
+              ...(c.vmIds?.length
+                ? {
+                    vmLinks: {
+                      create: [...new Set(c.vmIds)].map((vmId) => {
+                        const relationType =
+                          existingPrimaryVmIds.has(vmId) ||
+                          assignedPrimaryVmIds.has(vmId)
+                            ? 'SHARED'
+                            : 'PRIMARY';
+                        assignedPrimaryVmIds.add(vmId);
+                        return {
+                          vm: { connect: { id: vmId } },
+                          relationType,
+                        };
+                      }),
+                    },
+                  }
+                : {}),
+              ...(c.logicalDatabaseIds?.length
+                ? {
+                    logicalDatabases: {
+                      connect: c.logicalDatabaseIds.map((id) => ({ id })),
+                    },
+                  }
+                : {}),
+            })),
+        },
+        access: {
+          create: this.buildEnvironmentAccess(env.access, {
+            applicationId,
+            environmentId,
+          }),
+        },
+      };
+    });
     const access = dto.access ? this.buildAccess(dto.access) : undefined;
     return { environments, access };
   }
@@ -562,11 +569,18 @@ export class ApplicationsService {
         }>
       | undefined,
   ) {
-    const primaryCount = (items ?? []).filter((item) => item.isPrimary).length;
-    if (primaryCount > 1) {
-      throw new BadRequestException(
-        'Only one Primary Access may be assigned to an environment.',
-      );
+    const primaryCountByEnvironment = new Map<string | undefined, number>();
+    for (const item of items ?? []) {
+      if (item.isPrimary) {
+        const count =
+          (primaryCountByEnvironment.get(item.environmentId) ?? 0) + 1;
+        primaryCountByEnvironment.set(item.environmentId, count);
+        if (count > 1) {
+          throw new BadRequestException(
+            'Only one Primary Access may be assigned to an environment.',
+          );
+        }
+      }
     }
     return (items ?? []).map((item, index) => ({
       label: item.label.trim(),
@@ -602,7 +616,7 @@ export class ApplicationsService {
           }>;
         }>
       | undefined,
-    options: { applicationId: string },
+    options: { applicationId: string; environmentId: string },
   ) {
     const primaryCount = (items ?? []).filter((item) => item.isPrimary).length;
     if (primaryCount > 1) {
@@ -617,6 +631,7 @@ export class ApplicationsService {
       sortOrder: item.sortOrder ?? index,
       isPrimary: item.isPrimary ?? false,
       application: { connect: { id: options.applicationId } },
+      environment: { connect: { id: options.environmentId } },
       credentials: {
         create: (item.credentials ?? [])
           .filter((c) => c.username.trim())

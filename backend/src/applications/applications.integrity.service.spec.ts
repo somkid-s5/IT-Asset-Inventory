@@ -1,18 +1,47 @@
 import {
   ApplicationStatus,
+  ApplicationEnvironmentName,
   DatabaseStatus,
   Role,
   VmLifecycleState,
 } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateApplicationDto } from './dto/create-application.dto';
 import { ApplicationsService } from './applications.service';
 
 const credentials = {
   encrypt: jest.fn((value: string) => `encrypted:${value}`),
 } as unknown as CredentialsService;
 
+type AccessInput = {
+  label: string;
+  address: string;
+  method: string;
+  environmentId?: string;
+  isPrimary?: boolean;
+  sortOrder?: number;
+};
+
 type IntegrityInternals = {
+  buildAccess: (items: AccessInput[] | undefined) => Array<{
+    environment: { connect: { id: string } };
+    isPrimary: boolean;
+  }>;
+  nested: (
+    dto: CreateApplicationDto,
+    applicationId: string,
+  ) => Promise<{
+    environments?: Array<{
+      id: string;
+      access: {
+        create: Array<{
+          application: { connect: { id: string } };
+          environment: { connect: { id: string } };
+        }>;
+      };
+    }>;
+  }>;
   validateComponentRelations: (
     environmentName: string,
     vmIds: string[] | undefined,
@@ -36,6 +65,76 @@ type IntegrityInternals = {
 };
 
 describe('ApplicationsService Ticket 04 integrity contracts', () => {
+  it('connects nested environment access to its owning application environment', async () => {
+    const prisma = {
+      applicationEnvironment: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'env-prod',
+          applicationId: 'app-1',
+          name: ApplicationEnvironmentName.PROD,
+        }),
+      },
+    } as unknown as PrismaService;
+    const service = new ApplicationsService(prisma, credentials);
+    const internals = service as unknown as IntegrityInternals;
+
+    const result = await internals.nested(
+      {
+        name: 'Inventory App',
+        environments: [
+          {
+            name: ApplicationEnvironmentName.PROD,
+            access: [
+              {
+                label: 'Console',
+                address: 'https://prod.example.test',
+                method: 'HTTPS',
+                isPrimary: true,
+              },
+            ],
+          },
+        ],
+      },
+      'app-1',
+    );
+
+    const environment = result.environments?.[0];
+    if (!environment) throw new Error('Expected nested environment data');
+    expect(environment.access.create[0]).toMatchObject({
+      application: { connect: { id: 'app-1' } },
+      environment: { connect: { id: environment.id } },
+    });
+  });
+
+  it('enforces primary access uniqueness per environment, not across the application', () => {
+    const service = new ApplicationsService({} as PrismaService, credentials);
+    const internals = service as unknown as IntegrityInternals;
+    const access = [
+      {
+        label: 'PROD console',
+        address: 'https://prod.example.test',
+        method: 'HTTPS',
+        environmentId: 'env-prod',
+        isPrimary: true,
+      },
+      {
+        label: 'UAT console',
+        address: 'https://uat.example.test',
+        method: 'HTTPS',
+        environmentId: 'env-uat',
+        isPrimary: true,
+      },
+    ];
+
+    expect(internals.buildAccess(access)).toHaveLength(2);
+    expect(() =>
+      internals.buildAccess([
+        access[0],
+        { ...access[0], label: 'Second PROD console' },
+      ]),
+    ).toThrow('Only one Primary Access may be assigned to an environment.');
+  });
+
   it('rejects an access environment owned by another application', async () => {
     const prisma = {
       applicationEnvironment: {
