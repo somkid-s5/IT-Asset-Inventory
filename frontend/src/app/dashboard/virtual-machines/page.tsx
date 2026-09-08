@@ -5,24 +5,24 @@ export const dynamic = 'force-dynamic';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePageHeader } from '@/contexts/PageHeaderContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle, CheckCircle2, Clock3, Monitor, RefreshCw, Search, Server, 
-  ChevronLeft, ChevronRight, Columns, Download, ShieldAlert,
+  Columns, Download, ShieldAlert,
   LoaderCircle, Box, Archive, ArchiveRestore
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { VmFormDialog } from '@/components/LazyLoadedDialogs';
 import { EmptyState } from '@/components/EmptyState';
-import { EnvironmentBadge, InventoryQueryStateView } from '@/components/inventory';
+import { EnvironmentBadge, InventoryPagination, InventoryQueryStateView } from '@/components/inventory';
 import { useInventoryQueryState } from '@/lib/inventory-query-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { type VmDiscoveryItem, type VmInventoryItem } from '@/lib/vm-inventory';
+import { type VmDiscoveryItem, type VmInventoryEnvironment, type VmInventoryItem, type VmListResponse, type VmViewCounts } from '@/lib/vm-inventory';
 import { archiveVmInventory, getVmDiscoveries, getVmDiscovery, getVmInventory, restoreVmInventory } from '@/services/vm';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -33,9 +33,8 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import {
-  flexRender, getCoreRowModel, getSortedRowModel,
-  getPaginationRowModel, getFilteredRowModel, useReactTable,
-  ColumnDef, SortingState, VisibilityState,
+  flexRender, getCoreRowModel, useReactTable,
+  ColumnDef, VisibilityState,
 } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -72,25 +71,57 @@ const VIEW_COPY: Record<InventoryView, { title: string; shortLabel: string; desc
 
 export default function VmPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { setHeader } = usePageHeader();
   const initialView = searchParams.get('view') as InventoryView | null;
   const [activeView, setActiveView] = useState<InventoryView>(initialView && ['PENDING', 'ACTIVE', 'ORPHANED', 'ARCHIVED'].includes(initialView) ? initialView : 'ACTIVE');
-  const [includeArchived, setIncludeArchived] = useState(initialView === 'ARCHIVED' || searchParams.get('archived') === 'true');
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
+  const [environment, setEnvironment] = useState<VmInventoryEnvironment | ''>(() => {
+    const value = searchParams.get('environment');
+    return value === 'PROD' || value === 'UAT' || value === 'TEST' ? value : '';
+  });
+  const [sourceId, setSourceId] = useState(() => searchParams.get('sourceId') ?? '');
+  const [page, setPage] = useState(() => Math.max(Number(searchParams.get('page') ?? '1'), 1));
+  const [pageSize, setPageSize] = useState(() => Math.min(Math.max(Number(searchParams.get('limit') ?? '20'), 10), 200));
+  const [sortBy, setSortBy] = useState(() => searchParams.get('sortBy') ?? 'updatedAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(() => searchParams.get('sortDir') === 'asc' ? 'asc' : 'desc');
   
   // Dialog functionality state
   const [selectedDiscovery, setSelectedDiscovery] = useState<VmDiscoveryItem | null>(null);
   const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
   const [openingPendingId, setOpeningPendingId] = useState<string | null>(null);
 
+  const updateUrl = useCallback((updates: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === undefined || value === '') params.delete(key);
+      else params.set(key, value);
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
   const vmQuery = useQuery({
-    queryKey: ['vm-data', includeArchived],
+    queryKey: ['vm-data', activeView, page, pageSize, searchTerm, environment, sourceId, sortBy, sortDir],
     queryFn: async () => {
+      const commonQuery = {
+        page,
+        limit: pageSize,
+        q: searchTerm.trim() || undefined,
+        environment: environment || undefined,
+        sourceId: sourceId || undefined,
+        sortBy,
+        sortDir,
+      } as const;
       const [discoveryRecords, inventoryRecords] = await Promise.all([
-        getVmDiscoveries(),
-        getVmInventory(includeArchived),
+        getVmDiscoveries({ ...commonQuery, view: 'PENDING' }),
+        getVmInventory({
+          ...commonQuery,
+          view: activeView === 'PENDING' ? 'ACTIVE' : activeView,
+          includeArchived: activeView === 'ARCHIVED',
+        }),
       ]);
       return { discoveries: discoveryRecords, inventory: inventoryRecords };
     },
@@ -99,8 +130,8 @@ export default function VmPage() {
   const isLoading = vmQuery.isLoading;
   const refetch = vmQuery.refetch;
 
-  const discoveries = vmData?.discoveries ?? [];
-  const inventory = vmData?.inventory ?? [];
+  const discoveries = vmData?.discoveries.data ?? [];
+  const inventory = vmData?.inventory.data ?? [];
 
   useEffect(() => {
     setHeader({
@@ -130,10 +161,10 @@ export default function VmPage() {
     router.push(`/dashboard/virtual-machines/${id}`);
   }, [router]);
 
-  const pendingQueue = useMemo(() => discoveries.filter(vm => vm.state !== 'DRIFTED'), [discoveries]);
-  const activeQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ACTIVE' && vm.syncState !== 'Missing from source'), [inventory]);
-  const orphanedQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState !== 'ARCHIVED' && (vm.syncState === 'Missing from source' || vm.lifecycleState === 'DELETED_IN_VCENTER')), [inventory]);
-  const archivedQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ARCHIVED'), [inventory]);
+  const pendingQueue = useMemo(() => discoveries, [discoveries]);
+  const activeQueue = useMemo(() => inventory, [inventory]);
+  const orphanedQueue = useMemo(() => inventory, [inventory]);
+  const archivedQueue = useMemo(() => inventory, [inventory]);
   const selectedQueue = activeView === 'PENDING'
     ? pendingQueue
     : activeView === 'ACTIVE'
@@ -144,13 +175,46 @@ export default function VmPage() {
   const queryState = useInventoryQueryState(vmQuery, {
     hasData: vmData !== undefined,
     hasRecords: selectedQueue.length > 0,
-    isFiltered: Boolean(searchTerm.trim()) || activeView !== 'ACTIVE',
+    isFiltered: Boolean(searchTerm.trim()) || Boolean(environment) || Boolean(sourceId) || activeView !== 'ACTIVE',
   });
 
   const handleViewChange = useCallback((view: InventoryView) => {
     setActiveView(view);
-    setIncludeArchived(view === 'ARCHIVED');
-  }, []);
+    setPage(1);
+    updateUrl({ view, page: '1' });
+  }, [updateUrl]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+    updateUrl({ q: value.trim() || undefined, page: '1' });
+  }, [updateUrl]);
+
+  const handleEnvironmentChange = useCallback((value: string) => {
+    const nextEnvironment: VmInventoryEnvironment | '' = value === 'PROD' || value === 'UAT' || value === 'TEST' ? value : '';
+    setEnvironment(nextEnvironment);
+    setPage(1);
+    updateUrl({ environment: nextEnvironment || undefined, page: '1' });
+  }, [updateUrl]);
+
+  const handlePageChange = useCallback((nextPage: number) => {
+    const normalizedPage = Math.max(nextPage, 1);
+    setPage(normalizedPage);
+    updateUrl({ page: String(normalizedPage) });
+  }, [updateUrl]);
+
+  const handlePageSizeChange = useCallback((nextPageSize: number) => {
+    setPageSize(nextPageSize);
+    setPage(1);
+    updateUrl({ limit: String(nextPageSize), page: '1' });
+  }, [updateUrl]);
+
+  const handleSortChange = useCallback((nextSortBy: string, nextSortDir: 'asc' | 'desc') => {
+    setSortBy(nextSortBy);
+    setSortDir(nextSortDir);
+    setPage(1);
+    updateUrl({ sortBy: nextSortBy, sortDir: nextSortDir, page: '1' });
+  }, [updateUrl]);
 
   const handleArchive = useCallback(async (id: string) => {
     try {
@@ -178,12 +242,18 @@ export default function VmPage() {
     }
   }, [inventory, router]);
 
-  const stats = useMemo(() => ({
-    ACTIVE: activeQueue.length,
-    PENDING: pendingQueue.length,
-    ORPHANED: orphanedQueue.length,
-    ARCHIVED: archivedQueue.length,
-  }), [activeQueue.length, pendingQueue.length, orphanedQueue.length, archivedQueue.length]);
+  const stats = useMemo(() => {
+    const counts: VmViewCounts | undefined = vmData?.inventory.viewCounts;
+    return {
+      ACTIVE: counts?.active ?? 0,
+      PENDING: counts?.pending ?? 0,
+      ORPHANED: counts?.orphaned ?? 0,
+      ARCHIVED: counts?.archived ?? 0,
+    };
+  }, [vmData?.inventory.viewCounts]);
+  const selectedPage: VmListResponse<VmInventoryItem | VmDiscoveryItem> | undefined = activeView === 'PENDING'
+    ? vmData?.discoveries
+    : vmData?.inventory;
 
   return (
     <motion.div 
@@ -237,13 +307,13 @@ export default function VmPage() {
         ) : (
           <>
             {activeView === 'PENDING' ? (
-              <PendingTable data={pendingQueue} onOpen={openPendingSetup} openingId={openingPendingId} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={handleViewChange} stats={stats} />
+              <PendingTable data={pendingQueue} onOpen={openPendingSetup} openingId={openingPendingId} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
             ) : activeView === 'ACTIVE' ? (
-              <ActiveTable data={activeQueue} onOpen={openInventoryDetail} onArchive={user?.role === 'ADMIN' ? handleArchive : undefined} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={handleViewChange} stats={stats} />
+              <ActiveTable data={activeQueue} onOpen={openInventoryDetail} onArchive={user?.role === 'ADMIN' ? handleArchive : undefined} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
             ) : activeView === 'ORPHANED' ? (
-              <OrphanedTable data={orphanedQueue} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={handleViewChange} stats={stats} />
+              <OrphanedTable data={orphanedQueue} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
             ) : (
-              <OrphanedTable data={archivedQueue} archived onRestore={user?.role === 'ADMIN' ? handleRestore : undefined} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={setSearchTerm} view={activeView} setView={handleViewChange} stats={stats} />
+              <OrphanedTable data={archivedQueue} archived onRestore={user?.role === 'ADMIN' ? handleRestore : undefined} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
             )}
           </>
         )}
@@ -274,9 +344,22 @@ function getPowerStateBadge(state: string) {
   return <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 uppercase text-[10px] font-bold">{state || 'Unknown'}</Badge>;
 }
 
-function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchChange }: { table: any, view: InventoryView, setView: (v: InventoryView) => void, stats: any, searchTerm: string, onSearchChange: (v: string) => void }) {
+type VmTableControls = {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  sortBy: string;
+  sortDir: 'asc' | 'desc';
+  onSortChange: (sortBy: string, sortDir: 'asc' | 'desc') => void;
+  environment: string;
+  onEnvironmentChange: (environment: string) => void;
+};
+
+function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: { table: any, view: InventoryView, setView: (v: InventoryView) => void, stats: any, searchTerm: string, onSearchChange: (v: string) => void } & Pick<VmTableControls, 'sortBy' | 'sortDir' | 'onSortChange' | 'environment' | 'onEnvironmentChange'>) {
   const handleExport = () => {
-    const dataToExport = table.getFilteredRowModel().rows.map((row: any) => row.original);
+    const dataToExport = table.getRowModel().rows.map((row: any) => row.original);
 
     let exportData: any[] = [];
     
@@ -369,7 +452,7 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
       window.URL.revokeObjectURL(url);
     }, 200);
 
-    toast.success(`Exported all ${view.toLowerCase()} items`);
+    toast.success(`Exported ${exportData.length} ${view.toLowerCase()} items from this page`);
   };
 
   return (
@@ -417,6 +500,39 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
           />
         </div>
 
+        <select
+          aria-label="Filter by environment"
+          value={environment}
+          onChange={(event) => onEnvironmentChange(event.target.value)}
+          className="h-9 rounded-md border border-border/50 bg-card px-2 text-xs text-foreground"
+        >
+          <option value="">All environments</option>
+          <option value="PROD">PROD</option>
+          <option value="UAT">UAT</option>
+          <option value="TEST">TEST</option>
+        </select>
+        <select
+          aria-label="Sort VM inventory"
+          value={sortBy}
+          onChange={(event) => onSortChange(event.target.value, sortDir)}
+          className="h-9 rounded-md border border-border/50 bg-card px-2 text-xs text-foreground"
+        >
+          <option value="updatedAt">Recently updated</option>
+          <option value="systemName">System name</option>
+          <option value="name">VM name</option>
+          <option value="primaryIp">IP address</option>
+          <option value="environment">Environment</option>
+          <option value="sourceName">Source</option>
+        </select>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 shrink-0 bg-card px-3"
+          onClick={() => onSortChange(sortBy, sortDir === 'asc' ? 'desc' : 'asc')}
+          aria-label={`Sort ${sortDir === 'asc' ? 'descending' : 'ascending'}`}
+        >
+          {sortDir === 'asc' ? 'A–Z' : 'Z–A'}
+        </Button>
         <Button variant="outline" size="sm" className="h-9 shrink-0 bg-card px-3" onClick={handleExport}>
           <Download className="h-4 w-4 mr-2" />
           Export
@@ -448,46 +564,24 @@ function TableHeaderToolbar({ table, view, setView, stats, searchTerm, onSearchC
   );
 }
 
-function TablePaginationFooter({ table }: { table: any }) {
+function TablePaginationFooter({ page, pageSize, total, onPageChange, onPageSizeChange }: Pick<VmTableControls, 'page' | 'pageSize' | 'total' | 'onPageChange' | 'onPageSizeChange'>) {
   return (
-    <div className="flex flex-col gap-3 border-t border-border/50 bg-muted/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-      <div className="text-xs text-muted-foreground">
-        Total {table.getFilteredRowModel().rows.length} items
-      </div>
-      <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-6 lg:gap-8">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-medium text-muted-foreground">Rows per page</p>
-          <select
-            value={table.getState().pagination.pageSize}
-            onChange={e => table.setPageSize(Number(e.target.value))}
-            className="h-8 w-16 rounded-md border border-border bg-card text-[11px] focus:ring-1 focus:ring-primary outline-none"
-          >
-            {[10, 20, 30, 40, 50].map(size => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex w-[100px] items-center justify-center text-xs font-medium">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" className="h-8 w-8 p-0" aria-label="Previous page" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" className="h-8 w-8 p-0" aria-label="Next page" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
+    <InventoryPagination
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      pageSizeOptions={[10, 20, 50, 100, 200]}
+      className="bg-muted/10 p-3 sm:p-4"
+    />
   );
 }
 
 // -------------------------------------------------------------
 // PENDING TABLE
 // -------------------------------------------------------------
-function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, view, setView, stats }: any) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   
   const columns = useMemo<ColumnDef<VmDiscoveryItem>[]>(() => [
@@ -521,16 +615,14 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
   ], [openingId, onOpen]);
 
   const table = useReactTable({
-    data, columns, state: { sorting, globalFilter: searchTerm, columnVisibility },
-    onSortingChange: setSorting, onGlobalFilterChange: onSearchChange,
+    data, columns, state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel(),
+    getCoreRowModel: getCoreRowModel(),
   });
 
   return (
     <>
-      <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} />
+      <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} sortBy={sortBy} sortDir={sortDir} onSortChange={onSortChange} environment={environment} onEnvironmentChange={onEnvironmentChange} />
       <div className="overflow-x-auto">
         <Table className="min-w-[780px]">
           <TableHeader className="bg-transparent">
@@ -567,7 +659,7 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
           </TableBody>
         </Table>
       </div>
-      <TablePaginationFooter table={table} />
+      <TablePaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
     </>
   );
 }
@@ -575,8 +667,7 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
 // -------------------------------------------------------------
 // ACTIVE TABLE
 // -------------------------------------------------------------
-function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view, setView, stats }: any) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   
   const columns = useMemo<ColumnDef<VmInventoryItem>[]>(() => [
@@ -631,16 +722,14 @@ function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view
   ], [onOpen, onArchive]);
 
   const table = useReactTable({
-    data, columns, state: { sorting, globalFilter: searchTerm, columnVisibility },
-    onSortingChange: setSorting, onGlobalFilterChange: onSearchChange,
+    data, columns, state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel(),
+    getCoreRowModel: getCoreRowModel(),
   });
 
   return (
     <>
-      <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} />
+      <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} sortBy={sortBy} sortDir={sortDir} onSortChange={onSortChange} environment={environment} onEnvironmentChange={onEnvironmentChange} />
       <div className="overflow-x-auto">
         <Table className="min-w-[1120px]">
           <TableHeader className="bg-muted/30">
@@ -679,7 +768,7 @@ function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view
           </TableBody>
         </Table>
       </div>
-      <TablePaginationFooter table={table} />
+      <TablePaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
     </>
   );
 }
@@ -687,8 +776,7 @@ function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view
 // -------------------------------------------------------------
 // ORPHANED TABLE
 // -------------------------------------------------------------
-function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, onSearchChange, view, setView, stats }: any) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   
   const columns = useMemo<ColumnDef<any>[]>(() => [
@@ -724,16 +812,14 @@ function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, 
   ], [onOpen, onRestore, archived]);
 
   const table = useReactTable({
-    data, columns, state: { sorting, globalFilter: searchTerm, columnVisibility },
-    onSortingChange: setSorting, onGlobalFilterChange: onSearchChange,
+    data, columns, state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel(),
+    getCoreRowModel: getCoreRowModel(),
   });
 
   return (
     <>
-      <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} />
+      <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} sortBy={sortBy} sortDir={sortDir} onSortChange={onSortChange} environment={environment} onEnvironmentChange={onEnvironmentChange} />
       <div className="overflow-x-auto">
         <Table className="min-w-[820px]">
           <TableHeader className="bg-muted/30">
@@ -772,7 +858,7 @@ function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, 
           </TableBody>
         </Table>
       </div>
-      <TablePaginationFooter table={table} />
+      <TablePaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
     </>
   );
 }

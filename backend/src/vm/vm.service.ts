@@ -66,6 +66,111 @@ type VmInventoryWithRelations = Prisma.VmInventoryGetPayload<{
   include: typeof VM_INVENTORY_INCLUDE;
 }>;
 
+const VM_INVENTORY_LIST_SELECT = {
+  id: true,
+  name: true,
+  systemName: true,
+  moid: true,
+  environment: true,
+  cluster: true,
+  clusterResolution: true,
+  host: true,
+  hostResolution: true,
+  computerName: true,
+  guestOs: true,
+  primaryIp: true,
+  cpuCores: true,
+  memoryGb: true,
+  storageGb: true,
+  disks: true,
+  networkLabel: true,
+  powerState: true,
+  lifecycleState: true,
+  discoveryState: true,
+  syncState: true,
+  owner: true,
+  businessUnit: true,
+  slaTier: true,
+  serviceRole: true,
+  criticality: true,
+  description: true,
+  tags: true,
+  lastSyncAt: true,
+  syncedFields: true,
+  source: { select: { id: true, name: true, version: true } },
+  _count: { select: { guestAccounts: true, componentLinks: true } },
+  updatedAt: true,
+} satisfies Prisma.VmInventorySelect;
+
+type VmInventoryListRecord = Prisma.VmInventoryGetPayload<{
+  select: typeof VM_INVENTORY_LIST_SELECT;
+}>;
+
+const VM_DISCOVERY_LIST_SELECT = {
+  id: true,
+  name: true,
+  systemName: true,
+  moid: true,
+  cluster: true,
+  clusterResolution: true,
+  host: true,
+  hostResolution: true,
+  computerName: true,
+  guestOs: true,
+  primaryIp: true,
+  cpuCores: true,
+  memoryGb: true,
+  storageGb: true,
+  disks: true,
+  networkLabel: true,
+  powerState: true,
+  state: true,
+  completeness: true,
+  missingFields: true,
+  lastSeenAt: true,
+  tags: true,
+  owner: true,
+  environment: true,
+  businessUnit: true,
+  slaTier: true,
+  serviceRole: true,
+  criticality: true,
+  description: true,
+  notes: true,
+  suggestedOwner: true,
+  suggestedEnvironment: true,
+  suggestedServiceRole: true,
+  suggestedCriticality: true,
+  source: { select: { id: true, name: true, version: true } },
+  _count: { select: { guestAccounts: true } },
+  updatedAt: true,
+} satisfies Prisma.VmDiscoverySelect;
+
+type VmDiscoveryListRecord = Prisma.VmDiscoveryGetPayload<{
+  select: typeof VM_DISCOVERY_LIST_SELECT;
+}>;
+
+type VmListFilters = {
+  q?: string;
+  view?: string;
+  lifecycle?: string;
+  state?: string;
+  environment?: string;
+  sourceId?: string;
+  includeArchived?: boolean;
+  sortBy?: string;
+  sortDir?: string;
+};
+
+type VmViewCounts = {
+  active: number;
+  pending: number;
+  orphaned: number;
+  archived: number;
+};
+
+const MAX_VM_LIST_LIMIT = 200;
+
 type VmDiscoveryWithRelations = Prisma.VmDiscoveryGetPayload<{
   include: {
     source: true;
@@ -560,6 +665,109 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
             },
           ]
         : [],
+    };
+  }
+
+  private mapDiscoveryList(discovery: VmDiscoveryListRecord) {
+    const quality = evaluateVmDiscoveryCompleteness({
+      systemName: discovery.systemName,
+      environment: discovery.environment,
+      serviceRole: discovery.serviceRole,
+      description: discovery.description,
+      guestAccountsCount: discovery._count.guestAccounts,
+    });
+
+    return {
+      id: discovery.id,
+      name: discovery.name,
+      systemName: discovery.systemName,
+      moid: discovery.moid,
+      sourceName: discovery.source.name,
+      sourceVersion: discovery.source.version,
+      cluster: discovery.cluster,
+      clusterResolution: discovery.clusterResolution,
+      host: discovery.host,
+      hostResolution: discovery.hostResolution,
+      computerName: discovery.computerName,
+      guestOs: discovery.guestOs,
+      primaryIp: discovery.primaryIp,
+      cpuCores: discovery.cpuCores,
+      memoryGb: discovery.memoryGb,
+      storageGb: discovery.storageGb,
+      disks: (discovery.disks as VmDisk[] | null) ?? [],
+      networkLabel: discovery.networkLabel,
+      powerState: discovery.powerState,
+      state:
+        discovery.state === VmDiscoveryState.ARCHIVED
+          ? VmDiscoveryState.ARCHIVED
+          : quality.state,
+      completeness: quality.completeness,
+      missingFields: quality.missingFields,
+      quality,
+      lastSeen: this.toRelativeTime(discovery.lastSeenAt),
+      tags: discovery.tags,
+      guestAccountsCount: discovery._count.guestAccounts,
+      owner: discovery.owner,
+      environment: discovery.environment,
+      businessUnit: discovery.businessUnit,
+      slaTier: discovery.slaTier,
+      serviceRole: discovery.serviceRole,
+      criticality: discovery.criticality,
+      description: discovery.description,
+      notes: discovery.notes ?? '',
+      suggestedOwner: discovery.suggestedOwner,
+      suggestedEnvironment: discovery.suggestedEnvironment,
+      suggestedServiceRole: discovery.suggestedServiceRole,
+      suggestedCriticality: discovery.suggestedCriticality,
+    };
+  }
+
+  private mapInventoryList(inventory: VmInventoryListRecord) {
+    const quality = evaluateVmInventoryCompleteness({
+      owner: inventory.owner,
+      businessUnit: inventory.businessUnit,
+      serviceRole: inventory.serviceRole,
+      criticality: inventory.criticality,
+      componentCount: inventory._count.componentLinks,
+      lifecycleState: inventory.lifecycleState,
+      syncState: inventory.syncState,
+    });
+
+    return {
+      id: inventory.id,
+      name: inventory.name,
+      systemName: inventory.systemName,
+      moid: inventory.moid,
+      vcenterName: inventory.source?.name ?? '--',
+      vcenterVersion: inventory.source?.version ?? '--',
+      environment: inventory.environment,
+      cluster: inventory.cluster,
+      clusterResolution: inventory.clusterResolution,
+      host: inventory.host,
+      hostResolution: inventory.hostResolution,
+      computerName: inventory.computerName,
+      guestOs: inventory.guestOs,
+      primaryIp: inventory.primaryIp,
+      cpuCores: inventory.cpuCores,
+      memoryGb: inventory.memoryGb,
+      storageGb: inventory.storageGb,
+      disks: (inventory.disks as VmDisk[] | null) ?? [],
+      networkLabel: inventory.networkLabel,
+      powerState: inventory.powerState,
+      lifecycleState: inventory.lifecycleState,
+      discoveryState: inventory.discoveryState,
+      syncState: inventory.syncState,
+      owner: inventory.owner,
+      businessUnit: inventory.businessUnit,
+      slaTier: inventory.slaTier,
+      serviceRole: inventory.serviceRole,
+      criticality: inventory.criticality,
+      description: inventory.description,
+      tags: inventory.tags,
+      lastSyncAt: this.toRelativeTime(inventory.lastSyncAt),
+      syncedFields: inventory.syncedFields,
+      quality,
+      guestAccountsCount: inventory._count.guestAccounts,
     };
   }
 
@@ -1693,27 +1901,280 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async findDiscoveries() {
-    this.ensureSeedData();
-    const discoveries = await this.prisma.vmDiscovery.findMany({
-      take: 1000,
-      where: {
-        state: {
-          not: VmDiscoveryState.ARCHIVED,
-        },
-      },
-      include: {
-        source: true,
-        guestAccounts: {
-          select: { id: true },
-        },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+  private normalizeListPage(value: number | string | undefined) {
+    const page = value === undefined ? 1 : Number(value);
+    if (!Number.isInteger(page) || page < 1) {
+      throw new BadRequestException('VM list page must be a positive integer.');
+    }
+    return page;
+  }
 
-    return discoveries.map((discovery) =>
-      this.mapDiscovery(discovery as unknown as VmDiscoveryWithRelations),
-    );
+  private normalizeListLimit(value: number | string | undefined) {
+    const limit = value === undefined ? 20 : Number(value);
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new BadRequestException(
+        'VM list limit must be a positive integer.',
+      );
+    }
+    return Math.min(limit, MAX_VM_LIST_LIMIT);
+  }
+
+  private parseEnvironment(value?: string) {
+    if (value === undefined || value.trim() === '') return undefined;
+    if (!Object.values(VmEnvironment).includes(value as VmEnvironment)) {
+      throw new BadRequestException(`Unsupported VM environment: ${value}`);
+    }
+    return value as VmEnvironment;
+  }
+
+  private parseInventoryLifecycle(value?: string) {
+    if (value === undefined || value.trim() === '') return undefined;
+    if (!Object.values(VmLifecycleState).includes(value as VmLifecycleState)) {
+      throw new BadRequestException(`Unsupported VM lifecycle: ${value}`);
+    }
+    return value as VmLifecycleState;
+  }
+
+  private parseDiscoveryState(value?: string) {
+    if (value === undefined || value.trim() === '') return undefined;
+    if (!Object.values(VmDiscoveryState).includes(value as VmDiscoveryState)) {
+      throw new BadRequestException(`Unsupported VM discovery state: ${value}`);
+    }
+    return value as VmDiscoveryState;
+  }
+
+  private normalizeSourceId(value?: string) {
+    const sourceId = value?.trim();
+    return sourceId || undefined;
+  }
+
+  private inventorySearchWhere(q?: string): Prisma.VmInventoryWhereInput {
+    const query = q?.trim();
+    if (!query) return {};
+    return {
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { systemName: { contains: query, mode: 'insensitive' } },
+        { moid: { contains: query, mode: 'insensitive' } },
+        { primaryIp: { contains: query, mode: 'insensitive' } },
+        { computerName: { contains: query, mode: 'insensitive' } },
+        { cluster: { contains: query, mode: 'insensitive' } },
+        { host: { contains: query, mode: 'insensitive' } },
+        { guestOs: { contains: query, mode: 'insensitive' } },
+        { source: { is: { name: { contains: query, mode: 'insensitive' } } } },
+      ],
+    };
+  }
+
+  private discoverySearchWhere(q?: string): Prisma.VmDiscoveryWhereInput {
+    const query = q?.trim();
+    if (!query) return {};
+    return {
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { systemName: { contains: query, mode: 'insensitive' } },
+        { moid: { contains: query, mode: 'insensitive' } },
+        { primaryIp: { contains: query, mode: 'insensitive' } },
+        { computerName: { contains: query, mode: 'insensitive' } },
+        { cluster: { contains: query, mode: 'insensitive' } },
+        { host: { contains: query, mode: 'insensitive' } },
+        { guestOs: { contains: query, mode: 'insensitive' } },
+        { source: { is: { name: { contains: query, mode: 'insensitive' } } } },
+      ],
+    };
+  }
+
+  private inventoryViewWhere(view?: string): Prisma.VmInventoryWhereInput {
+    switch (view?.trim().toUpperCase()) {
+      case undefined:
+      case '':
+        return {};
+      case 'ACTIVE':
+        return {
+          lifecycleState: VmLifecycleState.ACTIVE,
+          syncState: { not: 'Missing from source' },
+        };
+      case 'ORPHANED':
+        return {
+          lifecycleState: { not: VmLifecycleState.ARCHIVED },
+          OR: [
+            { syncState: 'Missing from source' },
+            { lifecycleState: VmLifecycleState.DELETED_IN_VCENTER },
+          ],
+        };
+      case 'ARCHIVED':
+        return { lifecycleState: VmLifecycleState.ARCHIVED };
+      case 'PENDING':
+        return { id: '__pending-discovery-view__' };
+      default:
+        throw new BadRequestException(`Unsupported VM inventory view: ${view}`);
+    }
+  }
+
+  private discoveryViewWhere(view?: string): Prisma.VmDiscoveryWhereInput {
+    switch (view?.trim().toUpperCase()) {
+      case undefined:
+      case '':
+      case 'PENDING':
+        return {
+          state: {
+            notIn: [VmDiscoveryState.ARCHIVED, VmDiscoveryState.DRIFTED],
+          },
+        };
+      case 'ARCHIVED':
+        return { state: VmDiscoveryState.ARCHIVED };
+      case 'ACTIVE':
+      case 'ORPHANED':
+        return { id: '__inventory-view__' };
+      default:
+        throw new BadRequestException(`Unsupported VM discovery view: ${view}`);
+    }
+  }
+
+  private inventoryOrderBy(sortBy?: string, sortDir?: string) {
+    const direction = sortDir === 'asc' ? 'asc' : 'desc';
+    switch (sortBy) {
+      case 'name':
+      case 'systemName':
+      case 'moid':
+      case 'environment':
+      case 'cluster':
+      case 'host':
+      case 'primaryIp':
+      case 'powerState':
+      case 'lifecycleState':
+      case 'syncState':
+      case 'createdAt':
+      case 'updatedAt':
+        return {
+          [sortBy]: direction,
+        } as Prisma.VmInventoryOrderByWithRelationInput;
+      case 'sourceName':
+        return {
+          source: { name: direction },
+        } as Prisma.VmInventoryOrderByWithRelationInput;
+      default:
+        return {
+          updatedAt: 'desc',
+        } as Prisma.VmInventoryOrderByWithRelationInput;
+    }
+  }
+
+  private discoveryOrderBy(sortBy?: string, sortDir?: string) {
+    const direction = sortDir === 'asc' ? 'asc' : 'desc';
+    switch (sortBy) {
+      case 'name':
+      case 'systemName':
+      case 'moid':
+      case 'environment':
+      case 'cluster':
+      case 'host':
+      case 'primaryIp':
+      case 'powerState':
+      case 'state':
+      case 'lastSeenAt':
+      case 'createdAt':
+      case 'updatedAt':
+        return {
+          [sortBy]: direction,
+        } as Prisma.VmDiscoveryOrderByWithRelationInput;
+      case 'sourceName':
+        return {
+          source: { name: direction },
+        } as Prisma.VmDiscoveryOrderByWithRelationInput;
+      default:
+        return {
+          updatedAt: 'desc',
+        } as Prisma.VmDiscoveryOrderByWithRelationInput;
+    }
+  }
+
+  private async getViewCounts(filters: VmListFilters): Promise<VmViewCounts> {
+    const environment = this.parseEnvironment(filters.environment);
+    const sourceId = this.normalizeSourceId(filters.sourceId);
+    const inventoryScope: Prisma.VmInventoryWhereInput = {
+      ...(environment ? { environment } : {}),
+      ...(sourceId ? { sourceId } : {}),
+    };
+    const discoveryScope: Prisma.VmDiscoveryWhereInput = {
+      ...(environment ? { environment } : {}),
+      ...(sourceId ? { sourceId } : {}),
+    };
+
+    const [active, pending, orphaned, archived] = await Promise.all([
+      this.prisma.vmInventory.count({
+        where: {
+          ...inventoryScope,
+          lifecycleState: VmLifecycleState.ACTIVE,
+          syncState: { not: 'Missing from source' },
+        },
+      }),
+      this.prisma.vmDiscovery.count({
+        where: {
+          ...discoveryScope,
+          state: {
+            notIn: [VmDiscoveryState.ARCHIVED, VmDiscoveryState.DRIFTED],
+          },
+        },
+      }),
+      this.prisma.vmInventory.count({
+        where: {
+          ...inventoryScope,
+          lifecycleState: { not: VmLifecycleState.ARCHIVED },
+          OR: [
+            { syncState: 'Missing from source' },
+            { lifecycleState: VmLifecycleState.DELETED_IN_VCENTER },
+          ],
+        },
+      }),
+      this.prisma.vmInventory.count({
+        where: { ...inventoryScope, lifecycleState: VmLifecycleState.ARCHIVED },
+      }),
+    ]);
+
+    return { active, pending, orphaned, archived };
+  }
+
+  async findDiscoveries(
+    page: number | string = 1,
+    limit: number | string = 20,
+    filters: VmListFilters = {},
+  ) {
+    this.ensureSeedData();
+    const safePage = this.normalizeListPage(page);
+    const take = this.normalizeListLimit(limit);
+    const skip = (safePage - 1) * take;
+    const environment = this.parseEnvironment(filters.environment);
+    const state = this.parseDiscoveryState(filters.state);
+    const sourceId = this.normalizeSourceId(filters.sourceId);
+    const where: Prisma.VmDiscoveryWhereInput = {
+      ...this.discoveryViewWhere(filters.view),
+      ...(state ? { state } : {}),
+      ...(environment ? { environment } : {}),
+      ...(sourceId ? { sourceId } : {}),
+      ...this.discoverySearchWhere(filters.q),
+    };
+    const [discoveries, total, viewCounts] = await Promise.all([
+      this.prisma.vmDiscovery.findMany({
+        skip,
+        take,
+        where,
+        select: VM_DISCOVERY_LIST_SELECT,
+        orderBy: this.discoveryOrderBy(filters.sortBy, filters.sortDir),
+      }),
+      this.prisma.vmDiscovery.count({ where }),
+      this.getViewCounts(filters),
+    ]);
+
+    return {
+      data: discoveries.map((discovery) => this.mapDiscoveryList(discovery)),
+      total,
+      page: safePage,
+      limit: take,
+      totalPages: Math.ceil(total / take),
+      hasMore: safePage * take < total,
+      viewCounts,
+    };
   }
 
   async findDiscovery(id: string) {
@@ -2065,20 +2526,60 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return { success: true };
   }
 
-  async findInventory(includeArchived = false) {
+  async findInventory(
+    page: number | string | boolean = 1,
+    limit: number | string = 20,
+    filters: VmListFilters = {},
+  ) {
     this.ensureSeedData();
-    const inventories = await this.prisma.vmInventory.findMany({
-      take: 1000,
-      where: includeArchived
-        ? undefined
-        : { lifecycleState: { not: VmLifecycleState.ARCHIVED } },
-      include: VM_INVENTORY_INCLUDE,
-      orderBy: { updatedAt: 'desc' },
-    });
-
-    return inventories.map((inventory) =>
-      this.mapInventory(inventory as unknown as VmInventoryWithRelations),
+    const queryFilters =
+      typeof page === 'boolean'
+        ? { ...filters, includeArchived: page }
+        : filters;
+    const safePage = this.normalizeListPage(
+      typeof page === 'boolean' ? undefined : page,
     );
+    const take = this.normalizeListLimit(limit);
+    const skip = (safePage - 1) * take;
+    const environment = this.parseEnvironment(queryFilters.environment);
+    const lifecycle = this.parseInventoryLifecycle(queryFilters.lifecycle);
+    const sourceId = this.normalizeSourceId(queryFilters.sourceId);
+    const view = this.inventoryViewWhere(queryFilters.view);
+    const archiveWhere = queryFilters.includeArchived
+      ? {}
+      : { lifecycleState: { not: VmLifecycleState.ARCHIVED } };
+    const where: Prisma.VmInventoryWhereInput = {
+      ...archiveWhere,
+      ...view,
+      ...(lifecycle ? { lifecycleState: lifecycle } : {}),
+      ...(environment ? { environment } : {}),
+      ...(sourceId ? { sourceId } : {}),
+      ...this.inventorySearchWhere(queryFilters.q),
+    };
+    const [inventories, total, viewCounts] = await Promise.all([
+      this.prisma.vmInventory.findMany({
+        skip,
+        take,
+        where,
+        select: VM_INVENTORY_LIST_SELECT,
+        orderBy: this.inventoryOrderBy(
+          queryFilters.sortBy,
+          queryFilters.sortDir,
+        ),
+      }),
+      this.prisma.vmInventory.count({ where }),
+      this.getViewCounts(queryFilters),
+    ]);
+
+    return {
+      data: inventories.map((inventory) => this.mapInventoryList(inventory)),
+      total,
+      page: safePage,
+      limit: take,
+      totalPages: Math.ceil(total / take),
+      hasMore: safePage * take < total,
+      viewCounts,
+    };
   }
 
   async getDataQualitySummary() {

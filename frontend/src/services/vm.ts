@@ -3,6 +3,8 @@ import type {
   VmDiscoveryItem,
   VmInventoryDetail,
   VmInventoryItem,
+  VmListQuery,
+  VmListResponse,
   VmVCenterSource,
 } from "@/lib/vm-inventory";
 
@@ -109,8 +111,11 @@ export async function syncVmSource(id: string) {
   return response.data;
 }
 
-export async function getVmDiscoveries() {
-  const response = await api.get<VmDiscoveryItem[]>("/vm/discoveries");
+export async function getVmDiscoveries(query: VmListQuery = {}) {
+  const response = await api.get<VmListResponse<VmDiscoveryItem>>(
+    "/vm/discoveries",
+    { params: query },
+  );
   return response.data;
 }
 
@@ -145,10 +150,11 @@ export async function archiveVmDiscovery(id: string) {
   await api.post(`/vm/discoveries/${id}/archive`);
 }
 
-export async function getVmInventory(includeArchived = false) {
-  const response = await api.get<VmInventoryItem[]>("/vm/inventory", {
-    params: includeArchived ? { includeArchived: "true" } : undefined,
-  });
+export async function getVmInventory(query: VmListQuery = {}) {
+  const response = await api.get<VmListResponse<VmInventoryItem>>(
+    "/vm/inventory",
+    { params: query },
+  );
   return response.data;
 }
 

@@ -137,6 +137,37 @@ export interface VmInventoryDetail extends VmInventoryItem {
   documentLinks?: Array<{ id: string; title: string; updatedAt?: string }>;
 }
 
+export interface VmViewCounts {
+  active: number;
+  pending: number;
+  orphaned: number;
+  archived: number;
+}
+
+export interface VmListResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasMore: boolean;
+  viewCounts: VmViewCounts;
+}
+
+export interface VmListQuery {
+  page?: number;
+  limit?: number;
+  q?: string;
+  view?: "PENDING" | "ACTIVE" | "ORPHANED" | "ARCHIVED";
+  lifecycle?: VmLifecycleState;
+  state?: VmDiscoveryState;
+  environment?: VmInventoryEnvironment;
+  sourceId?: string;
+  includeArchived?: boolean;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+}
+
 export const VM_ENVIRONMENT_FILTERS: Array<{
   label: string;
   value: "ALL" | VmInventoryEnvironment;

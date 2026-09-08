@@ -86,8 +86,27 @@ export class VmController {
   }
 
   @Get('discoveries')
-  findDiscoveries() {
-    return this.vmService.findDiscoveries();
+  findDiscoveries(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+    @Query('view') view?: string,
+    @Query('state') state?: string,
+    @Query('environment') environment?: string,
+    @Query('sourceId') sourceId?: string,
+    @Query('source') source?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
+  ) {
+    return this.vmService.findDiscoveries(page, limit, {
+      q,
+      view,
+      state,
+      environment,
+      sourceId: sourceId ?? source,
+      sortBy,
+      sortDir,
+    });
   }
 
   @Get('data-quality/summary')
@@ -130,8 +149,29 @@ export class VmController {
   }
 
   @Get('inventory')
-  findInventory(@Query('includeArchived') includeArchived?: string) {
-    return this.vmService.findInventory(includeArchived === 'true');
+  findInventory(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+    @Query('view') view?: string,
+    @Query('lifecycle') lifecycle?: string,
+    @Query('environment') environment?: string,
+    @Query('sourceId') sourceId?: string,
+    @Query('source') source?: string,
+    @Query('includeArchived') includeArchived?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
+  ) {
+    return this.vmService.findInventory(page, limit, {
+      q,
+      view,
+      lifecycle,
+      environment,
+      sourceId: sourceId ?? source,
+      includeArchived: includeArchived === 'true',
+      sortBy,
+      sortDir,
+    });
   }
 
   @Get('inventory/:id')
