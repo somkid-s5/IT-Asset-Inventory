@@ -123,10 +123,6 @@ export class CreateAssetDto {
 
   @IsOptional()
   @IsString()
-  manageType?: string;
-
-  @IsOptional()
-  @IsString()
   brandModel?: string;
 
   @IsOptional()
@@ -148,10 +144,6 @@ export class CreateAssetDto {
   @IsOptional()
   @IsEnum(AssetStatus)
   status?: AssetStatus;
-
-  @IsOptional()
-  @IsString()
-  environment?: string;
 
   @IsOptional()
   @IsString()

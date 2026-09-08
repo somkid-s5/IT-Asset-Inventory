@@ -113,6 +113,7 @@ describe('AssetsService pagination', () => {
       type: true,
       rack: true,
       location: true,
+      owner: true,
       status: true,
       brandModel: true,
       sn: true,

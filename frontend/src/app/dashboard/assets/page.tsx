@@ -71,12 +71,18 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import { motion } from "framer-motion";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { fadeInUp } from "@/lib/animations";
-import { InventoryQueryStateView } from "@/components/inventory";
+import {
+  InventoryQueryStateView,
+  RecordStatusBadge,
+} from "@/components/inventory";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
-
-type AssetType = "SERVER" | "STORAGE" | "SWITCH" | "SP" | "NETWORK";
+import { getAssetTypeLabel, type AssetType } from "@/lib/asset-presentation";
 
 interface Asset {
   id: string;
@@ -85,6 +91,7 @@ interface Asset {
   type: AssetType;
   rack?: string | null;
   location?: string | null;
+  owner?: string | null;
   status?: string | null;
   brandModel?: string | null;
   sn?: string | null;
@@ -402,20 +409,12 @@ export default function AssetsPage() {
         accessorKey: "type",
         header: "Type",
         cell: ({ getValue }) => {
-          const type = getValue() as AssetType;
-          const labels: Record<AssetType, string> = {
-            SERVER: "Server",
-            STORAGE: "Storage",
-            SWITCH: "Switch",
-            SP: "SP",
-            NETWORK: "Network",
-          };
           return (
             <Badge
               variant="outline"
               className="font-medium bg-muted/20 text-[11px] px-1.5 py-0"
             >
-              {labels[type]}
+              {getAssetTypeLabel(getValue() as string)}
             </Badge>
           );
         },
@@ -439,53 +438,27 @@ export default function AssetsPage() {
         ),
       },
       {
+        accessorKey: "location",
+        header: "Location",
+        cell: ({ getValue }) => (
+          <span className="max-w-40 truncate text-xs text-foreground">
+            {(getValue() as string) || "Unknown"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "owner",
+        header: "Owner",
+        cell: ({ getValue }) => (
+          <span className="max-w-40 truncate text-xs text-foreground">
+            {(getValue() as string) || "Unknown"}
+          </span>
+        ),
+      },
+      {
         accessorKey: "status",
         header: "Status",
-        cell: ({ getValue }) => {
-          const status = getValue() as string;
-          if (!status)
-            return (
-              <span className="text-xs text-muted-foreground opacity-50">
-                --
-              </span>
-            );
-
-          const config: Record<string, { label: string; className: string }> = {
-            ACTIVE: {
-              label: "Active",
-              className: "bg-success/10 text-success border-success/20",
-            },
-            INACTIVE: {
-              label: "Inactive",
-              className: "bg-critical/10 text-critical border-critical/20",
-            },
-            MAINTENANCE: {
-              label: "Maintenance",
-              className: "bg-warning/10 text-warning border-warning/20",
-            },
-            DECOMMISSIONED: {
-              label: "Decommissioned",
-              className: "bg-low/10 text-low border-low/20",
-            },
-          };
-
-          const item = config[status] || {
-            label: status,
-            className: "bg-low/10 text-low border-low/20",
-          };
-
-          return (
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] font-semibold px-1.5 py-0",
-                item.className,
-              )}
-            >
-              {item.label}
-            </Badge>
-          );
-        },
+        cell: ({ getValue }) => <RecordStatusBadge value={getValue()} />,
       },
       {
         id: "actions",
@@ -702,271 +675,300 @@ export default function AssetsPage() {
             />
           }
         >
-        <Card className="border border-border/80 gap-0 shadow-md bg-card overflow-hidden p-0 rounded-2xl">
-          <div className="p-3 sm:p-4 border-b border-border bg-muted/80 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            {/* Tabs */}
-            <div className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto bg-muted/50 p-1 rounded-xl w-fit">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => setActiveTab(tab.value)}
-                  aria-pressed={activeTab === tab.value}
-                  className={cn(
-                    "shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
-                    activeTab === tab.value
-                      ? "bg-card text-foreground shadow-sm ring-1 ring-border/50"
-                      : "text-muted-foreground hover:text-foreground hover:bg-card/50",
-                  )}
-                >
-                  <tab.icon
+          <Card className="border border-border/80 gap-0 shadow-md bg-card overflow-hidden p-0 rounded-2xl">
+            <div className="p-3 sm:p-4 border-b border-border bg-muted/80 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              {/* Tabs */}
+              <div className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto bg-muted/50 p-1 rounded-xl w-fit">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => setActiveTab(tab.value)}
+                    aria-pressed={activeTab === tab.value}
                     className={cn(
-                      "h-3.5 w-3.5",
+                      "shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
                       activeTab === tab.value
-                        ? tab.iconClassName
-                        : "text-muted-foreground",
+                        ? "bg-card text-foreground shadow-sm ring-1 ring-border/50"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card/50",
                     )}
-                  />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex w-full items-center gap-2 md:w-auto">
-              <div className="relative min-w-0 flex-1 md:flex-none">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search assets..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-9 w-full pl-9 bg-card border-border/50 focus-visible:ring-primary/20 md:w-64"
-                />
-              </div>
-
-              <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 bg-card"
-                    aria-label="Toggle Columns"
                   >
-                    <Columns className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                  <DropdownMenuLabel>Show Columns</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {table
-                    .getAllColumns()
-                    .filter((c) => c.getCanHide())
-                    .map((column) => (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize cursor-pointer"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(val) =>
-                          column.toggleVisibility(!!val)
-                        }
-                        onSelect={(e) => e.preventDefault()}
-                      >
-                        {column.id === "assetId" ? "Asset ID" : column.id}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 border-b border-border/70 bg-card px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Filters
-              </div>
-              <div className="relative min-w-0 sm:w-52">
-                <Input
-                  aria-label="Filter by owner"
-                  placeholder="Owner (exact match)"
-                  value={ownerFilter}
-                  onChange={(event) => setOwnerFilter(event.target.value)}
-                  className="h-8 pr-8 text-xs"
-                />
-                {ownerFilter && (
-                  <button
-                    type="button"
-                    aria-label="Clear owner filter"
-                    onClick={() => setOwnerFilter("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
+                    <tab.icon
+                      className={cn(
+                        "h-3.5 w-3.5",
+                        activeTab === tab.value
+                          ? tab.iconClassName
+                          : "text-muted-foreground",
+                      )}
+                    />
+                    {tab.label}
                   </button>
-                )}
-              </div>
-              <div className="relative min-w-0 sm:w-52">
-                <Input
-                  aria-label="Filter by location"
-                  placeholder="Location (exact match)"
-                  value={locationFilter}
-                  onChange={(event) => setLocationFilter(event.target.value)}
-                  className="h-8 pr-8 text-xs"
-                />
-                {locationFilter && (
-                  <button
-                    type="button"
-                    aria-label="Clear location filter"
-                    onClick={() => setLocationFilter("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {hasOperationalFilters && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 justify-start text-xs lg:justify-center"
-                onClick={() => {
-                  setOwnerFilter("");
-                  setLocationFilter("");
-                }}
-              >
-                Clear filters
-              </Button>
-            )}
-          </div>
-
-          <div className="overflow-x-auto">
-            <Table className="min-w-[760px]">
-              <TableHeader className="bg-transparent">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow
-                    key={headerGroup.id}
-                    className="border-border hover:bg-transparent"
-                  >
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3 border-b-2 border-border"
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
                 ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="group border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => {
-                        navigationInProgressRef.current = true;
-                        router.push(`/dashboard/assets/${row.original.id}`);
-                      }}
+              </div>
+
+              <div className="flex w-full items-center gap-2 md:w-auto">
+                <div className="relative min-w-0 flex-1 md:flex-none">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search assets..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-9 w-full pl-9 bg-card border-border/50 focus-visible:ring-primary/20 md:w-64"
+                  />
+                </div>
+
+                <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 bg-card"
+                      aria-label="Toggle Columns"
                     >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="py-1.5 px-3">
+                      <Columns className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                    <DropdownMenuLabel>Show Columns</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {table
+                      .getAllColumns()
+                      .filter((c) => c.getCanHide())
+                      .map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.id}
+                          className="capitalize cursor-pointer"
+                          checked={column.getIsVisible()}
+                          onCheckedChange={(val) =>
+                            column.toggleVisibility(!!val)
+                          }
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          {column.id === "assetId" ? "Asset ID" : column.id}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 border-b border-border/70 bg-card px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Filters
+                </div>
+                <div className="relative min-w-0 sm:w-52">
+                  <Input
+                    aria-label="Filter by owner"
+                    placeholder="Owner (exact match)"
+                    value={ownerFilter}
+                    onChange={(event) => setOwnerFilter(event.target.value)}
+                    className="h-8 pr-8 text-xs"
+                  />
+                  {ownerFilter && (
+                    <button
+                      type="button"
+                      aria-label="Clear owner filter"
+                      onClick={() => setOwnerFilter("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="relative min-w-0 sm:w-52">
+                  <Input
+                    aria-label="Filter by location"
+                    placeholder="Location (exact match)"
+                    value={locationFilter}
+                    onChange={(event) => setLocationFilter(event.target.value)}
+                    className="h-8 pr-8 text-xs"
+                  />
+                  {locationFilter && (
+                    <button
+                      type="button"
+                      aria-label="Clear location filter"
+                      onClick={() => setLocationFilter("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {hasOperationalFilters && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {debouncedOwnerFilter && (
+                    <Badge variant="secondary" className="gap-1 text-xs">
+                      Owner: {debouncedOwnerFilter}
+                      <button
+                        type="button"
+                        aria-label={`Clear owner filter ${debouncedOwnerFilter}`}
+                        onClick={() => setOwnerFilter("")}
+                        className="rounded-full hover:bg-background/70"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {debouncedLocationFilter && (
+                    <Badge variant="secondary" className="gap-1 text-xs">
+                      Location: {debouncedLocationFilter}
+                      <button
+                        type="button"
+                        aria-label={`Clear location filter ${debouncedLocationFilter}`}
+                        onClick={() => setLocationFilter("")}
+                        className="rounded-full hover:bg-background/70"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 justify-start text-xs lg:justify-center"
+                    onClick={() => {
+                      setOwnerFilter("");
+                      setLocationFilter("");
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table className="min-w-[760px]">
+                <TableHeader className="bg-transparent">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow
+                      key={headerGroup.id}
+                      className="border-border hover:bg-transparent"
+                    >
+                      {headerGroup.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-2 px-3 border-b-2 border-border"
+                        >
                           {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                            header.column.columnDef.header,
+                            header.getContext(),
                           )}
-                        </TableCell>
+                        </TableHead>
                       ))}
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-96 p-0 border-none bg-transparent"
-                    >
-                      <div className="flex items-center justify-center h-full">
-                        <EmptyState
-                          icon={HardDrive}
-                          title="No assets found"
-                          description={
-                            !hasActiveAssetFilter && (assetsResponse?.total ?? 0) === 0
-                              ? "You haven't added any infrastructure assets yet. Start by adding your first server or switch."
-                              : showArchived
-                                ? "No archived assets match your current search or type filter."
-                                : "No assets match your current search or filter criteria."
-                          }
-                          action={
-                            !hasActiveAssetFilter && assets.length === 0
-                              ? {
-                                  label: "Add Your First Asset",
-                                  onClick: () => {
-                                    setEditingAsset(undefined);
-                                    setDialogOpen(true);
-                                  },
-                                }
-                              : undefined
-                          }
-                          className="w-full max-w-md border-none bg-transparent"
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination Footer */}
-          <div className="flex flex-col gap-3 border-t border-border/50 bg-muted/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-            <div className="text-xs text-muted-foreground">
-              Total {assetsResponse?.total ?? 0} items
-            </div>
-            <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-6 lg:gap-8">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-medium">Rows per page</p>
-                <select
-                  value={pagination.pageSize}
-                  onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="h-8 w-16 rounded-md border border-border bg-card text-xs focus:ring-1 focus:ring-primary outline-none"
-                >
-                  {[5, 10, 20, 30, 40, 50].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
                   ))}
-                </select>
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="group border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => {
+                          navigationInProgressRef.current = true;
+                          router.push(`/dashboard/assets/${row.original.id}`);
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="py-1.5 px-3">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-96 p-0 border-none bg-transparent"
+                      >
+                        <div className="flex items-center justify-center h-full">
+                          <EmptyState
+                            icon={HardDrive}
+                            title="No assets found"
+                            description={
+                              !hasActiveAssetFilter &&
+                              (assetsResponse?.total ?? 0) === 0
+                                ? "You haven't added any infrastructure assets yet. Start by adding your first server or switch."
+                                : showArchived
+                                  ? "No archived assets match your current search or type filter."
+                                  : "No assets match your current search or filter criteria."
+                            }
+                            action={
+                              !hasActiveAssetFilter && assets.length === 0
+                                ? {
+                                    label: "Add Your First Asset",
+                                    onClick: () => {
+                                      setEditingAsset(undefined);
+                                      setDialogOpen(true);
+                                    },
+                                  }
+                                : undefined
+                            }
+                            className="w-full max-w-md border-none bg-transparent"
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Pagination Footer */}
+            <div className="flex flex-col gap-3 border-t border-border/50 bg-muted/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+              <div className="text-xs text-muted-foreground">
+                Total {assetsResponse?.total ?? 0} items
               </div>
-              <div className="flex w-[100px] items-center justify-center text-xs font-medium">
-                Page {pagination.pageIndex + 1} of {totalPages}
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  aria-label="Previous page"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  aria-label="Next page"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                </Button>
+              <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-6 lg:gap-8">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-medium">Rows per page</p>
+                  <select
+                    value={pagination.pageSize}
+                    onChange={(e) => table.setPageSize(Number(e.target.value))}
+                    className="h-8 w-16 rounded-md border border-border bg-card text-xs focus:ring-1 focus:ring-primary outline-none"
+                  >
+                    {[5, 10, 20, 30, 40, 50].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex w-[100px] items-center justify-center text-xs font-medium">
+                  Page {pagination.pageIndex + 1} of {totalPages}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    className="h-8 w-8 p-0"
+                    aria-label="Previous page"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-8 w-8 p-0"
+                    aria-label="Next page"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
         </InventoryQueryStateView>
       </div>
 

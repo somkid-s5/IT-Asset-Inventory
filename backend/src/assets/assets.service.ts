@@ -452,12 +452,19 @@ export class AssetsService {
       credentials: _credentials,
       componentIds: _componentIds,
       componentLinks: _componentLinks,
+      environment: _environment,
+      manageType: _manageType,
       ...assetData
-    } = createAssetDto;
+    } = createAssetDto as CreateAssetDto & {
+      environment?: unknown;
+      manageType?: unknown;
+    };
     void _ips;
     void _credentials;
     void _componentIds;
     void _componentLinks;
+    void _environment;
+    void _manageType;
 
     const created = await this.prisma.$transaction(async (tx) => {
       const asset = await tx.asset.create({
@@ -674,6 +681,7 @@ export class AssetsService {
       type: true,
       rack: true,
       location: true,
+      owner: true,
       status: true,
       brandModel: true,
       sn: true,
@@ -687,6 +695,7 @@ export class AssetsService {
           type: true,
           rack: true,
           location: true,
+          owner: true,
           status: true,
           brandModel: true,
           sn: true,
@@ -882,8 +891,20 @@ export class AssetsService {
       id,
     );
 
-    const { ips, credentials, componentIds, componentLinks, ...assetData } =
-      updateAssetDto;
+    const {
+      ips,
+      credentials,
+      componentIds,
+      componentLinks,
+      environment: _environment,
+      manageType: _manageType,
+      ...assetData
+    } = updateAssetDto as UpdateAssetDto & {
+      environment?: unknown;
+      manageType?: unknown;
+    };
+    void _environment;
+    void _manageType;
     const referencedCredentialIds = [
       ...new Set((ips ?? []).flatMap((ip) => this.credentialIdsForIp(ip))),
     ];

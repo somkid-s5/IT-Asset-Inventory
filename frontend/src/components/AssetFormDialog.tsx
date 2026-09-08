@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -56,8 +57,7 @@ import {
   normalizeSpecKey,
   type HardwareSpecifications,
 } from "@/lib/asset-specs";
-
-type AssetType = "SERVER" | "STORAGE" | "SWITCH" | "SP" | "NETWORK";
+import { ASSET_TYPE_OPTIONS, type AssetType } from "@/lib/asset-presentation";
 
 interface FormErrors {
   name?: string;
@@ -130,7 +130,6 @@ interface AssetFormAsset {
   location?: string | null;
   brandModel?: string | null;
   sn?: string | null;
-  manageType?: string | null;
   parentId?: string | null;
   status?: string | null;
   owner?: string | null;
@@ -139,7 +138,6 @@ interface AssetFormAsset {
   vendor?: string | null;
   purchaseDate?: string | null;
   warrantyExpiration?: string | null;
-  environment?: string | null;
   dependencies?: string | null;
   osVersion?: string | null;
   customMetadata?: Record<string, unknown> | null;
@@ -203,14 +201,6 @@ const DEFAULT_FORM_STATE = {
   dependencies: "",
   osVersion: "",
 };
-
-const typeOptions: { value: AssetType; label: string }[] = [
-  { value: "SERVER", label: "Server" },
-  { value: "STORAGE", label: "Storage" },
-  { value: "SWITCH", label: "Switch" },
-  { value: "SP", label: "Service Processor" },
-  { value: "NETWORK", label: "Network" },
-];
 
 const accessTypeOptions = ["Host", "Management"];
 
@@ -356,7 +346,7 @@ export function AssetFormDialog({
       groupedMap.set(key, {
         nodeLabel: ip.nodeLabel ?? "",
         type: ip.type ?? "",
-        manageType: ip.manageType ?? assetToEdit.manageType ?? "",
+        manageType: ip.manageType ?? "",
         version: ip.version ?? "",
         address: ip.address,
         users: users.length > 0 ? users : [createEmptyUser()],
@@ -992,7 +982,7 @@ export function AssetFormDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {typeOptions.map((option) => (
+                    {ASSET_TYPE_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -1263,6 +1253,37 @@ export function AssetFormDialog({
                       warrantyExpiration: event.target.value,
                     })
                   }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="asset-os-version" optional>
+                  OS / Firmware Version
+                </Label>
+                <Input
+                  id="asset-os-version"
+                  autoComplete="off"
+                  value={formData.osVersion}
+                  onChange={(event) =>
+                    setFormData({ ...formData, osVersion: event.target.value })
+                  }
+                  placeholder="e.g. Ubuntu 24.04 or iLO 6"
+                />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="asset-dependencies" optional>
+                  Operational Dependencies
+                </Label>
+                <Textarea
+                  id="asset-dependencies"
+                  value={formData.dependencies}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      dependencies: event.target.value,
+                    })
+                  }
+                  placeholder="Record important dependency context or leave blank when unknown."
+                  rows={3}
                 />
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePageHeader } from "@/contexts/PageHeaderContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import api from "@/services/api";
 import {
@@ -55,13 +56,18 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
-import { InventoryQueryStateView } from "@/components/inventory";
+import {
+  InventoryQueryStateView,
+  RecordStatusBadge,
+} from "@/components/inventory";
+import { AssetFormDialog } from "@/components/LazyLoadedDialogs";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
 import {
   HARDWARE_SPEC_GROUPS,
   normalizeSpecKey,
   type HardwareSpecGroup,
 } from "@/lib/asset-specs";
+import { getAssetTypeLabel, type AssetType } from "@/lib/asset-presentation";
 import {
   Dialog,
   DialogContent,
@@ -71,7 +77,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-type AssetType = "SERVER" | "STORAGE" | "SWITCH" | "SP" | "NETWORK";
 type AssetStatus =
   "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED" | "ARCHIVED";
 
@@ -243,41 +248,6 @@ function extractMethods(...values: Array<string | null | undefined>) {
     }
   });
   return Array.from(tokens);
-}
-
-function getStatusBadge(status?: AssetStatus | null) {
-  switch (status) {
-    case "ACTIVE":
-      return {
-        label: "Active",
-        class: "border-success/30 bg-success/10 text-success",
-      };
-    case "INACTIVE":
-      return {
-        label: "Inactive",
-        class: "border-destructive/30 bg-destructive/10 text-destructive",
-      };
-    case "MAINTENANCE":
-      return {
-        label: "Maintenance",
-        class: "border-warning/30 bg-warning/10 text-warning",
-      };
-    case "DECOMMISSIONED":
-      return {
-        label: "Decommissioned",
-        class: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
-      };
-    case "ARCHIVED":
-      return {
-        label: "Archived",
-        class: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
-      };
-    default:
-      return {
-        label: "Unknown",
-        class: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
-      };
-  }
 }
 
 function formatFileSize(bytes: number) {
@@ -1784,11 +1754,15 @@ export default function AssetDetailsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { setHeader } = usePageHeader();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [revealedPasswords, setRevealedPasswords] = useState<
     Record<string, string>
   >({});
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const editRequestedRef = useRef(false);
 
   const handleRevealPassword = async (credId: string) => {
     if (revealed.has(credId)) {
@@ -1859,6 +1833,20 @@ export default function AssetDetailsPage() {
     hasRecords: asset !== undefined,
   });
 
+  useEffect(() => {
+    if (
+      asset &&
+      user &&
+      (user.role === "ADMIN" || user.role === "EDITOR") &&
+      searchParams.get("edit") === "1" &&
+      !editRequestedRef.current
+    ) {
+      editRequestedRef.current = true;
+      const timer = window.setTimeout(() => setEditOpen(true), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [asset, searchParams, user]);
+
   // Handle Header
   useEffect(() => {
     if (!asset) return;
@@ -1893,7 +1881,7 @@ export default function AssetDetailsPage() {
         nodeLabel,
         label,
         addresses: [],
-        methods: extractMethods(ip.manageType, asset.manageType),
+        methods: extractMethods(ip.manageType),
         version: ip.version?.trim() || undefined,
         credentials: [],
       };
@@ -1917,7 +1905,7 @@ export default function AssetDetailsPage() {
       existing.methods =
         existing.methods.length > 0
           ? existing.methods
-          : extractMethods(ip.manageType, asset.manageType);
+          : extractMethods(ip.manageType);
       existing.version = existing.version || ip.version?.trim() || undefined;
       groups.set(key, existing);
     });
@@ -1963,10 +1951,7 @@ export default function AssetDetailsPage() {
   }
 
   const style = getAssetStyle(asset.type);
-  const primaryVersion =
-    asset.osVersion?.trim() ||
-    accessRows.find((row) => row.version)?.version ||
-    null;
+  const primaryVersion = asset.osVersion?.trim() || null;
 
   return (
     <InventoryQueryStateView
@@ -1974,642 +1959,686 @@ export default function AssetDetailsPage() {
       onRetry={() => void assetQuery.refetch()}
       hasStaleData={detailState.hasStaleData}
     >
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="workspace-page space-y-4 pt-1"
-    >
-      <div className="flex justify-between items-center">
-        <button
-          onClick={() => router.push(returnTo || "/dashboard/assets")}
-          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to Assets
-        </button>
-      </div>
-
-      {/* Hero Section */}
-      <section className="glass-card overflow-hidden">
-        <div className="relative flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none"></div>
-          <div className="relative z-10 flex min-w-0 items-start gap-4">
-            <div
-              className={cn(
-                "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white shadow-xl",
-                style.bg,
-              )}
-            >
-              {style.icon}
-            </div>
-            <div className="space-y-2 min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground truncate max-w-[400px]">
-                  {asset.name}
-                </h1>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground min-w-0">
-                <span className="font-semibold text-foreground/80 truncate">
-                  {asset.brandModel || "Generic Hardware"}
-                </span>
-                {asset.rack && (
-                  <span className="flex items-center gap-1.5">
-                    <Waypoints className="h-3.5 w-3.5" /> {asset.rack}
-                  </span>
-                )}
-                {asset.location && (
-                  <span className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" /> {asset.location}
-                  </span>
-                )}
-                {asset.sn && (
-                  <span className="flex items-center gap-1.5 font-mono text-[11px]">
-                    <Hash className="h-3.5 w-3.5" /> {asset.sn}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
-            <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
-              <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                Interfaces
-              </span>
-              <span className="text-lg font-bold text-primary">
-                {accessRows.length}
-              </span>
-            </div>
-            <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
-              <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                Accounts
-              </span>
-              <span className="text-lg font-bold text-warning">
-                {asset.credentials?.length ?? 0}
-              </span>
-            </div>
-            <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
-              <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                Notes
-              </span>
-              <span className="text-lg font-bold text-low">
-                {asset.notes?.length ?? 0}
-              </span>
-            </div>
-          </div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="workspace-page space-y-4 pt-1"
+      >
+        <div className="flex justify-between items-center">
+          <button
+            onClick={() => router.push(returnTo || "/dashboard/assets")}
+            className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Assets
+          </button>
         </div>
-      </section>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-4">
-          {/* Hardware Specs & Governance */}
-          <section className="grid gap-3 md:grid-cols-2">
-            {/* Metadata (Spec) */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2 px-1">
-                <LaptopMinimal className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-bold tracking-tight text-foreground">
-                  Specifications
-                </h2>
+        {/* Hero Section */}
+        <section className="glass-card overflow-hidden">
+          <div className="relative flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none"></div>
+            <div className="relative z-10 flex min-w-0 items-start gap-4">
+              <div
+                className={cn(
+                  "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white shadow-xl",
+                  style.bg,
+                )}
+              >
+                {style.icon}
               </div>
-              <div className="glass-card h-full overflow-hidden">
-                <div className="divide-y divide-border/40">
-                  {HARDWARE_SPEC_GROUPS.map((group) => {
-                    const summary = getHardwareSpecSummary(
-                      asset.customMetadata,
-                      group,
-                    );
-                    return (
-                      <div
-                        key={group.key}
-                        className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30"
-                      >
-                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-                          {group.label}
-                        </span>
-                        <span
-                          className="max-w-[72%] truncate text-right text-[11px] font-semibold text-foreground"
-                          title={summary}
-                        >
-                          {summary}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Asset Properties */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2 px-1">
-                <Info className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-bold tracking-tight text-foreground">
-                  Asset Properties
-                </h2>
-              </div>
-              <div className="glass-card h-full divide-y divide-border/40 overflow-hidden">
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Type
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.type || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Asset ID
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.assetId || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Version
-                  </span>
-                  <span
-                    className="max-w-[68%] truncate text-right font-mono text-[11px] font-semibold text-foreground"
-                    title={primaryVersion || undefined}
-                  >
-                    {primaryVersion || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Brand / Model
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.brandModel || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Serial Number
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.sn || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Location
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.location || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Rack
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.rack || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Purchase Date
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.purchaseDate
-                      ? new Date(asset.purchaseDate).toLocaleDateString()
-                      : "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Warranty Exp.
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.warrantyExpiration
-                      ? new Date(asset.warrantyExpiration).toLocaleDateString()
-                      : "--"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-3 flex items-center gap-2 px-1">
-                <User className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-bold tracking-tight text-foreground">
-                  Governance Context
-                </h2>
-              </div>
-              <div className="glass-card divide-y divide-border/40 overflow-hidden">
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Owner
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.owner || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Department
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.department || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Responsible Party
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.responsibleParty || "--"}
-                  </span>
-                </div>
-                <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Vendor
-                  </span>
-                  <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
-                    {asset.vendor || "--"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Access & Credentials Section */}
-          <section className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <Globe className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-bold tracking-tight text-foreground">
-                Access Interfaces & Credentials
-              </h2>
-            </div>
-
-            <div className="space-y-3">
-              {accessRows.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">
-                  No access methods configured for this asset
-                </div>
-              ) : (
-                accessRows.map((row) => (
-                  <div
-                    key={row.key}
-                    className={cn(
-                      "group overflow-hidden rounded-xl border transition-all duration-300",
-                      openAccordion === row.key
-                        ? "border-primary/40 bg-card shadow-lg ring-1 ring-primary/10"
-                        : "border-border/60 bg-card/50 hover:border-primary/20 hover:bg-card",
-                    )}
-                  >
-                    <button
-                      onClick={() =>
-                        setOpenAccordion(
-                          openAccordion === row.key ? null : row.key,
-                        )
-                      }
-                      aria-expanded={openAccordion === row.key}
-                      className="flex w-full items-center justify-between gap-3 p-3 text-left sm:p-4"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div
-                          className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
-                            openAccordion === row.key
-                              ? "bg-primary text-primary-foreground shadow-md"
-                              : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
-                          )}
-                        >
-                          <Globe className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground opacity-60">
-                              {row.nodeLabel}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] h-4.5 px-1.5 font-bold uppercase tracking-tight"
-                            >
-                              {row.label}
-                            </Badge>
-                          </div>
-                          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
-                            <span className="truncate text-sm font-bold text-foreground">
-                              {row.addresses[0] || "No IP"}
-                            </span>
-                            {row.addresses.length > 1 && (
-                              <Badge
-                                variant="secondary"
-                                className="h-4.5 px-1 text-[9px]"
-                              >
-                                +{row.addresses.length - 1}
-                              </Badge>
-                            )}
-                            {row.version && (
-                              <Badge
-                                variant="outline"
-                                className="max-w-full truncate border-primary/20 bg-primary/5 text-[9px] font-semibold text-primary sm:max-w-48"
-                                title={row.version}
-                              >
-                                Version {row.version}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <div className="hidden sm:flex items-center gap-1.5">
-                          {row.methods.map((m) => (
-                            <Badge
-                              key={m}
-                              variant="secondary"
-                              className="bg-muted/50 text-[10px] font-bold uppercase"
-                            >
-                              {m}
-                            </Badge>
-                          ))}
-                        </div>
-                        <ChevronDown
-                          className={cn(
-                            "h-4 w-4 text-muted-foreground transition-transform duration-300",
-                            openAccordion === row.key && "rotate-180",
-                          )}
-                        />
-                      </div>
-                    </button>
-
-                    <AnimatePresence>
-                      {openAccordion === row.key && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                          <div className="space-y-3 border-t border-border/40 bg-muted/10 p-3 pt-2 sm:p-4 sm:pt-2">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              {/* IPs List */}
-                              <div className="space-y-2">
-                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
-                                  Network Addresses
-                                </h4>
-                                <div className="space-y-1">
-                                  {row.addresses.map((addr) => (
-                                    <div
-                                      key={addr}
-                                      className="flex items-center justify-between rounded-lg bg-background/60 p-2 border border-border/40 group/item"
-                                    >
-                                      <span className="font-mono text-xs text-foreground/80">
-                                        {addr}
-                                      </span>
-                                      <button
-                                        onClick={() => {
-                                          navigator.clipboard.writeText(addr);
-                                          toast.success("Copied to clipboard");
-                                        }}
-                                        className="p-1 rounded hover:bg-muted opacity-0 group-hover/item:opacity-100 transition-opacity"
-                                      >
-                                        <Copy className="h-3 w-3" />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              {/* Credentials List */}
-                              <div className="space-y-2">
-                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
-                                  Linked Credentials
-                                </h4>
-                                <div className="space-y-1">
-                                  {row.credentials.length === 0 ? (
-                                    <div className="p-3 text-[11px] text-muted-foreground italic bg-background/30 rounded-lg border border-dashed border-border/50">
-                                      No credentials linked to this interface
-                                    </div>
-                                  ) : (
-                                    row.credentials.map((cred) => (
-                                      <div
-                                        key={cred.id}
-                                        className="rounded-lg bg-background/60 p-2 border border-border/40 space-y-2 group/cred"
-                                      >
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-2">
-                                            <Shield className="h-3 w-3 text-primary opacity-60" />
-                                            <span className="text-xs font-bold text-foreground">
-                                              {cred.username}
-                                            </span>
-                                          </div>
-                                          <Badge
-                                            variant="outline"
-                                            className="text-[9px] h-4 uppercase"
-                                          >
-                                            {cred.type}
-                                          </Badge>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <div className="flex-1 flex items-center justify-between px-2 py-1 bg-muted/50 rounded border border-border/40 min-h-[28px]">
-                                            <span className="font-mono text-xs text-muted-foreground tracking-widest">
-                                              {revealed.has(cred.id)
-                                                ? revealedPasswords[cred.id] ||
-                                                  "••••••••"
-                                                : "••••••••"}
-                                            </span>
-                                            <button
-                                              onClick={() =>
-                                                handleRevealPassword(cred.id)
-                                              }
-                                              aria-label={`Reveal password for ${cred.username}`}
-                                              className="p-1 rounded hover:bg-background transition-colors"
-                                            >
-                                              {revealed.has(cred.id) ? (
-                                                <EyeOff className="h-3 w-3" />
-                                              ) : (
-                                                <Eye className="h-3 w-3" />
-                                              )}
-                                            </button>
-                                          </div>
-                                          <button
-                                            onClick={() =>
-                                              handleCopyPassword(cred.id)
-                                            }
-                                            aria-label={`Copy password for ${cred.username}`}
-                                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-background border border-border/60 hover:bg-muted transition-colors"
-                                          >
-                                            <Copy className="h-3 w-3" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+              <div className="space-y-2 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground truncate max-w-[400px]">
+                      {asset.name}
+                    </h1>
+                    <RecordStatusBadge value={asset.status} />
                   </div>
-                ))
-              )}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground min-w-0">
+                  <span className="font-semibold text-foreground/80 truncate">
+                    {asset.brandModel || "Generic Hardware"}
+                  </span>
+                  {asset.rack && (
+                    <span className="flex items-center gap-1.5">
+                      <Waypoints className="h-3.5 w-3.5" /> {asset.rack}
+                    </span>
+                  )}
+                  {asset.location && (
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" /> {asset.location}
+                    </span>
+                  )}
+                  {asset.sn && (
+                    <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                      <Hash className="h-3.5 w-3.5" /> {asset.sn}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-          </section>
+            <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+              {user &&
+                (user.role === "ADMIN" || user.role === "EDITOR") &&
+                asset.status !== "ARCHIVED" && (
+                  <button
+                    type="button"
+                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                    onClick={() => setEditOpen(true)}
+                  >
+                    <PenLine className="h-3.5 w-3.5" />
+                    Edit Asset
+                  </button>
+                )}
+              <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                  Interfaces
+                </span>
+                <span className="text-lg font-bold text-primary">
+                  {accessRows.length}
+                </span>
+              </div>
+              <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                  Accounts
+                </span>
+                <span className="text-lg font-bold text-warning">
+                  {asset.credentials?.length ?? 0}
+                </span>
+              </div>
+              <div className="flex min-w-[72px] flex-col items-center justify-center rounded-lg border border-border/50 bg-background/50 px-3 py-1.5">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                  Notes
+                </span>
+                <span className="text-lg font-bold text-low">
+                  {asset.notes?.length ?? 0}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          {asset.componentLinks && asset.componentLinks.length > 0 && (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-4">
+            {/* Hardware Specs & Governance */}
+            <section className="grid gap-3 md:grid-cols-2">
+              {/* Metadata (Spec) */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 px-1">
+                  <LaptopMinimal className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-bold tracking-tight text-foreground">
+                    Specifications
+                  </h2>
+                </div>
+                <div className="glass-card h-full overflow-hidden">
+                  <div className="divide-y divide-border/40">
+                    {HARDWARE_SPEC_GROUPS.map((group) => {
+                      const summary = getHardwareSpecSummary(
+                        asset.customMetadata,
+                        group,
+                      );
+                      return (
+                        <div
+                          key={group.key}
+                          className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30"
+                        >
+                          <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {group.label}
+                          </span>
+                          <span
+                            className="max-w-[72%] truncate text-right text-[11px] font-semibold text-foreground"
+                            title={summary}
+                          >
+                            {summary}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Asset Properties */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 px-1">
+                  <Info className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-bold tracking-tight text-foreground">
+                    Asset Properties
+                  </h2>
+                </div>
+                <div className="glass-card h-full divide-y divide-border/40 overflow-hidden">
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Type
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {getAssetTypeLabel(asset.type)}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Asset ID
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.assetId || "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      OS / Firmware Version
+                    </span>
+                    <span
+                      className="max-w-[68%] truncate text-right font-mono text-[11px] font-semibold text-foreground"
+                      title={primaryVersion || undefined}
+                    >
+                      {primaryVersion || "Unknown"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Brand / Model
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.brandModel || "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Serial Number
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.sn || "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Location
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.location || "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Rack
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.rack || "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Purchase Date
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.purchaseDate
+                        ? new Date(asset.purchaseDate).toLocaleDateString()
+                        : "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Warranty Exp.
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.warrantyExpiration
+                        ? new Date(
+                            asset.warrantyExpiration,
+                          ).toLocaleDateString()
+                        : "Unknown"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Dependencies
+                    </span>
+                    <span
+                      className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground"
+                      title={asset.dependencies || undefined}
+                    >
+                      {asset.dependencies || "Unknown"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 px-1">
+                  <User className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-bold tracking-tight text-foreground">
+                    Governance Context
+                  </h2>
+                </div>
+                <div className="glass-card divide-y divide-border/40 overflow-hidden">
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Owner
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.owner || "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Department
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.department || "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Responsible Party
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.responsibleParty || "--"}
+                    </span>
+                  </div>
+                  <div className="flex min-h-8 items-center justify-between gap-3 px-2.5 py-1.5 transition-colors hover:bg-muted/30">
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                      Vendor
+                    </span>
+                    <span className="max-w-[68%] truncate text-right text-[11px] font-semibold text-foreground">
+                      {asset.vendor || "--"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Access & Credentials Section */}
             <section className="space-y-3">
               <div className="flex items-center gap-2 px-1">
-                <Boxes className="h-4 w-4 text-primary" />
+                <Globe className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-bold tracking-tight text-foreground">
-                  Application Relationships
+                  Access Interfaces & Credentials
                 </h2>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {[...asset.componentLinks]
-                  .sort((left, right) =>
-                    left.relationType === right.relationType
-                      ? left.component.environment.application.name.localeCompare(
-                          right.component.environment.application.name,
-                        )
-                      : left.relationType === "PRIMARY"
-                        ? -1
-                        : 1,
-                  )
-                  .map((link) => {
-                    const environment = link.component.environment;
-                    const application = environment.application;
-                    const isPrimary = link.relationType === "PRIMARY";
-                    return (
+
+              <div className="space-y-3">
+                {accessRows.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-6 py-12 text-center text-sm text-muted-foreground">
+                    No access methods configured for this asset
+                  </div>
+                ) : (
+                  accessRows.map((row) => (
+                    <div
+                      key={row.key}
+                      className={cn(
+                        "group overflow-hidden rounded-xl border transition-all duration-300",
+                        openAccordion === row.key
+                          ? "border-primary/40 bg-card shadow-lg ring-1 ring-primary/10"
+                          : "border-border/60 bg-card/50 hover:border-primary/20 hover:bg-card",
+                      )}
+                    >
                       <button
-                        key={link.componentId}
-                        type="button"
                         onClick={() =>
-                          router.push(
-                            `/dashboard/applications/${application.id}`,
+                          setOpenAccordion(
+                            openAccordion === row.key ? null : row.key,
                           )
                         }
-                        className={cn(
-                          "glass-card flex w-full items-start gap-3 p-4 text-left transition-all hover:border-primary/40 hover:shadow-md",
-                          isPrimary && "border-primary/30 bg-primary/[0.03]",
-                        )}
+                        aria-expanded={openAccordion === row.key}
+                        className="flex w-full items-center justify-between gap-3 p-3 text-left sm:p-4"
                       >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <Boxes className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="truncate text-sm font-bold text-foreground">
-                              {application.name}
-                            </span>
-                            <Badge variant={isPrimary ? "default" : "outline"}>
-                              {isPrimary ? "Primary" : "Shared"}
-                            </Badge>
-                          </div>
-                          <p className="mt-1 truncate text-xs text-muted-foreground">
-                            {environment.name} · {link.component.name}
-                          </p>
-                          {(application.technicalOwner ||
-                            application.businessUnit) && (
-                            <p className="mt-2 truncate text-[11px] text-muted-foreground">
-                              {[
-                                application.technicalOwner,
-                                application.businessUnit,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </p>
-                          )}
-                          {link.responsibleParty && (
-                            <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                              Responsible: {link.responsibleParty}
-                            </p>
-                          )}
-                        </div>
-                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
-                      </button>
-                    );
-                  })}
-              </div>
-            </section>
-          )}
-
-          {/* Relations Section */}
-          {(asset.parent || (asset.children && asset.children.length > 0)) && (
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 px-1">
-                <FolderTree className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-bold tracking-tight text-foreground">
-                  Hierarchy & Relations
-                </h2>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Parent */}
-                {asset.parent && (
-                  <div className="glass-card p-4 space-y-3">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Parent Asset
-                    </h4>
-                    <button
-                      onClick={() =>
-                        router.push(`/dashboard/assets/${asset.parent?.id}`)
-                      }
-                      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-background/50 p-3 text-left transition-all hover:border-primary/40 hover:bg-background hover:shadow-sm group"
-                    >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                        <Building2 className="h-4.5 w-4.5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-foreground">
-                          {asset.parent.name}
-                        </div>
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">
-                          {asset.parent.type}
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                )}
-                {/* Children */}
-                {asset.children && asset.children.length > 0 && (
-                  <div className="glass-card p-4 space-y-3">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Child Assets ({asset.children.length})
-                    </h4>
-                    <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                      {asset.children.map((child) => (
-                        <button
-                          key={child.id}
-                          onClick={() =>
-                            router.push(`/dashboard/assets/${child.id}`)
-                          }
-                          className="flex w-full items-center gap-3 rounded-lg border border-border/40 bg-background/30 p-2 text-left transition-all hover:border-primary/30 hover:bg-background group"
-                        >
-                          <div className="flex h-7 w-7 items-center justify-center rounded bg-muted text-muted-foreground group-hover:bg-primary/5 group-hover:text-primary">
-                            <ChevronRight className="h-3.5 w-3.5" />
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
+                              openAccordion === row.key
+                                ? "bg-primary text-primary-foreground shadow-md"
+                                : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
+                            )}
+                          >
+                            <Globe className="h-5 w-5" />
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-foreground truncate">
-                              {child.name}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground opacity-60">
+                                {row.nodeLabel}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] h-4.5 px-1.5 font-bold uppercase tracking-tight"
+                              >
+                                {row.label}
+                              </Badge>
+                            </div>
+                            <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
+                              <span className="truncate text-sm font-bold text-foreground">
+                                {row.addresses[0] || "No IP"}
+                              </span>
+                              {row.addresses.length > 1 && (
+                                <Badge
+                                  variant="secondary"
+                                  className="h-4.5 px-1 text-[9px]"
+                                >
+                                  +{row.addresses.length - 1}
+                                </Badge>
+                              )}
+                              {row.version && (
+                                <Badge
+                                  variant="outline"
+                                  className="max-w-full truncate border-primary/20 bg-primary/5 text-[9px] font-semibold text-primary sm:max-w-48"
+                                  title={row.version}
+                                >
+                                  Version {row.version}
+                                </Badge>
+                              )}
                             </div>
                           </div>
-                        </button>
-                      ))}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <div className="hidden sm:flex items-center gap-1.5">
+                            {row.methods.map((m) => (
+                              <Badge
+                                key={m}
+                                variant="secondary"
+                                className="bg-muted/50 text-[10px] font-bold uppercase"
+                              >
+                                {m}
+                              </Badge>
+                            ))}
+                          </div>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 text-muted-foreground transition-transform duration-300",
+                              openAccordion === row.key && "rotate-180",
+                            )}
+                          />
+                        </div>
+                      </button>
+
+                      <AnimatePresence>
+                        {openAccordion === row.key && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                          >
+                            <div className="space-y-3 border-t border-border/40 bg-muted/10 p-3 pt-2 sm:p-4 sm:pt-2">
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                {/* IPs List */}
+                                <div className="space-y-2">
+                                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+                                    Network Addresses
+                                  </h4>
+                                  <div className="space-y-1">
+                                    {row.addresses.map((addr) => (
+                                      <div
+                                        key={addr}
+                                        className="flex items-center justify-between rounded-lg bg-background/60 p-2 border border-border/40 group/item"
+                                      >
+                                        <span className="font-mono text-xs text-foreground/80">
+                                          {addr}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(addr);
+                                            toast.success(
+                                              "Copied to clipboard",
+                                            );
+                                          }}
+                                          className="p-1 rounded hover:bg-muted opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                        >
+                                          <Copy className="h-3 w-3" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                {/* Credentials List */}
+                                <div className="space-y-2">
+                                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+                                    Linked Credentials
+                                  </h4>
+                                  <div className="space-y-1">
+                                    {row.credentials.length === 0 ? (
+                                      <div className="p-3 text-[11px] text-muted-foreground italic bg-background/30 rounded-lg border border-dashed border-border/50">
+                                        No credentials linked to this interface
+                                      </div>
+                                    ) : (
+                                      row.credentials.map((cred) => (
+                                        <div
+                                          key={cred.id}
+                                          className="rounded-lg bg-background/60 p-2 border border-border/40 space-y-2 group/cred"
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <Shield className="h-3 w-3 text-primary opacity-60" />
+                                              <span className="text-xs font-bold text-foreground">
+                                                {cred.username}
+                                              </span>
+                                            </div>
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[9px] h-4 uppercase"
+                                            >
+                                              {cred.type}
+                                            </Badge>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <div className="flex-1 flex items-center justify-between px-2 py-1 bg-muted/50 rounded border border-border/40 min-h-[28px]">
+                                              <span className="font-mono text-xs text-muted-foreground tracking-widest">
+                                                {revealed.has(cred.id)
+                                                  ? revealedPasswords[
+                                                      cred.id
+                                                    ] || "••••••••"
+                                                  : "••••••••"}
+                                              </span>
+                                              <button
+                                                onClick={() =>
+                                                  handleRevealPassword(cred.id)
+                                                }
+                                                aria-label={`Reveal password for ${cred.username}`}
+                                                className="p-1 rounded hover:bg-background transition-colors"
+                                              >
+                                                {revealed.has(cred.id) ? (
+                                                  <EyeOff className="h-3 w-3" />
+                                                ) : (
+                                                  <Eye className="h-3 w-3" />
+                                                )}
+                                              </button>
+                                            </div>
+                                            <button
+                                              onClick={() =>
+                                                handleCopyPassword(cred.id)
+                                              }
+                                              aria-label={`Copy password for ${cred.username}`}
+                                              className="h-7 w-7 flex items-center justify-center rounded-lg bg-background border border-border/60 hover:bg-muted transition-colors"
+                                            >
+                                              <Copy className="h-3 w-3" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                  </div>
+                  ))
                 )}
               </div>
             </section>
-          )}
 
-          <InventoryDocuments documents={asset.documentLinks} />
+            {asset.componentLinks && asset.componentLinks.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 px-1">
+                  <Boxes className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-bold tracking-tight text-foreground">
+                    Application Relationships
+                  </h2>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {[...asset.componentLinks]
+                    .sort((left, right) =>
+                      left.relationType === right.relationType
+                        ? left.component.environment.application.name.localeCompare(
+                            right.component.environment.application.name,
+                          )
+                        : left.relationType === "PRIMARY"
+                          ? -1
+                          : 1,
+                    )
+                    .map((link) => {
+                      const environment = link.component.environment;
+                      const application = environment.application;
+                      const isPrimary = link.relationType === "PRIMARY";
+                      return (
+                        <button
+                          key={link.componentId}
+                          type="button"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/applications/${application.id}`,
+                            )
+                          }
+                          className={cn(
+                            "glass-card flex w-full items-start gap-3 p-4 text-left transition-all hover:border-primary/40 hover:shadow-md",
+                            isPrimary && "border-primary/30 bg-primary/[0.03]",
+                          )}
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Boxes className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="truncate text-sm font-bold text-foreground">
+                                {application.name}
+                              </span>
+                              <Badge
+                                variant={isPrimary ? "default" : "outline"}
+                              >
+                                {isPrimary ? "Primary" : "Shared"}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 truncate text-xs text-muted-foreground">
+                              {environment.name} · {link.component.name}
+                            </p>
+                            {(application.technicalOwner ||
+                              application.businessUnit) && (
+                              <p className="mt-2 truncate text-[11px] text-muted-foreground">
+                                {[
+                                  application.technicalOwner,
+                                  application.businessUnit,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </p>
+                            )}
+                            {link.responsibleParty && (
+                              <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                                Responsible: {link.responsibleParty}
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      );
+                    })}
+                </div>
+              </section>
+            )}
 
-          {/* Attachments Section */}
-          <AttachmentsSection
-            assetId={assetId}
-            initialAttachments={asset.attachments ?? []}
-          />
+            {/* Relations Section */}
+            {(asset.parent ||
+              (asset.children && asset.children.length > 0)) && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                  <FolderTree className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-bold tracking-tight text-foreground">
+                    Hierarchy & Relations
+                  </h2>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Parent */}
+                  {asset.parent && (
+                    <div className="glass-card p-4 space-y-3">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Parent Asset
+                      </h4>
+                      <button
+                        onClick={() =>
+                          router.push(`/dashboard/assets/${asset.parent?.id}`)
+                        }
+                        className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-background/50 p-3 text-left transition-all hover:border-primary/40 hover:bg-background hover:shadow-sm group"
+                      >
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                          <Building2 className="h-4.5 w-4.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold text-foreground">
+                            {asset.parent.name}
+                          </div>
+                          <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">
+                            {getAssetTypeLabel(asset.parent.type)}
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                  {/* Children */}
+                  {asset.children && asset.children.length > 0 && (
+                    <div className="glass-card p-4 space-y-3">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Child Assets ({asset.children.length})
+                      </h4>
+                      <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                        {asset.children.map((child) => (
+                          <button
+                            key={child.id}
+                            onClick={() =>
+                              router.push(`/dashboard/assets/${child.id}`)
+                            }
+                            className="flex w-full items-center gap-3 rounded-lg border border-border/40 bg-background/30 p-2 text-left transition-all hover:border-primary/30 hover:bg-background group"
+                          >
+                            <div className="flex h-7 w-7 items-center justify-center rounded bg-muted text-muted-foreground group-hover:bg-primary/5 group-hover:text-primary">
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-foreground truncate">
+                                {child.name}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            <InventoryDocuments documents={asset.documentLinks} />
+
+            {/* Attachments Section */}
+            <AttachmentsSection
+              assetId={assetId}
+              initialAttachments={asset.attachments ?? []}
+            />
+          </div>
+
+          {/* Sidebar Components (Notes, Timeline) */}
+          <div className="space-y-4">
+            <NotesSection assetId={assetId} initialNotes={asset.notes ?? []} />
+            <AssetChangelogSection assetId={assetId} />
+          </div>
         </div>
-
-        {/* Sidebar Components (Notes, Timeline) */}
-        <div className="space-y-4">
-          <NotesSection assetId={assetId} initialNotes={asset.notes ?? []} />
-          <AssetChangelogSection assetId={assetId} />
-        </div>
-      </div>
-    </motion.div>
+      </motion.div>
+      <AssetFormDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        assetToEdit={asset}
+        onSuccess={() => {
+          setEditOpen(false);
+          void queryClient.invalidateQueries({ queryKey: ["asset", assetId] });
+          void assetQuery.refetch();
+        }}
+      />
     </InventoryQueryStateView>
   );
 }

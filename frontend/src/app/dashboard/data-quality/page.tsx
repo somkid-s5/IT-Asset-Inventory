@@ -94,7 +94,7 @@ export default function DataQualityPage() {
           issues: assets.data.issues,
           operationalIssues: assets.data.operationalIssues ?? [],
           icon: Server,
-          href: (issue: QualityIssue) => `/dashboard/assets/${issue.id}`,
+          href: (issue: QualityIssue) => `/dashboard/assets/${issue.id}?edit=1`,
         },
         {
           label: "Databases",

@@ -47,13 +47,17 @@ test.describe("Assets CRUD Operations", () => {
     await page.getByPlaceholder("Enter asset or host name").fill(assetName);
 
     // Select Switch type
-    await page
-      .getByRole("combobox", { name: "Type", exact: true })
-      .click();
+    await page.getByRole("combobox", { name: "Type", exact: true }).click();
     await page.getByRole("option", { name: "Switch", exact: true }).click();
 
     await page.getByPlaceholder("e.g. Rack A1").fill("Rack-99");
     await page.getByPlaceholder("e.g. Data Center 1").fill("Main DC");
+    await page
+      .getByLabel("OS / Firmware Version", { exact: true })
+      .fill("Ubuntu 24.04 LTS");
+    await page
+      .getByLabel("Operational Dependencies", { exact: true })
+      .fill("Core switch and backup network");
     await page.getByLabel("Total Sockets", { exact: true }).fill("2");
     await page
       .getByLabel("Installed Capacity (Total)", { exact: true })
@@ -82,6 +86,15 @@ test.describe("Assets CRUD Operations", () => {
     await expect(
       qualityIssueBefore.getByText("owner", { exact: true }),
     ).toBeVisible();
+    await qualityIssueBefore.click();
+    await expect(page).toHaveURL(/\/dashboard\/assets\/[^/?]+\?edit=1$/);
+    await expect(
+      page.getByRole("heading", { name: "Edit Asset Information" }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("OS / Firmware Version", { exact: true }),
+    ).toHaveValue("Ubuntu 24.04 LTS");
+    await page.getByRole("button", { name: "Cancel" }).click();
 
     await page.goto("/dashboard/assets");
     await page.getByPlaceholder("Search assets...").fill(assetName);
@@ -122,6 +135,15 @@ test.describe("Assets CRUD Operations", () => {
     ).toBeVisible();
     await expect(
       page.getByText("E2E Operations Team", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Ubuntu 24.04 LTS", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Core switch and backup network", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("status", { name: "Record status: Active" }),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Back to Assets" }).click();
