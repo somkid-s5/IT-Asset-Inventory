@@ -41,7 +41,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
-import { DataTableSkeleton } from "@/components/Skeletons";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -74,6 +73,8 @@ import {
 import { motion } from "framer-motion";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fadeInUp } from "@/lib/animations";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 type AssetType = "SERVER" | "STORAGE" | "SWITCH" | "SP" | "NETWORK";
 
@@ -98,14 +99,6 @@ interface AssetsResponse {
   limit: number;
   totalPages: number;
 }
-
-const EMPTY_ASSETS_RESPONSE: AssetsResponse = {
-  data: [],
-  total: 0,
-  page: 1,
-  limit: 20,
-  totalPages: 1,
-};
 
 const TABS: {
   label: string;
@@ -277,11 +270,7 @@ export default function AssetsPage() {
     showArchived,
   ]);
 
-  const {
-    data: assetsResponse = EMPTY_ASSETS_RESPONSE,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const assetsQuery = useQuery({
     queryKey: [
       "assets",
       activeTab,
@@ -314,8 +303,10 @@ export default function AssetsPage() {
     refetchOnMount: "always",
   });
 
-  const assets = assetsResponse.data;
-  const totalPages = Math.max(1, assetsResponse.totalPages);
+  const assetsResponse = assetsQuery.data;
+  const refetch = assetsQuery.refetch;
+  const assets = assetsResponse?.data ?? [];
+  const totalPages = Math.max(1, assetsResponse?.totalPages ?? 0);
   const hasActiveAssetFilter =
     Boolean(
       debouncedSearchTerm || debouncedOwnerFilter || debouncedLocationFilter,
@@ -325,6 +316,11 @@ export default function AssetsPage() {
   const hasOperationalFilters = Boolean(
     ownerFilter.trim() || locationFilter.trim(),
   );
+  const queryState = useInventoryQueryState(assetsQuery, {
+    hasData: assetsResponse !== undefined,
+    hasRecords: assets.length > 0,
+    isFiltered: hasActiveAssetFilter,
+  });
 
   useEffect(() => {
     setPagination((current) => ({ ...current, pageIndex: 0 }));
@@ -623,8 +619,6 @@ export default function AssetsPage() {
     }
   };
 
-  if (isLoading && assets.length === 0) return <DataTableSkeleton />;
-
   return (
     <motion.div
       variants={fadeInUp}
@@ -677,6 +671,37 @@ export default function AssetsPage() {
       </div>
 
       <div>
+        <InventoryQueryStateView
+          state={queryState.state}
+          hasStaleData={queryState.hasStaleData}
+          onRetry={() => void assetsQuery.refetch()}
+          loadingLabel="Loading assets…"
+          emptyState={
+            <EmptyState
+              icon={HardDrive}
+              title="No assets yet"
+              description="You haven't added any infrastructure assets yet. Start by adding your first server or switch."
+              action={{
+                label: "Add Your First Asset",
+                onClick: () => {
+                  setEditingAsset(undefined);
+                  setDialogOpen(true);
+                },
+              }}
+            />
+          }
+          filteredEmptyState={
+            <EmptyState
+              icon={HardDrive}
+              title="No assets found"
+              description={
+                showArchived
+                  ? "No archived assets match your current search or type filter."
+                  : "No assets match your current search or filter criteria."
+              }
+            />
+          }
+        >
         <Card className="border border-border/80 gap-0 shadow-md bg-card overflow-hidden p-0 rounded-2xl">
           <div className="p-3 sm:p-4 border-b border-border bg-muted/80 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             {/* Tabs */}
@@ -869,7 +894,7 @@ export default function AssetsPage() {
                           icon={HardDrive}
                           title="No assets found"
                           description={
-                            !hasActiveAssetFilter && assetsResponse.total === 0
+                            !hasActiveAssetFilter && (assetsResponse?.total ?? 0) === 0
                               ? "You haven't added any infrastructure assets yet. Start by adding your first server or switch."
                               : showArchived
                                 ? "No archived assets match your current search or type filter."
@@ -899,7 +924,7 @@ export default function AssetsPage() {
           {/* Pagination Footer */}
           <div className="flex flex-col gap-3 border-t border-border/50 bg-muted/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
             <div className="text-xs text-muted-foreground">
-              Total {assetsResponse.total} items
+              Total {assetsResponse?.total ?? 0} items
             </div>
             <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-6 lg:gap-8">
               <div className="flex items-center gap-2">
@@ -942,6 +967,7 @@ export default function AssetsPage() {
             </div>
           </div>
         </Card>
+        </InventoryQueryStateView>
       </div>
 
       {/* Asset Form Dialog */}

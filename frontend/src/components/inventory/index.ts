@@ -1,8 +1,10 @@
 export {
   InventoryPagination,
+  InventoryQueryStateView,
   InventoryTableShell,
   InventoryTableToolbar,
   type InventoryQueryState,
+  type InventoryQueryStateViewProps,
   type InventoryTableShellProps,
 } from "./InventoryTableShell";
 export {

@@ -30,7 +30,8 @@ api.interceptors.response.use(
     async (error) => {
         const config = error.config;
 
-        // Don't retry on 401/403 errors (auth issues)
+        // Authentication failures redirect to login; ordinary 403 responses
+        // must remain available to query-state consumers as Forbidden.
         if (error.response?.status === 401 || error.response?.status === 403) {
             if (typeof window !== 'undefined') {
                 const errCode = error.response?.data?.message?.code;
@@ -38,7 +39,7 @@ api.interceptors.response.use(
                     if (window.location.pathname !== '/dashboard/profile') {
                         window.location.href = '/dashboard/profile?forceChangePassword=true';
                     }
-                } else {
+                } else if (error.response?.status === 401) {
                     localStorage.removeItem('user');
                     if (window.location.pathname !== '/login') {
                         window.location.href = '/login';

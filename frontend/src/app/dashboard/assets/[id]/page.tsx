@@ -55,6 +55,8 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 import {
   HARDWARE_SPEC_GROUPS,
   normalizeSpecKey,
@@ -1842,11 +1844,7 @@ export default function AssetDetailsPage() {
   const assetId = typeof params.id === "string" ? params.id : "";
   const returnTo = searchParams?.get("returnTo");
 
-  const {
-    data: asset,
-    isLoading,
-    isError,
-  } = useQuery({
+  const assetQuery = useQuery({
     queryKey: ["asset", assetId],
     queryFn: async () => {
       const response = await api.get<Asset>(`/assets/${assetId}`);
@@ -1855,14 +1853,11 @@ export default function AssetDetailsPage() {
     enabled: !!assetId,
     staleTime: 30000, // 30 seconds
   });
-
-  // Handle errors
-  useEffect(() => {
-    if (isError) {
-      toast.error("Failed to load asset details");
-      router.push("/dashboard/assets");
-    }
-  }, [isError, router]);
+  const asset = assetQuery.data;
+  const detailState = useInventoryQueryState(assetQuery, {
+    hasData: asset !== undefined,
+    hasRecords: asset !== undefined,
+  });
 
   // Handle Header
   useEffect(() => {
@@ -1954,18 +1949,18 @@ export default function AssetDetailsPage() {
     return () => clearTimeout(timer);
   }, [assetId, accessRows]);
 
-  if (isLoading) {
+  if (detailState.state === "loading" || !asset) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-muted-foreground">
-        <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm font-bold tracking-tight">
-          Syncing Asset Resources...
-        </p>
-      </div>
+      <InventoryQueryStateView
+        state={detailState.state}
+        onRetry={() => void assetQuery.refetch()}
+        hasStaleData={detailState.hasStaleData}
+        loadingLabel="Loading asset details…"
+      >
+        <span />
+      </InventoryQueryStateView>
     );
   }
-
-  if (!asset) return null;
 
   const style = getAssetStyle(asset.type);
   const primaryVersion =
@@ -1974,6 +1969,11 @@ export default function AssetDetailsPage() {
     null;
 
   return (
+    <InventoryQueryStateView
+      state={detailState.state}
+      onRetry={() => void assetQuery.refetch()}
+      hasStaleData={detailState.hasStaleData}
+    >
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -2610,5 +2610,6 @@ export default function AssetDetailsPage() {
         </div>
       </div>
     </motion.div>
+    </InventoryQueryStateView>
   );
 }

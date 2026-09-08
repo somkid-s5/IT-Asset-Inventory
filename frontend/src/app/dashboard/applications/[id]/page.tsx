@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 export default function ApplicationDetailPage() {
   const params = useParams<{ id: string }>();
@@ -90,11 +92,16 @@ export default function ApplicationDetailPage() {
   });
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const { setHeader } = usePageHeader();
-  const { data, isLoading } = useQuery({
+  const applicationQuery = useQuery({
     queryKey: ["application", params.id],
     queryFn: async () =>
       (await api.get<Application>(`/applications/${params.id}`)).data,
     enabled: Boolean(params.id),
+  });
+  const data = applicationQuery.data;
+  const detailState = useInventoryQueryState(applicationQuery, {
+    hasData: data !== undefined,
+    hasRecords: data !== undefined,
   });
   const {
     data: topologyOptions = {
@@ -386,19 +393,24 @@ export default function ApplicationDetailPage() {
       }),
     [data, setHeader],
   );
-  if (isLoading)
+  if (detailState.state === "loading" || !data) {
     return (
-      <p className="text-sm text-muted-foreground">Loading application…</p>
+      <InventoryQueryStateView
+        state={detailState.state}
+        onRetry={() => void applicationQuery.refetch()}
+        hasStaleData={detailState.hasStaleData}
+        loadingLabel="Loading application details…"
+      >
+        <span />
+      </InventoryQueryStateView>
     );
-  if (!data)
-    return (
-      <EmptyState
-        icon={AppWindow}
-        title="Application not found"
-        description="The application may have been archived or removed."
-      />
-    );
+  }
   return (
+    <InventoryQueryStateView
+      state={detailState.state}
+      onRetry={() => void applicationQuery.refetch()}
+      hasStaleData={detailState.hasStaleData}
+    >
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -1294,5 +1306,6 @@ export default function ApplicationDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </InventoryQueryStateView>
   );
 }

@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePageHeader } from "@/contexts/PageHeaderContext";
 import { kbService } from "@/services/kb";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { getInventoryQueryState } from "@/lib/inventory-query-state";
+import { EmptyState } from "@/components/EmptyState";
 import {
   ArrowRight,
   BookOpen,
@@ -92,21 +95,27 @@ export default function DocsPage() {
   const [isInitializing, setIsInitializing] = useState(false);
   const normalizedSearch = search.trim().toLowerCase();
 
-  const { data: categories = [], isLoading: catsLoading } = useQuery({
+  const categoriesQuery = useQuery({
     queryKey: ["kb-categories"],
     queryFn: kbService.getCategories,
   });
 
-  const { data: recentArticles = [], isLoading: recentLoading } = useQuery({
+  const recentArticlesQuery = useQuery({
     queryKey: ["kb-recent-documents"],
     queryFn: () => kbService.getRecentDocuments(10),
   });
 
-  const { data: searchArticles = [], isLoading: searchLoading } = useQuery({
+  const searchArticlesQuery = useQuery({
     queryKey: ["kb-document-search", normalizedSearch],
     queryFn: () => kbService.searchDocuments(search.trim(), 50),
     enabled: Boolean(normalizedSearch),
   });
+  const categories = categoriesQuery.data ?? [];
+  const recentArticles = recentArticlesQuery.data ?? [];
+  const searchArticles = searchArticlesQuery.data ?? [];
+  const catsLoading = categoriesQuery.isLoading;
+  const recentLoading = recentArticlesQuery.isLoading;
+  const searchLoading = searchArticlesQuery.isLoading;
 
   const filteredCategories = categories.filter((category) =>
     category.name.toLowerCase().includes(normalizedSearch),
@@ -115,6 +124,23 @@ export default function DocsPage() {
     ? searchArticles
     : recentArticles;
   const articlesLoading = normalizedSearch ? searchLoading : recentLoading;
+  const articlesQuery = normalizedSearch
+    ? searchArticlesQuery
+    : recentArticlesQuery;
+  const queryState = getInventoryQueryState(
+    {
+      data: { categories, articles: filteredRecentArticles },
+      error: categoriesQuery.error ?? articlesQuery.error,
+      isError: categoriesQuery.isError || articlesQuery.isError,
+      isFetching: categoriesQuery.isFetching || articlesQuery.isFetching,
+      isPending: categoriesQuery.isPending || articlesQuery.isPending,
+    },
+    {
+      hasData: categoriesQuery.data !== undefined && articlesQuery.data !== undefined,
+      hasRecords: filteredCategories.length > 0 || filteredRecentArticles.length > 0,
+      isFiltered: Boolean(normalizedSearch),
+    },
+  );
 
   useEffect(() => {
     setHeader({
@@ -205,6 +231,29 @@ export default function DocsPage() {
         </div>
       </div>
 
+      <InventoryQueryStateView
+        state={queryState.state}
+        hasStaleData={queryState.hasStaleData}
+        onRetry={() => {
+          void categoriesQuery.refetch();
+          void articlesQuery.refetch();
+        }}
+        loadingLabel="Loading documentation…"
+        emptyState={
+          <EmptyState
+            icon={FileText}
+            title="No documentation yet"
+            description="Start by initializing the library or creating a category."
+          />
+        }
+        filteredEmptyState={
+          <EmptyState
+            icon={FileText}
+            title="No documentation found"
+            description={`No categories or documents match “${search.trim()}”.`}
+          />
+        }
+      >
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <SummaryTile
           label="Total Documents"
@@ -425,6 +474,7 @@ export default function DocsPage() {
           </div>
         )}
       </Card>
+      </InventoryQueryStateView>
     </motion.div>
   );
 }

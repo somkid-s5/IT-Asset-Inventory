@@ -80,6 +80,8 @@ import {
 import api from "@/services/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 const ENVIRONMENT_TABS: Array<{
   label: string;
@@ -149,11 +151,7 @@ export default function DbPage() {
   });
   const activeSort = sorting[0];
 
-  const {
-    data: databasePage,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const databaseQuery = useQuery({
     queryKey: [
       "databases",
       pagination.pageIndex,
@@ -183,6 +181,9 @@ export default function DbPage() {
       return response.data;
     },
   });
+  const databasePage = databaseQuery.data;
+  const isLoading = databaseQuery.isLoading;
+  const refetch = databaseQuery.refetch;
   const databases = databasePage?.data ?? [];
   const countsByEnvironment = databasePage?.environmentCounts ?? {
     ALL: 0,
@@ -232,6 +233,13 @@ export default function DbPage() {
 
   const hasActiveDatabaseFilter =
     Boolean(searchTerm.trim()) || activeEnvironment !== "ALL" || showArchived;
+  const queryState = useInventoryQueryState(databaseQuery,
+    {
+      hasData: databasePage !== undefined,
+      hasRecords: databases.length > 0,
+      isFiltered: hasActiveDatabaseFilter,
+    },
+  );
 
   const columns = useMemo<ColumnDef<DatabaseInventoryItem>[]>(
     () => [
@@ -600,6 +608,30 @@ export default function DbPage() {
         </div>
       </div>
 
+      <InventoryQueryStateView
+        state={queryState.state}
+        hasStaleData={queryState.hasStaleData}
+        onRetry={() => void refetch()}
+        loadingLabel="Loading databases…"
+        emptyState={
+          <EmptyState
+            icon={Database}
+            title="No databases yet"
+            description="You haven't added any database records yet. Start by adding your first database."
+          />
+        }
+        filteredEmptyState={
+          <EmptyState
+            icon={Database}
+            title="No databases found"
+            description={
+              showArchived
+                ? "No archived databases match your current search or environment filter."
+                : "No databases match your current search or filter criteria."
+            }
+          />
+        }
+      >
       <Card className="gap-0 overflow-hidden rounded-2xl border border-border/80 bg-card p-0 shadow-md">
         <div className="flex flex-col gap-3 border-b border-border bg-muted/80 p-3 sm:p-4 md:flex-row md:items-center md:justify-between">
           <div className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1">
@@ -820,6 +852,7 @@ export default function DbPage() {
           </div>
         </div>
       </Card>
+      </InventoryQueryStateView>
 
       {dialogOpen && (
         <DatabaseFormDialog

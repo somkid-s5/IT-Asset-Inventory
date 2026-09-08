@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/EmptyState";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 import { toast } from "sonner";
 import {
   ColumnDef,
@@ -114,7 +116,7 @@ export default function ApplicationsPage() {
     [setHeader],
   );
 
-  const { data = [], isLoading } = useQuery({
+  const applicationsQuery = useQuery({
     queryKey: ["applications", showArchived, query],
     queryFn: async () =>
       (
@@ -123,6 +125,7 @@ export default function ApplicationsPage() {
         })
       ).data,
   });
+  const data = applicationsQuery.data ?? [];
 
   const create = useMutation({
     mutationFn: async (values: ApplicationFormValues) =>
@@ -173,6 +176,11 @@ export default function ApplicationsPage() {
     () => data.filter((app) => showArchived || app.status === "ACTIVE"),
     [data, showArchived],
   );
+  const queryState = useInventoryQueryState(applicationsQuery, {
+    hasData: applicationsQuery.data !== undefined,
+    hasRecords: visible.length > 0,
+    isFiltered: Boolean(query.trim()) || showArchived,
+  });
 
   const columns = useMemo<ColumnDef<Application>[]>(
     () => [
@@ -393,11 +401,13 @@ export default function ApplicationsPage() {
         <Input aria-label="Search applications" className="pl-9" placeholder="Search applications, owners, or business units" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
 
-      {isLoading ? (
-        <Card><CardContent className="p-8 text-sm text-muted-foreground">Loading applications…</CardContent></Card>
-      ) : visible.length === 0 ? (
-        <EmptyState icon={AppWindow} title="No applications found" description="Create the first application to start mapping its environments and components." />
-      ) : (
+      <InventoryQueryStateView
+        state={queryState.state}
+        hasStaleData={queryState.hasStaleData}
+        onRetry={() => void applicationsQuery.refetch()}
+        emptyState={<EmptyState icon={AppWindow} title="No applications yet" description="Create the first application to start mapping its environments and components." />}
+        filteredEmptyState={<EmptyState icon={AppWindow} title="No applications found" description="No applications match the current search or archived filter." />}
+      >
         <div className="space-y-3">
           <Card className="overflow-hidden p-0">
             <CardContent className="p-0">
@@ -437,7 +447,7 @@ export default function ApplicationsPage() {
             </div>
           )}
         </div>
-      )}
+      </InventoryQueryStateView>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   EnvironmentBadge,
   InventoryPagination,
+  InventoryQueryStateView,
   InventoryRowActions,
   InventoryTableShell,
   InventoryTableToolbar,
@@ -61,6 +62,28 @@ test("InventoryTableShell keeps request errors distinct from empty data", () => 
   assert.match(markup, /Inventory unavailable/);
   assert.match(markup, />Retry</);
   assert.doesNotMatch(markup, /Should not render during error/);
+});
+
+test("shared query renderer exposes stale refresh failure and returns to ready after retry", () => {
+  const failedMarkup = renderToStaticMarkup(
+    <InventoryQueryStateView state="error" hasStaleData onRetry={() => undefined}>
+      <div data-slot="stale-records">Previously loaded asset</div>
+    </InventoryQueryStateView>,
+  );
+  assert.match(failedMarkup, /data-query-state="error"/);
+  assert.match(failedMarkup, /data-stale="true"/);
+  assert.match(failedMarkup, /Refresh failed/);
+  assert.match(failedMarkup, />Retry</);
+  assert.match(failedMarkup, /Previously loaded asset/);
+  assert.doesNotMatch(failedMarkup, /No records yet/);
+
+  const retriedMarkup = renderToStaticMarkup(
+    <InventoryQueryStateView state="ready">
+      <div data-slot="ready-records">Retry succeeded</div>
+    </InventoryQueryStateView>,
+  );
+  assert.match(retriedMarkup, /Retry succeeded/);
+  assert.doesNotMatch(retriedMarkup, /Refresh failed/);
 });
 
 test("shared row actions and semantic missing/status components expose accessible grammar", () => {

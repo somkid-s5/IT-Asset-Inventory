@@ -26,6 +26,8 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
 import { useAuth } from "@/contexts/AuthContext";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 export default function DatabaseDetailPage() {
   const params = useParams();
@@ -39,12 +41,7 @@ export default function DatabaseDetailPage() {
     Record<string, string>
   >({});
 
-  const {
-    data: database,
-    isLoading: loading,
-    isError,
-    refetch,
-  } = useQuery({
+  const databaseQuery = useQuery({
     queryKey: ["database", params?.id],
     queryFn: async () => {
       if (typeof params?.id !== "string") throw new Error("Invalid ID");
@@ -55,13 +52,12 @@ export default function DatabaseDetailPage() {
     },
     enabled: typeof params?.id === "string",
   });
-
-  useEffect(() => {
-    if (isError) {
-      toast.error("Failed to load database details");
-      router.push("/dashboard/databases");
-    }
-  }, [isError, router]);
+  const database = databaseQuery.data;
+  const refetch = databaseQuery.refetch;
+  const detailState = useInventoryQueryState(databaseQuery, {
+    hasData: database !== undefined,
+    hasRecords: database !== undefined,
+  });
 
   useEffect(() => {
     if (!database) return;
@@ -84,29 +80,16 @@ export default function DatabaseDetailPage() {
     };
   }, [database]);
 
-  if (loading) {
+  if (detailState.state === "loading" || !database) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-muted-foreground">
-        <LoaderCircle className="mb-3 h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm">Loading database details...</p>
-      </div>
-    );
-  }
-
-  if (!database) {
-    return (
-      <div className="space-y-4 pb-8">
-        <button
-          onClick={() => router.push("/dashboard/databases")}
-          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Databases
-        </button>
-        <div className="glass-card p-8 text-center text-sm text-muted-foreground">
-          Database not found
-        </div>
-      </div>
+      <InventoryQueryStateView
+        state={detailState.state}
+        onRetry={() => void refetch()}
+        hasStaleData={detailState.hasStaleData}
+        loadingLabel="Loading database details…"
+      >
+        <span />
+      </InventoryQueryStateView>
     );
   }
 
@@ -259,6 +242,11 @@ export default function DatabaseDetailPage() {
   };
 
   return (
+    <InventoryQueryStateView
+      state={detailState.state}
+      onRetry={() => void refetch()}
+      hasStaleData={detailState.hasStaleData}
+    >
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -707,5 +695,6 @@ export default function DatabaseDetailPage() {
         </div>
       </section>
     </motion.div>
+    </InventoryQueryStateView>
   );
 }

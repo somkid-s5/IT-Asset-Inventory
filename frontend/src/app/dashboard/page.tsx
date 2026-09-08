@@ -27,6 +27,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DashboardSkeleton } from "@/components/Skeletons";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 import { containerVariants, itemVariants } from "@/lib/animations";
 
 type QualityReason = {
@@ -210,6 +212,10 @@ export default function DashboardPage() {
     retry: false,
     refetchOnMount: "always",
   });
+  const overviewState = useInventoryQueryState(overviewQuery, {
+    hasData: overviewQuery.data !== undefined,
+    hasRecords: overviewQuery.data !== undefined,
+  });
 
   useEffect(() => {
     setHeader({
@@ -240,11 +246,17 @@ export default function DashboardPage() {
     await Promise.all([overviewQuery.refetch(), qualityQuery.refetch()]);
   };
 
-  if (overviewQuery.isLoading) return <DashboardSkeleton />;
+  if (overviewState.state === "loading") return <DashboardSkeleton />;
 
   const data = overviewQuery.data;
 
   return (
+    <InventoryQueryStateView
+      state={overviewState.state}
+      hasStaleData={overviewState.hasStaleData}
+      onRetry={() => void overviewQuery.refetch()}
+      loadingLabel="Loading dashboard overview…"
+    >
     <motion.div
       variants={containerVariants}
       initial="hidden"
@@ -466,6 +478,7 @@ export default function DashboardPage() {
         </Card>
       </motion.section>
     </motion.div>
+    </InventoryQueryStateView>
   );
 }
 

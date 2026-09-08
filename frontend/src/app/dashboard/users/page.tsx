@@ -5,6 +5,8 @@ import { usePageHeader } from '@/contexts/PageHeaderContext';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EmptyState } from '@/components/EmptyState';
+import { InventoryQueryStateView } from '@/components/inventory';
+import { useInventoryQueryState } from '@/lib/inventory-query-state';
 import { 
   ArrowDown, ArrowUp, ChevronsUpDown, Eye, KeyRound, 
   LoaderCircle, PencilLine, Plus, Search, Shield, 
@@ -106,7 +108,7 @@ export default function UsersPage() {
   const [rowSelection, setRowSelection] = useState({});
 
   // React Query Queries & Mutations
-  const { data: users = [], isLoading: loading } = useQuery({
+  const usersQuery = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       const response = await api.get<UserRecord[]>('/users');
@@ -114,6 +116,8 @@ export default function UsersPage() {
     },
     enabled: !!user && user.role === 'ADMIN',
   });
+  const users = usersQuery.data ?? [];
+  const loading = usersQuery.isLoading;
 
   const roleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: Role }) => {
@@ -343,6 +347,11 @@ export default function UsersPage() {
         .some((value) => value.toLowerCase().includes(normalizedFilter));
     },
   });
+  const queryState = useInventoryQueryState(usersQuery, {
+    hasData: usersQuery.data !== undefined,
+    hasRecords: table.getFilteredRowModel().rows.length > 0,
+    isFiltered: activeRole !== 'ALL' || Boolean(globalFilter.trim()),
+  });
 
   const handleCreateUser = (e: FormEvent) => {
     e.preventDefault();
@@ -388,6 +397,27 @@ export default function UsersPage() {
         </div>
       </div>
 
+      <InventoryQueryStateView
+        state={queryState.state}
+        hasStaleData={queryState.hasStaleData}
+        onRetry={() => void usersQuery.refetch()}
+        loadingLabel="Loading users…"
+        emptyState={
+          <EmptyState
+            icon={Users}
+            title="No users yet"
+            description="There are no users registered in the system yet. Start by adding a user account."
+            action={{ label: "Add Your First User", onClick: () => setCreateOpen(true) }}
+          />
+        }
+        filteredEmptyState={
+          <EmptyState
+            icon={Users}
+            title="No users found"
+            description="No users match your current search or role filter criteria."
+          />
+        }
+      >
       <Card className="border-2 border-border shadow-md bg-card overflow-hidden p-0 gap-0 rounded-[24px]">
         <div className="p-4 border-b-2 border-border bg-muted/80 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-fit">
@@ -516,6 +546,7 @@ export default function UsersPage() {
           </div>
         </div>
       </Card>
+      </InventoryQueryStateView>
 
       {/* Dialogs */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import api from '@/services/api';
 import { VmFormDialog } from '@/components/LazyLoadedDialogs';
 import { EmptyState } from '@/components/EmptyState';
+import { InventoryQueryStateView } from '@/components/inventory';
+import { useInventoryQueryState } from '@/lib/inventory-query-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -83,7 +85,7 @@ export default function VmPage() {
   const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
   const [openingPendingId, setOpeningPendingId] = useState<string | null>(null);
 
-  const { data: vmData, isLoading, refetch } = useQuery({
+  const vmQuery = useQuery({
     queryKey: ['vm-data', includeArchived],
     queryFn: async () => {
       const [discoveryRecords, inventoryRecords] = await Promise.all([
@@ -93,6 +95,9 @@ export default function VmPage() {
       return { discoveries: discoveryRecords, inventory: inventoryRecords };
     },
   });
+  const vmData = vmQuery.data;
+  const isLoading = vmQuery.isLoading;
+  const refetch = vmQuery.refetch;
 
   const discoveries = vmData?.discoveries ?? [];
   const inventory = vmData?.inventory ?? [];
@@ -129,6 +134,18 @@ export default function VmPage() {
   const activeQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ACTIVE' && vm.syncState !== 'Missing from source'), [inventory]);
   const orphanedQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState !== 'ARCHIVED' && (vm.syncState === 'Missing from source' || vm.lifecycleState === 'DELETED_IN_VCENTER')), [inventory]);
   const archivedQueue = useMemo(() => inventory.filter(vm => vm.lifecycleState === 'ARCHIVED'), [inventory]);
+  const selectedQueue = activeView === 'PENDING'
+    ? pendingQueue
+    : activeView === 'ACTIVE'
+      ? activeQueue
+      : activeView === 'ORPHANED'
+        ? orphanedQueue
+        : archivedQueue;
+  const queryState = useInventoryQueryState(vmQuery, {
+    hasData: vmData !== undefined,
+    hasRecords: selectedQueue.length > 0,
+    isFiltered: Boolean(searchTerm.trim()) || activeView !== 'ACTIVE',
+  });
 
   const handleViewChange = useCallback((view: InventoryView) => {
     setActiveView(view);
@@ -191,6 +208,26 @@ export default function VmPage() {
         </div>
       </div>
 
+      <InventoryQueryStateView
+        state={queryState.state}
+        hasStaleData={queryState.hasStaleData}
+        onRetry={() => void refetch()}
+        loadingLabel="Loading virtual machine data…"
+        emptyState={
+          <EmptyState
+            icon={Monitor}
+            title={`No ${VIEW_COPY[activeView].shortLabel.toLowerCase()} VMs yet`}
+            description="No virtual machines are available in this inventory view yet."
+          />
+        }
+        filteredEmptyState={
+          <EmptyState
+            icon={Monitor}
+            title="No virtual machines found"
+            description="No virtual machines match your current search or view."
+          />
+        }
+      >
       <Card className="gap-0 overflow-hidden rounded-2xl border border-border/80 bg-card p-0 shadow-md">
         {isLoading ? (
            <div className="p-20 flex flex-col items-center justify-center text-muted-foreground">
@@ -211,6 +248,7 @@ export default function VmPage() {
           </>
         )}
       </Card>
+      </InventoryQueryStateView>
 
       {pendingDialogOpen && (
         <VmFormDialog

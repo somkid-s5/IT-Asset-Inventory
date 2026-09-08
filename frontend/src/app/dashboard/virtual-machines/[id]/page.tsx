@@ -45,6 +45,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import api from "@/services/api";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 export default function VmDetailPage() {
   const params = useParams();
@@ -61,12 +63,7 @@ export default function VmDetailPage() {
     "OVERVIEW" | "RESOURCES" | "CONTEXT"
   >("OVERVIEW");
 
-  const {
-    data: vm,
-    isLoading: loading,
-    isError,
-    refetch: loadVm,
-  } = useQuery({
+  const vmQuery = useQuery({
     queryKey: ["vm-inventory-detail", params?.id],
     queryFn: async () => {
       if (typeof params?.id !== "string") throw new Error("Invalid ID");
@@ -74,13 +71,12 @@ export default function VmDetailPage() {
     },
     enabled: typeof params?.id === "string",
   });
-
-  useEffect(() => {
-    if (isError) {
-      toast.error("Failed to load virtual machine details");
-      router.push("/dashboard/virtual-machines");
-    }
-  }, [isError, router]);
+  const vm = vmQuery.data;
+  const loadVm = vmQuery.refetch;
+  const detailState = useInventoryQueryState(vmQuery, {
+    hasData: vm !== undefined,
+    hasRecords: vm !== undefined,
+  });
 
   useEffect(() => {
     if (!vm) return;
@@ -148,28 +144,16 @@ export default function VmDetailPage() {
     await api.post(`/vm/guest-accounts/${accountId}/copy`);
   };
 
-  if (loading) {
+  if (detailState.state === "loading" || !vm) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-muted-foreground">
-        <LoaderCircle className="mb-3 h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm">Loading VM details...</p>
-      </div>
-    );
-  }
-
-  if (!vm) {
-    return (
-      <div className="space-y-4 pb-8">
-        <button
-          onClick={() => router.push("/dashboard/virtual-machines")}
-          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to VMs
-        </button>
-        <div className="glass-card p-8 text-center text-sm text-muted-foreground">
-          Virtual machine not found
-        </div>
-      </div>
+      <InventoryQueryStateView
+        state={detailState.state}
+        onRetry={() => void loadVm()}
+        hasStaleData={detailState.hasStaleData}
+        loadingLabel="Loading VM details…"
+      >
+        <span />
+      </InventoryQueryStateView>
     );
   }
 
@@ -214,6 +198,11 @@ export default function VmDetailPage() {
   const isSynced = syncBadge.label === "Synced";
 
   return (
+    <InventoryQueryStateView
+      state={detailState.state}
+      onRetry={() => void loadVm()}
+      hasStaleData={detailState.hasStaleData}
+    >
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -768,6 +757,7 @@ export default function VmDetailPage() {
         </DialogContent>
       </Dialog>
     </motion.div>
+    </InventoryQueryStateView>
   );
 }
 

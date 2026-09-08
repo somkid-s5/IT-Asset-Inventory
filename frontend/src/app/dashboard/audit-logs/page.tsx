@@ -36,6 +36,8 @@ import api from '@/services/api';
 import { fadeInUp } from '@/lib/animations';
 import { AccessDenied } from '@/components/access-denied';
 import { EmptyState } from '@/components/EmptyState';
+import { InventoryQueryStateView } from '@/components/inventory';
+import { useInventoryQueryState } from '@/lib/inventory-query-state';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -192,7 +194,7 @@ export default function AuditLogsPage() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
 
-  const { data: logs = [], isLoading: loading } = useQuery({
+  const logsQuery = useQuery({
     queryKey: ['audit-logs'],
     queryFn: async () => {
       const response = await api.get('/audit-logs');
@@ -201,6 +203,8 @@ export default function AuditLogsPage() {
     },
     enabled: !!user && user.role === 'ADMIN',
   });
+  const logs = logsQuery.data ?? [];
+  const loading = logsQuery.isLoading;
 
   useEffect(() => {
     if (user && user.role !== 'ADMIN') router.replace('/dashboard');
@@ -269,8 +273,6 @@ export default function AuditLogsPage() {
     },
   });
 
-  if (!user || user.role !== 'ADMIN') return <AccessDenied />;
-
   const today = new Date();
   const todayEvents = logs.filter((log) => {
     const date = new Date(log.timestamp);
@@ -279,6 +281,13 @@ export default function AuditLogsPage() {
   const deleteEvents = logs.filter((log) => log.action.includes('DELETE')).length;
   const uniqueActors = new Set(logs.map((log) => log.user?.username || 'system')).size;
   const filteredRows = table.getFilteredRowModel().rows;
+  const queryState = useInventoryQueryState(logsQuery, {
+    hasData: logsQuery.data !== undefined,
+    hasRecords: filteredRows.length > 0,
+    isFiltered: Boolean(globalFilter.trim()) || columnFilters.length > 0,
+  });
+
+  if (!user || user.role !== 'ADMIN') return <AccessDenied />;
 
   return (
     <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="space-y-5 pb-8">
@@ -294,6 +303,26 @@ export default function AuditLogsPage() {
         )}
       </div>
 
+      <InventoryQueryStateView
+        state={queryState.state}
+        hasStaleData={queryState.hasStaleData}
+        onRetry={() => void logsQuery.refetch()}
+        loadingLabel="Loading audit logs…"
+        emptyState={
+          <EmptyState
+            icon={ShieldAlert}
+            title="No audit logs yet"
+            description="No system audit logs have been recorded yet."
+          />
+        }
+        filteredEmptyState={
+          <EmptyState
+            icon={ShieldAlert}
+            title="No audit logs found"
+            description="No audit logs match your current search or filters."
+          />
+        }
+      >
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <SummaryTile icon={Activity} label="Total Events" value={logs.length} tone="bg-primary/10 text-primary" />
         <SummaryTile icon={Clock3} label="Today" value={todayEvents} tone="bg-info/10 text-info" />
@@ -362,6 +391,7 @@ export default function AuditLogsPage() {
           </div>
         </div>
       </Card>
+      </InventoryQueryStateView>
     </motion.div>
   );
 }

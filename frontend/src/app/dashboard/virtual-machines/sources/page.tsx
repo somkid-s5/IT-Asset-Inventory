@@ -61,6 +61,8 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { fadeInUp } from "@/lib/animations";
 import { EmptyState } from "@/components/EmptyState";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 import {
   Table,
   TableBody,
@@ -161,16 +163,15 @@ export default function VmSourcesPage() {
   const canManageSources = user?.role === "ADMIN" || user?.role === "EDITOR";
   const canRestoreSources = user?.role === "ADMIN";
 
-  const {
-    data: sources = [],
-    isLoading,
-    refetch,
-  } = useQuery({
+  const sourcesQuery = useQuery({
     queryKey: ["vm-sources"],
     queryFn: async () => {
       return await getVmSources();
     },
   });
+  const sources = sourcesQuery.data ?? [];
+  const isLoading = sourcesQuery.isLoading;
+  const refetch = sourcesQuery.refetch;
 
   const [addOpen, setAddOpen] = useState(false);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
@@ -556,6 +557,11 @@ export default function VmSourcesPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
   });
+  const queryState = useInventoryQueryState(sourcesQuery, {
+    hasData: sourcesQuery.data !== undefined,
+    hasRecords: table.getFilteredRowModel().rows.length > 0,
+    isFiltered: Boolean(globalFilter.trim()),
+  });
 
   return (
     <motion.div
@@ -644,6 +650,27 @@ export default function VmSourcesPage() {
         />
       </div>
 
+      <InventoryQueryStateView
+        state={queryState.state}
+        hasStaleData={queryState.hasStaleData}
+        onRetry={() => void refetch()}
+        loadingLabel="Loading vCenter sources…"
+        emptyState={
+          <EmptyState
+            icon={Server}
+            title="No vCenter sources yet"
+            description="Add a vCenter source to start discovering virtual machines."
+            action={{ label: "Create first source", onClick: openAddDialog }}
+          />
+        }
+        filteredEmptyState={
+          <EmptyState
+            icon={Server}
+            title="No sources match your search"
+            description="Try a different source name or endpoint."
+          />
+        }
+      >
       <Card className="gap-0 overflow-hidden rounded-2xl border border-border/80 bg-card p-0 shadow-md">
         <div className="flex flex-col gap-3 border-b border-border/70 bg-muted/30 p-3 sm:p-4 md:flex-row md:items-center md:justify-between">
           <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-border/50 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -746,6 +773,7 @@ export default function VmSourcesPage() {
         </div>
         <SourcePagination table={table} />
       </Card>
+      </InventoryQueryStateView>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl bg-card p-0">

@@ -28,6 +28,7 @@ export interface InventoryTableShellProps {
   toolbar?: ReactNode;
   state?: InventoryQueryState;
   onRetry?: () => void;
+  hasStaleData?: boolean;
   emptyState?: ReactNode;
   filteredEmptyState?: ReactNode;
   pagination?: ReactNode;
@@ -84,6 +85,87 @@ function DefaultState({
       )}
     </div>
   );
+}
+
+export interface InventoryQueryStateViewProps {
+  state?: InventoryQueryState;
+  onRetry?: () => void;
+  hasStaleData?: boolean;
+  emptyState?: ReactNode;
+  filteredEmptyState?: ReactNode;
+  loadingLabel?: string;
+  children: ReactNode;
+}
+
+export function InventoryQueryStateView({
+  state = "ready",
+  onRetry,
+  hasStaleData = false,
+  emptyState,
+  filteredEmptyState,
+  loadingLabel = "Loading inventory…",
+  children,
+}: InventoryQueryStateViewProps) {
+  if (state === "loading") {
+    return (
+      <div
+        className="flex min-h-32 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/10 px-4 py-10 text-sm text-muted-foreground"
+        data-slot="inventory-query-state"
+        data-query-state="loading"
+        role="status"
+        aria-live="polite"
+      >
+        <LoaderCircle className="animate-spin" />
+        {loadingLabel}
+      </div>
+    );
+  }
+
+  if (state === "error" && hasStaleData) {
+    return (
+      <div className="space-y-3">
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm"
+          data-slot="inventory-query-state"
+          data-query-state="error"
+          data-stale="true"
+          role="alert"
+        >
+          <div>
+            <p className="font-semibold text-foreground">Refresh failed</p>
+            <p className="text-muted-foreground">Showing previously loaded data. The latest refresh was not confirmed.</p>
+          </div>
+          {onRetry && (
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              <RefreshCw />
+              Retry
+            </Button>
+          )}
+        </div>
+        {children}
+      </div>
+    );
+  }
+
+  if (state === "refreshing") {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+          <LoaderCircle className="animate-spin" />
+          Refreshing inventory…
+        </div>
+        {children}
+      </div>
+    );
+  }
+
+  if (state === "error" || state === "forbidden" || state === "not-found") {
+    return <DefaultState state={state} onRetry={onRetry} />;
+  }
+
+  if (state === "empty") return <>{emptyState ?? <DefaultState state="empty" />}</>;
+  if (state === "filtered-empty") return <>{filteredEmptyState ?? <DefaultState state="filtered-empty" />}</>;
+  return <>{children}</>;
 }
 
 export function InventoryTableToolbar({
@@ -218,6 +300,7 @@ export function InventoryTableShell({
   toolbar,
   state = "ready",
   onRetry,
+  hasStaleData,
   emptyState,
   filteredEmptyState,
   pagination,
@@ -226,37 +309,17 @@ export function InventoryTableShell({
 }: InventoryTableShellProps) {
   const titleId = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-inventory-heading`;
 
-  let content: ReactNode = children;
-  if (state === "loading") {
-    content = (
-      <div
-        className="flex min-h-32 items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/10 px-4 py-10 text-sm text-muted-foreground"
-        data-slot="inventory-query-state"
-        data-query-state="loading"
-        role="status"
-        aria-live="polite"
-      >
-        <LoaderCircle className="animate-spin" />
-        Loading inventory…
-      </div>
-    );
-  } else if (state === "refreshing") {
-    content = (
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
-          <LoaderCircle className="animate-spin" />
-          Refreshing inventory…
-        </div>
-        {children}
-      </div>
-    );
-  } else if (state === "error" || state === "forbidden" || state === "not-found") {
-    content = <DefaultState state={state} onRetry={onRetry} />;
-  } else if (state === "empty") {
-    content = emptyState ?? <DefaultState state="empty" />;
-  } else if (state === "filtered-empty") {
-    content = filteredEmptyState ?? <DefaultState state="filtered-empty" />;
-  }
+  const content = (
+    <InventoryQueryStateView
+      state={state}
+      onRetry={onRetry}
+      hasStaleData={hasStaleData}
+      emptyState={emptyState}
+      filteredEmptyState={filteredEmptyState}
+    >
+      {children}
+    </InventoryQueryStateView>
+  );
 
   return (
     <section
