@@ -66,6 +66,7 @@ const include = {
         orderBy: { sortOrder: 'asc' as const },
       },
       access: {
+        include: { credentials: true, environment: true },
         orderBy: [
           { sortOrder: 'asc' as const },
           { createdAt: 'asc' as const },

@@ -60,7 +60,17 @@ type IntegrityInternals = {
   project: (
     app: unknown,
     role: Role,
-  ) => { access: Array<{ isPrimary: boolean; sortOrder: number }> };
+  ) => {
+    access: Array<ProjectedAccess>;
+    environments: Array<{ access: Array<ProjectedAccess> }>;
+  };
+};
+
+type ProjectedAccess = {
+  environment: { id: string; name: string } | null;
+  isPrimary: boolean;
+  sortOrder: number;
+  credentials: Array<{ username: string; hasPassword: boolean }>;
 };
 
 describe('ApplicationsService Ticket 04 integrity contracts', () => {
@@ -322,6 +332,68 @@ describe('ApplicationsService Ticket 04 integrity contracts', () => {
         responsibleParty: 'Platform Team',
       },
     ]);
+  });
+
+  it('projects nested environment access with credentials safely', () => {
+    const service = new ApplicationsService({} as PrismaService, credentials);
+    const internals = service as unknown as IntegrityInternals;
+    const projected = internals.project(
+      {
+        id: 'app-1',
+        name: 'Inventory App',
+        technicalOwner: null,
+        businessUnit: null,
+        description: 'Application',
+        status: ApplicationStatus.ACTIVE,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdByUser: null,
+        environments: [
+          {
+            id: 'env-prod',
+            name: ApplicationEnvironmentName.PROD,
+            noDatabase: false,
+            components: [],
+            access: [
+              {
+                id: 'access-env-1',
+                applicationId: 'app-1',
+                environmentId: 'env-prod',
+                environment: { id: 'env-prod', name: 'PROD' },
+                label: 'Console',
+                address: 'https://prod.example.test',
+                method: 'HTTPS',
+                sortOrder: 0,
+                isPrimary: true,
+                credentials: [
+                  {
+                    id: 'credential-1',
+                    username: 'operator',
+                    role: 'Admin',
+                    encryptedPassword: 'nested-ciphertext-must-not-leak',
+                    lastChangedDate: null,
+                  },
+                ],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+            ],
+          },
+        ],
+        access: [],
+        documentLinks: [],
+      },
+      Role.EDITOR,
+    );
+
+    expect(projected.environments[0]?.access[0]).toMatchObject({
+      environment: { id: 'env-prod', name: 'PROD' },
+      isPrimary: true,
+      credentials: [{ username: 'operator', hasPassword: true }],
+    });
+    expect(JSON.stringify(projected)).not.toContain(
+      'nested-ciphertext-must-not-leak',
+    );
   });
 
   it('projects explicit primary/order metadata without encrypted secrets', () => {
