@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   VmCriticality,
   VmDiscoveryState,
   VmEnvironment,
@@ -17,6 +18,27 @@ type InventoryUpdateArgs = {
 };
 
 describe('VmService curated context and lifecycle contract', () => {
+  it('rejects normal curated mutations for archived inventory records', async () => {
+    const inventoryUpdate = jest.fn();
+    const prisma = {
+      vmInventory: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'vm-archived',
+          lifecycleState: VmLifecycleState.ARCHIVED,
+          guestAccounts: [],
+          componentLinks: [],
+        }),
+        update: inventoryUpdate,
+      },
+    } as unknown as PrismaService;
+    const service = new VmService(prisma, {} as CredentialsService);
+
+    await expect(
+      service.updateInventory('vm-archived', { owner: 'new-owner' }, 'user-1'),
+    ).rejects.toThrow(BadRequestException);
+    expect(inventoryUpdate).not.toHaveBeenCalled();
+  });
+
   it('updates curated context without changing vCenter facts, sync state, lifecycle, or nested relations', async () => {
     const current = {
       id: 'vm-1',

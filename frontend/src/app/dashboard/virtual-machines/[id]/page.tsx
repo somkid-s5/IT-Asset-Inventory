@@ -40,12 +40,13 @@ import {
   archiveVmInventory,
   getVmInventoryById,
   revealVmGuestAccountPassword,
+  restoreVmInventory,
 } from "@/services/vm";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import api from "@/services/api";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
-import { InventoryQueryStateView } from "@/components/inventory";
+import { EnvironmentBadge, InventoryQueryStateView } from "@/components/inventory";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 export default function VmDetailPage() {
@@ -165,9 +166,15 @@ export default function VmDetailPage() {
       };
     if (state === "DRAFT")
       return { label: "Draft", class: "border-low/25 bg-low/10 text-low" };
+    if (state === "DELETED_IN_VCENTER") {
+      return {
+        label: "Deleted in vCenter",
+        class: "border-critical/25 bg-critical/10 text-critical",
+      };
+    }
     return {
       label: "Archived",
-      class: "border-critical/25 bg-critical/10 text-critical",
+      class: "border-border bg-muted/50 text-muted-foreground",
     };
   };
   const lifecycleBadge = getLifecycleBadge(vm.lifecycleState);
@@ -216,7 +223,7 @@ export default function VmDetailPage() {
           <ArrowLeft className="h-4 w-4" /> Back to VMs
         </button>
         <div className="flex w-full shrink-0 flex-wrap justify-end gap-2 sm:w-auto">
-          {canEdit ? (
+          {canEdit && vm.lifecycleState !== "ARCHIVED" ? (
             <Button
               variant="outline"
               size="sm"
@@ -226,7 +233,25 @@ export default function VmDetailPage() {
               Edit VM
             </Button>
           ) : null}
-          {canAdmin ? (
+          {canAdmin && vm.lifecycleState === "ARCHIVED" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await restoreVmInventory(vm.id);
+                  toast.success("VM restored successfully");
+                  void loadVm();
+                } catch {
+                  toast.error("Restore failed");
+                }
+              }}
+              className="h-8 shadow-sm"
+            >
+              Restore VM
+            </Button>
+          ) : null}
+          {canAdmin && vm.lifecycleState !== "ARCHIVED" ? (
             <Button
               variant="destructive"
               size="sm"
@@ -251,8 +276,10 @@ export default function VmDetailPage() {
                 {vm.lifecycleState === "DRAFT"
                   ? "Draft record created from vCenter discovery. Review the context before promoting it."
                   : vm.lifecycleState === "DELETED_IN_VCENTER"
-                    ? "This VM is no longer present in vCenter. Archive or delete the record after review."
-                    : "This VM is active and synced with the connected source."}
+                    ? "This VM is no longer present in vCenter. Curated context is preserved; archive it for history or restore it after the source returns."
+                    : vm.lifecycleState === "ARCHIVED"
+                      ? "This VM is archived as historical record. Restore it before making normal curation changes."
+                      : "This VM is active and synced with the connected source."}
               </p>
             </div>
           </div>
@@ -492,8 +519,18 @@ export default function VmDetailPage() {
                       </h3>
                       <div className="space-y-3">
                         <DetailRow label="System Name" value={vm.systemName} />
-                        <DetailRow label="Environment" value={vm.environment} />
+                        <DetailRow
+                          label="Environment"
+                          value={<EnvironmentBadge value={vm.environment} />}
+                        />
+                        <DetailRow label="Owner" value={vm.owner} />
+                        <DetailRow label="Business Unit" value={vm.businessUnit} />
+                        <DetailRow label="SLA Tier" value={vm.slaTier} />
                         <DetailRow label="Role" value={vm.serviceRole} />
+                        <DetailRow
+                          label="Criticality"
+                          value={vm.criticality.replaceAll("_", " ")}
+                        />
                         <DetailRow
                           label="Tags"
                           value={

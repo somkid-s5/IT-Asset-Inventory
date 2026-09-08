@@ -4,6 +4,49 @@ import { PrismaService } from '../prisma/prisma.service';
 import { VmService } from './vm.service';
 
 describe('VmService VM Data Quality contract', () => {
+  it('reports only remediable VM context reasons for missing supported controls', async () => {
+    const prisma = {
+      vmDiscovery: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      vmInventory: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'vm-incomplete',
+            name: 'app-prod-incomplete',
+            syncState: 'Synced',
+            lifecycleState: VmLifecycleState.ACTIVE,
+            owner: '',
+            businessUnit: '',
+            serviceRole: '',
+            criticality: null,
+            componentLinks: [],
+          },
+        ]),
+      },
+    } as unknown as PrismaService;
+    const service = new VmService(prisma, {} as CredentialsService);
+
+    const summary = await service.getDataQualitySummary();
+
+    expect(summary.issues[0]?.reasons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'vm.owner', label: 'owner' }),
+        expect.objectContaining({
+          code: 'vm.businessUnit',
+          label: 'business unit',
+        }),
+        expect.objectContaining({ code: 'vm.serviceRole', label: 'service role' }),
+        expect.objectContaining({ code: 'vm.criticality', label: 'criticality' }),
+        expect.objectContaining({
+          code: 'vm.applicationComponent',
+          label: 'application component',
+        }),
+      ]),
+    );
+    expect(summary.issues[0]?.reasons).toHaveLength(5);
+  });
+
   it('reports missing Application context for an Inventory VM', async () => {
     const prisma = {
       vmDiscovery: {

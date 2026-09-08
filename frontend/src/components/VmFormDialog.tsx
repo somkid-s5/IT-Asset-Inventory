@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import {
   VM_ENVIRONMENT_FILTERS,
+  VM_CRITICALITY_OPTIONS,
   VM_SERVICE_ROLE_OPTIONS,
   type VmDiscoveryItem,
   type VmInventoryDetail,
@@ -420,7 +421,7 @@ export function VmFormDialog({
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-1.5">
-                <Label required>System Name / Service</Label>
+                <Label htmlFor="vm-system-name" required>System Name / Service</Label>
                 <Input
                   id="vm-system-name"
                   value={formData.systemName}
@@ -434,7 +435,7 @@ export function VmFormDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label required>Environment</Label>
+                <Label htmlFor="vm-env" required>Environment</Label>
                 <Select
                   value={formData.environment}
                   onValueChange={(value) =>
@@ -444,7 +445,11 @@ export function VmFormDialog({
                     }))
                   }
                 >
-                  <SelectTrigger id="vm-env" className="w-full">
+                  <SelectTrigger
+                    id="vm-env"
+                    aria-label="Environment"
+                    className="w-full"
+                  >
                     <SelectValue placeholder="Select environment" />
                   </SelectTrigger>
                   <SelectContent>
@@ -459,7 +464,76 @@ export function VmFormDialog({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label required>Service Role</Label>
+                <Label htmlFor="vm-owner" required>Owner</Label>
+                <Input
+                  id="vm-owner"
+                  value={formData.owner}
+                  onChange={(event) =>
+                    setFormData((current) => ({
+                      ...current,
+                      owner: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. platform-team"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-business-unit" required>Business Unit</Label>
+                <Input
+                  id="vm-business-unit"
+                  value={formData.businessUnit}
+                  onChange={(event) =>
+                    setFormData((current) => ({
+                      ...current,
+                      businessUnit: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Treasury"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-sla-tier" optional>SLA Tier</Label>
+                <Input
+                  id="vm-sla-tier"
+                  value={formData.slaTier}
+                  onChange={(event) =>
+                    setFormData((current) => ({
+                      ...current,
+                      slaTier: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Tier-1"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-criticality" required>Criticality</Label>
+                <Select
+                  value={formData.criticality}
+                  onValueChange={(value) =>
+                    setFormData((current) => ({
+                      ...current,
+                      criticality: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    id="vm-criticality"
+                    aria-label="Criticality"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="Select criticality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VM_CRITICALITY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vm-service-role" required>Service Role</Label>
                 <Select
                   value={formData.serviceRole}
                   onValueChange={(value) =>
@@ -469,7 +543,11 @@ export function VmFormDialog({
                     }))
                   }
                 >
-                  <SelectTrigger id="vm-service-role" className="w-full">
+                  <SelectTrigger
+                    id="vm-service-role"
+                    aria-label="Service Role"
+                    className="w-full"
+                  >
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -490,7 +568,7 @@ export function VmFormDialog({
                 </Select>
               </div>
               <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
-                <Label optional>Business Purpose</Label>
+                <Label htmlFor="vm-description" required>Business Purpose / Description</Label>
                 <textarea
                   id="vm-description"
                   value={formData.description}
@@ -520,7 +598,7 @@ export function VmFormDialog({
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label optional>Tags</Label>
+                <Label htmlFor="vm-tags" optional>Tags</Label>
                 <Input
                   id="vm-tags"
                   value={formData.tags}
@@ -663,8 +741,9 @@ export function VmFormDialog({
 
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                     <div className="space-y-1.5">
-                      <Label required>Username</Label>
+                      <Label htmlFor={`vm-account-${index}-username`} required>Username</Label>
                       <Input
+                        id={`vm-account-${index}-username`}
                         value={account.username}
                         onChange={(event) =>
                           setAccounts((current) =>
@@ -678,8 +757,9 @@ export function VmFormDialog({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label required>Password</Label>
+                      <Label htmlFor={`vm-account-${index}-password`} required>Password</Label>
                       <Input
+                        id={`vm-account-${index}-password`}
                         type="password"
                         value={account.password}
                         onChange={(event) =>
@@ -694,7 +774,7 @@ export function VmFormDialog({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>Method</Label>
+                      <Label htmlFor={`vm-account-${index}-method`} optional>Method</Label>
                       <Select
                         value={account.accessMethod}
                         onValueChange={(value) =>
@@ -707,7 +787,7 @@ export function VmFormDialog({
                           )
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id={`vm-account-${index}-method`} className="w-full">
                           <SelectValue placeholder="Select method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -718,8 +798,9 @@ export function VmFormDialog({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label optional>Role</Label>
+                      <Label htmlFor={`vm-account-${index}-role`} optional>Role</Label>
                       <Input
+                        id={`vm-account-${index}-role`}
                         value={account.role}
                         onChange={(event) =>
                           setAccounts((current) =>
@@ -734,8 +815,9 @@ export function VmFormDialog({
                       />
                     </div>
                     <div className="space-y-1.5 md:col-span-2 xl:col-span-1">
-                      <Label optional>Notes</Label>
+                      <Label htmlFor={`vm-account-${index}-notes`} optional>Notes</Label>
                       <Input
+                        id={`vm-account-${index}-notes`}
                         value={account.note}
                         onChange={(event) =>
                           setAccounts((current) =>

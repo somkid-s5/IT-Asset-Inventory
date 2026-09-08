@@ -2194,6 +2194,11 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     if (!current) {
       throw new NotFoundException(`VM inventory ${id} not found`);
     }
+    if (current.lifecycleState === VmLifecycleState.ARCHIVED) {
+      throw new BadRequestException(
+        'Archived VM inventory is read-only. Restore it before editing.',
+      );
+    }
 
     const guestAccounts =
       dto.guestAccounts !== undefined

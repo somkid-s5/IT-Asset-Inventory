@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import api from '@/services/api';
 import { VmFormDialog } from '@/components/LazyLoadedDialogs';
 import { EmptyState } from '@/components/EmptyState';
-import { InventoryQueryStateView } from '@/components/inventory';
+import { EnvironmentBadge, InventoryQueryStateView } from '@/components/inventory';
 import { useInventoryQueryState } from '@/lib/inventory-query-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -606,12 +606,7 @@ function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view
     {
       accessorKey: 'environment',
       header: "Env",
-      cell: ({ getValue }) => {
-        const env = getValue() as string;
-        if (!env) return <span className="text-xs text-muted-foreground opacity-50">--</span>;
-        const variants: Record<string, string> = { PROD: 'bg-critical/10 text-critical border-critical/20', UAT: 'bg-warning/10 text-warning border-warning/20', DEV: 'bg-muted/10 text-muted-foreground border-border/20' };
-        return <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", variants[env] || "bg-muted/10 text-muted-foreground")}>{env}</Badge>;
-      }
+      cell: ({ getValue }) => <EnvironmentBadge value={getValue()} className="text-[10px] font-bold px-1.5 py-0" />
     },
     {
       accessorKey: 'guestOs',

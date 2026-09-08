@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("VM V1 acceptance - progressive promotion", () => {
+test.describe("VM V1.1 acceptance - progressive promotion and remediation", () => {
   test.use({ storageState: "playwright/.auth/admin.json" });
 
   test("promotes an incomplete discovery into Inventory and keeps it actionable in Data Quality", async ({
@@ -36,15 +36,47 @@ test.describe("VM V1 acceptance - progressive promotion", () => {
       /\/dashboard\/virtual-machines\/[a-zA-Z0-9-]+/,
     );
 
-    await page.goto("/dashboard/data-quality");
-    const issue = page
-      .getByRole("link")
-      .filter({ hasText: "vm-e2e-needs-context" });
-    await expect(issue).toBeVisible();
-    await expect(issue.getByText("owner", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Edit VM" }).click();
+    const editDialog = page.getByRole("dialog", {
+      name: "Edit Virtual Machine",
+    });
+    await expect(editDialog).toBeVisible();
+    await editDialog.getByLabel("Owner").fill("platform-team");
+    await editDialog.getByLabel("Business Unit").fill("Treasury");
+    await editDialog.getByLabel("SLA Tier").fill("Tier-1");
+    await editDialog.getByRole("combobox", { name: "Environment" }).click();
+    await page.getByRole("option", { name: "PROD", exact: true }).click();
+    await editDialog.getByRole("combobox", { name: "Service Role" }).click();
+    await page.getByRole("option", { name: "Web Server", exact: true }).click();
+    await editDialog
+      .getByLabel("Business Purpose / Description")
+      .fill("E2E curated production VM context");
+    await editDialog.getByLabel("Tags").fill("e2e, curated");
+    await editDialog.getByLabel("Username").fill("svc-e2e-curated");
+    await editDialog.getByRole("textbox", { name: "Role", exact: true }).fill("OS Admin");
+    await editDialog
+      .getByRole("combobox", { name: "Primary Application Component" })
+      .click();
+    await page
+      .getByRole("option", { name: /Treasury Registry · PROD ·/ })
+      .first()
+      .click();
+    await editDialog.getByRole("button", { name: "Save Changes" }).click();
+    await expect(page.getByText("VM updated", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "CONTEXT", exact: true }).click();
+    await expect(page.getByText("platform-team", { exact: true })).toBeVisible();
+    await expect(page.getByText("Treasury", { exact: true })).toBeVisible();
+    await expect(page.getByText("Tier-1", { exact: true })).toBeVisible();
     await expect(
-      issue.getByText("application component", { exact: true }),
+      page.getByText("E2E curated production VM context", { exact: true }),
     ).toBeVisible();
+
+    await page.getByRole("link", { name: "Data Quality" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/data-quality$/);
+    await expect(
+      page.getByRole("link").filter({ hasText: "vm-e2e-needs-context" }),
+    ).toHaveCount(0);
   });
 });
 

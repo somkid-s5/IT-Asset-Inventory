@@ -141,8 +141,8 @@ export const VM_ENVIRONMENT_FILTERS: Array<{
   value: "ALL" | VmInventoryEnvironment;
 }> = [
   { label: "All", value: "ALL" },
-  { label: "Production", value: "PROD" },
-  { label: "Test", value: "TEST" },
+  { label: "PROD", value: "PROD" },
+  { label: "TEST", value: "TEST" },
   { label: "UAT", value: "UAT" },
 ];
 
