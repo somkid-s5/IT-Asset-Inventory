@@ -76,6 +76,7 @@ describe('DatabasesService identity and host contract', () => {
         name: 'Finance DB',
         engine: 'PostgreSQL',
         hostVmId: 'vm-1',
+        operationalClientIps: ['10.0.0.50 | Registry API'],
       },
       'user-1',
     );
@@ -88,6 +89,7 @@ describe('DatabasesService identity and host contract', () => {
       hostAssetId: null,
       hostVmId: 'vm-1',
       ipAddress: null,
+      linkedApps: ['10.0.0.50 | Registry API'],
     });
     expect(createCalls[0]?.data).not.toHaveProperty('accounts');
   });

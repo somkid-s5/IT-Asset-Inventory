@@ -5,9 +5,12 @@ import {
 } from '@nestjs/common';
 import {
   AuditAction,
+  ApplicationStatus,
+  AssetStatus,
   DatabaseAccountScope,
   DatabaseStatus,
   Prisma,
+  VmLifecycleState,
 } from '@prisma/client';
 import { CredentialsService } from '../credentials/credentials.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -58,6 +61,15 @@ export class DatabasesService {
 
   private sanitizeText(value?: string | null) {
     return value?.trim() || null;
+  }
+
+  private getOperationalClientIps(dto: {
+    operationalClientIps?: string[];
+    linkedApps?: string[];
+  }) {
+    return (dto.operationalClientIps ?? dto.linkedApps ?? [])
+      .map((entry) => entry.trim())
+      .filter(Boolean);
   }
 
   private normalizeEnvironment(
@@ -156,10 +168,16 @@ export class DatabasesService {
     host?: string | null;
     hostAssetId?: string | null;
     hostVmId?: string | null;
+    environment?: string | null;
+    existingHostAssetId?: string | null;
+    existingHostVmId?: string | null;
   }) {
     const host = this.sanitizeText(input.host);
     const hostAssetId = this.sanitizeText(input.hostAssetId);
     const hostVmId = this.sanitizeText(input.hostVmId);
+    const environment = this.sanitizeText(input.environment)?.toUpperCase();
+    const existingHostAssetId = this.sanitizeText(input.existingHostAssetId);
+    const existingHostVmId = this.sanitizeText(input.existingHostVmId);
 
     if (hostAssetId && hostVmId) {
       throw new BadRequestException(
@@ -174,25 +192,123 @@ export class DatabasesService {
     if (hostAssetId) {
       const asset = await this.prisma.asset.findUnique({
         where: { id: hostAssetId },
-        select: { id: true },
+        select: { id: true, status: true },
       });
       if (!asset) {
         throw new BadRequestException(
           `Host Asset ${hostAssetId} was not found.`,
         );
       }
+      if (
+        asset.status === AssetStatus.ARCHIVED &&
+        existingHostAssetId !== hostAssetId
+      ) {
+        throw new BadRequestException(
+          `Archived Host Asset ${hostAssetId} cannot be newly selected.`,
+        );
+      }
     }
     if (hostVmId) {
       const vm = await this.prisma.vmInventory.findUnique({
         where: { id: hostVmId },
-        select: { id: true },
+        select: { id: true, environment: true, lifecycleState: true },
       });
       if (!vm) {
         throw new BadRequestException(`Host VM ${hostVmId} was not found.`);
       }
+      if (
+        vm.lifecycleState === VmLifecycleState.ARCHIVED &&
+        existingHostVmId !== hostVmId
+      ) {
+        throw new BadRequestException(
+          `Archived Host VM ${hostVmId} cannot be newly selected.`,
+        );
+      }
+      if ((environment ?? null) !== (vm.environment ?? null)) {
+        throw new BadRequestException(
+          `Database environment ${environment ?? 'Unknown'} must match Host VM environment ${vm.environment ?? 'Unknown'}.`,
+        );
+      }
     }
 
     return { host, hostAssetId, hostVmId };
+  }
+
+  private async validateLogicalDatabaseComponentSelection(
+    databaseEnvironment: string | null | undefined,
+    componentIds: string[] | undefined,
+  ) {
+    const ids = [...new Set(componentIds ?? [])].filter(Boolean);
+    if (!ids.length) return;
+
+    const components = await this.prisma.applicationComponent.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        environment: {
+          select: {
+            name: true,
+            application: { select: { status: true } },
+          },
+        },
+      },
+    });
+    if (components.length !== ids.length) {
+      throw new BadRequestException(
+        'Logical database component links must reference existing application components',
+      );
+    }
+
+    const archived = components.find(
+      (component) =>
+        component.environment.application.status === ApplicationStatus.ARCHIVED,
+    );
+    if (archived) {
+      throw new BadRequestException(
+        `Archived Application Component ${archived.id} cannot be newly selected.`,
+      );
+    }
+
+    const environment = databaseEnvironment?.trim().toUpperCase() || null;
+    if (!environment) {
+      throw new BadRequestException(
+        'Database environment is required before linking Application Components.',
+      );
+    }
+    const mismatch = components.find(
+      (component) => component.environment.name !== environment,
+    );
+    if (mismatch) {
+      throw new BadRequestException(
+        `Logical Database component ${mismatch.id} must use the Database environment ${environment}.`,
+      );
+    }
+  }
+
+  private async validateExistingLogicalDatabaseTopology(
+    databaseId: string,
+    databaseEnvironment: string | null,
+  ) {
+    const logicalDatabases = await this.prisma.logicalDatabase.findMany({
+      where: { databaseInventoryId: databaseId },
+      select: {
+        components: {
+          select: { id: true, environment: { select: { name: true } } },
+        },
+      },
+    });
+    const environment = databaseEnvironment?.trim().toUpperCase() || null;
+    const mismatch = logicalDatabases
+      .flatMap((logical) => logical.components)
+      .find(
+        (component) =>
+          !environment || component.environment.name !== environment,
+      );
+    if (mismatch) {
+      throw new BadRequestException(
+        `Database environment ${environment} must match every linked Application Component environment.`,
+      );
+    }
   }
 
   private validateAccountUsernames(accounts: CreateDatabaseDto['accounts']) {
@@ -275,7 +391,7 @@ export class DatabasesService {
       owner: database.owner,
       backupPolicy: database.backupPolicy,
       replication: database.replication,
-      linkedApps: database.linkedApps,
+      operationalClientIps: database.linkedApps,
       maintenanceWindow: database.maintenanceWindow,
       status: database.status,
       note: database.note,
@@ -337,10 +453,14 @@ export class DatabasesService {
       undefined,
       createDatabaseDto.accounts,
     );
+    const environment = this.normalizeEnvironment(
+      createDatabaseDto.environment,
+    );
     const hostIdentity = await this.validateHostIdentity({
       host: createDatabaseDto.host,
       hostAssetId: createDatabaseDto.hostAssetId,
       hostVmId: createDatabaseDto.hostVmId,
+      environment,
     });
     const accountCreates = this.buildAccounts(createDatabaseDto.accounts);
 
@@ -349,7 +469,7 @@ export class DatabasesService {
         name: createDatabaseDto.name.trim(),
         engine: createDatabaseDto.engine.trim(),
         version: this.sanitizeText(createDatabaseDto.version),
-        environment: this.normalizeEnvironment(createDatabaseDto.environment),
+        environment,
         host: hostIdentity.host,
         ipAddress: this.sanitizeText(createDatabaseDto.ipAddress),
         port: this.sanitizeText(createDatabaseDto.port),
@@ -357,9 +477,7 @@ export class DatabasesService {
         owner: this.sanitizeText(createDatabaseDto.owner),
         backupPolicy: this.sanitizeText(createDatabaseDto.backupPolicy),
         replication: this.sanitizeText(createDatabaseDto.replication),
-        linkedApps: (createDatabaseDto.linkedApps ?? [])
-          .map((app) => app.trim())
-          .filter(Boolean),
+        linkedApps: this.getOperationalClientIps(createDatabaseDto),
         maintenanceWindow: this.sanitizeText(
           createDatabaseDto.maintenanceWindow,
         ),
@@ -608,9 +726,14 @@ export class DatabasesService {
       host: true,
       ipAddress: true,
       port: true,
+      serviceName: true,
       status: true,
       owner: true,
       backupPolicy: true,
+      replication: true,
+      maintenanceWindow: true,
+      responsibleParty: true,
+      linkedApps: true,
       hostAsset: { select: { id: true, name: true, assetId: true } },
       hostVm: { select: { id: true, name: true, systemName: true } },
       _count: { select: { accounts: true } },
@@ -659,9 +782,14 @@ export class DatabasesService {
         host: database.host,
         ipAddress: database.ipAddress,
         port: database.port,
+        serviceName: database.serviceName,
         status: database.status,
         owner: database.owner,
         backupPolicy: database.backupPolicy,
+        replication: database.replication,
+        maintenanceWindow: database.maintenanceWindow,
+        responsibleParty: database.responsibleParty,
+        operationalClientIps: database.linkedApps,
         hostAsset: database.hostAsset,
         hostVm: database.hostVm,
         accountsCount: database._count.accounts,
@@ -945,6 +1073,13 @@ export class DatabasesService {
     }
 
     await this.validateLogicalDatabaseScopes(id, updateDatabaseDto.accounts);
+    const environment =
+      updateDatabaseDto.environment !== undefined
+        ? this.normalizeEnvironment(
+            updateDatabaseDto.environment,
+            current.environment,
+          )
+        : current.environment;
     const hostIdentity = await this.validateHostIdentity({
       host:
         updateDatabaseDto.host !== undefined
@@ -958,7 +1093,13 @@ export class DatabasesService {
         updateDatabaseDto.hostVmId !== undefined
           ? updateDatabaseDto.hostVmId
           : current.hostVmId,
+      environment,
+      existingHostAssetId: current.hostAssetId,
+      existingHostVmId: current.hostVmId,
     });
+    if (environment !== current.environment) {
+      await this.validateExistingLogicalDatabaseTopology(id, environment);
+    }
     const accountMutation = await this.prepareAccountMutation(
       id,
       updateDatabaseDto.accounts,
@@ -979,10 +1120,7 @@ export class DatabasesService {
           : {}),
         ...(updateDatabaseDto.environment !== undefined
           ? {
-              environment: this.normalizeEnvironment(
-                updateDatabaseDto.environment,
-                current.environment,
-              ),
+              environment,
             }
           : {}),
         host: hostIdentity.host,
@@ -1006,11 +1144,10 @@ export class DatabasesService {
         ...(updateDatabaseDto.replication !== undefined
           ? { replication: this.sanitizeText(updateDatabaseDto.replication) }
           : {}),
-        ...(updateDatabaseDto.linkedApps !== undefined
+        ...(updateDatabaseDto.operationalClientIps !== undefined ||
+        updateDatabaseDto.linkedApps !== undefined
           ? {
-              linkedApps: updateDatabaseDto.linkedApps
-                .map((app) => app.trim())
-                .filter(Boolean),
+              linkedApps: this.getOperationalClientIps(updateDatabaseDto),
             }
           : {}),
         ...(updateDatabaseDto.maintenanceWindow !== undefined
@@ -1133,16 +1270,17 @@ export class DatabasesService {
     dto: LogicalDatabaseDto,
     userId: string,
   ) {
-    await this.findOne(id);
+    const database = await this.findOne(id);
+    if (database.status === DatabaseStatus.ARCHIVED) {
+      throw new BadRequestException(
+        'Archived Database records are read-only until restored.',
+      );
+    }
     if (dto.componentIds?.length) {
-      const count = await this.prisma.applicationComponent.count({
-        where: { id: { in: dto.componentIds } },
-      });
-      if (count !== new Set(dto.componentIds).size) {
-        throw new BadRequestException(
-          'Logical database component links must reference existing application components',
-        );
-      }
+      await this.validateLogicalDatabaseComponentSelection(
+        database.environment,
+        dto.componentIds,
+      );
     }
     const logical = await this.prisma.logicalDatabase.create({
       data: {
@@ -1197,18 +1335,17 @@ export class DatabasesService {
     });
     if (!existing)
       throw new NotFoundException(`Logical database ${logicalId} not found`);
+    const database = await this.findOne(id);
+    if (database.status === DatabaseStatus.ARCHIVED) {
+      throw new BadRequestException(
+        'Archived Database records are read-only until restored.',
+      );
+    }
     if (dto.componentIds) {
-      const ids = [...new Set(dto.componentIds)];
-      const count = ids.length
-        ? await this.prisma.applicationComponent.count({
-            where: { id: { in: ids } },
-          })
-        : 0;
-      if (count !== ids.length) {
-        throw new BadRequestException(
-          'Logical database component links must reference existing application components',
-        );
-      }
+      await this.validateLogicalDatabaseComponentSelection(
+        database.environment,
+        dto.componentIds,
+      );
     }
     const logical = await this.prisma.logicalDatabase.update({
       where: { id: logicalId },

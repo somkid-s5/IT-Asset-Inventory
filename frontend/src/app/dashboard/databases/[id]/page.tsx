@@ -12,22 +12,27 @@ import {
   EyeOff,
   Globe,
   Hash,
-  LoaderCircle,
+  Pencil,
   Server,
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/services/api";
 import {
-  parseLinkedAppEntry,
+  parseOperationalClientIpEntry,
   type DatabaseInventoryDetail,
 } from "@/lib/database-inventory";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
+import { DatabaseFormDialog } from "@/components/LazyLoadedDialogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { InventoryQueryStateView } from "@/components/inventory";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
+import {
+  formatMissingValue,
+  getInventoryBadgeMeta,
+} from "@/lib/inventory-presentation";
 
 export default function DatabaseDetailPage() {
   const params = useParams();
@@ -40,6 +45,7 @@ export default function DatabaseDetailPage() {
   const [revealedPasswords, setRevealedPasswords] = useState<
     Record<string, string>
   >({});
+  const [editOpen, setEditOpen] = useState(false);
 
   const databaseQuery = useQuery({
     queryKey: ["database", params?.id],
@@ -76,7 +82,7 @@ export default function DatabaseDetailPage() {
     if (!database) return { accounts: 0, appIps: 0 };
     return {
       accounts: database.accounts.length,
-      appIps: database.linkedApps.length,
+      appIps: database.operationalClientIps.length,
     };
   }, [database]);
 
@@ -213,10 +219,14 @@ export default function DatabaseDetailPage() {
 
   const operationsProperties = [
     { label: "Owner", value: database.owner || "--" },
-    { label: "Status", value: database.status || "--" },
+    { label: "Status", value: formatMissingValue(database.status) },
     { label: "Backup Policy", value: database.backupPolicy || "--" },
     { label: "Replication", value: database.replication || "--" },
     { label: "Maintenance Window", value: database.maintenanceWindow || "--" },
+    {
+      label: "Responsible Party",
+      value: formatMissingValue(database.responsibleParty),
+    },
   ];
 
   const getRoleBadge = (role?: string | null) => {
@@ -260,6 +270,17 @@ export default function DatabaseDetailPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to Databases
         </button>
+        {(user?.role === "ADMIN" || user?.role === "EDITOR") &&
+        database.status !== "ARCHIVED" ? (
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-primary/30 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Edit Database
+          </button>
+        ) : null}
       </div>
 
       <section className="glass-card overflow-hidden">
@@ -280,7 +301,7 @@ export default function DatabaseDetailPage() {
                   {database.name || "Database System"}
                 </h1>
                 <span className="rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
-                  {database.environment}
+                  {formatMissingValue(database.environment)}
                 </span>
               </div>
               {database.note && (
@@ -393,9 +414,9 @@ export default function DatabaseDetailPage() {
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {database.linkedApps.length > 0 ? (
-              database.linkedApps.map((entry) => {
-                const linkedApp = parseLinkedAppEntry(entry);
+            {database.operationalClientIps.length > 0 ? (
+              database.operationalClientIps.map((entry) => {
+                const linkedApp = parseOperationalClientIpEntry(entry);
                 return (
                   <div
                     key={entry}
@@ -460,7 +481,7 @@ export default function DatabaseDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-                      {logical.status ?? "ACTIVE"}
+                      {getInventoryBadgeMeta("record-status", logical.status).label}
                     </span>
                     <span className="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
                       {logical.components?.length ?? 0} links
@@ -695,6 +716,12 @@ export default function DatabaseDetailPage() {
         </div>
       </section>
     </motion.div>
+    <DatabaseFormDialog
+      open={editOpen}
+      onOpenChange={setEditOpen}
+      databaseToEdit={database}
+      onSuccess={() => void refetch()}
+    />
     </InventoryQueryStateView>
   );
 }

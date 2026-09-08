@@ -28,12 +28,12 @@ import type {
   DatabaseInventoryDetail,
   DatabaseHostOptions,
   DatabaseInventoryPayload,
-  DatabaseLinkedAppFormValue,
+  DatabaseOperationalClientIpFormValue,
 } from "@/lib/database-inventory";
 import {
   joinCommaSeparated,
-  parseLinkedApps,
-  serializeLinkedApps,
+  parseOperationalClientIps,
+  serializeOperationalClientIps,
   splitCommaSeparated,
 } from "@/lib/database-inventory";
 
@@ -54,7 +54,7 @@ const EMPTY_ACCOUNT: DatabaseAccountFormValue = {
   logicalDatabaseIds: [],
 };
 
-const EMPTY_LINKED_APP: DatabaseLinkedAppFormValue = {
+const EMPTY_LINKED_APP: DatabaseOperationalClientIpFormValue = {
   ipAddress: "",
   description: "",
 };
@@ -74,6 +74,7 @@ const DEFAULT_FORM = {
   backupPolicy: "",
   replication: "",
   maintenanceWindow: "",
+  responsibleParty: "",
 };
 
 const COMPACT_INPUT_CLASS = "h-9 rounded-[10px] px-3 text-sm";
@@ -108,9 +109,9 @@ export function DatabaseFormDialog({
     { ...EMPTY_ACCOUNT },
   ]);
   const [removedAccountIds, setRemovedAccountIds] = useState<string[]>([]);
-  const [linkedApps, setLinkedApps] = useState<DatabaseLinkedAppFormValue[]>([
-    { ...EMPTY_LINKED_APP },
-  ]);
+  const [operationalClientIps, setOperationalClientIps] = useState<
+    DatabaseOperationalClientIpFormValue[]
+  >([{ ...EMPTY_LINKED_APP }]);
   const [logicalDatabases, setLogicalDatabases] = useState("");
   const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>(
     {},
@@ -132,7 +133,7 @@ export function DatabaseFormDialog({
       setFormData(DEFAULT_FORM);
       setAccounts([{ ...EMPTY_ACCOUNT }]);
       setRemovedAccountIds([]);
-      setLinkedApps([{ ...EMPTY_LINKED_APP }]);
+      setOperationalClientIps([{ ...EMPTY_LINKED_APP }]);
       setLogicalDatabases("");
       setHostMode("TEXT");
       setHostAssetId("");
@@ -151,11 +152,12 @@ export function DatabaseFormDialog({
       port: databaseToEdit.port ?? "",
       serviceName: databaseToEdit.serviceName ?? "",
       owner: databaseToEdit.owner ?? "",
-      status: databaseToEdit.status ?? "ACTIVE",
+      status: databaseToEdit.status ?? "",
       note: databaseToEdit.note ?? "",
       backupPolicy: databaseToEdit.backupPolicy ?? "",
       replication: databaseToEdit.replication ?? "",
       maintenanceWindow: databaseToEdit.maintenanceWindow ?? "",
+      responsibleParty: databaseToEdit.responsibleParty ?? "",
     });
     setHostMode(
       databaseToEdit.hostAsset
@@ -168,9 +170,9 @@ export function DatabaseFormDialog({
     setHostVmId(databaseToEdit.hostVm?.id ?? "");
     setHostSearch("");
     setRemovedAccountIds([]);
-    setLinkedApps(
-      databaseToEdit.linkedApps.length > 0
-        ? parseLinkedApps(databaseToEdit.linkedApps)
+    setOperationalClientIps(
+      databaseToEdit.operationalClientIps.length > 0
+        ? parseOperationalClientIps(databaseToEdit.operationalClientIps)
         : [{ ...EMPTY_LINKED_APP }],
     );
     setLogicalDatabases(
@@ -302,8 +304,9 @@ export function DatabaseFormDialog({
       owner: formData.owner.trim() || undefined,
       backupPolicy: formData.backupPolicy.trim() || undefined,
       replication: formData.replication.trim() || undefined,
-      linkedApps: serializeLinkedApps(linkedApps),
+      operationalClientIps: serializeOperationalClientIps(operationalClientIps),
       maintenanceWindow: formData.maintenanceWindow.trim() || undefined,
+      responsibleParty: formData.responsibleParty.trim() || undefined,
       status: formData.status || undefined,
       note: formData.note.trim() || undefined,
       accounts:
@@ -721,6 +724,11 @@ export function DatabaseFormDialog({
                     <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
                   </SelectContent>
                 </Select>
+                {databaseToEdit && !databaseToEdit.status ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Unknown status is preserved until you choose a replacement.
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-1.5 md:col-span-4">
@@ -759,7 +767,7 @@ export function DatabaseFormDialog({
                 />
               </div>
 
-              <div className="space-y-1.5 md:col-span-6">
+              <div className="space-y-1.5 md:col-span-4">
                 <Label htmlFor="db-replication" optional>
                   Replication Status
                 </Label>
@@ -777,7 +785,7 @@ export function DatabaseFormDialog({
                 />
               </div>
 
-              <div className="space-y-1.5 md:col-span-6">
+              <div className="space-y-1.5 md:col-span-4">
                 <Label htmlFor="db-maintenance-window" optional>
                   Maintenance Window
                 </Label>
@@ -792,6 +800,24 @@ export function DatabaseFormDialog({
                     }))
                   }
                   placeholder="e.g. Sun 02:00 - 04:00 AM"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-4">
+                <Label htmlFor="db-responsible-party" optional>
+                  Responsible Party
+                </Label>
+                <Input
+                  id="db-responsible-party"
+                  className={COMPACT_INPUT_CLASS}
+                  value={formData.responsibleParty}
+                  onChange={(event) =>
+                    setFormData((current) => ({
+                      ...current,
+                      responsibleParty: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Platform DBA Team"
                 />
               </div>
 
@@ -837,7 +863,7 @@ export function DatabaseFormDialog({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      setLinkedApps((current) => [
+                      setOperationalClientIps((current) => [
                         ...current,
                         { ...EMPTY_LINKED_APP },
                       ])
@@ -849,16 +875,18 @@ export function DatabaseFormDialog({
                 </div>
 
                 <div className="space-y-2">
-                  {linkedApps.map((linkedApp, index) => (
+                  {operationalClientIps.map((linkedApp, index) => (
                     <div
                       key={`linked-app-${index}`}
                       className="grid gap-2 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto]"
                     >
                       <Input
+                        id={`db-operational-client-ip-${index}`}
+                        aria-label={`Operational Client IP ${index + 1}`}
                         className={COMPACT_INPUT_CLASS}
                         value={linkedApp.ipAddress}
                         onChange={(event) =>
-                          setLinkedApps((current) =>
+                          setOperationalClientIps((current) =>
                             current.map((item, itemIndex) =>
                               itemIndex === index
                                 ? { ...item, ipAddress: event.target.value }
@@ -869,10 +897,12 @@ export function DatabaseFormDialog({
                         placeholder="e.g. 10.10.20.15"
                       />
                       <Input
+                        id={`db-operational-client-description-${index}`}
+                        aria-label={`Operational Client IP Description ${index + 1}`}
                         className={COMPACT_INPUT_CLASS}
                         value={linkedApp.description}
                         onChange={(event) =>
-                          setLinkedApps((current) =>
+                          setOperationalClientIps((current) =>
                             current.map((item, itemIndex) =>
                               itemIndex === index
                                 ? { ...item, description: event.target.value }
@@ -887,7 +917,7 @@ export function DatabaseFormDialog({
                         variant="ghost"
                         size="icon-xs"
                         onClick={() =>
-                          setLinkedApps((current) =>
+                          setOperationalClientIps((current) =>
                             current.length === 1
                               ? [{ ...EMPTY_LINKED_APP }]
                               : current.filter(

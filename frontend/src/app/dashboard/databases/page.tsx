@@ -82,6 +82,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { InventoryQueryStateView } from "@/components/inventory";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
+import { getInventoryBadgeMeta } from "@/lib/inventory-presentation";
 
 const ENVIRONMENT_TABS: Array<{
   label: string;
@@ -339,19 +340,21 @@ export default function DbPage() {
         accessorKey: "status",
         header: "Status",
         cell: ({ getValue }) => {
-          const status = (getValue() as string) || "ACTIVE";
-          const active = status === "ACTIVE";
+          const status = getValue() as string | null | undefined;
+          const statusMeta = getInventoryBadgeMeta("record-status", status);
           return (
             <Badge
               variant="outline"
               className={cn(
                 "text-[10px] font-semibold px-1.5 py-0",
-                active
+                statusMeta.tone === "success"
                   ? "bg-success/10 text-success border-success/20"
-                  : "bg-muted/10 text-muted-foreground border-border/20",
+                  : statusMeta.tone === "warning"
+                    ? "bg-warning/10 text-warning border-warning/20"
+                    : "bg-muted/10 text-muted-foreground border-border/20",
               )}
             >
-              {status}
+              {statusMeta.label}
             </Badge>
           );
         },
@@ -372,6 +375,7 @@ export default function DbPage() {
           const isWritable =
             mounted &&
             !loading &&
+            db.status !== "ARCHIVED" &&
             (user?.role === "ADMIN" || user?.role === "EDITOR");
           const isAdmin = mounted && !loading && user?.role === "ADMIN";
           return (
@@ -505,6 +509,10 @@ export default function DbPage() {
       IP: db.ipAddress || "",
       Port: db.port || "",
       Status: db.status || "",
+      "Responsible Party": db.responsibleParty || "",
+      "Operational Client IP Metadata": (db.operationalClientIps ?? []).join(
+        ", ",
+      ),
       Accounts: db.accountsCount,
     }));
 

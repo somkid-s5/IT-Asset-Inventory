@@ -11,7 +11,7 @@ export interface DatabaseAccountFormValue {
   logicalDatabaseIds?: string[];
 }
 
-export interface DatabaseLinkedAppFormValue {
+export interface DatabaseOperationalClientIpFormValue {
   ipAddress: string;
   description: string;
 }
@@ -52,7 +52,7 @@ export interface DatabaseInventoryItem {
   owner?: string | null;
   backupPolicy?: string | null;
   replication?: string | null;
-  linkedApps?: string[];
+  operationalClientIps?: string[];
   maintenanceWindow?: string | null;
   status?: string | null;
   note?: string | null;
@@ -106,9 +106,9 @@ export interface DatabaseInventoryListResponse {
 
 export interface DatabaseInventoryDetail extends Omit<
   DatabaseInventoryItem,
-  "accountsCount" | "linkedApps"
+  "accountsCount" | "operationalClientIps"
 > {
-  linkedApps: string[];
+  operationalClientIps: string[];
   accounts: DatabaseAccountDetail[];
 }
 
@@ -124,10 +124,11 @@ export interface DatabaseInventoryPayload {
   owner?: string;
   backupPolicy?: string;
   replication?: string;
-  linkedApps?: string[];
+  operationalClientIps?: string[];
   maintenanceWindow?: string;
   status?: string;
   note?: string;
+  responsibleParty?: string;
   hostAssetId?: string;
   hostVmId?: string;
   accounts?: Array<{
@@ -165,7 +166,9 @@ export function joinCommaSeparated(values?: string[] | null) {
   return (values ?? []).join(", ");
 }
 
-export function parseLinkedAppEntry(value: string): DatabaseLinkedAppFormValue {
+export function parseOperationalClientIpEntry(
+  value: string,
+): DatabaseOperationalClientIpFormValue {
   const [ipAddress, ...rest] = value.split("|");
 
   return {
@@ -174,11 +177,13 @@ export function parseLinkedAppEntry(value: string): DatabaseLinkedAppFormValue {
   };
 }
 
-export function parseLinkedApps(values?: string[] | null) {
-  return (values ?? []).map((value) => parseLinkedAppEntry(value));
+export function parseOperationalClientIps(values?: string[] | null) {
+  return (values ?? []).map((value) => parseOperationalClientIpEntry(value));
 }
 
-export function serializeLinkedApps(values: DatabaseLinkedAppFormValue[]) {
+export function serializeOperationalClientIps(
+  values: DatabaseOperationalClientIpFormValue[],
+) {
   return values
     .map(({ ipAddress, description }) => {
       const normalizedIp = ipAddress.trim();

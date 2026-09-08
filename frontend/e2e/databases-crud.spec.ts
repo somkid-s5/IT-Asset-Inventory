@@ -42,6 +42,11 @@ test.describe("Databases CRUD Operations", () => {
     // Fill Connection Parameters
     await page.getByLabel("Host Name").fill("e2e-db-host.local");
     await page.getByLabel("IP Address").fill("10.0.1.99");
+    await page.getByLabel("Responsible Party").fill("Platform DBA Team");
+    await page.getByLabel("Operational Client IP 1").fill("10.0.1.100");
+    await page
+      .getByLabel("Operational Client IP Description 1")
+      .fill("Reporting API");
 
     // Fill Account Username & Password
     await page.getByLabel("Username").fill("e2e_admin_user");
@@ -54,6 +59,17 @@ test.describe("Databases CRUD Operations", () => {
     await expect(page.getByText("Database created")).toBeVisible();
     const row = page.getByRole("row").filter({ hasText: dbUniqueName });
     await expect(row).toBeVisible();
+
+    await row
+      .getByRole("link", { name: `View details for ${dbUniqueName}` })
+      .click();
+    await expect(page.getByText("Platform DBA Team", { exact: true })).toBeVisible();
+    await expect(page.getByText("10.0.1.100", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Edit Database" }).click();
+    await expect(page.getByRole("heading", { name: "Update Database Details" })).toBeVisible();
+    await expect(page.getByLabel("Responsible Party")).toHaveValue("Platform DBA Team");
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Back to Databases" }).click();
 
     // 2. Edit Database
     const editBtn = row.getByRole("button", { name: "Edit Database" });

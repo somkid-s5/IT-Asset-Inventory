@@ -26,9 +26,14 @@ describe('DatabasesService list and topology option contract', () => {
           host: null,
           ipAddress: '10.0.0.10',
           port: '1521',
+          serviceName: 'TREASURY',
           status: DatabaseStatus.ACTIVE,
           owner: 'DBA Team',
           backupPolicy: 'Daily',
+          replication: 'Primary',
+          maintenanceWindow: 'Sun 02:00',
+          responsibleParty: 'Platform DBA Team',
+          linkedApps: ['10.0.0.50 | Registry API'],
           hostAsset: { id: 'asset-1', name: 'db-host-01', assetId: 'AST-001' },
           hostVm: null,
           _count: { accounts: 2 },
@@ -54,6 +59,9 @@ describe('DatabasesService list and topology option contract', () => {
     expect(result.data[0]).toMatchObject({
       id: 'db-1',
       accountsCount: 2,
+      serviceName: 'TREASURY',
+      operationalClientIps: ['10.0.0.50 | Registry API'],
+      responsibleParty: 'Platform DBA Team',
       hostAsset: { id: 'asset-1' },
       needsContext: false,
     });
@@ -129,6 +137,49 @@ describe('DatabasesService list and topology option contract', () => {
       id: 'db-missing-host',
       issues: ['host identity'],
     });
+  });
+
+  it('preserves an unknown Database status and exposes neutral client-IP metadata', async () => {
+    const databaseFindMany = jest.fn().mockResolvedValue([
+      {
+        id: 'db-unknown',
+        name: 'Unknown Status DB',
+        engine: 'PostgreSQL',
+        version: null,
+        environment: 'PROD',
+        host: 'db-host-01',
+        ipAddress: null,
+        port: null,
+        serviceName: null,
+        status: null,
+        owner: null,
+        backupPolicy: null,
+        replication: null,
+        maintenanceWindow: null,
+        responsibleParty: null,
+        linkedApps: [],
+        hostAsset: null,
+        hostVm: null,
+        _count: { accounts: 0 },
+        createdAt: new Date('2026-09-01T00:00:00Z'),
+        updatedAt: new Date('2026-09-02T00:00:00Z'),
+      },
+    ]);
+    const prisma = {
+      databaseInventory: {
+        findMany: databaseFindMany,
+        count: jest.fn().mockResolvedValue(1),
+      },
+    } as unknown as PrismaService;
+    const databases = new DatabasesService(prisma, {} as CredentialsService);
+
+    const result = await databases.findAll();
+
+    expect(result.data[0]).toMatchObject({
+      id: 'db-unknown',
+      status: null,
+    });
+    expect(result.data[0]).not.toHaveProperty('linkedApps');
   });
 
   it('returns only active lightweight Logical Database options for Application topology', async () => {

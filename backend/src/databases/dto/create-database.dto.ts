@@ -95,6 +95,16 @@ export class CreateDatabaseDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  operationalClientIps?: string[];
+
+  /**
+   * Compatibility input for clients that have not migrated from the legacy
+   * DatabaseInventory column name yet. New API responses use
+   * operationalClientIps and never expose this as Application topology.
+   */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   linkedApps?: string[];
 
   @IsOptional()
