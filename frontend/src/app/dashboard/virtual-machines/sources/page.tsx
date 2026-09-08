@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Clock3,
   LoaderCircle,
-  Pencil,
   Plus,
   RefreshCw,
   Server,
@@ -71,6 +70,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { InventoryRowActions } from "@/components/inventory";
 import {
   flexRender,
   getCoreRowModel,
@@ -175,6 +175,9 @@ export default function VmSourcesPage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
+  const [editingSourceHasCredential, setEditingSourceHasCredential] =
+    useState(false);
+  const [originalEndpoint, setOriginalEndpoint] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<VmVCenterSource | null>(
     null,
   );
@@ -223,8 +226,13 @@ export default function VmSourcesPage() {
     [],
   );
   const currentConnectionTestKey = getConnectionTestKey(formData);
+  const connectionFieldsChanged =
+    !editingSourceId ||
+    formData.endpoint.trim() !== originalEndpoint.trim() ||
+    Boolean(formData.username.trim()) ||
+    Boolean(formData.password);
   const isConnectionVerified =
-    lastSuccessfulTestKey === currentConnectionTestKey;
+    !connectionFieldsChanged || lastSuccessfulTestKey === currentConnectionTestKey;
 
   useEffect(() => {
     setHeader({
@@ -241,6 +249,8 @@ export default function VmSourcesPage() {
   const resetForm = useCallback(() => {
     setFormData(DEFAULT_SOURCE_FORM);
     setEditingSourceId(null);
+    setEditingSourceHasCredential(false);
+    setOriginalEndpoint("");
     setLastSuccessfulTestKey(null);
   }, []);
   const openAddDialog = useCallback(() => {
@@ -249,6 +259,8 @@ export default function VmSourcesPage() {
   }, [resetForm]);
   const openEditDialog = useCallback((source: VmVCenterSource) => {
     setEditingSourceId(source.id);
+    setEditingSourceHasCredential(source.hasCredential);
+    setOriginalEndpoint(source.endpoint);
     setFormData({
       name: source.name,
       endpoint: source.endpoint,
@@ -262,7 +274,10 @@ export default function VmSourcesPage() {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (lastSuccessfulTestKey !== getConnectionTestKey(formData))
+    if (
+      connectionFieldsChanged &&
+      lastSuccessfulTestKey !== getConnectionTestKey(formData)
+    )
       return toast.error("Please test connection before saving");
     setSaving(true);
     try {
@@ -285,6 +300,7 @@ export default function VmSourcesPage() {
     formData,
     editingSourceId,
     lastSuccessfulTestKey,
+    connectionFieldsChanged,
     getConnectionTestKey,
     resetForm,
     refetch,
@@ -472,65 +488,43 @@ export default function VmSourcesPage() {
         cell: ({ row }) => {
           const source = row.original;
           const isSyncing = syncingAll || syncingSourceIds.includes(source.id);
-          if (!canManageSources) return null;
-          const isArchived = source.status === "ARCHIVED";
+          const isArchived = source.status.toUpperCase() === "ARCHIVED";
           return (
-            <div className="flex justify-end gap-1.5">
-              {!isArchived && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground"
-                  aria-label={`Sync ${source.name}`}
-                  title="Sync source"
-                  disabled={isSyncing}
-                  onClick={() => void handleSyncSource(source)}
-                >
-                  <RefreshCw
-                    className={cn(
-                      "h-4 w-4",
-                      isSyncing && "animate-spin text-primary",
-                    )}
-                  />
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground"
-                aria-label={`Edit ${source.name}`}
-                title="Edit source"
-                disabled={isSyncing}
-                onClick={() => openEditDialog(source)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              {!isArchived ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  aria-label={`Archive ${source.name}`}
-                  title="Archive source"
-                  disabled={isSyncing}
-                  onClick={() => setDeleteTarget(source)}
-                >
-                  <Archive className="h-4 w-4" />
-                </Button>
-              ) : canRestoreSources ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground"
-                  aria-label={`Restore ${source.name}`}
-                  title="Restore source"
-                  disabled={isSyncing}
-                  onClick={() => void handleRestoreSource(source)}
-                >
-                  <ArchiveRestore className="h-4 w-4" />
-                </Button>
-              ) : null}
-            </div>
+            <InventoryRowActions
+              recordLabel={source.name}
+              detailHref={`/dashboard/virtual-machines/sources/${source.id}`}
+              edit={{
+                allowed: canManageSources && !isArchived,
+                onSelect: () => openEditDialog(source),
+              }}
+              secondaryActions={
+                canManageSources && !isArchived
+                  ? [
+                      {
+                        label: "Sync",
+                        disabled: isSyncing,
+                        icon: (
+                          <RefreshCw
+                            className={cn(isSyncing && "animate-spin")}
+                          />
+                        ),
+                        onSelect: () => void handleSyncSource(source),
+                      },
+                    ]
+                  : []
+              }
+              lifecycle={{
+                status: isArchived ? "ARCHIVED" : "ACTIVE",
+                archive: {
+                  allowed: canManageSources && !isArchived && !isSyncing,
+                  onSelect: () => setDeleteTarget(source),
+                },
+                restore: {
+                  allowed: canRestoreSources && isArchived && !isSyncing,
+                  onSelect: () => void handleRestoreSource(source),
+                },
+              }}
+            />
           );
         },
       },
@@ -783,7 +777,7 @@ export default function VmSourcesPage() {
             </DialogTitle>
             <DialogDescription>
               {editingSourceId
-                ? "Update vCenter API connection parameters and credentials."
+                ? "Update source metadata without re-entering the saved credential, or test new connection values before saving."
                 : "Configure a new vCenter server connection for automated VM discovery."}
             </DialogDescription>
           </DialogHeader>
@@ -828,8 +822,15 @@ export default function VmSourcesPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label required>Username</Label>
+                <Label {...(editingSourceId ? { optional: true } : { required: true })}>
+                  Username
+                </Label>
                 <Input
+                  placeholder={
+                    editingSourceId && editingSourceHasCredential
+                      ? "Leave blank to preserve saved username"
+                      : undefined
+                  }
                   value={formData.username}
                   onChange={(e) =>
                     setFormData((c) => ({ ...c, username: e.target.value }))
@@ -837,9 +838,16 @@ export default function VmSourcesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label required>Password</Label>
+                <Label {...(editingSourceId ? { optional: true } : { required: true })}>
+                  Password
+                </Label>
                 <Input
                   type="password"
+                  placeholder={
+                    editingSourceId && editingSourceHasCredential
+                      ? "Leave blank to preserve saved password"
+                      : undefined
+                  }
                   value={formData.password}
                   onChange={(e) =>
                     setFormData((c) => ({ ...c, password: e.target.value }))
@@ -868,8 +876,10 @@ export default function VmSourcesPage() {
                   </div>
                   <p className="mt-1 text-xs opacity-80">
                     {isConnectionVerified
-                      ? "Ready to save"
-                      : "Please test the connection with current credentials before saving"}
+                      ? connectionFieldsChanged
+                        ? "Ready to save"
+                        : "Metadata-only change; saved credentials will be preserved"
+                      : "Please test the connection with the current endpoint and credentials before saving"}
                   </p>
                 </div>
               </div>

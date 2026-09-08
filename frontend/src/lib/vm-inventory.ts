@@ -37,6 +37,7 @@ export interface VmVCenterSource {
   name: string;
   version: string;
   endpoint: string;
+  hasCredential: boolean;
   vmCount: number;
   status: string;
   syncInterval: string;

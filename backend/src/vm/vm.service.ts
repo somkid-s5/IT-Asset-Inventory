@@ -418,6 +418,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       name: source.name,
       version: source.version,
       endpoint: source.endpoint,
+      hasCredential: Boolean(source.encryptedPassword),
       vmCount: source.discoveries.length,
       status: source.status,
       syncInterval: source.syncInterval,
@@ -599,6 +600,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
   private getVcenterApiBase(endpoint: string) {
     const normalized = this.normalizeEndpoint(endpoint);
     return new URL(normalized.origin);
+  }
+
+  private getSourceConnectionEndpointKey(endpoint: string) {
+    return this.getVcenterApiBase(endpoint).origin.toLowerCase();
   }
 
   /**
@@ -1445,7 +1450,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.auditLog.create({
       data: {
         userId,
-        action: AuditAction.VCENTER_SYNC,
+        action: AuditAction.CREATE_SOURCE,
         details: `Created vCenter source: ${source.name} (${source.endpoint})`,
       },
     });
@@ -1463,18 +1468,31 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException(`VM source ${id} not found`);
     }
 
-    const username = this.sanitizeText(dto.username) ?? currentSource.username;
-    const password = dto.password
-      ? dto.password
-      : currentSource.encryptedPassword
-        ? this.credentialsService.decrypt(currentSource.encryptedPassword)
-        : null;
-    const session = await this.authenticateVcenter(
-      dto.endpoint,
-      username,
-      password,
-    );
-    const version = await this.getVcenterVersion(session);
+    const suppliedUsername = this.sanitizeText(dto.username);
+    const username = suppliedUsername ?? currentSource.username;
+    const passwordChanged = Boolean(dto.password);
+    const endpointChanged =
+      this.getSourceConnectionEndpointKey(dto.endpoint) !==
+      this.getSourceConnectionEndpointKey(currentSource.endpoint);
+    const usernameChanged =
+      suppliedUsername !== null && suppliedUsername !== currentSource.username;
+    const connectionChanged =
+      endpointChanged || usernameChanged || passwordChanged;
+
+    let version = currentSource.version;
+    if (connectionChanged) {
+      const password = passwordChanged
+        ? dto.password
+        : currentSource.encryptedPassword
+          ? this.credentialsService.decrypt(currentSource.encryptedPassword)
+          : null;
+      const session = await this.authenticateVcenter(
+        dto.endpoint,
+        username,
+        password,
+      );
+      version = await this.getVcenterVersion(session);
+    }
 
     const source = await this.prisma.vmVCenterSource.update({
       where: { id },
@@ -1482,13 +1500,15 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         name: dto.name.trim(),
         endpoint: dto.endpoint.trim(),
         version,
-        username,
-        ...(dto.password
-          ? { encryptedPassword: this.credentialsService.encrypt(dto.password) }
+        ...(suppliedUsername !== null ? { username } : {}),
+        ...(passwordChanged
+          ? {
+              encryptedPassword: this.credentialsService.encrypt(dto.password!),
+            }
           : {}),
         syncInterval: this.parseSyncIntervalMinutes(dto.syncInterval),
         notes: this.sanitizeText(dto.notes),
-        status: VmSourceStatus.READY_TO_SYNC,
+        ...(connectionChanged ? { status: VmSourceStatus.READY_TO_SYNC } : {}),
       },
       include: {
         discoveries: {
@@ -1504,7 +1524,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.auditLog.create({
       data: {
         userId,
-        action: AuditAction.VCENTER_SYNC,
+        action: AuditAction.UPDATE_SOURCE,
         targetId: source.id,
         details: `Updated vCenter source: ${source.name} (${source.endpoint})`,
       },
@@ -1530,7 +1550,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.auditLog.create({
       data: {
         userId,
-        action: AuditAction.DELETE_SOURCE,
+        action: AuditAction.ARCHIVE_SOURCE,
         targetId: id,
         details: `Archived vCenter source: ${source.name}`,
       },
@@ -1552,7 +1572,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.auditLog.create({
       data: {
         userId,
-        action: AuditAction.VCENTER_SYNC,
+        action: AuditAction.RESTORE_SOURCE,
         targetId: id,
         details: `Restored vCenter source: ${source.name}`,
       },
