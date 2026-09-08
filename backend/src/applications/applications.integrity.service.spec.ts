@@ -37,7 +37,6 @@ type IntegrityInternals = {
       access: {
         create: Array<{
           application: { connect: { id: string } };
-          environment: { connect: { id: string } };
         }>;
       };
     }>;
@@ -65,7 +64,7 @@ type IntegrityInternals = {
 };
 
 describe('ApplicationsService Ticket 04 integrity contracts', () => {
-  it('connects nested environment access to its owning application environment', async () => {
+  it('nests environment access under its owning environment and application', async () => {
     const prisma = {
       applicationEnvironment: {
         findUnique: jest.fn().mockResolvedValue({
@@ -100,10 +99,11 @@ describe('ApplicationsService Ticket 04 integrity contracts', () => {
 
     const environment = result.environments?.[0];
     if (!environment) throw new Error('Expected nested environment data');
+    expect(environment.access.create).toHaveLength(1);
     expect(environment.access.create[0]).toMatchObject({
       application: { connect: { id: 'app-1' } },
-      environment: { connect: { id: environment.id } },
     });
+    expect(environment.access.create[0]).not.toHaveProperty('environment');
   });
 
   it('enforces primary access uniqueness per environment, not across the application', () => {

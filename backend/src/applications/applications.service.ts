@@ -631,7 +631,6 @@ export class ApplicationsService {
       sortOrder: item.sortOrder ?? index,
       isPrimary: item.isPrimary ?? false,
       application: { connect: { id: options.applicationId } },
-      environment: { connect: { id: options.environmentId } },
       credentials: {
         create: (item.credentials ?? [])
           .filter((c) => c.username.trim())
