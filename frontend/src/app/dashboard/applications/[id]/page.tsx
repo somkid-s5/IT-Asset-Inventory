@@ -828,8 +828,8 @@ export default function ApplicationDetailPage() {
                 )
               }
             />
-              <Select
-                value={editingAccess?.environmentId}
+            <Select
+              value={editingAccess?.environmentId}
               onValueChange={(value) =>
                 setEditingAccess((current) =>
                   current
@@ -851,20 +851,20 @@ export default function ApplicationDetailPage() {
                   </SelectItem>
                 ))}
               </SelectContent>
-              </Select>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={editingAccess?.isPrimary ?? false}
-                  onCheckedChange={(checked) =>
-                    setEditingAccess((current) =>
-                      current
-                        ? { ...current, isPrimary: checked === true }
-                        : current,
-                    )
-                  }
-                />
-                Primary access for this environment
-              </label>
+            </Select>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={editingAccess?.isPrimary ?? false}
+                onCheckedChange={(checked) =>
+                  setEditingAccess((current) =>
+                    current
+                      ? { ...current, isPrimary: checked === true }
+                      : current,
+                  )
+                }
+              />
+              Primary access for this environment
+            </label>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Credentials</Label>
@@ -1303,12 +1303,12 @@ export default function ApplicationDetailPage() {
                 setAccessForm({ ...accessForm, method: e.target.value })
               }
             />
-              <Select
-                value={accessForm.environmentId}
+            <Select
+              value={accessForm.environmentId}
               onValueChange={(value) =>
                 setAccessForm({
                   ...accessForm,
-                    environmentId: value,
+                  environmentId: value,
                 })
               }
             >
@@ -1322,19 +1322,19 @@ export default function ApplicationDetailPage() {
                   </SelectItem>
                 ))}
               </SelectContent>
-              </Select>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={accessForm.isPrimary}
-                  onCheckedChange={(checked) =>
-                    setAccessForm({
-                      ...accessForm,
-                      isPrimary: checked === true,
-                    })
-                  }
-                />
-                Primary access for this environment
-              </label>
+            </Select>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={accessForm.isPrimary}
+                onCheckedChange={(checked) =>
+                  setAccessForm({
+                    ...accessForm,
+                    isPrimary: checked === true,
+                  })
+                }
+              />
+              Primary access for this environment
+            </label>
             <Input
               aria-label="Username"
               placeholder="Username (optional)"
