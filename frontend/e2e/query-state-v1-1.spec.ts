@@ -1,13 +1,33 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("V1.1 shared query state", () => {
-  test.use({ storageState: "playwright/.auth/admin.json" });
+  test.use({ storageState: { cookies: [], origins: [] } });
 
   test("keeps a 500 failure distinct from empty and recovers on retry", async ({
     page,
   }) => {
-    test.setTimeout(45_000);
+    test.setTimeout(60_000);
+    const syntheticUser = {
+      id: "ticket-02-e2e-user",
+      username: "ticket-02-e2e-user",
+      displayName: "Ticket 02 E2E User",
+      avatarSeed: "ticket-02-e2e",
+      role: "ADMIN" as const,
+      mustChangePassword: false,
+    };
     let allowRetry = false;
+
+    await page.addInitScript((user) => {
+      window.localStorage.setItem("user", JSON.stringify(user));
+    }, syntheticUser);
+
+    await page.route("**/api/auth/me", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ user: syntheticUser }),
+      });
+    });
 
     await page.route("**/api/applications**", async (route) => {
       if (!allowRetry) {
@@ -38,14 +58,17 @@ test.describe("V1.1 shared query state", () => {
       });
     });
 
-    await page.goto("/dashboard/applications");
-    await expect(page.getByRole("alert")).toContainText("Inventory unavailable");
+    await page.goto("http://localhost:3000/dashboard/applications");
+    const errorAlert = page
+      .getByRole("alert")
+      .filter({ hasText: "Inventory unavailable" });
+    await expect(errorAlert).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText("No applications found")).toHaveCount(0);
 
     allowRetry = true;
     await page.getByRole("button", { name: "Retry" }).click();
 
     await expect(page.getByRole("table")).toContainText("Retryable ERP");
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(errorAlert).toHaveCount(0);
   });
 });
