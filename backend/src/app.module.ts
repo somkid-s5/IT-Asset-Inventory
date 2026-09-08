@@ -18,6 +18,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { SearchModule } from './search/search.module';
 import { ExportModule } from './export/export.module';
+import { RelationPickerModule } from './relation-picker/relation-picker.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ExportModule } from './export/export.module';
     ApplicationsModule,
     SearchModule,
     ExportModule,
+    RelationPickerModule,
   ],
   controllers: [AppController],
   providers: [

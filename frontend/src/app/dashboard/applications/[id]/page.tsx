@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MultiCheckbox } from "@/components/ui/multi-checkbox";
+import { RelationPicker } from "@/components/RelationPicker";
 import {
   Dialog,
   DialogContent,
@@ -102,43 +102,6 @@ export default function ApplicationDetailPage() {
   const detailState = useInventoryQueryState(applicationQuery, {
     hasData: data !== undefined,
     hasRecords: data !== undefined,
-  });
-  const {
-    data: topologyOptions = {
-      assets: [] as Array<{ id: string; label: string }>,
-      vms: [] as Array<{ id: string; label: string }>,
-      logicalDatabases: [] as Array<{ id: string; label: string }>,
-    },
-  } = useQuery({
-    queryKey: ["application-topology-options"],
-    queryFn: async () => {
-      const [assetsResponse, vmResponse, logicalResponse] = await Promise.all([
-        api.get<{
-          data: Array<{ id: string; name: string; assetId?: string | null }>;
-        }>("/assets", { params: { page: 1, limit: 200 } }),
-        api.get<Array<{ id: string; name: string; systemName?: string }>>(
-          "/vm/inventory",
-        ),
-        api.get<Array<{ id: string; label: string }>>(
-          "/databases/logical-options",
-        ),
-      ]);
-      return {
-        assets: assetsResponse.data.data.map((item) => ({
-          id: item.id,
-          label: item.assetId ? `${item.name} (${item.assetId})` : item.name,
-        })),
-        vms: vmResponse.data.map((item) => ({
-          id: item.id,
-          label: item.systemName || item.name,
-        })),
-        logicalDatabases: logicalResponse.data.map((logical) => ({
-          id: logical.id,
-          label: logical.label,
-        })),
-      };
-    },
-    staleTime: 30_000,
   });
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["application", params.id] });
@@ -1120,26 +1083,39 @@ export default function ApplicationDetailPage() {
               onChange={(event) => setComponentName(event.target.value)}
               placeholder="e.g. API"
             />
-            <MultiCheckbox
+            <RelationPicker
+              kind="assets"
               label="Assets"
-              options={topologyOptions.assets}
+              description="Physical and network inventory records"
               value={componentLinks.assetIds}
               onChange={(assetIds) =>
                 setComponentLinks((current) => ({ ...current, assetIds }))
               }
             />
-            <MultiCheckbox
+            <RelationPicker
+              kind="vms"
               label="Virtual machines"
-              options={topologyOptions.vms}
+              description="VMs in the component environment"
               value={componentLinks.vmIds}
+              environment={
+                data.environments.find(
+                  (environment) => environment.id === componentDialog?.environmentId,
+                )?.name
+              }
               onChange={(vmIds) =>
                 setComponentLinks((current) => ({ ...current, vmIds }))
               }
             />
-            <MultiCheckbox
+            <RelationPicker
+              kind="logical-databases"
               label="Logical databases"
-              options={topologyOptions.logicalDatabases}
+              description="Logical databases in the component environment"
               value={componentLinks.logicalDatabaseIds}
+              environment={
+                data.environments.find(
+                  (environment) => environment.id === componentDialog?.environmentId,
+                )?.name
+              }
               onChange={(logicalDatabaseIds) =>
                 setComponentLinks((current) => ({
                   ...current,
@@ -1176,26 +1152,39 @@ export default function ApplicationDetailPage() {
                 )
               }
             />
-            <MultiCheckbox
+            <RelationPicker
+              kind="assets"
               label="Assets"
-              options={topologyOptions.assets}
+              description="Physical and network inventory records"
               value={componentLinks.assetIds}
               onChange={(assetIds) =>
                 setComponentLinks((current) => ({ ...current, assetIds }))
               }
             />
-            <MultiCheckbox
+            <RelationPicker
+              kind="vms"
               label="Virtual machines"
-              options={topologyOptions.vms}
+              description="VMs in the component environment"
               value={componentLinks.vmIds}
+              environment={
+                data.environments.find(
+                  (environment) => environment.id === editingComponent?.environmentId,
+                )?.name
+              }
               onChange={(vmIds) =>
                 setComponentLinks((current) => ({ ...current, vmIds }))
               }
             />
-            <MultiCheckbox
+            <RelationPicker
+              kind="logical-databases"
               label="Logical databases"
-              options={topologyOptions.logicalDatabases}
+              description="Logical databases in the component environment"
               value={componentLinks.logicalDatabaseIds}
+              environment={
+                data.environments.find(
+                  (environment) => environment.id === editingComponent?.environmentId,
+                )?.name
+              }
               onChange={(logicalDatabaseIds) =>
                 setComponentLinks((current) => ({
                   ...current,
