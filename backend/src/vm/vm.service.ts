@@ -2357,7 +2357,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
 
     const existingVmLinks = vmId
       ? await prisma.applicationComponentVm.findMany({
-          where: { vmId, componentId: { in: componentIds } },
+          where: { vmId },
           select: { componentId: true, relationType: true },
         })
       : [];

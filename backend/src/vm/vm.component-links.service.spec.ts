@@ -174,4 +174,42 @@ describe('VmService Application relationship contract', () => {
       ),
     ).rejects.toThrow('cannot be newly selected');
   });
+  it('rejects replacing an existing PRIMARY relationship', async () => {
+    const prisma = {
+      applicationComponent: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'component-new-primary',
+            environment: {
+              name: 'PROD',
+              application: { status: 'ACTIVE' },
+            },
+          },
+        ]),
+      },
+      applicationComponentVm: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            componentId: 'component-existing-primary',
+            relationType: 'PRIMARY',
+          },
+        ]),
+      },
+    } as unknown as PrismaService;
+
+    await expect(
+      internals.validateVmComponentLinks(
+        [
+          {
+            componentId: 'component-new-primary',
+            relationType: 'PRIMARY',
+            responsibleParty: null,
+          },
+        ],
+        'PROD',
+        'vm-1',
+        prisma,
+      ),
+    ).rejects.toThrow('at most one PRIMARY');
+  });
 });
