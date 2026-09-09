@@ -391,6 +391,9 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       const assetPicker = componentDialog.getByRole("group", {
         name: "Assets",
       });
+      await assetPicker
+        .getByRole("textbox", { name: "Search Assets" })
+        .fill(asset.label);
       await expect(assetPicker.getByText(asset.label, { exact: true })).toBeVisible();
       await assetPicker
         .getByRole("checkbox", { name: `Select ${asset.label}` })
