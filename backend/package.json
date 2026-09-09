@@ -18,7 +18,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "dotenv -e ../.env -- jest --config ./test/jest-e2e.json",
-    "verify:golden": "ts-node --project prisma/tsconfig.seed.json prisma/verify-golden-dataset.ts"
+    "verify:golden": "ts-node --project prisma/tsconfig.seed.json prisma/verify-golden-dataset.ts",
+    "generate:dense": "ts-node --project prisma/tsconfig.seed.json prisma/generate-dense-fixture.ts",
+    "verify:dense": "ts-node --project prisma/tsconfig.seed.json prisma/verify-dense-fixture.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",
