@@ -46,6 +46,7 @@ describe('AssetsService application component links', () => {
       asset: { findUnique: jest.fn() },
       credential: { findMany: jest.fn() },
       applicationComponent: { count },
+      applicationComponentAsset: { findMany: jest.fn().mockResolvedValue([]) },
       auditLog: { create: jest.fn().mockResolvedValue({}) },
       $transaction: jest.fn(
         (callback: (tx: { asset: { update: typeof update } }) => unknown) =>

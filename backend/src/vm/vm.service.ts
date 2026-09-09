@@ -10,6 +10,7 @@ import * as http from 'node:http';
 import * as https from 'node:https';
 import {
   Prisma,
+  ApplicationStatus,
   VmVCenterSource,
   VmCriticality,
   VmDiscoveryState,
@@ -2323,6 +2324,79 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     return links;
   }
 
+  private async validateVmComponentLinks(
+    links: Array<{
+      componentId: string;
+      relationType: 'PRIMARY' | 'SHARED';
+      responsibleParty: string | null;
+    }>,
+    vmEnvironment: VmEnvironment | null,
+    vmId?: string,
+    prisma: PrismaService | Prisma.TransactionClient = this.prisma,
+  ) {
+    if (!links.length) return;
+
+    const componentIds = links.map((link) => link.componentId);
+    const components = await prisma.applicationComponent.findMany({
+      where: { id: { in: componentIds } },
+      select: {
+        id: true,
+        environment: {
+          select: {
+            name: true,
+            application: { select: { status: true } },
+          },
+        },
+      },
+    });
+    if (components.length !== componentIds.length) {
+      throw new BadRequestException(
+        'VM component links must reference existing application components',
+      );
+    }
+
+    const archivedComponent = components.find(
+      (component) =>
+        component.environment.application.status === ApplicationStatus.ARCHIVED,
+    );
+    if (archivedComponent) {
+      throw new BadRequestException(
+        `Archived Application Component ${archivedComponent.id} cannot be newly selected.`,
+      );
+    }
+
+    const mismatchedComponent = components.find(
+      (component) => component.environment.name !== vmEnvironment,
+    );
+    if (mismatchedComponent) {
+      throw new BadRequestException(
+        `VM environment ${vmEnvironment ?? 'Unknown'} must match component environment ${mismatchedComponent.environment.name}.`,
+      );
+    }
+
+    const requestedPrimaryComponentIds = new Set(
+      links
+        .filter((link) => link.relationType === 'PRIMARY')
+        .map((link) => link.componentId),
+    );
+    if (vmId && requestedPrimaryComponentIds.size > 0) {
+      const existingPrimaryLinks = await prisma.applicationComponentVm.findMany(
+        {
+          where: { vmId, relationType: 'PRIMARY' },
+          select: { componentId: true },
+        },
+      );
+      const conflictingLink = existingPrimaryLinks.find(
+        (link) => !requestedPrimaryComponentIds.has(link.componentId),
+      );
+      if (conflictingLink) {
+        throw new BadRequestException(
+          'A VM can have at most one PRIMARY Application Component relationship.',
+        );
+      }
+    }
+  }
+
   async promoteDiscovery(id: string, dto: SaveVmDraftDto, userId: string) {
     this.ensureSeedData();
 
@@ -2399,17 +2473,12 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
           );
         }
         const componentLinks = this.normalizeVmComponentLinks(dto) ?? [];
-        const componentIds = componentLinks.map((link) => link.componentId);
-        if (componentIds.length) {
-          const componentCount = await tx.applicationComponent.count({
-            where: { id: { in: componentIds } },
-          });
-          if (componentCount !== componentIds.length) {
-            throw new BadRequestException(
-              'VM component links must reference existing application components',
-            );
-          }
-        }
+        await this.validateVmComponentLinks(
+          componentLinks,
+          environment,
+          undefined,
+          tx,
+        );
 
         await tx.vmDiscovery.update({
           where: { id },
@@ -2768,14 +2837,7 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
     const componentLinks = this.normalizeVmComponentLinks(dto);
     const componentIds = componentLinks?.map((link) => link.componentId) ?? [];
     if (componentLinks !== undefined && componentIds.length) {
-      const componentCount = await this.prisma.applicationComponent.count({
-        where: { id: { in: componentIds } },
-      });
-      if (componentCount !== componentIds.length) {
-        throw new BadRequestException(
-          'VM component links must reference existing application components',
-        );
-      }
+      await this.validateVmComponentLinks(componentLinks, environment, id);
     }
     const componentLinkCount =
       componentLinks !== undefined

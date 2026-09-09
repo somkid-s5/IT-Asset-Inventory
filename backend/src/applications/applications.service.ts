@@ -129,8 +129,35 @@ export class ApplicationsService {
     environmentName: string,
     vmIds: string[] | undefined,
     logicalDatabaseIds: string[] | undefined,
-    retained: { vmIds?: Set<string>; logicalDatabaseIds?: Set<string> } = {},
+    retained: {
+      assetIds?: Set<string>;
+      vmIds?: Set<string>;
+      logicalDatabaseIds?: Set<string>;
+    } = {},
+    assetIds?: string[],
   ) {
+    const uniqueAssetIds = [...new Set(assetIds ?? [])];
+    if (uniqueAssetIds.length) {
+      const assets = await this.prisma.asset.findMany({
+        where: { id: { in: uniqueAssetIds } },
+        select: { id: true, status: true },
+      });
+      if (assets.length !== uniqueAssetIds.length) {
+        throw new BadRequestException(
+          'Every selected Asset must exist before it can be linked to a component.',
+        );
+      }
+      for (const asset of assets) {
+        const isRetainedArchived =
+          asset.status === 'ARCHIVED' && retained.assetIds?.has(asset.id);
+        if (asset.status === 'ARCHIVED' && !isRetainedArchived) {
+          throw new BadRequestException(
+            `Archived Asset ${asset.id} cannot be newly linked to a component.`,
+          );
+        }
+      }
+    }
+
     const uniqueVmIds = [...new Set(vmIds ?? [])];
     if (uniqueVmIds.length) {
       const vms = await this.prisma.vmInventory.findMany({
@@ -446,6 +473,8 @@ export class ApplicationsService {
           environment.name,
           component.vmIds,
           component.logicalDatabaseIds,
+          {},
+          component.assetIds,
         );
       }
     }
@@ -1100,6 +1129,8 @@ export class ApplicationsService {
       environment.name,
       dto.vmIds,
       dto.logicalDatabaseIds,
+      {},
+      dto.assetIds,
     );
     const assetLinks = await this.buildComponentAssetLinks(dto.assetIds);
     const vmLinks = await this.buildComponentVmLinks(dto.vmIds);
@@ -1169,16 +1200,25 @@ export class ApplicationsService {
           })
         : Promise.resolve([]),
     ]);
+    const existingAssetLinks =
+      dto.assetIds !== undefined
+        ? await this.prisma.applicationComponentAsset.findMany({
+            where: { componentId },
+            select: { assetId: true },
+          })
+        : [];
     await this.validateComponentRelations(
       environment.name,
       dto.vmIds,
       dto.logicalDatabaseIds,
       {
+        assetIds: new Set(existingAssetLinks.map((link) => link.assetId)),
         vmIds: new Set(existingVmLinks.map((link) => link.vmId)),
         logicalDatabaseIds: new Set(
           existingLogicalDatabases.map((logical) => logical.id),
         ),
       },
+      dto.assetIds,
     );
     const assetLinks = await this.buildComponentAssetLinks(dto.assetIds, {
       excludeComponentId: componentId,

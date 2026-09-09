@@ -101,7 +101,10 @@ export class AssetsService {
     return links;
   }
 
-  private async validateComponentLinks(dto: CreateAssetDto | UpdateAssetDto) {
+  private async validateComponentLinks(
+    dto: CreateAssetDto | UpdateAssetDto,
+    assetId?: string,
+  ) {
     const links = this.normalizeComponentLinks(dto);
     if (!links?.length) return links;
 
@@ -113,6 +116,27 @@ export class AssetsService {
       throw new BadRequestException(
         'Asset component links must reference existing application components',
       );
+    }
+
+    const requestedPrimaryComponentIds = new Set(
+      links
+        .filter((link) => link.relationType === 'PRIMARY')
+        .map((link) => link.componentId),
+    );
+    if (assetId && requestedPrimaryComponentIds.size > 0) {
+      const existingPrimaryLinks =
+        await this.prisma.applicationComponentAsset.findMany({
+          where: { assetId, relationType: 'PRIMARY' },
+          select: { componentId: true },
+        });
+      const conflictingLink = existingPrimaryLinks.find(
+        (link) => !requestedPrimaryComponentIds.has(link.componentId),
+      );
+      if (conflictingLink) {
+        throw new BadRequestException(
+          'An asset can have at most one PRIMARY application component relationship.',
+        );
+      }
     }
 
     return links;
@@ -975,7 +999,7 @@ export class AssetsService {
           })
         : [];
 
-    await this.validateComponentLinks(updateAssetDto);
+    await this.validateComponentLinks(updateAssetDto, id);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const asset = await tx.asset.update({
