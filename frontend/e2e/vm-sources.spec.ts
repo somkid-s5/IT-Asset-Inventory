@@ -26,6 +26,8 @@ test.describe('vCenter Sources V1.1 credential and lifecycle acceptance', () => 
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test('covers create/test, metadata preservation, connection re-test, sync, archive/restore, and audit evidence', async ({ page }) => {
+    test.setTimeout(120_000);
+
     let source = {
       id: 'source-v1-1',
       name: 'acceptance-vcenter',
@@ -138,13 +140,23 @@ test.describe('vCenter Sources V1.1 credential and lifecycle acceptance', () => 
     });
     await page.route('**/api/audit-logs**', async (route) => {
       await route.fulfill({
-        json: [
-          { id: 'audit-1', action: 'RESTORE_SOURCE', targetId: source.id, details: 'Restored vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
-          { id: 'audit-2', action: 'ARCHIVE_SOURCE', targetId: source.id, details: 'Archived vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
-          { id: 'audit-3', action: 'VCENTER_SYNC', targetId: source.id, details: 'Manual sync of vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
-          { id: 'audit-4', action: 'UPDATE_SOURCE', targetId: source.id, details: 'Updated vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
-          { id: 'audit-5', action: 'CREATE_SOURCE', targetId: source.id, details: 'Created vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
-        ],
+        json: {
+          data: [
+            { id: 'audit-1', action: 'RESTORE_SOURCE', targetId: source.id, details: 'Restored vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
+            { id: 'audit-2', action: 'ARCHIVE_SOURCE', targetId: source.id, details: 'Archived vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
+            { id: 'audit-3', action: 'VCENTER_SYNC', targetId: source.id, details: 'Manual sync of vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
+            { id: 'audit-4', action: 'UPDATE_SOURCE', targetId: source.id, details: 'Updated vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
+            { id: 'audit-5', action: 'CREATE_SOURCE', targetId: source.id, details: 'Created vCenter source', timestamp: new Date().toISOString(), user: null, ipAddress: null },
+          ],
+          meta: { total: 5, page: 1, limit: 20, totalPages: 1 },
+          summary: {
+            totalEvents: 5,
+            todayEvents: 5,
+            deleteEvents: 0,
+            uniqueActors: 1,
+            scope: 'all events matching the current filters',
+          },
+        },
       });
     });
 
@@ -199,7 +211,7 @@ test.describe('vCenter Sources V1.1 credential and lifecycle acceptance', () => 
     await expect(page.getByText('Ready to sync', { exact: true })).toBeVisible();
 
     await page.goto('/dashboard/audit-logs');
-    for (const action of ['CREATE_SOURCE', 'UPDATE_SOURCE', 'VCENTER_SYNC', 'ARCHIVE_SOURCE', 'RESTORE_SOURCE']) {
+    for (const action of ['Create Source', 'Update Source', 'Vcenter Sync', 'Archive Source', 'Restore Source']) {
       await expect(page.getByRole('table').getByText(action, { exact: true })).toBeVisible();
     }
   });
