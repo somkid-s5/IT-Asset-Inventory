@@ -176,7 +176,9 @@ test.describe("Assets List Page Features", () => {
     );
     await expect(page.getByRole("table")).toContainText("db-prod-01");
 
-    await page.getByRole("button", { name: "Clear owner filter" }).click();
+    await page
+      .getByRole("button", { name: "Clear owner filter", exact: true })
+      .click();
     await expect(page).not.toHaveURL(/owner=/);
     await expect(page).toHaveURL(/location=Bangkok(\+|%20)DC1/);
     await expect(page.getByRole("table")).toContainText("web-front-lb");

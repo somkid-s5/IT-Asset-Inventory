@@ -79,3 +79,23 @@ The 47 findings in `SYSTEM_CONSISTENCY_AUDIT_2026-09-08.md` are mapped to the in
 | REL-001/002 | Tickets 04, 09, 13, and 15; Ticket 13 verifier passed |
 
 The remaining release blockers are the four broad-suite failures and the unconfirmed current HTTPS/restart checks above. They require supervisor direction or a later scoped ticket; they are intentionally not fixed here.
+
+## Follow-up evidence addendum — 2026-09-09
+
+The four originally reported specs were rerun against a fresh isolated PostgreSQL database with local HTTP frontend/backend fallback because the local HTTPS-by-IP path is blocked by the known TLS/SNI issue.
+
+Final focused run:
+
+- Command: `playwright test e2e/admin-audit-logs.spec.ts e2e/assets-crud.spec.ts e2e/assets-detail.spec.ts e2e/assets-list.spec.ts --project=chromium --workers=1 --retries=0`
+- Result: **18 passed, 2 failed (1.6m)**, including three setup tests.
+- `assets-crud`, `assets-detail`, and the original owner-clear locator failure were test locator/expectation drift and are fixed only in their spec files.
+- `admin-audit-logs.spec.ts:35` remains a product/UI-state blocker: once a search returns filtered-empty, `InventoryQueryStateView` replaces the page content and removes the search input, so the test cannot clear the active search.
+- `assets-list.spec.ts:192` exposes the same product/UI-state blocker after a no-match owner filter: the `Clear filters` button is removed with the filtered-empty content.
+
+HTTP restart-persistence check passed against the isolated seeded database:
+
+- Before restart: Asset API HTTP 200, seeded `DEV-ASSET-001` present, Asset count 10.
+- Backend restarted with the same database and signing configuration.
+- After restart: readiness HTTP 200, Asset API HTTP 200, `DEV-ASSET-001` still present, Asset count still 10.
+
+HTTPS remains **BLOCKED** by the previously recorded Windows Schannel/Node IP-SNI handshake failure. Secure/HttpOnly cookie verification was not claimed from HTTP. All local processes, the temporary database, Playwright artifacts, Next build artifacts, logs, and generated Next agent files were removed after the run.

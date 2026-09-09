@@ -53,10 +53,12 @@ test.describe("Assets CRUD Operations", () => {
     await page.getByPlaceholder("e.g. Rack A1").fill("Rack-99");
     await page.getByPlaceholder("e.g. Data Center 1").fill("Main DC");
     await page
-      .getByLabel("OS / Firmware Version", { exact: true })
+      .getByPlaceholder("e.g. Ubuntu 24.04 or iLO 6")
       .fill("Ubuntu 24.04 LTS");
     await page
-      .getByLabel("Operational Dependencies", { exact: true })
+      .getByPlaceholder(
+        "Record important dependency context or leave blank when unknown.",
+      )
       .fill("Core switch and backup network");
     await page.getByLabel("Total Sockets", { exact: true }).fill("2");
     await page
@@ -92,7 +94,7 @@ test.describe("Assets CRUD Operations", () => {
       page.getByRole("heading", { name: "Edit Asset Information" }),
     ).toBeVisible();
     await expect(
-      page.getByLabel("OS / Firmware Version", { exact: true }),
+      page.getByPlaceholder("e.g. Ubuntu 24.04 or iLO 6"),
     ).toHaveValue("Ubuntu 24.04 LTS");
     await page.getByRole("button", { name: "Cancel" }).click();
 

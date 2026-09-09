@@ -23,9 +23,9 @@ test.describe("Asset Detail Management", () => {
     await expect(
       page.getByRole("main").getByRole("heading", { name: "db-prod-01" }),
     ).toBeVisible();
-    await expect(page.getByText("SERVER", { exact: true })).toBeVisible();
+    await expect(page.getByText("Server", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("Version", { exact: true }).first(),
+      page.getByText("OS / Firmware Version", { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("Ubuntu 22.04 LTS", { exact: true }),
