@@ -12,6 +12,16 @@ type ComponentLink = {
 
 type VmRelationInternals = {
   normalizeVmComponentLinks(dto: SaveVmDraftDto): ComponentLink[] | undefined;
+  validateVmComponentLinks(
+    links: Array<{
+      componentId: string;
+      relationType: 'PRIMARY' | 'SHARED';
+      responsibleParty: string | null;
+    }>,
+    vmEnvironment: 'PROD' | 'TEST' | 'UAT' | null,
+    vmId?: string,
+    prisma?: PrismaService,
+  ): Promise<void>;
 };
 
 describe('VmService Application relationship contract', () => {
@@ -91,5 +101,77 @@ describe('VmService Application relationship contract', () => {
         ],
       }),
     ).toThrow(BadRequestException);
+  });
+
+  it('allows an archived application link when the VM already retains it', async () => {
+    const prisma = {
+      applicationComponent: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'component-archived',
+            environment: {
+              name: 'PROD',
+              application: { status: 'ARCHIVED' },
+            },
+          },
+        ]),
+      },
+      applicationComponentVm: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { componentId: 'component-archived', relationType: 'SHARED' },
+          ]),
+      },
+    } as unknown as PrismaService;
+
+    await expect(
+      internals.validateVmComponentLinks(
+        [
+          {
+            componentId: 'component-archived',
+            relationType: 'SHARED',
+            responsibleParty: null,
+          },
+        ],
+        'PROD',
+        'vm-1',
+        prisma,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it('rejects a newly selected archived application link', async () => {
+    const prisma = {
+      applicationComponent: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'component-archived',
+            environment: {
+              name: 'PROD',
+              application: { status: 'ARCHIVED' },
+            },
+          },
+        ]),
+      },
+      applicationComponentVm: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    } as unknown as PrismaService;
+
+    await expect(
+      internals.validateVmComponentLinks(
+        [
+          {
+            componentId: 'component-archived',
+            relationType: 'SHARED',
+            responsibleParty: null,
+          },
+        ],
+        'PROD',
+        'vm-1',
+        prisma,
+      ),
+    ).rejects.toThrow('cannot be newly selected');
   });
 });

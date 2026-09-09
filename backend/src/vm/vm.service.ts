@@ -2355,9 +2355,19 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    const existingVmLinks = vmId
+      ? await prisma.applicationComponentVm.findMany({
+          where: { vmId, componentId: { in: componentIds } },
+          select: { componentId: true, relationType: true },
+        })
+      : [];
+    const existingComponentIds = new Set(
+      existingVmLinks.map((link) => link.componentId),
+    );
     const archivedComponent = components.find(
       (component) =>
-        component.environment.application.status === ApplicationStatus.ARCHIVED,
+        component.environment.application.status ===
+          ApplicationStatus.ARCHIVED && !existingComponentIds.has(component.id),
     );
     if (archivedComponent) {
       throw new BadRequestException(
@@ -2380,14 +2390,10 @@ export class VmService implements OnModuleInit, OnModuleDestroy {
         .map((link) => link.componentId),
     );
     if (vmId && requestedPrimaryComponentIds.size > 0) {
-      const existingPrimaryLinks = await prisma.applicationComponentVm.findMany(
-        {
-          where: { vmId, relationType: 'PRIMARY' },
-          select: { componentId: true },
-        },
-      );
-      const conflictingLink = existingPrimaryLinks.find(
-        (link) => !requestedPrimaryComponentIds.has(link.componentId),
+      const conflictingLink = existingVmLinks.find(
+        (link) =>
+          link.relationType === 'PRIMARY' &&
+          !requestedPrimaryComponentIds.has(link.componentId),
       );
       if (conflictingLink) {
         throw new BadRequestException(
