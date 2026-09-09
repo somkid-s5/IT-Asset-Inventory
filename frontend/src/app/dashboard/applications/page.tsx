@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AppWindow,
@@ -100,6 +100,7 @@ export default function ApplicationsPage() {
   const { user } = useAuth();
   const { setHeader } = usePageHeader();
   const queryClient = useQueryClient();
+  const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [open, setOpen] = useState(false);
@@ -127,6 +128,11 @@ export default function ApplicationsPage() {
       }),
     [setHeader],
   );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setQuery(searchInput.trim()), 150);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   const applicationsQuery = useQuery({
     queryKey: ["applications", showArchived, query],
@@ -326,13 +332,23 @@ export default function ApplicationsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {user?.role === "ADMIN" && (
-            <Button variant="outline" onClick={() => setShowArchived((value) => !value)}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                startTransition(() => setShowArchived((value) => !value))
+              }
+            >
               <ArchiveRestore className="mr-2 h-4 w-4" />
               {showArchived ? "Hide archived" : "Show archived"}
             </Button>
           )}
           {canEdit && (
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog
+              open={open}
+              onOpenChange={(nextOpen) =>
+                startTransition(() => setOpen(nextOpen))
+              }
+            >
               <DialogTrigger asChild>
                 <Button><Plus className="mr-2 h-4 w-4" />New application</Button>
               </DialogTrigger>
@@ -410,8 +426,8 @@ export default function ApplicationsPage() {
       </div>
 
       <div className="relative w-full max-w-xl">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input aria-label="Search applications" className="pl-9" placeholder="Search applications, owners, or business units" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input aria-label="Search applications" className="pl-9" placeholder="Search applications, owners, or business units" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
       </div>
 
       <InventoryQueryStateView
