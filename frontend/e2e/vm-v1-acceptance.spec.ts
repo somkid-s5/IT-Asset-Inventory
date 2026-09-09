@@ -97,11 +97,26 @@ test.describe("VM V1 acceptance - relationships, credentials, archive/restore", 
     await expect(
       page.getByText("Application Relationships", { exact: true }),
     ).toBeVisible();
+    const relationships = page
+      .getByRole("heading", {
+        name: "Application Relationships",
+        exact: true,
+      })
+      .locator("..")
+      .locator("..");
     await expect(
-      page.getByText("Treasury Registry", { exact: true }),
+      relationships.getByText("Treasury Registry", { exact: true }),
     ).toHaveCount(2);
-    await expect(page.getByText("Primary", { exact: true })).toBeVisible();
-    await expect(page.getByText("Shared", { exact: true })).toBeVisible();
+    await expect(
+      relationships.getByRole("button", {
+        name: /Treasury Registry.*Primary/,
+      }),
+    ).toHaveCount(1);
+    await expect(
+      relationships.getByRole("button", {
+        name: /Treasury Registry.*Shared/,
+      }),
+    ).toHaveCount(1);
     await expect(page.getByText("svc_vm_e2e", { exact: true })).toBeVisible();
 
     const copy = page.getByRole("button", {
@@ -129,11 +144,26 @@ test.describe("VM V1 acceptance - relationships, credentials, archive/restore", 
     row = page.getByRole("row").filter({ hasText: "vm-prod-01" });
     await expect(row).toBeVisible();
     await row.getByRole("button", { name: "Details" }).click();
+    const restoredRelationships = page
+      .getByRole("heading", {
+        name: "Application Relationships",
+        exact: true,
+      })
+      .locator("..")
+      .locator("..");
     await expect(
-      page.getByText("Treasury Registry", { exact: true }),
+      restoredRelationships.getByText("Treasury Registry", { exact: true }),
     ).toHaveCount(2);
-    await expect(page.getByText("Primary", { exact: true })).toBeVisible();
-    await expect(page.getByText("Shared", { exact: true })).toBeVisible();
+    await expect(
+      restoredRelationships.getByRole("button", {
+        name: /Treasury Registry.*Primary/,
+      }),
+    ).toHaveCount(1);
+    await expect(
+      restoredRelationships.getByRole("button", {
+        name: /Treasury Registry.*Shared/,
+      }),
+    ).toHaveCount(1);
     await expect(page.getByText("svc_vm_e2e", { exact: true })).toBeVisible();
 
     await page.goto("/dashboard/audit-logs");
