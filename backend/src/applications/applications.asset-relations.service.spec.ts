@@ -110,9 +110,11 @@ describe('ApplicationsService asset relationship classification', () => {
       },
       applicationComponentAsset: { findMany: jest.fn().mockResolvedValue([]) },
       asset: {
-        findMany: jest.fn().mockResolvedValue([
-          { id: 'asset-shared-within-app', status: 'ACTIVE' },
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'asset-shared-within-app', status: 'ACTIVE' },
+          ]),
       },
       auditLog: { create: jest.fn().mockResolvedValue({}) },
     } as unknown as PrismaService;
