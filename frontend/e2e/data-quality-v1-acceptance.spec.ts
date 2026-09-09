@@ -201,17 +201,17 @@ test.describe("Data Quality V1 acceptance - context transitions", () => {
     ).toBeVisible();
 
     await expect(
-      page.locator('a[href="/dashboard/applications/app-1"]'),
-    ).toBeVisible();
+      page.getByRole("link", { name: /App Needs Context/ }),
+    ).toHaveAttribute("href", "/dashboard/applications/app-1");
     await expect(
-      page.locator('a[href="/dashboard/assets/asset-1"]'),
-    ).toBeVisible();
+      page.getByRole("link", { name: /Asset Needs Context/ }),
+    ).toHaveAttribute("href", "/dashboard/assets/asset-1?edit=1");
     await expect(
-      page.locator('a[href="/dashboard/databases/db-1"]'),
-    ).toBeVisible();
+      page.getByRole("link", { name: /Database Needs Context/ }),
+    ).toHaveAttribute("href", "/dashboard/databases/db-1");
     await expect(
-      page.locator('a[href="/dashboard/virtual-machines/vm-1"]'),
-    ).toBeVisible();
+      page.getByRole("link", { name: /VM Needs Context/ }),
+    ).toHaveAttribute("href", "/dashboard/virtual-machines/vm-1");
 
     await page.evaluate(() => {
       (window as Window & { __dqRefreshMarker?: string }).__dqRefreshMarker =
