@@ -31,8 +31,11 @@ test.describe('Audit Logs Viewer Spec', () => {
     await searchInput.fill('NON_EXISTENT_AUDIT_LOG_ACTION_123456');
     await expect(page.getByRole('heading', { name: 'No audit logs found' })).toBeVisible({ timeout: 5000 });
 
-    // Clear search query
-    await searchInput.fill('');
+    // The active search remains available in the filtered-empty state.
+    await expect(searchInput).toBeVisible();
+    await expect(searchInput).toHaveValue('NON_EXISTENT_AUDIT_LOG_ACTION_123456');
+    await page.getByRole('button', { name: 'Clear search', exact: true }).click();
+    await expect(searchInput).toHaveValue('');
     await expect(page.getByRole('heading', { name: 'No audit logs found' })).not.toBeVisible();
   });
 });

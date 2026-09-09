@@ -1,6 +1,7 @@
 param(
   [string]$ProjectName = "infrapilot-v1-acceptance",
-  [string]$InternalIp = ""
+  [string]$InternalIp = "",
+  [switch]$AllowInsecureTlsFallback
 )
 
 # Native tools such as Docker and npm legitimately write warnings to stderr.
@@ -14,6 +15,7 @@ $playwrightLog = Join-Path $evidenceDir "playwright-full.log"
 $runtimeLog = Join-Path $evidenceDir "runtime-summary.txt"
 $loginBody = Join-Path $repoRoot ".scratch/v1-login-body.json"
 $loginHeaders = Join-Path $repoRoot ".scratch/v1-login-headers.txt"
+$internalCaPath = Join-Path $evidenceDir "caddy-local-root.crt"
 
 if (-not $InternalIp) {
   $networkConfig = Get-NetIPConfiguration |
@@ -85,16 +87,27 @@ function Get-UploadFileCount {
   return [int](($count | Select-Object -Last 1).Trim())
 }
 
+function Get-CurlTlsArguments {
+  if (Test-Path -LiteralPath $internalCaPath) {
+    return @("--cacert", $internalCaPath)
+  }
+  if ($AllowInsecureTlsFallback) {
+    return @("-k")
+  }
+  throw "The Caddy internal CA was not extracted; HTTPS certificate validation is blocked. Re-run with -AllowInsecureTlsFallback only for an explicit local TLS fallback."
+}
+
 function Assert-HttpsRuntime {
+  $tlsArguments = Get-CurlTlsArguments
   $live = "000"
   for ($attempt = 1; $attempt -le 30; $attempt++) {
-    $live = & curl.exe --noproxy "*" -k -s --connect-timeout 2 -o NUL -w "%{http_code}" "$BaseUrl/api/health/live"
+    $live = & curl.exe --noproxy "*" @tlsArguments -s --connect-timeout 2 -o NUL -w "%{http_code}" "$BaseUrl/api/health/live"
     if ($live -eq "200") { break }
     Start-Sleep -Seconds 1
   }
   Assert-Condition ($live -eq "200") "HTTPS liveness returned HTTP $live instead of 200 after bounded startup retries."
 
-  $ready = & curl.exe --noproxy "*" -k -s --connect-timeout 2 -o NUL -w "%{http_code}" "$BaseUrl/api/health/ready"
+  $ready = & curl.exe --noproxy "*" @tlsArguments -s --connect-timeout 2 -o NUL -w "%{http_code}" "$BaseUrl/api/health/ready"
   Assert-Condition ($ready -eq "200") "HTTPS readiness returned HTTP $ready instead of 200."
 
   $redirectHeaders = & curl.exe --noproxy "*" -s --connect-timeout 2 -o NUL -D - --max-redirs 0 "http://$InternalIp/"
@@ -105,10 +118,11 @@ function Assert-HttpsRuntime {
 }
 
 function Assert-SecureLoginCookie {
+  $tlsArguments = Get-CurlTlsArguments
   $payload = @{ username = 'admin'; password = $script:adminPassword } | ConvertTo-Json -Compress
   [System.IO.File]::WriteAllText($loginBody, $payload, (New-Object System.Text.UTF8Encoding($false)))
   try {
-    $status = & curl.exe --noproxy "*" -k -s -o NUL -D $loginHeaders -w "%{http_code}" -H "Content-Type: application/json" --data-binary "@$loginBody" "$BaseUrl/api/auth/login"
+    $status = & curl.exe --noproxy "*" @tlsArguments -s -o NUL -D $loginHeaders -w "%{http_code}" -H "Content-Type: application/json" --data-binary "@$loginBody" "$BaseUrl/api/auth/login"
     Assert-Condition ($status -eq "200") "Admin login over HTTPS returned HTTP $status."
     $headers = Get-Content $loginHeaders -Raw
     Assert-Condition ($headers -match "(?im)^Set-Cookie:\s*access_token=") "Login did not set the authentication cookie."
@@ -183,6 +197,8 @@ try {
 
   Write-Host "[4/7] Starting Backend, Frontend, and HTTPS gateway..." -ForegroundColor Cyan
   Invoke-Compose up -d --wait backend frontend gateway
+  Invoke-Compose cp gateway:/data/caddy/pki/authorities/local/root.crt $internalCaPath
+  Assert-Condition (Test-Path -LiteralPath $internalCaPath) "Caddy internal CA extraction failed; HTTPS certificate validation cannot proceed."
   Assert-HttpsRuntime
   Assert-SecureLoginCookie
 
@@ -226,6 +242,7 @@ Persisted upload files: $uploadsAfter
 HTTPS liveness/readiness: PASS
 HTTP -> HTTPS redirect: PASS
 Secure/HttpOnly/SameSite auth cookie: PASS
+TLS certificate verification: $(if ($AllowInsecureTlsFallback) { 'NOT VERIFIED (explicit insecure fallback)' } else { 'PASS (Caddy internal CA)' })
 Container recreation persistence: PASS
 DurationSeconds: $duration
 RawPlaywrightLog: $playwrightLog
@@ -243,6 +260,7 @@ finally {
   Write-Host "Cleaning isolated acceptance stack..." -ForegroundColor DarkGray
   & docker compose --project-name $ProjectName --env-file $envFile down -v --remove-orphans 2>$null | Out-Null
   Remove-Item $envFile, $loginBody, $loginHeaders -Force -ErrorAction SilentlyContinue
+  Remove-Item $internalCaPath -Force -ErrorAction SilentlyContinue
   $env:DEFAULT_ADMIN_PASSWORD = $oldEnv.DEFAULT_ADMIN_PASSWORD
   $env:DEFAULT_EDITOR_PASSWORD = $oldEnv.DEFAULT_EDITOR_PASSWORD
   $env:DEFAULT_VIEWER_PASSWORD = $oldEnv.DEFAULT_VIEWER_PASSWORD

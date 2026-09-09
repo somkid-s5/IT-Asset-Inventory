@@ -592,6 +592,18 @@ export default function AssetsPage() {
     }
   };
 
+  const clearAssetFilters = () => {
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
+    setOwnerFilter("");
+    setDebouncedOwnerFilter("");
+    setLocationFilter("");
+    setDebouncedLocationFilter("");
+    setActiveTab("ALL");
+    setShowArchived(false);
+    setPagination((current) => ({ ...current, pageIndex: 0 }));
+  };
+
   return (
     <motion.div
       variants={fadeInUp}
@@ -672,6 +684,10 @@ export default function AssetsPage() {
                   ? "No archived assets match your current search or type filter."
                   : "No assets match your current search or filter criteria."
               }
+              action={{
+                label: "Clear filters",
+                onClick: clearAssetFilters,
+              }}
             />
           }
         >

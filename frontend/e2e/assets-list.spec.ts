@@ -55,6 +55,9 @@ test.describe("Assets List Page Features", () => {
     // Search by invalid string
     await searchInput.fill("nonexistent-asset-query");
     await expect(page.getByText("No assets found")).toBeVisible();
+    await page.getByRole("button", { name: "Clear filters", exact: true }).click();
+    await expect(searchInput).toHaveValue("");
+    await expect(table).toContainText("db-prod-01");
   });
 
   test("should keep the search field focused while typing continuously", async ({

@@ -386,14 +386,48 @@ export default function AuditLogsPage() {
     }
   };
 
-  const resetFilters = () => {
+  const clearSearch = () => {
     setSearch("");
     setDebouncedSearch("");
+    setPage(1);
+  };
+
+  const resetFilters = () => {
+    clearSearch();
     setAction("");
     setFrom("");
     setTo("");
     setPage(1);
   };
+
+  const summaryTiles = (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <SummaryTile
+        icon={Activity}
+        label="Filtered Events"
+        value={summary?.totalEvents ?? meta.total}
+        tone="bg-primary/10 text-primary"
+      />
+      <SummaryTile
+        icon={Clock3}
+        label="Filtered Today"
+        value={summary?.todayEvents ?? 0}
+        tone="bg-info/10 text-info"
+      />
+      <SummaryTile
+        icon={Trash2}
+        label="Delete Events"
+        value={summary?.deleteEvents ?? 0}
+        tone="bg-destructive/10 text-destructive"
+      />
+      <SummaryTile
+        icon={Users}
+        label="Unique Actors"
+        value={summary?.uniqueActors ?? 0}
+        tone="bg-primary/10 text-primary"
+      />
+    </div>
+  );
 
   if (!user || user.role !== "ADMIN") return <AccessDenied />;
 
@@ -426,55 +460,8 @@ export default function AuditLogsPage() {
         )}
       </div>
 
-      <InventoryQueryStateView
-        state={queryState.state}
-        hasStaleData={queryState.hasStaleData}
-        onRetry={() => void logsQuery.refetch()}
-        loadingLabel="Loading audit logs…"
-        emptyState={
-          <EmptyState
-            icon={ShieldAlert}
-            title="No audit logs yet"
-            description="No system audit logs have been recorded yet."
-          />
-        }
-        filteredEmptyState={
-          <EmptyState
-            icon={ShieldAlert}
-            title="No audit logs found"
-            description="No audit logs match your current search or filters."
-          />
-        }
-      >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <SummaryTile
-            icon={Activity}
-            label="Filtered Events"
-            value={summary?.totalEvents ?? meta.total}
-            tone="bg-primary/10 text-primary"
-          />
-          <SummaryTile
-            icon={Clock3}
-            label="Filtered Today"
-            value={summary?.todayEvents ?? 0}
-            tone="bg-info/10 text-info"
-          />
-          <SummaryTile
-            icon={Trash2}
-            label="Delete Events"
-            value={summary?.deleteEvents ?? 0}
-            tone="bg-destructive/10 text-destructive"
-          />
-          <SummaryTile
-            icon={Users}
-            label="Unique Actors"
-            value={summary?.uniqueActors ?? 0}
-            tone="bg-primary/10 text-primary"
-          />
-        </div>
-
-        <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/30 p-3 sm:p-4">
+      <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/30 p-3 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="relative w-full lg:max-w-md">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -485,8 +472,20 @@ export default function AuditLogsPage() {
                     setSearch(event.target.value);
                     setPage(1);
                   }}
-                  className="h-9 rounded-xl border-border/60 bg-card pl-9 text-xs"
+                  className="h-9 rounded-xl border-border/60 bg-card pl-9 pr-9 text-xs"
                 />
+                {search && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Clear search"
+                    onClick={clearSearch}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X />
+                  </Button>
+                )}
               </div>
               <p className="text-[11px] font-semibold text-muted-foreground">
                 {meta.total.toLocaleString()} matching events ·{" "}
@@ -541,6 +540,28 @@ export default function AuditLogsPage() {
               </label>
             </div>
           </div>
+
+        <InventoryQueryStateView
+          state={queryState.state}
+          hasStaleData={queryState.hasStaleData}
+          onRetry={() => void logsQuery.refetch()}
+          loadingLabel="Loading audit logs…"
+          emptyState={
+            <EmptyState
+              icon={ShieldAlert}
+              title="No audit logs yet"
+              description="No system audit logs have been recorded yet."
+            />
+          }
+          filteredEmptyState={
+            <EmptyState
+              icon={ShieldAlert}
+              title="No audit logs found"
+              description="No audit logs match your current search or filters."
+            />
+          }
+        >
+          {summaryTiles}
 
           <div className="hidden overflow-x-auto md:block">
             <Table>
@@ -729,8 +750,8 @@ export default function AuditLogsPage() {
               </div>
             </div>
           </div>
-        </Card>
-      </InventoryQueryStateView>
+        </InventoryQueryStateView>
+      </Card>
     </motion.div>
   );
 }
