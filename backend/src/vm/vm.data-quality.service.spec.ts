@@ -36,8 +36,14 @@ describe('VmService VM Data Quality contract', () => {
           code: 'vm.businessUnit',
           label: 'business unit',
         }),
-        expect.objectContaining({ code: 'vm.serviceRole', label: 'service role' }),
-        expect.objectContaining({ code: 'vm.criticality', label: 'criticality' }),
+        expect.objectContaining({
+          code: 'vm.serviceRole',
+          label: 'service role',
+        }),
+        expect.objectContaining({
+          code: 'vm.criticality',
+          label: 'criticality',
+        }),
         expect.objectContaining({
           code: 'vm.applicationComponent',
           label: 'application component',
