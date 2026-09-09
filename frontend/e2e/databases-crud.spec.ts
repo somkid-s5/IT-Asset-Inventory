@@ -57,7 +57,11 @@ test.describe("Databases CRUD Operations", () => {
 
     // Verify create persistence
     await expect(page.getByText("Database created")).toBeVisible();
-    const row = page.getByRole("row").filter({ hasText: dbUniqueName });
+    // The list is server-paginated and sorted by name, so the new record may
+    // be outside the current page. Search through the same server-backed path
+    // a user would use in a larger inventory.
+    await page.getByPlaceholder("Search databases...").fill(dbUniqueName);
+    let row = page.getByRole("row").filter({ hasText: dbUniqueName });
     await expect(row).toBeVisible();
 
     await row
@@ -70,6 +74,9 @@ test.describe("Databases CRUD Operations", () => {
     await expect(page.getByLabel("Responsible Party")).toHaveValue("Platform DBA Team");
     await page.getByRole("button", { name: "Cancel" }).click();
     await page.getByRole("button", { name: "Back to Databases" }).click();
+    await page.getByPlaceholder("Search databases...").fill(dbUniqueName);
+    row = page.getByRole("row").filter({ hasText: dbUniqueName });
+    await expect(row).toBeVisible();
 
     // 2. Edit Database
     const editBtn = row.getByRole("button", { name: "Edit Database" });
