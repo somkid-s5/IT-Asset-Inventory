@@ -55,6 +55,7 @@ export default function EditArticlePage() {
   const { user, loading: authLoading } = useAuth();
   const canAuthor = user?.role === "ADMIN" || user?.role === "EDITOR";
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFormReady, setIsFormReady] = useState(false);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -95,6 +96,7 @@ export default function EditArticlePage() {
         databases:
           document.databaseLinks?.map((link) => link.database.id) ?? [],
       });
+      setIsFormReady(true);
     }
   }, [document]);
 
@@ -146,7 +148,7 @@ export default function EditArticlePage() {
 
   if (authLoading || !canAuthor) return null;
 
-  if (isLoading) {
+  if (isLoading || (document && !isFormReady)) {
     return (
       <div className="flex items-center justify-center h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary opacity-20" />

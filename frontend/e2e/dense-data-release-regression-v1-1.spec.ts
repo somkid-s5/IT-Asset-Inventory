@@ -315,7 +315,43 @@ test.describe("Ticket 16 dense-data release regression gate", () => {
         await expect(checkbox).toBeChecked();
       }
 
+      const updateResponsePromise = page.waitForResponse((response) => {
+        return (
+          response.url().endsWith(`/api/knowledge-base/documents/${document.id}`) &&
+          response.request().method() === "PATCH"
+        );
+      });
       await page.getByRole("button", { name: "Save Changes" }).click();
+      const updateResponse = await updateResponsePromise;
+      expect(updateResponse.status()).toBe(200);
+      const updateBody = await updateResponse.json();
+      expect(updateBody.assetLinks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            asset: expect.objectContaining({
+              assetId: `${MARKER}-ASSET-201`,
+            }),
+          }),
+        ]),
+      );
+      expect(updateBody.databaseLinks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            database: expect.objectContaining({
+              name: `${MARKER}-DATABASE-201`,
+            }),
+          }),
+        ]),
+      );
+      expect(updateBody.vmLinks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            vm: expect.objectContaining({
+              systemName: `${MARKER}-VM-1001`,
+            }),
+          }),
+        ]),
+      );
       await expect(page).toHaveURL(
         new RegExp(`/dashboard/docs/${document.id}$`),
       );
