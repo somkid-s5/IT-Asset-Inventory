@@ -86,6 +86,21 @@ test("shared query renderer exposes stale refresh failure and returns to ready a
   assert.doesNotMatch(retriedMarkup, /Refresh failed/);
 });
 
+test("shared query renderer keeps filtered-empty distinct from a ready result", () => {
+  const markup = renderToStaticMarkup(
+    <InventoryQueryStateView
+      state="filtered-empty"
+      filteredEmptyState={<h2>No virtual machines found</h2>}
+    >
+      <div data-slot="ready-records">Should not render for a filtered-empty result</div>
+    </InventoryQueryStateView>,
+  );
+
+  assert.match(markup, /data-query-state="filtered-empty"/);
+  assert.match(markup, /No virtual machines found/);
+  assert.doesNotMatch(markup, /Should not render for a filtered-empty result/);
+});
+
 test("shared row actions and semantic missing/status components expose accessible grammar", () => {
   const markup = renderToStaticMarkup(
     <>

@@ -87,6 +87,20 @@ function DefaultState({
   );
 }
 
+function CustomState({
+  state,
+  children,
+}: {
+  state: "empty" | "filtered-empty";
+  children: ReactNode;
+}) {
+  return (
+    <div data-slot="inventory-query-state" data-query-state={state}>
+      {children}
+    </div>
+  );
+}
+
 export interface InventoryQueryStateViewProps {
   state?: InventoryQueryState;
   onRetry?: () => void;
@@ -163,8 +177,20 @@ export function InventoryQueryStateView({
     return <DefaultState state={state} onRetry={onRetry} />;
   }
 
-  if (state === "empty") return <>{emptyState ?? <DefaultState state="empty" />}</>;
-  if (state === "filtered-empty") return <>{filteredEmptyState ?? <DefaultState state="filtered-empty" />}</>;
+  if (state === "empty") {
+    return (
+      <CustomState state="empty">
+        {emptyState ?? <DefaultState state="empty" />}
+      </CustomState>
+    );
+  }
+  if (state === "filtered-empty") {
+    return (
+      <CustomState state="filtered-empty">
+        {filteredEmptyState ?? <DefaultState state="filtered-empty" />}
+      </CustomState>
+    );
+  }
   return <>{children}</>;
 }
 

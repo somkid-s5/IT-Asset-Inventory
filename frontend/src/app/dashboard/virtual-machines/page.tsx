@@ -9,14 +9,14 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle, CheckCircle2, Clock3, Monitor, RefreshCw, Search, Server, 
   Columns, Download, ShieldAlert,
-  LoaderCircle, Box, Archive, ArchiveRestore
+  Box, Archive, ArchiveRestore
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { VmFormDialog } from '@/components/LazyLoadedDialogs';
 import { EmptyState } from '@/components/EmptyState';
 import { EnvironmentBadge, InventoryPagination, InventoryQueryStateView } from '@/components/inventory';
-import { useInventoryQueryState } from '@/lib/inventory-query-state';
+import { useInventoryQueryState, type InventoryQueryStateResult } from '@/lib/inventory-query-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -68,6 +68,43 @@ const VIEW_COPY: Record<InventoryView, { title: string; shortLabel: string; desc
     searchPlaceholder: 'Search archived VM...',
   },
 };
+
+function VmQueryStateContent({
+  queryState,
+  onRetry,
+  view,
+  children,
+}: {
+  queryState: InventoryQueryStateResult;
+  onRetry: () => void;
+  view: InventoryView;
+  children: ReactNode;
+}) {
+  return (
+    <InventoryQueryStateView
+      state={queryState.state}
+      hasStaleData={queryState.hasStaleData}
+      onRetry={onRetry}
+      loadingLabel="Loading virtual machine data…"
+      emptyState={
+        <EmptyState
+          icon={Monitor}
+          title={`No ${VIEW_COPY[view].shortLabel.toLowerCase()} VMs yet`}
+          description="No virtual machines are available in this inventory view yet."
+        />
+      }
+      filteredEmptyState={
+        <EmptyState
+          icon={Monitor}
+          title="No virtual machines found"
+          description="No virtual machines match your current search or view."
+        />
+      }
+    >
+      {children}
+    </InventoryQueryStateView>
+  );
+}
 
 export default function VmPage() {
   const router = useRouter();
@@ -127,7 +164,6 @@ export default function VmPage() {
     },
   });
   const vmData = vmQuery.data;
-  const isLoading = vmQuery.isLoading;
   const refetch = vmQuery.refetch;
 
   const discoveries = vmData?.discoveries.data ?? [];
@@ -278,47 +314,17 @@ export default function VmPage() {
         </div>
       </div>
 
-      <InventoryQueryStateView
-        state={queryState.state}
-        hasStaleData={queryState.hasStaleData}
-        onRetry={() => void refetch()}
-        loadingLabel="Loading virtual machine data…"
-        emptyState={
-          <EmptyState
-            icon={Monitor}
-            title={`No ${VIEW_COPY[activeView].shortLabel.toLowerCase()} VMs yet`}
-            description="No virtual machines are available in this inventory view yet."
-          />
-        }
-        filteredEmptyState={
-          <EmptyState
-            icon={Monitor}
-            title="No virtual machines found"
-            description="No virtual machines match your current search or view."
-          />
-        }
-      >
       <Card className="gap-0 overflow-hidden rounded-2xl border border-border/80 bg-card p-0 shadow-md">
-        {isLoading ? (
-           <div className="p-20 flex flex-col items-center justify-center text-muted-foreground">
-             <LoaderCircle className="h-8 w-8 animate-spin mb-4 text-primary" />
-             <p>Loading virtual machine data...</p>
-           </div>
+        {activeView === 'PENDING' ? (
+          <PendingTable data={pendingQueue} queryState={queryState} onRetry={() => void refetch()} onOpen={openPendingSetup} openingId={openingPendingId} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
+        ) : activeView === 'ACTIVE' ? (
+          <ActiveTable data={activeQueue} queryState={queryState} onRetry={() => void refetch()} onOpen={openInventoryDetail} onArchive={user?.role === 'ADMIN' ? handleArchive : undefined} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
+        ) : activeView === 'ORPHANED' ? (
+          <OrphanedTable data={orphanedQueue} queryState={queryState} onRetry={() => void refetch()} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
         ) : (
-          <>
-            {activeView === 'PENDING' ? (
-              <PendingTable data={pendingQueue} onOpen={openPendingSetup} openingId={openingPendingId} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
-            ) : activeView === 'ACTIVE' ? (
-              <ActiveTable data={activeQueue} onOpen={openInventoryDetail} onArchive={user?.role === 'ADMIN' ? handleArchive : undefined} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
-            ) : activeView === 'ORPHANED' ? (
-              <OrphanedTable data={orphanedQueue} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
-            ) : (
-              <OrphanedTable data={archivedQueue} archived onRestore={user?.role === 'ADMIN' ? handleRestore : undefined} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
-            )}
-          </>
+          <OrphanedTable data={archivedQueue} queryState={queryState} onRetry={() => void refetch()} archived onRestore={user?.role === 'ADMIN' ? handleRestore : undefined} onOpen={openInventoryDetail} searchTerm={searchTerm} onSearchChange={handleSearchChange} view={activeView} setView={handleViewChange} stats={stats} page={selectedPage?.page ?? page} pageSize={selectedPage?.limit ?? pageSize} total={selectedPage?.total ?? 0} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} sortBy={sortBy} sortDir={sortDir} onSortChange={handleSortChange} environment={environment} onEnvironmentChange={handleEnvironmentChange} />
         )}
       </Card>
-      </InventoryQueryStateView>
 
       {pendingDialogOpen && (
         <VmFormDialog
@@ -581,7 +587,7 @@ function TablePaginationFooter({ page, pageSize, total, onPageChange, onPageSize
 // -------------------------------------------------------------
 // PENDING TABLE
 // -------------------------------------------------------------
-function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
+function PendingTable({ data, queryState, onRetry, onOpen, openingId, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   
   const columns = useMemo<ColumnDef<VmDiscoveryItem>[]>(() => [
@@ -623,6 +629,7 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
   return (
     <>
       <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} sortBy={sortBy} sortDir={sortDir} onSortChange={onSortChange} environment={environment} onEnvironmentChange={onEnvironmentChange} />
+      <VmQueryStateContent queryState={queryState} onRetry={onRetry} view={view}>
       <div className="overflow-x-auto">
         <Table className="min-w-[780px]">
           <TableHeader className="bg-transparent">
@@ -633,33 +640,18 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? table.getRowModel().rows.map((row: any) => (
+            {table.getRowModel().rows.map((row: any) => (
               <TableRow key={row.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                 {row.getVisibleCells().map((cell: any) => <TableCell key={cell.id} className="py-1.5 px-3 text-[12px] text-foreground align-middle">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>)}
               </TableRow>
-            )) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-96 p-0 border-none bg-transparent">
-                  <div className="flex items-center justify-center h-full">
-                    <EmptyState
-                      icon={Server}
-                      title="No pending VMs"
-                      description={data.length === 0
-                        ? "There are no pending virtual machines discovered on your vCenter sources."
-                        : "No pending virtual machines match your current search criteria."
-                      }
-                      className="w-full max-w-md border-none bg-transparent"
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
       <TablePaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+      </VmQueryStateContent>
     </>
   );
 }
@@ -667,7 +659,7 @@ function PendingTable({ data, onOpen, openingId, searchTerm, onSearchChange, vie
 // -------------------------------------------------------------
 // ACTIVE TABLE
 // -------------------------------------------------------------
-function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
+function ActiveTable({ data, queryState, onRetry, onOpen, onArchive, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   
   const columns = useMemo<ColumnDef<VmInventoryItem>[]>(() => [
@@ -730,6 +722,7 @@ function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view
   return (
     <>
       <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} sortBy={sortBy} sortDir={sortDir} onSortChange={onSortChange} environment={environment} onEnvironmentChange={onEnvironmentChange} />
+      <VmQueryStateContent queryState={queryState} onRetry={onRetry} view={view}>
       <div className="overflow-x-auto">
         <Table className="min-w-[1120px]">
           <TableHeader className="bg-muted/30">
@@ -740,7 +733,7 @@ function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? table.getRowModel().rows.map(row => (
+            {table.getRowModel().rows.map(row => (
               <TableRow 
                 key={row.id} 
                 className="group border-border/40 hover:bg-muted/30 transition-colors cursor-pointer"
@@ -748,27 +741,12 @@ function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view
               >
                 {row.getVisibleCells().map(cell => <TableCell key={cell.id} className="py-1.5 px-3 text-[12px]">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
               </TableRow>
-            )) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
-                  <div className="flex items-center justify-center h-full">
-                    <EmptyState
-                      icon={Server}
-                      title="No active VMs found"
-                      description={data.length === 0
-                        ? "You haven't promoted any virtual machines to active inventory yet."
-                        : "No active virtual machines match your current search criteria."
-                      }
-                      className="w-full max-w-md border-none bg-transparent"
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
       <TablePaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+      </VmQueryStateContent>
     </>
   );
 }
@@ -776,7 +754,7 @@ function ActiveTable({ data, onOpen, onArchive, searchTerm, onSearchChange, view
 // -------------------------------------------------------------
 // ORPHANED TABLE
 // -------------------------------------------------------------
-function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
+function OrphanedTable({ data, queryState, onRetry, archived = false, onRestore, onOpen, searchTerm, onSearchChange, view, setView, stats, page, pageSize, total, onPageChange, onPageSizeChange, sortBy, sortDir, onSortChange, environment, onEnvironmentChange }: any) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   
   const columns = useMemo<ColumnDef<any>[]>(() => [
@@ -820,6 +798,7 @@ function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, 
   return (
     <>
       <TableHeaderToolbar table={table} view={view} setView={setView} stats={stats} searchTerm={searchTerm} onSearchChange={onSearchChange} sortBy={sortBy} sortDir={sortDir} onSortChange={onSortChange} environment={environment} onEnvironmentChange={onEnvironmentChange} />
+      <VmQueryStateContent queryState={queryState} onRetry={onRetry} view={view}>
       <div className="overflow-x-auto">
         <Table className="min-w-[820px]">
           <TableHeader className="bg-muted/30">
@@ -830,7 +809,7 @@ function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, 
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? table.getRowModel().rows.map(row => (
+            {table.getRowModel().rows.map(row => (
               <TableRow 
                 key={row.id} 
                 className="group border-border/40 hover:bg-rose-500/5 transition-colors cursor-pointer"
@@ -838,27 +817,12 @@ function OrphanedTable({ data, archived = false, onRestore, onOpen, searchTerm, 
               >
                 {row.getVisibleCells().map(cell => <TableCell key={cell.id} className="py-1.5 px-3 text-[12px]">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
               </TableRow>
-            )) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-96 p-0 border-none bg-transparent">
-                  <div className="flex items-center justify-center h-full">
-                    <EmptyState
-                      icon={Server}
-                      title={archived ? 'No archived VMs found' : 'No orphaned VMs found'}
-                      description={data.length === 0
-                        ? archived ? "No virtual machines have been archived from active inventory." : "No orphaned or missing virtual machines detected in your sources."
-                        : archived ? "No archived virtual machines match your current search criteria." : "No orphaned virtual machines match your current search criteria."
-                      }
-                      className="w-full max-w-md border-none bg-transparent"
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
       <TablePaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+      </VmQueryStateContent>
     </>
   );
 }

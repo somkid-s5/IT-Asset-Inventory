@@ -183,7 +183,6 @@ export default function DbPage() {
     },
   });
   const databasePage = databaseQuery.data;
-  const isLoading = databaseQuery.isLoading;
   const refetch = databaseQuery.refetch;
   const databases = databasePage?.data ?? [];
   const countsByEnvironment = databasePage?.environmentCounts ?? {
@@ -616,30 +615,6 @@ export default function DbPage() {
         </div>
       </div>
 
-      <InventoryQueryStateView
-        state={queryState.state}
-        hasStaleData={queryState.hasStaleData}
-        onRetry={() => void refetch()}
-        loadingLabel="Loading databases…"
-        emptyState={
-          <EmptyState
-            icon={Database}
-            title="No databases yet"
-            description="You haven't added any database records yet. Start by adding your first database."
-          />
-        }
-        filteredEmptyState={
-          <EmptyState
-            icon={Database}
-            title="No databases found"
-            description={
-              showArchived
-                ? "No archived databases match your current search or environment filter."
-                : "No databases match your current search or filter criteria."
-            }
-          />
-        }
-      >
       <Card className="gap-0 overflow-hidden rounded-2xl border border-border/80 bg-card p-0 shadow-md">
         <div className="flex flex-col gap-3 border-b border-border bg-muted/80 p-3 sm:p-4 md:flex-row md:items-center md:justify-between">
           <div className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1">
@@ -718,6 +693,43 @@ export default function DbPage() {
           </div>
         </div>
 
+        <InventoryQueryStateView
+          state={queryState.state}
+          hasStaleData={queryState.hasStaleData}
+          onRetry={() => void refetch()}
+          loadingLabel="Loading databases…"
+          emptyState={
+            <EmptyState
+              icon={Database}
+              title="No databases yet"
+              description="You haven't added any database records yet. Start by adding your first database."
+              action={
+                mounted &&
+                !loading &&
+                (user?.role === "ADMIN" || user?.role === "EDITOR")
+                  ? {
+                      label: "Add Your First Database",
+                      onClick: () => {
+                        setDatabaseToEdit(null);
+                        setDialogOpen(true);
+                      },
+                    }
+                  : undefined
+              }
+            />
+          }
+          filteredEmptyState={
+            <EmptyState
+              icon={Database}
+              title="No databases found"
+              description={
+                showArchived
+                  ? "No archived databases match your current search or environment filter."
+                  : "No databases match your current search or filter criteria."
+              }
+            />
+          }
+        >
         <div className="overflow-x-auto">
           <Table className="min-w-[980px]">
             <TableHeader className="bg-transparent">
@@ -741,75 +753,24 @@ export default function DbPage() {
               ))}
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-32 text-center text-muted-foreground"
-                  >
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <LoaderCircle className="h-5 w-5 animate-spin" />
-                      <span className="text-sm">Loading...</span>
-                    </div>
-                  </TableCell>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="group border-b border-border hover:bg-muted/50 transition-colors cursor-pointer data-[state=selected]:bg-muted"
+                  onClick={() =>
+                    router.push(`/dashboard/databases/${row.original.id}`)
+                  }
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="py-1.5 px-3">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
                 </TableRow>
-              ) : table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="group border-b border-border hover:bg-muted/50 transition-colors cursor-pointer data-[state=selected]:bg-muted"
-                    onClick={() =>
-                      router.push(`/dashboard/databases/${row.original.id}`)
-                    }
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-1.5 px-3">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-96 p-0 border-none bg-transparent"
-                  >
-                    <div className="flex items-center justify-center h-full">
-                      <EmptyState
-                        icon={Database}
-                        title="No databases found"
-                        description={
-                          !hasActiveDatabaseFilter && databases.length === 0
-                            ? "You haven't added any database records yet. Start by adding your first database."
-                            : showArchived
-                              ? "No archived databases match your current search or environment filter."
-                              : "No databases match your current search or filter criteria."
-                        }
-                        action={
-                          !hasActiveDatabaseFilter &&
-                          databases.length === 0 &&
-                          mounted &&
-                          !loading &&
-                          (user?.role === "ADMIN" || user?.role === "EDITOR")
-                            ? {
-                                label: "Add Your First Database",
-                                onClick: () => {
-                                  setDatabaseToEdit(null);
-                                  setDialogOpen(true);
-                                },
-                              }
-                            : undefined
-                        }
-                        className="w-full max-w-md border-none bg-transparent"
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </div>
@@ -859,8 +820,8 @@ export default function DbPage() {
             </div>
           </div>
         </div>
+        </InventoryQueryStateView>
       </Card>
-      </InventoryQueryStateView>
 
       {dialogOpen && (
         <DatabaseFormDialog

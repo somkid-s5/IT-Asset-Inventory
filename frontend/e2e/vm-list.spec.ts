@@ -36,21 +36,21 @@ test.describe('Virtual Machines List Spec', () => {
     await searchInputActive.fill('non-existent-vm-active-search');
     await inventorySearch;
     await expect(page).toHaveURL(/q=non-existent-vm-active-search/);
-    await expect(page.getByRole('heading', { name: 'No active VMs found' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No virtual machines found' })).toBeVisible();
 
     // Switch to Pending and search
     await page.getByRole('button', { name: 'Pending' }).click();
     const searchInputPending = page.getByPlaceholder('Search VM name, IP...');
     await expect(searchInputPending).toBeVisible();
     await searchInputPending.fill('non-existent-vm-pending-search');
-    await expect(page.getByRole('heading', { name: 'No pending VMs' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No virtual machines found' })).toBeVisible();
 
     // Switch to Orphaned and search
     await page.getByRole('button', { name: 'Orphaned' }).click();
     const searchInputOrphaned = page.getByPlaceholder('Search VM name...');
     await expect(searchInputOrphaned).toBeVisible();
     await searchInputOrphaned.fill('non-existent-vm-orphaned-search');
-    await expect(page.getByRole('heading', { name: 'No orphaned VMs found' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No virtual machines found' })).toBeVisible();
   });
 
   test('should keep the search field focused while typing continuously', async ({ page }) => {
