@@ -130,7 +130,9 @@ test.describe("Assets CRUD Operations", () => {
     await modifiedRow.click();
     await expect(page).toHaveURL(/\/dashboard\/assets\/[^/]+$/);
     await expect(
-      page.getByRole("heading", { name: modifiedName }),
+      page
+        .getByRole("main")
+        .getByRole("heading", { name: modifiedName, exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("E2E Governance Owner", { exact: true }),
@@ -150,6 +152,7 @@ test.describe("Assets CRUD Operations", () => {
 
     await page.getByRole("button", { name: "Back to Assets" }).click();
     await expect(page).toHaveURL(/\/dashboard\/assets$/);
+    await page.getByPlaceholder("Search assets...").fill(modifiedName);
     await expect(
       page.getByRole("row").filter({ hasText: modifiedName }),
     ).toBeVisible();
@@ -218,13 +221,17 @@ test.describe("Assets CRUD Operations", () => {
     await expect(childRow).toBeVisible();
     await childRow.click();
     await expect(
-      page.getByRole("heading", { name: "db-prod-01" }),
+      page
+        .getByRole("main")
+        .getByRole("heading", { name: "db-prod-01", exact: true }),
     ).toBeVisible();
     const parentLink = page.getByRole("button", { name: /switch-edge-01/i });
     await expect(parentLink).toBeVisible();
     await parentLink.click();
     await expect(
-      page.getByRole("heading", { name: "switch-edge-01" }),
+      page
+        .getByRole("main")
+        .getByRole("heading", { name: "switch-edge-01", exact: true }),
     ).toBeVisible();
 
     // Cleanup the seeded child so this test remains repeatable.

@@ -80,7 +80,11 @@ test.describe("Asset V1 acceptance - operational journey", () => {
     await expect(row).toBeVisible();
     await row.click();
 
-    await expect(page.getByRole("heading", { name: assetName })).toBeVisible();
+    await expect(
+      page
+        .getByRole("main")
+        .getByRole("heading", { name: assetName, exact: true }),
+    ).toBeVisible();
     const relationships = page.locator("section").filter({
       has: page.getByRole("heading", { name: "Application Relationships" }),
     });
@@ -115,7 +119,9 @@ test.describe("Asset V1 acceptance - operational journey", () => {
     await row.getByRole("button", { name: "Asset Actions" }).click();
     await page.getByRole("menuitem", { name: "Archive Asset" }).click();
     await page.getByRole("button", { name: "Confirm Archive" }).click();
-    await expect(page.getByText("Asset archived successfully")).toBeVisible();
+    await expect(
+      page.getByText("Asset archived successfully").last(),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Archived Assets" }).click();
     await page.getByPlaceholder("Search assets...").fill(assetName);
@@ -151,7 +157,9 @@ test.describe("Asset V1 acceptance - operational journey", () => {
     await row.getByRole("button", { name: "Asset Actions" }).click();
     await page.getByRole("menuitem", { name: "Archive Asset" }).click();
     await page.getByRole("button", { name: "Confirm Archive" }).click();
-    await expect(page.getByText("Asset archived successfully")).toBeVisible();
+    await expect(
+      page.getByText("Asset archived successfully").last(),
+    ).toBeVisible();
   });
 });
 
@@ -216,7 +224,7 @@ test.describe("Asset V1 acceptance - credential copy audit", () => {
     await search.fill("COPY_PASSWORD");
     const auditRow = page
       .getByRole("row")
-      .filter({ hasText: "COPY_PASSWORD" })
+      .filter({ hasText: "Copy Password" })
       .first();
     await expect(auditRow).toBeVisible();
     await expect(auditRow).toContainText("postgres_admin");
