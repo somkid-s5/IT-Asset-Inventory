@@ -105,20 +105,21 @@ test.describe("Assets List Page Features", () => {
   });
 
   test("should sort columns ascending and descending", async ({ page }) => {
+    await page.getByPlaceholder("Search assets...").fill("db-");
     await page.getByRole("combobox").selectOption("50");
     const nameHeader = page.getByRole("button", { name: "Asset Name" });
     const seededRows = page
       .getByRole("row")
-      .filter({ hasText: /DEV-ASSET-001|DEV-ASSET-002/ });
+      .filter({ hasText: /db-prod-01|db-uat-01/ });
     const seededNames = seededRows.getByTestId("asset-name");
 
     // Sort Ascending
     await nameHeader.click();
-    await expect(seededNames).toHaveText(["db-prod-01", "web-front-lb"]);
+    await expect(seededNames).toHaveText(["db-prod-01", "db-uat-01"]);
 
     // Sort Descending
     await nameHeader.click();
-    await expect(seededNames).toHaveText(["web-front-lb", "db-prod-01"]);
+    await expect(seededNames).toHaveText(["db-uat-01", "db-prod-01"]);
   });
 
   test("should toggle column visibility dynamically", async ({ page }) => {
