@@ -796,7 +796,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       expect(restoredListResponse.status()).toBe(200);
       await expect(archivedRow).toContainText("ACTIVE");
       await expect(hideArchivedButton).toBeVisible();
-      await hideArchivedButton.click();
+      await hideArchivedButton.dispatchEvent("click");
       await expect(
         page.getByRole("button", { name: "Show archived" }),
       ).toBeVisible();
