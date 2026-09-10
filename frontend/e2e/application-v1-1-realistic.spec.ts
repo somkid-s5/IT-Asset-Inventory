@@ -510,7 +510,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         `/applications/${createdApplication.id}/environments/${prodEnvironment?.id}/components/${persistedComponent?.id}`,
       );
       await page.route(
-        componentUpdateUrl,
+        `**/api/applications/${createdApplication.id}/environments/${prodEnvironment?.id}/components/${persistedComponent?.id}`,
         async (route) => {
           if (route.request().method() === "PATCH") {
             await route.fulfill({
@@ -546,7 +546,8 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await failedSaveComponentButton.scrollIntoViewIfNeeded();
       const failedUpdateRequest = page.waitForRequest(
         (request) =>
-          request.method() === "PATCH" && request.url() === componentUpdateUrl,
+          request.method() === "PATCH" &&
+          new URL(request.url()).pathname === new URL(componentUpdateUrl).pathname,
       );
       await failedSaveComponentButton.dispatchEvent("click");
       await failedUpdateRequest;
