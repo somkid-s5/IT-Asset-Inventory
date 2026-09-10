@@ -173,7 +173,7 @@ test.describe("VM V1 acceptance - relationships, credentials, archive/restore", 
     await search.fill("COPY_PASSWORD");
     const auditRow = page
       .getByRole("row")
-      .filter({ hasText: "COPY_PASSWORD" })
+      .filter({ hasText: "Copy Password" })
       .filter({ hasText: "svc_vm_e2e" })
       .first();
     await expect(auditRow).toBeVisible();
