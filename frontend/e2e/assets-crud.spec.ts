@@ -88,7 +88,7 @@ test.describe("Assets CRUD Operations", () => {
     await expect(
       qualityIssueBefore.getByText("owner", { exact: true }),
     ).toBeVisible();
-    await qualityIssueBefore.dispatchEvent("click");
+    await qualityIssueBefore.click({ force: true });
     await expect(page).toHaveURL(/\/dashboard\/assets\/[^/?]+\?edit=1$/);
     await expect(
       page.getByRole("heading", { name: "Edit Asset Information" }),
