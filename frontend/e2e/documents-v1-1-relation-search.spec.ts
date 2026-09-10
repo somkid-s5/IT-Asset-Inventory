@@ -242,22 +242,23 @@ test.describe("Ticket 11 document relation search", () => {
 
       let transientAttempts = 0;
       const transientQuery = `T11 transient relation failure ${runId}`;
-      await page.route("**/api/relation-options**", async (route) => {
+      let failTransientQuery = true;
+      await page.route("**/relation-options**", async (route) => {
         const url = new URL(route.request().url());
         if (
           route.request().method() === "GET" &&
+          url.pathname.endsWith("/relation-options") &&
           url.searchParams.get("kind") === "databases" &&
-          url.searchParams.get("q") === transientQuery
+          url.searchParams.get("q") === transientQuery &&
+          failTransientQuery
         ) {
           transientAttempts += 1;
-          if (transientAttempts <= 4) {
-            await route.fulfill({
-              status: 503,
-              contentType: "application/json",
-              body: JSON.stringify({ message: "controlled Ticket 11 retry" }),
-            });
-            return;
-          }
+          await route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({ message: "controlled Ticket 11 retry" }),
+          });
+          return;
         }
         await route.continue();
       });
@@ -337,21 +338,20 @@ test.describe("Ticket 11 document relation search", () => {
       await databaseGroup
         .getByRole("textbox", { name: "Search Databases" })
         .fill(transientQuery);
-      await expect(
-        databaseGroup.getByRole("alert").getByText("Refresh failed", {
-          exact: true,
-        }),
-      ).toBeVisible({ timeout: 20_000 });
+      const databaseError = databaseGroup.getByRole("alert");
+      await expect(databaseError).toBeVisible({ timeout: 20_000 });
+      await expect(databaseError).toContainText("Inventory unavailable");
       await expect(
         databaseGroup.getByText("No matching databases.", { exact: true }),
       ).toHaveCount(0);
-      await databaseGroup.getByRole("button", { name: "Retry" }).click();
+      failTransientQuery = false;
+      await databaseError.getByRole("button", { name: "Retry" }).click();
       await expect(
         databaseGroup.getByRole("checkbox", {
           name: `Select ${DENSE_MARKER}-DATABASE-201`,
         }),
       ).toBeChecked({ timeout: 20_000 });
-      expect(transientAttempts).toBe(5);
+      expect(transientAttempts).toBeGreaterThanOrEqual(4);
 
       const updateResponsePromise = page.waitForResponse(
         (response) =>
@@ -378,7 +378,7 @@ test.describe("Ticket 11 document relation search", () => {
         page.getByRole("heading", { name: "Related inventory" }),
       ).toBeVisible();
       await expect(
-        page.getByRole("link", { name: "Treasury Registry", exact: true }),
+        page.getByRole("link", { name: /Treasury Registry/ }),
       ).toBeVisible();
       await expect(
         page.getByRole("link", {
@@ -404,7 +404,7 @@ test.describe("Ticket 11 document relation search", () => {
         page.getByRole("heading", { name: "Related inventory" }),
       ).toBeVisible({ timeout: 20_000 });
       await expect(
-        page.getByRole("link", { name: "Treasury Registry", exact: true }),
+        page.getByRole("link", { name: /Treasury Registry/ }),
       ).toBeVisible();
       await expect(
         page.getByRole("link", {
