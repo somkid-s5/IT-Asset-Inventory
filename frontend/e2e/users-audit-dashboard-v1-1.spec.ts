@@ -542,6 +542,11 @@ test.describe("V1.1 Ticket 12 Users, Audit, Dashboard contracts", () => {
       await page.getByRole("button", { name: "Refresh dashboard" }).click();
       expect((await refreshOverviewResponse).status()).toBe(500);
       expect((await refreshQualityResponse).status()).toBe(403);
+      // The browser API client retries 5xx responses before React Query exposes
+      // the final stale refresh error state.
+      await expect(
+        page.getByRole("button", { name: "Refresh dashboard" }),
+      ).toBeEnabled({ timeout: 15_000 });
       await expect(
         page.getByRole("alert").filter({ hasText: "Refresh failed" }),
       ).toBeVisible();
