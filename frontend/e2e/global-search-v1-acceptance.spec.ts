@@ -55,7 +55,7 @@ test.describe("Global Search V1 acceptance - desktop", () => {
       logicalDatabases.getByText("Treasury Registry DB · Oracle", { exact: true }).last(),
     ).toBeVisible();
 
-    await logicalDatabases.getByText("registry", { exact: true }).click();
+    await logicalDatabases.getByRole("option", { name: /registry/ }).click();
     await expect(dialog).toHaveCount(0);
     await expect(page).toHaveURL(/\/dashboard\/databases\/[a-zA-Z0-9-]+/);
   });
