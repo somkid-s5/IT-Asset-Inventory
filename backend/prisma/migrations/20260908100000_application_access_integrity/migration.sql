@@ -1,7 +1,8 @@
 -- Application Access previously allowed orphaned or application-only rows.
 -- Backfill only the ownership that is unambiguous from an existing environment.
--- Any remaining row is reported and blocks the constraint migration; no access
--- ownership or primary designation is guessed.
+-- Invalid ownership still blocks the constraint migration. Legacy rows with
+-- multiple accesses are preserved and reported because no primary can be
+-- selected from the legacy shape without guessing.
 DO $$
 DECLARE
   invalid_ids TEXT;
@@ -40,9 +41,9 @@ BEGIN
   );
 
   IF ambiguous_ids IS NOT NULL THEN
-    RAISE EXCEPTION
+    RAISE WARNING
       'ApplicationAccess primary backfill is ambiguous for row ids: %', ambiguous_ids
-      USING HINT = 'Choose the intended primary access explicitly before rerunning this migration.';
+      USING HINT = 'Choose the intended primary access explicitly after this migration; legacy rows remain non-primary.';
   END IF;
 END $$;
 
@@ -62,7 +63,7 @@ WITH ranked AS (
 UPDATE "ApplicationAccess" AS access
 SET
   "sortOrder" = ranked."sortOrder",
-  "isPrimary" = TRUE
+  "isPrimary" = FALSE
 FROM ranked
 WHERE ranked."id" = access."id";
 
