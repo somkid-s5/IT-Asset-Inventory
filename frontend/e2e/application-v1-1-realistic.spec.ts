@@ -58,7 +58,9 @@ function apiPath(path: string) {
 
 function apiPathname(path: string) {
   const endpoint = apiPath(path);
-  return endpoint.startsWith("/") ? endpoint : new URL(endpoint).pathname;
+  return /^https?:\/\//.test(endpoint)
+    ? new URL(endpoint).pathname
+    : endpoint.split("?", 1)[0];
 }
 
 function escapeRegExp(value: string) {
@@ -90,7 +92,9 @@ async function findRelation(
     items: RelationItem[];
     total: number;
   }>(response, 200);
-  const item = body.items.find((candidate) => candidate.label === expectedLabel);
+  const item = body.items.find(
+    (candidate) => candidate.label === expectedLabel,
+  );
   expect(
     item,
     `Deterministic acceptance fixture ${kind}:${expectedLabel} is missing from the isolated seed.`,
@@ -267,7 +271,10 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
           note: `Ticket 05 mismatch fixture ${runId}`,
         },
       });
-      const database = await responseJson<{ id: string }>(databaseResponse, 201);
+      const database = await responseJson<{ id: string }>(
+        databaseResponse,
+        201,
+      );
       fixtures.databaseId = database.id;
 
       const logicalDatabaseResponse = await page.request.post(
@@ -290,12 +297,8 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         name: "Create application",
       });
       await expect(createDialog).toBeVisible({ timeout: 15_000 });
-      await createDialog
-        .getByLabel("Application name")
-        .fill(applicationName);
-      await createDialog
-        .getByLabel("Description")
-        .fill(initialDescription);
+      await createDialog.getByLabel("Application name").fill(applicationName);
+      await createDialog.getByLabel("Description").fill(initialDescription);
       await createDialog.getByLabel("Technical owner").fill(initialOwner);
       await createDialog
         .getByLabel("Business unit")
@@ -332,9 +335,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await expect(applicationRow).toContainText(initialOwner);
       await expect(applicationRow).toContainText("PROD");
 
-      await applicationRow
-        .getByRole("link", { name: applicationName })
-        .click();
+      await applicationRow.getByRole("link", { name: applicationName }).click();
       await expect(page).toHaveURL(
         new RegExp(`/dashboard/applications/${createdApplication.id}$`),
         { timeout: DETAIL_NAVIGATION_TIMEOUT },
@@ -356,7 +357,10 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       ).toBeVisible();
 
       // Ownership/description edit is exercised in the supported UI, then reloaded.
-      await page.getByRole("button", { name: "Edit", exact: true }).first().click();
+      await page
+        .getByRole("button", { name: "Edit", exact: true })
+        .first()
+        .click();
       const editApplicationDialog = page.getByRole("dialog", {
         name: "Edit application",
       });
@@ -393,16 +397,16 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       );
       fixtures.documentId = createdDocument.id;
       await page.reload();
-      await expect(page.getByText(documentTitle, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(documentTitle, { exact: true }),
+      ).toBeVisible();
 
       // Component create uses the server-authoritative pickers over real inventory rows.
       await page.getByRole("button", { name: "Add component" }).click();
       const componentDialog = page.getByRole("dialog", {
         name: "Add component",
       });
-      await componentDialog
-        .getByLabel("Component name")
-        .fill(componentName);
+      await componentDialog.getByLabel("Component name").fill(componentName);
       await componentDialog
         .getByLabel("Description")
         .fill(componentDescription);
@@ -413,7 +417,9 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await assetPicker
         .getByRole("textbox", { name: "Search Assets" })
         .fill(asset.label);
-      await expect(assetPicker.getByText(asset.label, { exact: true })).toBeVisible();
+      await expect(
+        assetPicker.getByText(asset.label, { exact: true }),
+      ).toBeVisible();
       await assetPicker
         .getByRole("checkbox", { name: `Select ${asset.label}` })
         .check();
@@ -432,8 +438,10 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await expect(
         logicalDatabasePicker.getByText(logicalDatabase.label, { exact: true }),
       ).toBeVisible();
-      const logicalDatabaseCheckbox = logicalDatabasePicker
-        .getByRole("checkbox", { name: `Select ${logicalDatabase.label}` })
+      const logicalDatabaseCheckbox = logicalDatabasePicker.getByRole(
+        "checkbox",
+        { name: `Select ${logicalDatabase.label}` },
+      );
       const logicalDatabaseOption = logicalDatabasePicker.getByText(
         logicalDatabase.label,
         { exact: true },
@@ -450,11 +458,15 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await addComponentButton.scrollIntoViewIfNeeded();
       await addComponentButton.click();
       await expect(page.getByText("Component added")).toBeVisible();
-      await expect(page.getByText(componentName, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(componentName, { exact: true }),
+      ).toBeVisible();
       await expect(
         page.getByText(componentDescription, { exact: true }),
       ).toBeVisible();
-      await expect(page.getByText("1 assets · 1 VMs · 1 logical DBs")).toBeVisible();
+      await expect(
+        page.getByText("1 assets · 1 VMs · 1 logical DBs"),
+      ).toBeVisible();
 
       // Component Name + Description round trip through edit and reload.
       await page
@@ -491,11 +503,15 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       );
       expect(prodEnvironment).toBeDefined();
       expect(persistedComponent).toBeDefined();
-      expect(persistedComponent?.assets.map((item) => item.id)).toContain(asset.id);
-      expect(persistedComponent?.virtualMachines.map((item) => item.id)).toContain(vm.id);
-      expect(persistedComponent?.logicalDatabases.map((item) => item.id)).toContain(
-        logicalDatabase.id,
+      expect(persistedComponent?.assets.map((item) => item.id)).toContain(
+        asset.id,
       );
+      expect(
+        persistedComponent?.virtualMachines.map((item) => item.id),
+      ).toContain(vm.id);
+      expect(
+        persistedComponent?.logicalDatabases.map((item) => item.id),
+      ).toContain(logicalDatabase.id);
 
       // The normal picker hides UAT records for a PROD component. The direct real
       // HTTP call proves the backend still rejects an attempted mismatched link.
@@ -519,29 +535,25 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
 
       // Separate UI error harness: app/detail data remains real, while only this
       // attempted mutation response is synthetic to exercise safe error feedback.
-      const componentUpdatePath =
-        `/applications/${createdApplication.id}/environments/${prodEnvironment?.id}/components/${persistedComponent?.id}`;
+      const componentUpdatePath = `/applications/${createdApplication.id}/environments/${prodEnvironment?.id}/components/${persistedComponent?.id}`;
       const componentUpdateRoute = new RegExp(
         `${escapeRegExp(apiPathname(componentUpdatePath))}$`,
       );
-      await page.route(
-        componentUpdateRoute,
-        async (route) => {
-          if (route.request().method() === "PATCH") {
-            await route.fulfill({
-              status: 400,
-              contentType: "application/json",
-              body: JSON.stringify({
-                statusCode: 400,
-                message: "Environment mismatch",
-                error: "Bad Request",
-              }),
-            });
-            return;
-          }
-          await route.continue();
-        },
-      );
+      await page.route(componentUpdateRoute, async (route) => {
+        if (route.request().method() === "PATCH") {
+          await route.fulfill({
+            status: 400,
+            contentType: "application/json",
+            body: JSON.stringify({
+              statusCode: 400,
+              message: "Environment mismatch",
+              error: "Bad Request",
+            }),
+          });
+          return;
+        }
+        await route.continue();
+      });
       await page
         .getByRole("listitem")
         .filter({ hasText: componentName })
@@ -589,10 +601,14 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await accessDialog.getByLabel("Access method").fill("HTTPS");
       await accessDialog.getByRole("combobox").click();
       await page.getByRole("option", { name: "PROD", exact: true }).click();
-      await accessDialog.getByLabel("Primary access for this environment").check();
+      await accessDialog
+        .getByLabel("Primary access for this environment")
+        .check();
       await accessDialog.getByLabel("Username").fill(`t05-admin-${runId}`);
       await accessDialog.getByLabel("Password").fill(credentialPassword);
-      await accessDialog.getByLabel("Credential role").fill("Application Admin");
+      await accessDialog
+        .getByLabel("Credential role")
+        .fill("Application Admin");
       await accessDialog
         .getByRole("button", { name: "Add access point" })
         .click();
@@ -625,7 +641,9 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await expect(
         page.getByText(`Secondary Access ${runId}`, { exact: true }),
       ).toBeVisible();
-      await expect(page.getByText(`t05-admin-${runId}`, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(`t05-admin-${runId}`, { exact: true }),
+      ).toBeVisible();
 
       // Edit the access metadata and credential role without replacing the secret.
       await page
@@ -641,7 +659,9 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await editAccessDialog
         .getByLabel("Edit access address")
         .fill(`https://credential-updated-${runId}.internal.example`);
-      await editAccessDialog.getByLabel("Credential role 1").fill("Platform Admin");
+      await editAccessDialog
+        .getByLabel("Credential role 1")
+        .fill("Platform Admin");
       await editAccessDialog
         .getByRole("button", { name: "Save access point" })
         .click();
@@ -663,15 +683,21 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         page.request,
         createdApplication.id,
       );
-      const primaryAccess = persistedAccess.access.find((item) => item.isPrimary);
+      const primaryAccess = persistedAccess.access.find(
+        (item) => item.isPrimary,
+      );
       expect(primaryAccess?.label).toBe(`Credential Primary Updated ${runId}`);
       expect(primaryAccess?.credentials[0]?.role).toBe("Platform Admin");
       const credential = primaryAccess?.credentials[0];
       expect(credential).toBeDefined();
 
-      await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+      await page
+        .context()
+        .grantPermissions(["clipboard-read", "clipboard-write"]);
       await page.getByRole("button", { name: "Reveal" }).click();
-      await expect(page.getByText(credentialPassword, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(credentialPassword, { exact: true }),
+      ).toBeVisible();
       await page
         .getByRole("button", {
           name: `Copy password for t05-admin-${runId}`,
@@ -681,14 +707,18 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
 
       const viewerContext = await browser.newContext({
         storageState: "playwright/.auth/viewer.json",
-        baseURL:
-          process.env.PLAYWRIGHT_BASE_URL ?? new URL(page.url()).origin,
-        ignoreHTTPSErrors: process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === "true",
+        baseURL: process.env.PLAYWRIGHT_BASE_URL ?? new URL(page.url()).origin,
+        ignoreHTTPSErrors:
+          process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === "true",
       });
       const viewerPage = await viewerContext.newPage();
       try {
-        await viewerPage.goto(`/dashboard/applications/${createdApplication.id}`);
-        await expect(viewerPage.getByText("Restricted", { exact: true })).toBeVisible();
+        await viewerPage.goto(
+          `/dashboard/applications/${createdApplication.id}`,
+        );
+        await expect(
+          viewerPage.getByText("Restricted", { exact: true }),
+        ).toBeVisible();
         await expect(
           viewerPage.getByRole("button", { name: "Reveal" }),
         ).toHaveCount(0);
@@ -731,7 +761,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       expect(reorderResponse.status()).toBe(200);
       await page.reload();
       await expect(
-        page.getByText(`Credential Primary Updated ${runId}`, { exact: true })
+        page.getByText(`Credential Primary Updated ${runId}`, { exact: true }),
       ).toBeVisible();
       await expect(page.getByText("Primary", { exact: true })).toBeVisible();
 
@@ -754,16 +784,14 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         name: "Show archived",
       });
       await expect(showArchivedButton).toBeVisible();
-      const archivedListResponsePromise = page.waitForResponse(
-        (response) => {
-          if (response.request().method() !== "GET") return false;
-          const url = new URL(response.url());
-          return (
-            url.pathname === apiPathname("/applications") &&
-            url.searchParams.get("includeArchived") === "true"
-          );
-        },
-      );
+      const archivedListResponsePromise = page.waitForResponse((response) => {
+        if (response.request().method() !== "GET") return false;
+        const url = new URL(response.url());
+        return (
+          url.pathname === apiPathname("/applications") &&
+          url.searchParams.get("includeArchived") === "true"
+        );
+      });
       await showArchivedButton.click();
       const archivedListResponse = await archivedListResponsePromise;
       expect(archivedListResponse.status()).toBe(200);
@@ -791,16 +819,14 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
           new URL(response.url()).pathname ===
             apiPathname(`/applications/${createdApplication.id}/restore`),
       );
-      const restoredListResponsePromise = page.waitForResponse(
-        (response) => {
-          if (response.request().method() !== "GET") return false;
-          const url = new URL(response.url());
-          return (
-            url.pathname === apiPathname("/applications") &&
-            url.searchParams.get("includeArchived") === "true"
-          );
-        },
-      );
+      const restoredListResponsePromise = page.waitForResponse((response) => {
+        if (response.request().method() !== "GET") return false;
+        const url = new URL(response.url());
+        return (
+          url.pathname === apiPathname("/applications") &&
+          url.searchParams.get("includeArchived") === "true"
+        );
+      });
       await archivedRow.getByRole("button", { name: "Restore" }).click();
       const restoreResponse = await restoreResponsePromise;
       expect(restoreResponse.status()).toBe(200);
@@ -816,21 +842,27 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         .getByRole("row")
         .filter({ hasText: applicationName });
       await expect(restoredRow).toBeVisible();
-      await restoredRow
-        .getByRole("link", { name: applicationName })
-        .click();
+      await restoredRow.getByRole("link", { name: applicationName }).click();
       await expect(page).toHaveURL(
         new RegExp(`/dashboard/applications/${createdApplication.id}$`),
         { timeout: DETAIL_NAVIGATION_TIMEOUT },
       );
       await page.reload();
-      await expect(page.getByText(updatedComponentDescription, { exact: true })).toBeVisible();
-      await expect(page.getByText(logicalDatabase.label, { exact: true })).toBeVisible();
-      await expect(page.getByText(documentTitle, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(updatedComponentDescription, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(logicalDatabase.label, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(documentTitle, { exact: true }),
+      ).toBeVisible();
       await expect(
         page.getByText(`Credential Primary Updated ${runId}`, { exact: true }),
       ).toBeVisible();
-      await expect(page.getByText(`t05-admin-${runId}`, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(`t05-admin-${runId}`, { exact: true }),
+      ).toBeVisible();
 
       const auditResponse = await page.request.get(apiPath("/audit-logs"), {
         params: { page: 1, limit: 1000 },
@@ -923,8 +955,14 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
           request.method() === "GET" &&
           new URL(request.url()).pathname === applicationsPath,
       );
+      const failedListResponsePromise = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === applicationsPath,
+      );
       await page.goto("/dashboard/applications");
       await listRequestPromise;
+      expect((await failedListResponsePromise).status()).toBe(500);
       await expect(
         page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
       ).toBeVisible({ timeout: 45_000 });
@@ -938,6 +976,11 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
       await page.getByRole("button", { name: "Retry" }).click();
       expect((await retryResponsePromise).status()).toBe(200);
       await expect(page.getByRole("table")).toContainText(applicationName);
+      const persistedApplication = await getApplication(
+        page.request,
+        createdApplication.id,
+      );
+      expect(persistedApplication.name).toBe(applicationName);
     } finally {
       await page.unroute(applicationsRoute);
       if (applicationId) {
@@ -951,7 +994,9 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
     }
   });
 
-  test("proves detail 500 is not Not Found and retry recovers", async ({ page }, testInfo) => {
+  test("proves detail 500 is not Not Found and retry recovers", async ({
+    page,
+  }, testInfo) => {
     const applicationName = `T05 query detail ${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${Date.now().toString(36)}`;
     let applicationId: string | undefined;
     let detailRoute: RegExp | undefined;
@@ -984,8 +1029,14 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
           request.method() === "GET" &&
           new URL(request.url()).pathname === detailPathname,
       );
+      const failedDetailResponsePromise = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === detailPathname,
+      );
       await page.goto(`/dashboard/applications/${applicationId}`);
       await detailRequestPromise;
+      expect((await failedDetailResponsePromise).status()).toBe(500);
       await expect(
         page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
       ).toBeVisible({ timeout: 45_000 });
@@ -1000,6 +1051,11 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
       await expect(
         page.getByRole("heading", { name: applicationName }),
       ).toBeVisible();
+      const persistedApplication = await getApplication(
+        page.request,
+        createdApplication.id,
+      );
+      expect(persistedApplication.name).toBe(applicationName);
     } finally {
       if (detailRoute) await page.unroute(detailRoute);
       if (applicationId) {
