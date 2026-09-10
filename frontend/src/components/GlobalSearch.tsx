@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, LoaderCircle, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -271,17 +272,21 @@ export function GlobalSearch() {
                           if (event.button === 0) {
                             pointerSelectedResult.current =
                               `${group.label}-${item.id}`;
-                            router.push(group.href(item));
-                            handleOpenChange(false);
                           }
                         }}
                       >
-                        <span className="min-w-0 flex-1 truncate">
-                          {group.primary(item)}
-                        </span>
-                        <span className="ml-3 max-w-[55%] truncate text-xs text-muted-foreground">
-                          {group.secondary(item)}
-                        </span>
+                        <Link
+                          href={group.href(item)}
+                          className="flex min-w-0 flex-1 items-center"
+                          onClick={() => handleOpenChange(false)}
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            {group.primary(item)}
+                          </span>
+                          <span className="ml-3 max-w-[55%] truncate text-xs text-muted-foreground">
+                            {group.secondary(item)}
+                          </span>
+                        </Link>
                       </CommandItem>
                     ))}
                   </CommandGroup>

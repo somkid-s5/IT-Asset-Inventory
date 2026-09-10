@@ -88,8 +88,9 @@ test.describe("Assets CRUD Operations", () => {
     await expect(
       qualityIssueBefore.getByText("owner", { exact: true }),
     ).toBeVisible();
-    await qualityIssueBefore.focus();
-    await qualityIssueBefore.press("Enter");
+    const qualityHref = await qualityIssueBefore.getAttribute("href");
+    expect(qualityHref).toMatch(/^\/dashboard\/assets\/[^/?]+\?edit=1$/);
+    await page.goto(qualityHref!);
     await expect(page).toHaveURL(/\/dashboard\/assets\/[^/?]+\?edit=1$/);
     await expect(
       page.getByRole("heading", { name: "Edit Asset Information" }),

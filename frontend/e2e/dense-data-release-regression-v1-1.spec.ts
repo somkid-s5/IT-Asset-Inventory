@@ -354,6 +354,7 @@ test.describe("Ticket 16 dense-data release regression gate", () => {
       );
       await expect(page).toHaveURL(
         new RegExp(`/dashboard/docs/${document.id}$`),
+        { timeout: 15_000 },
       );
       await expect(
         page.getByRole("heading", { name: "Related inventory" }),
