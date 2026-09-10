@@ -335,7 +335,9 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await expect(applicationRow).toContainText(initialOwner);
       await expect(applicationRow).toContainText("PROD");
 
-      await applicationRow.getByRole("link", { name: applicationName }).click();
+      await applicationRow
+        .getByRole("link", { name: applicationName, exact: true })
+        .click();
       await expect(page).toHaveURL(
         new RegExp(`/dashboard/applications/${createdApplication.id}$`),
         { timeout: DETAIL_NAVIGATION_TIMEOUT },
@@ -931,15 +933,14 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
         applicationName,
       );
       applicationId = createdApplication.id;
-      let failNextList = true;
+      let allowListRetry = false;
       await page.route(applicationsRoute, async (route) => {
         const url = new URL(route.request().url());
         if (
           route.request().method() === "GET" &&
           url.pathname === applicationsPath &&
-          failNextList
+          !allowListRetry
         ) {
-          failNextList = false;
           await route.fulfill({
             status: 500,
             contentType: "application/json",
@@ -968,6 +969,7 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
       ).toBeVisible({ timeout: 45_000 });
       await expect(page.getByText("No applications yet")).toHaveCount(0);
       await expect(page.getByText("No applications found")).toHaveCount(0);
+      allowListRetry = true;
       const retryResponsePromise = page.waitForResponse(
         (response) =>
           response.request().method() === "GET" &&
@@ -1010,10 +1012,9 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
       const detailPath = `/applications/${applicationId}`;
       const detailPathname = apiPathname(detailPath);
       detailRoute = new RegExp(`${escapeRegExp(detailPathname)}$`);
-      let failNextDetail = true;
+      let allowDetailRetry = false;
       await page.route(detailRoute, async (route) => {
-        if (route.request().method() === "GET" && failNextDetail) {
-          failNextDetail = false;
+        if (route.request().method() === "GET" && !allowDetailRetry) {
           await route.fulfill({
             status: 500,
             contentType: "application/json",
@@ -1041,6 +1042,7 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
         page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
       ).toBeVisible({ timeout: 45_000 });
       await expect(page.getByText("Application not found")).toHaveCount(0);
+      allowDetailRetry = true;
       const retryResponsePromise = page.waitForResponse(
         (response) =>
           response.request().method() === "GET" &&
