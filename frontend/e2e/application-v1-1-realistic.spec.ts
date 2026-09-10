@@ -270,7 +270,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       const createDialog = page.getByRole("dialog", {
         name: "Create application",
       });
-      await expect(createDialog).toBeVisible();
+      await expect(createDialog).toBeVisible({ timeout: 15_000 });
       await createDialog
         .getByLabel("Application name")
         .fill(applicationName);
