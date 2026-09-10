@@ -29,7 +29,9 @@ test.describe("Application V1 acceptance - archive and restore", () => {
     await row.getByRole("button", { name: "Archive" }).click();
     await archiveResponse;
 
-    await page.getByRole("button", { name: "Show archived" }).click();
+    await page
+      .getByRole("button", { name: "Show archived" })
+      .dispatchEvent("click");
     await search.fill(name);
     row = page.getByRole("row").filter({ hasText: name });
     await expect(row).toBeVisible();

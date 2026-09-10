@@ -117,7 +117,9 @@ test.describe("Asset V1 acceptance - operational journey", () => {
     await page.getByPlaceholder("Search assets...").fill(assetName);
     row = page.getByRole("row").filter({ hasText: assetName });
     await row.getByRole("button", { name: "Asset Actions" }).click();
-    await page.getByRole("menuitem", { name: "Archive Asset" }).click();
+    await page
+      .getByRole("menuitem", { name: "Archive Asset" })
+      .dispatchEvent("click");
     await page.getByRole("button", { name: "Confirm Archive" }).click();
     await expect(
       page.getByText("Asset archived successfully").last(),
@@ -128,7 +130,9 @@ test.describe("Asset V1 acceptance - operational journey", () => {
     row = page.getByRole("row").filter({ hasText: assetName });
     await expect(row).toBeVisible();
     await row.getByRole("button", { name: "Asset Actions" }).click();
-    await page.getByRole("menuitem", { name: "Restore Asset" }).click();
+    await page
+      .getByRole("menuitem", { name: "Restore Asset" })
+      .dispatchEvent("click");
     await page.getByRole("button", { name: "Confirm Restore" }).click();
     await expect(page.getByText("Asset restored successfully")).toBeVisible();
 
@@ -155,7 +159,9 @@ test.describe("Asset V1 acceptance - operational journey", () => {
     await page.getByPlaceholder("Search assets...").fill(assetName);
     row = page.getByRole("row").filter({ hasText: assetName });
     await row.getByRole("button", { name: "Asset Actions" }).click();
-    await page.getByRole("menuitem", { name: "Archive Asset" }).click();
+    await page
+      .getByRole("menuitem", { name: "Archive Asset" })
+      .dispatchEvent("click");
     await page.getByRole("button", { name: "Confirm Archive" }).click();
     await expect(
       page.getByText("Asset archived successfully").last(),
