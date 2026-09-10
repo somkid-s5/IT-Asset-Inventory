@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 export function useUnsavedChanges(open: boolean, value: unknown) {
   const snapshot = useMemo(() => JSON.stringify(value), [value]);
@@ -30,7 +30,13 @@ export function useUnsavedChanges(open: boolean, value: unknown) {
     return () => window.removeEventListener('beforeunload', beforeUnload);
   }, []);
 
+  const reset = useCallback((nextValue: unknown) => {
+    initialSnapshot.current = JSON.stringify(nextValue);
+    isDirtyRef.current = false;
+  }, []);
+
   return {
     confirmDiscard: () => !isDirtyRef.current || window.confirm('You have unsaved changes. Discard them?'),
+    reset,
   };
 }

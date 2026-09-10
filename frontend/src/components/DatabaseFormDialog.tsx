@@ -100,7 +100,7 @@ export function DatabaseFormDialog({
 }: DatabaseFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(DEFAULT_FORM);
-  const { confirmDiscard } = useUnsavedChanges(open, formData);
+  const { confirmDiscard, reset } = useUnsavedChanges(open, formData);
   const requestClose = () => {
     if (loading || !confirmDiscard()) return;
     onOpenChange(false);
@@ -131,6 +131,7 @@ export function DatabaseFormDialog({
 
     if (!databaseToEdit) {
       setFormData(DEFAULT_FORM);
+      reset(DEFAULT_FORM);
       setAccounts([{ ...EMPTY_ACCOUNT }]);
       setRemovedAccountIds([]);
       setOperationalClientIps([{ ...EMPTY_LINKED_APP }]);
@@ -142,7 +143,7 @@ export function DatabaseFormDialog({
       return;
     }
 
-    setFormData({
+    const nextFormData = {
       name: databaseToEdit.name ?? "",
       environment: databaseToEdit.environment ?? "",
       engine: databaseToEdit.engine ?? "",
@@ -158,7 +159,9 @@ export function DatabaseFormDialog({
       replication: databaseToEdit.replication ?? "",
       maintenanceWindow: databaseToEdit.maintenanceWindow ?? "",
       responsibleParty: databaseToEdit.responsibleParty ?? "",
-    });
+    };
+    setFormData(nextFormData);
+    reset(nextFormData);
     setHostMode(
       databaseToEdit.hostAsset
         ? "ASSET"
@@ -200,7 +203,7 @@ export function DatabaseFormDialog({
           }))
         : [{ ...EMPTY_ACCOUNT }],
     );
-  }, [databaseToEdit, open]);
+  }, [databaseToEdit, open, reset]);
 
   useEffect(() => {
     if (!open || hostMode === "TEXT") {
