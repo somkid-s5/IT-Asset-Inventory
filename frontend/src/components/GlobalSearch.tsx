@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, LoaderCircle, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -63,6 +63,7 @@ export function GlobalSearch() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const pointerSelectedResult = useRef<string | null>(null);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -256,11 +257,20 @@ export function GlobalSearch() {
                         key={`${group.label}-${item.id}`}
                         value={`${group.label}-${item.id}`}
                         onSelect={() => {
+                          if (
+                            pointerSelectedResult.current ===
+                            `${group.label}-${item.id}`
+                          ) {
+                            pointerSelectedResult.current = null;
+                            return;
+                          }
                           router.push(group.href(item));
                           handleOpenChange(false);
                         }}
                         onPointerDown={(event) => {
                           if (event.button === 0) {
+                            pointerSelectedResult.current =
+                              `${group.label}-${item.id}`;
                             router.push(group.href(item));
                             handleOpenChange(false);
                           }
