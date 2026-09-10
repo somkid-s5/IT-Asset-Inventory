@@ -4,8 +4,10 @@ const nextConfig = {
   async rewrites() {
     if (process.env.NODE_ENV !== "development") return [];
 
-    const backendOrigin = (process.env.NEXT_PUBLIC_API_URL ??
-      "http://localhost:3001/api").replace(/\/api\/?$/, "");
+    const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const backendOrigin = /^https?:\/\//i.test(configuredApiUrl ?? "")
+      ? configuredApiUrl!.replace(/\/api\/?$/, "")
+      : (process.env.BACKEND_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
     return [
       {
