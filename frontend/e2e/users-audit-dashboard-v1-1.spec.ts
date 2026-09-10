@@ -1,123 +1,249 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
-const admin = {
-  id: "ticket-12-admin",
-  username: "ticket-12-admin",
-  displayName: "Ticket 12 Admin",
-  avatarSeed: "ticket-12-admin",
-  role: "ADMIN",
-  mustChangePassword: false,
+const ADMIN_STATE = "playwright/.auth/admin.json";
+const API_BASE_URL = (
+  process.env.PLAYWRIGHT_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "/api"
+).replace(/\/$/, "");
+
+type UserRecord = {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarSeed: string;
+  avatarImage?: string | null;
+  role: "ADMIN" | "EDITOR" | "VIEWER";
+  createdAt: string;
+  updatedAt: string;
 };
 
-const users = [
-  {
-    id: admin.id,
-    username: admin.username,
-    displayName: admin.displayName,
-    avatarSeed: admin.avatarSeed,
-    role: "ADMIN",
-    createdAt: "2026-09-01T00:00:00.000Z",
-    updatedAt: "2026-09-01T00:00:00.000Z",
-  },
-  {
-    id: "ticket-12-editor",
-    username: "ticket-12-editor",
-    displayName: "Ticket 12 Editor",
-    avatarSeed: "ticket-12-editor",
-    role: "EDITOR",
-    createdAt: "2026-09-02T00:00:00.000Z",
-    updatedAt: "2026-09-02T00:00:00.000Z",
-  },
-];
-
-const overview = {
-  assets: { total: 7, active: 5, nonActive: 2, eolCount: 1 },
-  vm: {
-    sources: 2,
-    healthySources: 1,
-    connectionFailedSources: 1,
-    readyToSyncSources: 0,
-    pendingSetup: 0,
-    activeInventory: 12,
-    orphaned: 1,
-    latestSyncAt: "2026-09-08T08:00:00.000Z",
-  },
-  databases: { total: 4, production: 2, accounts: 9 },
-  applications: { total: 5, active: 3, archived: 2 },
-  recentlyUpdated: [],
+type AuditRecord = {
+  details: string | null;
+  action: string;
 };
 
-const quality = {
-  issueCount: 0,
-  issues: [],
-  operationalIssueCount: 0,
-  operationalIssues: [],
+type AuditPage = {
+  data: AuditRecord[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
 };
 
-function installAuth(page: import("@playwright/test").Page) {
-  return page.addInitScript((snapshot) => {
-    window.localStorage.setItem("user", JSON.stringify(snapshot));
-  }, admin);
+type VmSource = {
+  id: string;
+  status: string;
+};
+
+function apiPath(path: string) {
+  return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-async function mockAuth(page: import("@playwright/test").Page) {
-  await page.route("**/api/auth/me", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ user: admin }),
+function apiPathname(path: string) {
+  const endpoint = apiPath(path);
+  return /^https?:\/\//.test(endpoint)
+    ? new URL(endpoint).pathname
+    : endpoint.split("?", 1)[0];
+}
+
+function routeForPath(path: string) {
+  return new RegExp(`${escapeRegExp(apiPathname(path))}(?:\\?.*)?$`);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function responseJson<T>(
+  response: { status(): number; json(): Promise<unknown> },
+  expectedStatus = 200,
+) {
+  expect(response.status()).toBe(expectedStatus);
+  return (await response.json()) as T;
+}
+
+async function getCurrentUser(request: APIRequestContext) {
+  const body = await responseJson<{
+    user: Pick<UserRecord, "id" | "username" | "displayName" | "role">;
+  }>(await request.get(apiPath("/auth/me")));
+  return body.user;
+}
+
+async function getUsers(request: APIRequestContext) {
+  return responseJson<UserRecord[]>(await request.get(apiPath("/users")));
+}
+
+async function createUser(
+  request: APIRequestContext,
+  username: string,
+  displayName: string,
+  password: string,
+) {
+  return responseJson<UserRecord>(
+    await request.post(apiPath("/users"), {
+      data: { username, displayName, password, role: "VIEWER" },
+    }),
+    201,
+  );
+}
+
+async function deleteUser(request: APIRequestContext, userId: string) {
+  const response = await request.delete(apiPath(`/users/${userId}`));
+  expect([200, 404]).toContain(response.status());
+}
+
+async function createAuditExportEvents(
+  request: APIRequestContext,
+  marker: string,
+  count: number,
+) {
+  for (let index = 1; index <= count; index += 1) {
+    const response = await request.post(apiPath("/audit-logs/export"), {
+      data: {
+        resource: "ticket-12-audit",
+        count: index,
+        query: `${marker}-${index.toString().padStart(3, "0")}`,
+      },
     });
+    expect(response.status()).toBe(201);
+  }
+}
+
+function auditQuery(details: string | null) {
+  if (!details) return null;
+  const parsed = JSON.parse(details) as { query?: unknown };
+  return typeof parsed.query === "string" ? parsed.query : null;
+}
+
+async function waitForApiResponse(
+  page: Page,
+  path: string,
+  predicate?: (url: URL) => boolean,
+) {
+  return page.waitForResponse((response) => {
+    if (response.request().method() !== "GET") return false;
+    const url = new URL(response.url());
+    return (
+      url.pathname === apiPathname(path) && (!predicate || predicate(url))
+    );
   });
 }
 
 test.describe("V1.1 Ticket 12 Users, Audit, Dashboard contracts", () => {
-  test("Users has no unsupported selection state and uses privileged action dialogs", async ({
+  test.describe.configure({ mode: "serial" });
+  test.use({ storageState: ADMIN_STATE });
+
+  test("Users has no unsupported selection state, privileged dialogs, and server safeguards", async ({
     page,
-  }) => {
-    await installAuth(page);
-    await mockAuth(page);
-    await page.route("**/api/users", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(users),
+  }, testInfo) => {
+    test.setTimeout(60_000);
+    const currentUser = await getCurrentUser(page.request);
+    const username = `ticket12-${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${Date.now().toString(36)}`;
+    const displayName = `Ticket 12 User ${testInfo.workerIndex}-${testInfo.repeatEachIndex}`;
+    const createdUser = await createUser(
+      page.request,
+      username,
+      displayName,
+      `Ticket12-${Date.now()}-Aa1`,
+    );
+
+    try {
+      const selfRoleResponse = await page.request.patch(
+        apiPath(`/users/${currentUser.id}/role`),
+        { data: { role: "EDITOR" } },
+      );
+      expect(selfRoleResponse.status()).toBe(400);
+
+      const selfDeleteResponse = await page.request.delete(
+        apiPath(`/users/${currentUser.id}`),
+      );
+      expect(selfDeleteResponse.status()).toBe(400);
+
+      await page.goto("/dashboard/users");
+      await expect(
+        page.getByRole("heading", {
+          name: "System Access & User Directory",
+          level: 2,
+        }),
+      ).toBeVisible();
+      await expect(page.getByRole("checkbox")).toHaveCount(0);
+
+      const currentUserRow = page.getByRole("row", {
+        name: new RegExp(escapeRegExp(currentUser.displayName)),
       });
-    });
+      await expect(currentUserRow).toBeVisible();
+      await currentUserRow
+        .getByRole("button", {
+          name: `Actions for ${currentUser.displayName}`,
+        })
+        .click();
+      await expect(
+        page.getByRole("menuitem", { name: "Change Role" }),
+      ).toBeDisabled();
+      await expect(
+        page.getByRole("menuitem", { name: "Delete Account" }),
+      ).toBeDisabled();
+      await expect(
+        page.getByRole("menuitem", { name: "Reset Password" }),
+      ).toBeEnabled();
+      await page.keyboard.press("Escape");
 
-    await page.goto("/dashboard/users");
-    await expect(
-      page.getByRole("heading", { name: "System Access & User Directory" }),
-    ).toBeVisible();
-    await expect(page.getByRole("checkbox")).toHaveCount(0);
+      const userRow = page.getByRole("row", {
+        name: new RegExp(escapeRegExp(createdUser.displayName)),
+      });
+      await expect(userRow).toBeVisible();
+      const actions = userRow.getByRole("button", {
+        name: `Actions for ${createdUser.displayName}`,
+      });
 
-    await page
-      .getByRole("button", { name: "Actions for Ticket 12 Editor" })
-      .click();
-    await expect(
-      page.getByRole("menuitem", { name: "Change Role" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("menuitem", { name: "Reset Password" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("menuitem", { name: "Delete Account" }),
-    ).toBeVisible();
+      await actions.click();
+      await expect(
+        page.getByRole("menuitem", { name: "Change Role" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("menuitem", { name: "Reset Password" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("menuitem", { name: "Delete Account" }),
+      ).toBeVisible();
+      await page.getByRole("menuitem", { name: "Change Role" }).click();
+      const roleDialog = page.getByRole("dialog", { name: "Change Role" });
+      await expect(roleDialog).toBeVisible();
+      await expect(roleDialog).toContainText("Role changes are audited.");
+      await roleDialog.getByRole("button", { name: "Cancel" }).click();
 
-    await page.getByRole("menuitem", { name: "Change Role" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Change Role" }),
-    ).toBeVisible();
-    await expect(page.getByText("Role changes are audited.")).toBeVisible();
+      await actions.click();
+      await page.getByRole("menuitem", { name: "Reset Password" }).click();
+      const resetDialog = page.getByRole("dialog", { name: "Reset Password" });
+      await expect(resetDialog).toBeVisible();
+      await expect(resetDialog).toContainText("current password is never shown");
+      await resetDialog.getByRole("button", { name: "Cancel" }).click();
+
+      await actions.click();
+      await page.getByRole("menuitem", { name: "Delete Account" }).click();
+      const deleteDialog = page.getByRole("dialog", { name: "Delete User" });
+      await expect(deleteDialog).toBeVisible();
+      await expect(deleteDialog).toContainText("cannot target your own account");
+      await deleteDialog.getByRole("button", { name: "Cancel" }).click();
+    } finally {
+      await deleteUser(page.request, createdUser.id);
+    }
   });
 
   test("Users request failures remain an explicit retry state", async ({
     page,
   }) => {
-    await installAuth(page);
-    await mockAuth(page);
-    let usersAvailable = false;
-    await page.route("**/api/users", async (route) => {
-      if (!usersAvailable) {
+    test.setTimeout(60_000);
+    const currentUser = await getCurrentUser(page.request);
+    const persistedUsers = await getUsers(page.request);
+    const persistedTarget = persistedUsers.find(
+      (user) => user.id !== currentUser.id,
+    );
+    expect(persistedTarget).toBeDefined();
+    if (!persistedTarget) return;
+
+    let allowUsersRetry = false;
+    const usersRoute = routeForPath("/users");
+    await page.route(usersRoute, async (route) => {
+      if (route.request().method() === "GET" && !allowUsersRetry) {
         await route.fulfill({
           status: 500,
           contentType: "application/json",
@@ -125,127 +251,240 @@ test.describe("V1.1 Ticket 12 Users, Audit, Dashboard contracts", () => {
         });
         return;
       }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(users),
-      });
+      await route.continue();
     });
 
-    await page.goto("/dashboard/users");
-    await expect(
-      page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
-    ).toBeVisible({ timeout: 20_000 });
-    await expect(
-      page.getByRole("row", { name: /Ticket 12 Editor/ }),
-    ).toHaveCount(0);
+    try {
+      await page.goto("/dashboard/users");
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page.getByRole("row", {
+          name: new RegExp(escapeRegExp(persistedTarget.displayName)),
+        }),
+      ).toHaveCount(0);
 
-    usersAvailable = true;
-    await page.getByRole("button", { name: "Retry" }).click();
-    await expect(
-      page.getByRole("row", { name: /Ticket 12 Editor/ }),
-    ).toBeVisible();
+      allowUsersRetry = true;
+      const retryResponse = waitForApiResponse(page, "/users");
+      await page.getByRole("button", { name: "Retry" }).click();
+      expect((await retryResponse).status()).toBe(200);
+      await expect(
+        page.getByRole("row", {
+          name: new RegExp(escapeRegExp(persistedTarget.displayName)),
+        }),
+      ).toBeVisible();
+    } finally {
+      await page.unroute(usersRoute);
+    }
   });
 
-  test("Audit searches and paginates the server dataset beyond row 100", async ({
+  test("Audit searches, filters, paginates the server dataset beyond row 100, and keeps detail secret-safe", async ({
     page,
-  }) => {
-    await installAuth(page);
-    await mockAuth(page);
-    const requests: URL[] = [];
-    await page.route("**/api/audit-logs**", async (route) => {
-      const url = new URL(route.request().url());
-      requests.push(url);
-      const requestedPage = Number(url.searchParams.get("page") ?? "1");
-      const requestedLimit = Number(url.searchParams.get("limit") ?? "20");
-      const requestedSearch = url.searchParams.get("search");
-      const requestedAction = url.searchParams.get("action");
-      const oldEvent =
-        requestedPage === 3
-          ? [
-              {
-                id: "audit-201",
-                action: "ARCHIVE_SOURCE",
-                targetId: "source-201",
-                ipAddress: null,
-                details: '{"password":"[REDACTED]","source":"vc-old"}',
-                timestamp: "2026-01-01T00:00:00.000Z",
-                user: null,
-              },
-            ]
-          : [];
-      const pageRecord = {
-        id: `audit-page-${requestedPage}`,
-        action: "UPDATE_APPLICATION",
-        targetId: `application-${requestedPage}`,
-        ipAddress: "10.0.0.10",
-        details: '{"name":"application"}',
-        timestamp: "2026-09-08T00:00:00.000Z",
-        user: null,
-      };
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          data:
-            requestedSearch || requestedAction
-              ? [oldEvent[0] ?? pageRecord]
-              : [pageRecord, ...oldEvent],
-          meta: {
-            total: requestedSearch || requestedAction ? 1 : 201,
-            page: requestedPage,
-            limit: requestedLimit,
-            totalPages: requestedSearch || requestedAction ? 1 : 3,
-          },
-          summary: {
-            totalEvents: requestedSearch || requestedAction ? 1 : 201,
-            todayEvents: 2,
-            deleteEvents: 3,
-            uniqueActors: 4,
-            scope: "all events matching the current filters",
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const marker = `T12-AUDIT-${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${Date.now().toString(36)}`;
+    await createAuditExportEvents(page.request, marker, 101);
+
+    const sourceResponse = await page.request.get(apiPath("/vm/sources"));
+    const sources = await responseJson<VmSource[]>(sourceResponse);
+    const source = sources.find((candidate) => candidate.status !== "ARCHIVED");
+    expect(source).toBeDefined();
+    if (!source) return;
+
+    let sourceNeedsRestore = false;
+    const resetPassword = `Ticket12-${Date.now()}-Secret-Aa1`;
+    const auditUserDisplayName = `Ticket 12 Audit User ${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${Date.now().toString(36)}`;
+    const auditUser = await createUser(
+      page.request,
+      `ticket12-audit-${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${Date.now().toString(36)}`,
+      auditUserDisplayName,
+      resetPassword,
+    );
+
+    try {
+      const archiveResponse = await page.request.patch(
+        apiPath(`/vm/sources/${source.id}/archive`),
+      );
+      expect(archiveResponse.status()).toBe(200);
+      sourceNeedsRestore = true;
+      const restoreResponse = await page.request.patch(
+        apiPath(`/vm/sources/${source.id}/restore`),
+      );
+      expect(restoreResponse.status()).toBe(200);
+      sourceNeedsRestore = false;
+
+      const roleResponse = await page.request.patch(
+        apiPath(`/users/${auditUser.id}/role`),
+        { data: { role: "EDITOR" } },
+      );
+      expect(roleResponse.status()).toBe(200);
+      const resetResponse = await page.request.patch(
+        apiPath(`/users/${auditUser.id}/reset-password`),
+        { data: { password: resetPassword } },
+      );
+      expect(resetResponse.status()).toBe(200);
+
+      const firstPage = await responseJson<AuditPage>(
+        await page.request.get(apiPath("/audit-logs"), {
+          params: {
+            search: marker,
+            page: 1,
+            limit: 100,
+            sortBy: "timestamp",
+            sortDir: "desc",
           },
         }),
+      );
+      const secondPage = await responseJson<AuditPage>(
+        await page.request.get(apiPath("/audit-logs"), {
+          params: {
+            search: marker,
+            page: 2,
+            limit: 100,
+            sortBy: "timestamp",
+            sortDir: "desc",
+          },
+        }),
+      );
+      expect(firstPage.meta).toMatchObject({
+        total: 101,
+        page: 1,
+        limit: 100,
+        totalPages: 2,
       });
-    });
+      expect(firstPage.data).toHaveLength(100);
+      expect(secondPage.meta).toMatchObject({
+        total: 101,
+        page: 2,
+        limit: 100,
+        totalPages: 2,
+      });
+      expect(secondPage.data).toHaveLength(1);
+      const boundaryQuery = auditQuery(secondPage.data[0]?.details ?? null);
+      expect(boundaryQuery).toContain(marker);
+      if (!boundaryQuery) return;
 
-    await page.goto("/dashboard/audit-logs");
-    await expect(
-      page.getByRole("heading", { name: "System Audit Logs" }),
-    ).toBeVisible();
-    await page.getByLabel("Rows per page").selectOption("100");
-    await expect(page.getByText("Page 1 of 3")).toBeVisible();
-    await page.getByRole("button", { name: "Next page" }).click();
-    await expect(page.getByText("Page 2 of 3")).toBeVisible();
-    await page.getByRole("button", { name: "Next page" }).click();
-    await expect(page.getByText("Page 3 of 3")).toBeVisible();
-    await expect(
-      page.getByRole("table").getByText("Archive Source", { exact: true }),
-    ).toBeVisible();
+      await page.goto("/dashboard/audit-logs");
+      const searchInput = page.getByPlaceholder(
+        "Search logs by user, action, or details...",
+      );
+      const markerResponse = waitForApiResponse(
+        page,
+        "/audit-logs",
+        (url) => url.searchParams.get("search") === marker,
+      );
+      await searchInput.fill(marker);
+      expect((await markerResponse).status()).toBe(200);
+      await page.getByLabel("Rows per page").selectOption("100");
+      await expect(page.getByText("101 matching events")).toBeVisible();
+      await expect(page.getByText("Page 1 of 2")).toBeVisible();
 
-    await page
-      .getByPlaceholder("Search logs by user, action, or details...")
-      .fill("legacy-event");
-    await expect
-      .poll(() => requests.at(-1)?.searchParams.get("search"))
-      .toBe("legacy-event");
-    await page.getByLabel("Filter by action").selectOption("ARCHIVE_SOURCE");
-    await expect
-      .poll(() => requests.at(-1)?.searchParams.get("action"))
-      .toBe("ARCHIVE_SOURCE");
-    await expect(page.getByText("Filtered Events").locator("..")).toContainText(
-      "1",
-    );
+      const pageTwoResponse = waitForApiResponse(
+        page,
+        "/audit-logs",
+        (url) =>
+          url.searchParams.get("search") === marker &&
+          url.searchParams.get("page") === "2" &&
+          url.searchParams.get("limit") === "100",
+      );
+      await page.getByRole("button", { name: "Next page" }).click();
+      expect((await pageTwoResponse).status()).toBe(200);
+      await expect(page.getByText("Page 2 of 2")).toBeVisible();
+      const boundaryDetailsButton = page.getByRole("button", {
+        name: new RegExp(escapeRegExp(boundaryQuery)),
+      });
+      await expect(boundaryDetailsButton).toBeVisible();
+      await boundaryDetailsButton.click();
+      const detailsDialog = page.getByRole("dialog", {
+        name: "Audit Log Details",
+      });
+      await expect(detailsDialog).toBeVisible();
+      await expect(detailsDialog).toContainText(boundaryQuery);
+      await expect(detailsDialog).toContainText(
+        "Secret-shaped values are redacted.",
+      );
+      await page.keyboard.press("Escape");
+
+      const exactBoundaryResponse = waitForApiResponse(
+        page,
+        "/audit-logs",
+        (url) => url.searchParams.get("search") === boundaryQuery,
+      );
+      await searchInput.fill(boundaryQuery);
+      expect((await exactBoundaryResponse).status()).toBe(200);
+      await expect(page.getByText("Page 1 of 1")).toBeVisible();
+      await expect(
+        page.getByRole("button", {
+          name: new RegExp(escapeRegExp(boundaryQuery)),
+        }),
+      ).toBeVisible();
+
+      await page.getByRole("button", { name: "Clear search" }).click();
+      const actionResponse = waitForApiResponse(
+        page,
+        "/audit-logs",
+        (url) => url.searchParams.get("action") === "ARCHIVE_SOURCE",
+      );
+      await page.getByLabel("Filter by action").selectOption("ARCHIVE_SOURCE");
+      expect((await actionResponse).status()).toBe(200);
+      await expect(
+        page
+          .getByRole("table")
+          .getByText("Archive Source", { exact: true })
+          .first(),
+      ).toBeVisible();
+
+      const secretSafeResponse = waitForApiResponse(
+        page,
+        "/audit-logs",
+        (url) => url.searchParams.get("action") === "RESET_USER_PASSWORD",
+      );
+      await page
+        .getByLabel("Filter by action")
+        .selectOption("RESET_USER_PASSWORD");
+      expect((await secretSafeResponse).status()).toBe(200);
+      const resetDetailsButton = page.getByRole("button", {
+        name: new RegExp(escapeRegExp(auditUser.displayName)),
+      });
+      await expect(resetDetailsButton).toBeVisible();
+      await resetDetailsButton.click();
+      const resetDetailsDialog = page.getByRole("dialog", {
+        name: "Audit Log Details",
+      });
+      await expect(resetDetailsDialog).toBeVisible();
+      await expect(resetDetailsDialog).toContainText(auditUser.displayName);
+      await expect(resetDetailsDialog).not.toContainText(resetPassword);
+      await expect(resetDetailsDialog).toContainText(
+        "Secret-shaped values are redacted.",
+      );
+    } finally {
+      if (sourceNeedsRestore) {
+        const restoreResponse = await page.request.patch(
+          apiPath(`/vm/sources/${source.id}/restore`),
+        );
+        expect([200, 404]).toContain(restoreResponse.status());
+      }
+      await deleteUser(page.request, auditUser.id);
+    }
   });
 
-  test("Dashboard keeps overview errors distinct from empty data and Data Quality failures", async ({
+  test("Dashboard separates overview and Data Quality failures and marks stale overview data", async ({
     page,
   }) => {
-    await installAuth(page);
-    await mockAuth(page);
-    let overviewAvailable = false;
-    let qualityAvailable = true;
-    await page.route("**/api/dashboard/overview", async (route) => {
-      if (!overviewAvailable) {
+    test.setTimeout(60_000);
+    let allowOverviewRetry = false;
+    let failOverviewRefresh = false;
+    let failQualityRefresh = false;
+    const overviewRoute = routeForPath("/dashboard/overview");
+    const qualityRoute = routeForPath("/applications/data-quality/summary");
+
+    await page.route(overviewRoute, async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+      if (!allowOverviewRetry || failOverviewRefresh) {
         await route.fulfill({
           status: 500,
           contentType: "application/json",
@@ -253,66 +492,71 @@ test.describe("V1.1 Ticket 12 Users, Audit, Dashboard contracts", () => {
         });
         return;
       }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(overview),
-      });
+      await route.continue();
     });
-    await page.route(
-      "**/api/applications/data-quality/summary",
-      async (route) => {
-        if (!qualityAvailable) {
-          await route.fulfill({
-            status: 403,
-            contentType: "application/json",
-            body: JSON.stringify({ message: "quality unavailable" }),
-          });
-          return;
-        }
+    await page.route(qualityRoute, async (route) => {
+      if (route.request().method() === "GET" && failQualityRefresh) {
         await route.fulfill({
-          status: 200,
+          status: 403,
           contentType: "application/json",
-          body: JSON.stringify(quality),
+          body: JSON.stringify({ message: "quality unavailable" }),
         });
-      },
-    );
-    for (const endpoint of ["assets", "databases", "vm"]) {
-      await page.route(
-        `**/api/${endpoint}/data-quality/summary`,
-        async (route) => {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(quality),
-          });
-        },
+        return;
+      }
+      await route.continue();
+    });
+
+    try {
+      await page.goto("/dashboard");
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page.getByRole("link", { name: /^Applications:/ }),
+      ).toHaveCount(0);
+
+      allowOverviewRetry = true;
+      const retryResponse = waitForApiResponse(page, "/dashboard/overview");
+      await page.getByRole("button", { name: "Retry" }).click();
+      expect((await retryResponse).status()).toBe(200);
+      const applicationsCard = page.getByRole("link", {
+        name: /^Applications:/,
+      });
+      await expect(applicationsCard).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Refresh dashboard" }),
+      ).toBeEnabled();
+      const overviewLabel = await applicationsCard.getAttribute("aria-label");
+      expect(overviewLabel).toMatch(/^Applications:/);
+
+      failOverviewRefresh = true;
+      failQualityRefresh = true;
+      const refreshOverviewResponse = waitForApiResponse(
+        page,
+        "/dashboard/overview",
       );
+      const refreshQualityResponse = waitForApiResponse(
+        page,
+        "/applications/data-quality/summary",
+      );
+      await page.getByRole("button", { name: "Refresh dashboard" }).click();
+      expect((await refreshOverviewResponse).status()).toBe(500);
+      expect((await refreshQualityResponse).status()).toBe(403);
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Refresh failed" }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(
+          "Data Quality could not be loaded. Refresh the dashboard to retry.",
+        ),
+      ).toBeVisible();
+      await expect(applicationsCard).toHaveAttribute(
+        "aria-label",
+        overviewLabel ?? "",
+      );
+    } finally {
+      await page.unroute(overviewRoute);
+      await page.unroute(qualityRoute);
     }
-
-    await page.goto("/dashboard");
-    await expect(
-      page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
-    ).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole("link", { name: /Applications:/ })).toHaveCount(
-      0,
-    );
-
-    overviewAvailable = true;
-    await page.getByRole("button", { name: "Retry" }).click();
-    await expect(
-      page.getByRole("link", { name: "Applications: 3" }),
-    ).toBeVisible();
-
-    qualityAvailable = false;
-    await page.getByRole("button", { name: "Refresh dashboard" }).click();
-    await expect(
-      page.getByText(
-        "Data Quality could not be loaded. Refresh the dashboard to retry.",
-      ),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Applications: 3" }),
-    ).toBeVisible();
   });
 });
