@@ -788,19 +788,36 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await expect(finalRow).toHaveCount(0);
       // Let the real archive mutation/query invalidation settle before toggling
       // the registry filter; reload keeps this on the real archive/show path.
+      const initialListResponsePromise = page.waitForResponse(
+        (response) => {
+          if (response.request().method() !== "GET") return false;
+          const url = new URL(response.url());
+          return (
+            url.pathname === apiPathname("/applications") &&
+            url.searchParams.get("includeArchived") === "false" &&
+            !url.searchParams.has("q")
+          );
+        },
+        { timeout: 15_000 },
+      );
       await page.reload();
+      const initialListResponse = await initialListResponsePromise;
+      expect(initialListResponse.status()).toBe(200);
       const showArchivedButton = page.getByRole("button", {
         name: "Show archived",
       });
       await expect(showArchivedButton).toBeVisible();
-      const archivedListResponsePromise = page.waitForResponse((response) => {
-        if (response.request().method() !== "GET") return false;
-        const url = new URL(response.url());
-        return (
-          url.pathname === apiPathname("/applications") &&
-          url.searchParams.get("includeArchived") === "true"
-        );
-      });
+      const archivedListResponsePromise = page.waitForResponse(
+        (response) => {
+          if (response.request().method() !== "GET") return false;
+          const url = new URL(response.url());
+          return (
+            url.pathname === apiPathname("/applications") &&
+            url.searchParams.get("includeArchived") === "true"
+          );
+        },
+        { timeout: 15_000 },
+      );
       await showArchivedButton.click();
       const archivedListResponse = await archivedListResponsePromise;
       expect(archivedListResponse.status()).toBe(200);
