@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AppWindow,
@@ -334,9 +334,7 @@ export default function ApplicationsPage() {
           {user?.role === "ADMIN" && (
             <Button
               variant="outline"
-              onClick={() =>
-                startTransition(() => setShowArchived((value) => !value))
-              }
+              onClick={() => setShowArchived((value) => !value)}
             >
               <ArchiveRestore className="mr-2 h-4 w-4" />
               {showArchived ? "Hide archived" : "Show archived"}
@@ -345,9 +343,7 @@ export default function ApplicationsPage() {
           {canEdit && (
             <Dialog
               open={open}
-              onOpenChange={(nextOpen) =>
-                startTransition(() => setOpen(nextOpen))
-              }
+              onOpenChange={setOpen}
             >
               <DialogTrigger asChild>
                 <Button><Plus className="mr-2 h-4 w-4" />New application</Button>
