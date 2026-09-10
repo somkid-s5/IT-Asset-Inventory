@@ -259,10 +259,6 @@ export function GlobalSearch() {
                           router.push(group.href(item));
                           handleOpenChange(false);
                         }}
-                        onClick={() => {
-                          router.push(group.href(item));
-                          handleOpenChange(false);
-                        }}
                       >
                         <span className="min-w-0 flex-1 truncate">
                           {group.primary(item)}

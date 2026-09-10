@@ -130,7 +130,7 @@ test.describe("Global Search V1 acceptance - tablet", () => {
     await expect(
       dialog.getByText("Virtual Machines", { exact: true }),
     ).toBeVisible();
-    await dialog.getByText("vm-prod-01", { exact: true }).click();
+    await dialog.getByRole("option", { name: /vm-prod-01/ }).click();
     await expect(page).toHaveURL(
       /\/dashboard\/virtual-machines\/[a-zA-Z0-9-]+/,
     );
@@ -162,7 +162,7 @@ test.describe("Global Search V1 acceptance - mobile", () => {
       .locator("[cmdk-group]")
       .filter({ hasText: "Applications" });
     await applicationGroup
-      .getByText("Treasury Registry", { exact: true })
+      .getByRole("option", { name: /Treasury Registry/ })
       .click();
     await expect(page).toHaveURL(/\/dashboard\/applications\/[a-zA-Z0-9-]+/);
   });
