@@ -19,6 +19,9 @@ test.describe("Global Search V1 acceptance - desktop", () => {
     page,
   }) => {
     await page.goto("/dashboard/applications");
+    await expect(
+      page.getByRole("button", { name: "Open global search" }),
+    ).toBeVisible();
     await page.keyboard.press("Control+K");
 
     let dialog = page.getByRole("dialog");
@@ -84,6 +87,9 @@ test.describe("Global Search V1 acceptance - desktop", () => {
     });
 
     await page.goto("/dashboard/assets");
+    await expect(
+      page.getByRole("button", { name: "Open global search" }),
+    ).toBeVisible();
     await page.keyboard.press("Control+K");
     const dialog = page.getByRole("dialog");
     const input = dialog.getByRole("combobox", { name: "Search inventory" });
