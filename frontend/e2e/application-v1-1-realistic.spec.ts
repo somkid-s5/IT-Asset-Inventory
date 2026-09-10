@@ -458,7 +458,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         name: "Add component",
       });
       await addComponentButton.scrollIntoViewIfNeeded();
-      await addComponentButton.click();
+      await addComponentButton.press("Enter");
       await expect(page.getByText("Component added")).toBeVisible();
       await expect(
         page.getByText(componentName, { exact: true }),
@@ -486,7 +486,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         name: "Save component",
       });
       await saveComponentButton.scrollIntoViewIfNeeded();
-      await saveComponentButton.click();
+      await saveComponentButton.press("Enter");
       await expect(page.getByText("Component updated")).toBeVisible();
       await page.reload();
       await expect(
@@ -578,7 +578,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
           request.method() === "PATCH" &&
           new URL(request.url()).pathname === apiPathname(componentUpdatePath),
       );
-      await failedSaveComponentButton.click();
+      await failedSaveComponentButton.press("Enter");
       await failedUpdateRequest;
       await expect(page.getByText("Could not update component")).toBeVisible({
         timeout: 15_000,
@@ -650,7 +650,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       // Edit the access metadata and credential role without replacing the secret.
       await page
         .getByRole("button", { name: "Edit", exact: true })
-        .nth(1)
+        .nth(2)
         .click();
       const editAccessDialog = page.getByRole("dialog", {
         name: "Edit access point",
@@ -676,9 +676,10 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await expect(updatedAccess).toBeVisible();
       await expect(page.getByText("Primary", { exact: true })).toBeVisible();
       await expect(
-        page.getByText(`https://credential-updated-${runId}.internal.example`, {
-          exact: false,
-        }),
+        page.getByText(
+          `HTTPS · https://credential-updated-${runId}.internal.example`,
+          { exact: true },
+        ),
       ).toBeVisible();
 
       const persistedAccess = await getApplication(
@@ -719,8 +720,8 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
           `/dashboard/applications/${createdApplication.id}`,
         );
         await expect(
-          viewerPage.getByText("Restricted", { exact: true }),
-        ).toBeVisible();
+          viewerPage.getByText("HTTPS · Restricted", { exact: true }).first(),
+        ).toBeVisible({ timeout: 15_000 });
         await expect(
           viewerPage.getByRole("button", { name: "Reveal" }),
         ).toHaveCount(0);
@@ -777,7 +778,13 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         .getByRole("row")
         .filter({ hasText: applicationName });
       await expect(finalRow).toBeVisible();
-      await finalRow.getByRole("button", { name: "Archive" }).click();
+      await finalRow
+        .getByRole("button", {
+          name: `More actions for ${applicationName}`,
+          exact: true,
+        })
+        .click();
+      await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
       await expect(finalRow).toHaveCount(0);
       // Let the real archive mutation/query invalidation settle before toggling
       // the registry filter; reload keeps this on the real archive/show path.
@@ -829,7 +836,13 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
           url.searchParams.get("includeArchived") === "true"
         );
       });
-      await archivedRow.getByRole("button", { name: "Restore" }).click();
+      await archivedRow
+        .getByRole("button", {
+          name: `More actions for ${applicationName}`,
+          exact: true,
+        })
+        .click();
+      await page.getByRole("menuitem", { name: "Restore", exact: true }).click();
       const restoreResponse = await restoreResponsePromise;
       expect(restoreResponse.status()).toBe(200);
       const restoredListResponse = await restoredListResponsePromise;
