@@ -776,7 +776,8 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       const restoreResponsePromise = page.waitForResponse(
         (response) =>
           response.request().method() === "PATCH" &&
-          response.url() === apiPath(`/applications/${createdApplication.id}/restore`),
+          new URL(response.url()).pathname ===
+            new URL(apiPath(`/applications/${createdApplication.id}/restore`)).pathname,
       );
       const restoredListResponsePromise = page.waitForResponse(
         (response) => {
