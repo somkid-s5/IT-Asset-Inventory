@@ -70,9 +70,13 @@ const BADGE_META: Record<InventoryBadgeKind, Record<string, InventoryBadgeMeta>>
   "source-health": {
     HEALTHY: { label: "Healthy", tone: "success" },
     CONNECTED: { label: "Connected", tone: "success" },
+    READY_TO_SYNC: { label: "Ready to sync", tone: "warning" },
+    SYNCING: { label: "Syncing", tone: "default" },
     DEGRADED: { label: "Degraded", tone: "warning" },
     ERROR: { label: "Error", tone: "danger" },
+    CONNECTION_FAILED: { label: "Connection failed", tone: "danger" },
     UNAVAILABLE: { label: "Unavailable", tone: "danger" },
+    ARCHIVED: { label: "Archived", tone: "neutral" },
   },
 };
 

@@ -5,7 +5,12 @@ import { usePageHeader } from "@/contexts/PageHeaderContext";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "@/components/EmptyState";
-import { InventoryQueryStateView } from "@/components/inventory";
+import {
+  InventoryPagination,
+  InventoryTableShell,
+  InventoryTableToolbar,
+  formatDateTime,
+} from "@/components/inventory";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
 import {
   ArrowDown,
@@ -20,8 +25,6 @@ import {
   Shield,
   Trash2,
   Users,
-  ChevronLeft,
-  ChevronRight,
   MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -167,7 +170,6 @@ export default function UsersPage() {
     retry: false,
   });
   const users = usersQuery.data ?? [];
-  const loading = usersQuery.isLoading;
 
   const roleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: Role }) => {
@@ -336,7 +338,7 @@ export default function UsersPage() {
         header: "Created At",
         cell: ({ getValue }) => (
           <span className="text-[11px] text-muted-foreground">
-            {new Date(getValue() as string).toLocaleDateString("en-US")}
+            {formatDateTime(getValue() as string, { includeTime: false })}
           </span>
         ),
       },
@@ -486,11 +488,33 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <InventoryQueryStateView
+      <InventoryTableShell
+        title="System Access & User Directory"
+        description="Manage staff accounts and security permissions"
+        toolbar={
+          <InventoryTableToolbar
+            search={
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  aria-label="Search users"
+                  placeholder="Search name or @username..."
+                  value={globalFilter}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  className="h-9 pl-9 w-full bg-card border-border/50 focus-visible:ring-primary/20"
+                />
+              </div>
+            }
+            activeFilters={activeRole !== "ALL" ? <Badge variant="outline">Role: {activeRole}</Badge> : undefined}
+            onResetFilters={() => {
+              setActiveRole("ALL");
+              setGlobalFilter("");
+            }}
+          />
+        }
         state={queryState.state}
         hasStaleData={queryState.hasStaleData}
         onRetry={() => void usersQuery.refetch()}
-        loadingLabel="Loading users…"
         emptyState={
           <EmptyState
             icon={Users}
@@ -507,6 +531,18 @@ export default function UsersPage() {
             icon={Users}
             title="No users found"
             description="No users match your current search or role filter criteria."
+          />
+        }
+        pagination={
+          <InventoryPagination
+            page={table.getState().pagination.pageIndex + 1}
+            pageSize={table.getState().pagination.pageSize}
+            total={table.getFilteredRowModel().rows.length}
+            onPageChange={(page) => table.setPageIndex(page - 1)}
+            onPageSizeChange={(pageSize) => {
+              table.setPageSize(pageSize);
+              table.setPageIndex(0);
+            }}
           />
         }
       >
@@ -543,17 +579,6 @@ export default function UsersPage() {
               ))}
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search name or @username..."
-                  value={globalFilter}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="h-9 pl-9 w-64 bg-card border-border/50 focus-visible:ring-primary/20"
-                />
-              </div>
-            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -579,19 +604,7 @@ export default function UsersPage() {
                 ))}
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-32 text-center text-muted-foreground"
-                    >
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <LoaderCircle className="h-5 w-5 animate-spin" />
-                        <span className="text-sm">Loading...</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : table.getRowModel().rows.length ? (
+                {table.getRowModel().rows.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
@@ -607,87 +620,12 @@ export default function UsersPage() {
                       ))}
                     </TableRow>
                   ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-96 p-0 border-none bg-transparent"
-                    >
-                      <div className="flex items-center justify-center h-full">
-                        <EmptyState
-                          icon={Users}
-                          title="No users found"
-                          description={
-                            users.length === 0
-                              ? "There are no users registered in the system yet. Start by adding a user account."
-                              : "No users match your current search or role filter criteria."
-                          }
-                          action={
-                            users.length === 0
-                              ? {
-                                  label: "Add Your First User",
-                                  onClick: () => setCreateOpen(true),
-                                }
-                              : undefined
-                          }
-                          className="w-full max-w-md border-none bg-transparent"
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
+                ) : null}
               </TableBody>
             </Table>
           </div>
-
-          <div className="p-4 border-t border-border/50 flex items-center justify-between bg-muted/10">
-            <div className="flex-1 text-xs text-muted-foreground">
-              Showing {table.getRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} users
-            </div>
-            <div className="flex items-center gap-6 lg:gap-8">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Rows per page
-                </p>
-                <select
-                  value={table.getState().pagination.pageSize}
-                  onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="h-8 w-16 rounded-md border border-border bg-card text-xs focus:ring-1 focus:ring-primary outline-none"
-                >
-                  {[10, 20, 30, 40, 50].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex w-[100px] items-center justify-center text-xs font-medium">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount() || 1}
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
         </Card>
-      </InventoryQueryStateView>
+      </InventoryTableShell>
 
       {/* Dialogs */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

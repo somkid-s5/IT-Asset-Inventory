@@ -11,6 +11,7 @@ import {
   InventoryTableToolbar,
   MissingValue,
   RecordStatusBadge,
+  SourceHealthBadge,
 } from ".";
 
 test("InventoryTableShell exposes the shared title, toolbar, table, and pagination structure", () => {
@@ -128,4 +129,16 @@ test("shared row actions and semantic missing/status components expose accessibl
   assert.match(markup, /Environment: Unknown/);
   assert.match(markup, /aria-label="Unknown"[^>]*>—</);
   assert.match(markup, /aria-label="Needs context"[^>]*>Needs context</);
+});
+
+test("source health presentation owns syncing and connection-failure labels", () => {
+  const markup = renderToStaticMarkup(
+    <>
+      <SourceHealthBadge value="SYNCING" />
+      <SourceHealthBadge value="CONNECTION_FAILED" />
+    </>,
+  );
+
+  assert.match(markup, /Source health: Syncing/);
+  assert.match(markup, /Source health: Connection failed/);
 });

@@ -8,8 +8,6 @@ import {
   ArrowDown,
   ArrowUp,
   ChevronsUpDown,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   Search,
   ShieldAlert,
@@ -24,7 +22,12 @@ import api from "@/services/api";
 import { fadeInUp } from "@/lib/animations";
 import { AccessDenied } from "@/components/access-denied";
 import { EmptyState } from "@/components/EmptyState";
-import { InventoryQueryStateView } from "@/components/inventory";
+import {
+  InventoryPagination,
+  InventoryTableShell,
+  MissingValue,
+  formatDateTime,
+} from "@/components/inventory";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -108,22 +111,6 @@ function formatAction(action: string) {
     .join(" ");
 }
 
-function formatTimestamp(value: string) {
-  const date = new Date(value);
-  return {
-    date: date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }),
-    time: date.toLocaleTimeString("en-US", {
-      hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }),
-  };
-}
 
 function actionClasses(action: string) {
   if (action.includes("DELETE"))
@@ -438,7 +425,7 @@ export default function AuditLogsPage() {
       animate="visible"
       className="space-y-5 pb-8"
     >
-      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
             <Activity className="h-5 w-5 text-primary" />
@@ -541,11 +528,12 @@ export default function AuditLogsPage() {
             </div>
           </div>
 
-        <InventoryQueryStateView
+        <InventoryTableShell
+          title="System Audit Logs"
+          description="Search and review the complete server-side audit history."
           state={queryState.state}
           hasStaleData={queryState.hasStaleData}
           onRetry={() => void logsQuery.refetch()}
-          loadingLabel="Loading audit logs…"
           emptyState={
             <EmptyState
               icon={ShieldAlert}
@@ -558,6 +546,19 @@ export default function AuditLogsPage() {
               icon={ShieldAlert}
               title="No audit logs found"
               description="No audit logs match your current search or filters."
+            />
+          }
+          pagination={
+            <InventoryPagination
+              page={meta.page}
+              pageSize={meta.limit}
+              total={meta.total}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setLimit(size);
+                setPage(1);
+              }}
+              pageSizeOptions={[20, 50, 100]}
             />
           }
         >
@@ -601,7 +602,6 @@ export default function AuditLogsPage() {
               </TableHeader>
               <TableBody>
                 {logs.map((log) => {
-                  const timestamp = formatTimestamp(log.timestamp);
                   return (
                     <TableRow
                       key={log.id}
@@ -610,10 +610,7 @@ export default function AuditLogsPage() {
                       <TableCell className="px-4 py-2.5">
                         <div className="flex flex-col">
                           <span className="text-xs font-semibold">
-                            {timestamp.date}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {timestamp.time}
+                            {formatDateTime(log.timestamp)}
                           </span>
                         </div>
                       </TableCell>
@@ -634,7 +631,7 @@ export default function AuditLogsPage() {
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
                         <span className="font-mono text-xs">
-                          {log.ipAddress || "Unknown"}
+                          {log.ipAddress || <MissingValue compact />}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -646,7 +643,6 @@ export default function AuditLogsPage() {
 
           <div className="space-y-3 p-3 md:hidden">
             {logs.map((log) => {
-              const timestamp = formatTimestamp(log.timestamp);
               return (
                 <article
                   key={log.id}
@@ -654,11 +650,8 @@ export default function AuditLogsPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <ActionBadge action={log.action || "UNKNOWN"} />
-                    <time className="text-right text-[10px] text-muted-foreground">
-                      <span className="block font-semibold">
-                        {timestamp.date}
-                      </span>
-                      <span>{timestamp.time}</span>
+                      <time className="text-right text-[10px] text-muted-foreground">
+                        {formatDateTime(log.timestamp)}
                     </time>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/50 pt-3">
@@ -673,7 +666,7 @@ export default function AuditLogsPage() {
                         IP Address
                       </p>
                       <p className="truncate font-mono text-xs">
-                        {log.ipAddress || "Unknown"}
+                        {log.ipAddress || <MissingValue compact />}
                       </p>
                     </div>
                   </div>
@@ -694,63 +687,7 @@ export default function AuditLogsPage() {
             })}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-border/60 bg-muted/10 p-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:p-4">
-            <div className="text-muted-foreground">
-              Showing {logs.length} of {meta.total.toLocaleString()} records
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
-              <label
-                htmlFor="audit-page-size"
-                className="flex items-center gap-2 font-medium text-muted-foreground"
-              >
-                Rows per page
-                <select
-                  id="audit-page-size"
-                  aria-label="Rows per page"
-                  value={limit}
-                  onChange={(event) => {
-                    setLimit(Number(event.target.value));
-                    setPage(1);
-                  }}
-                  className="h-8 w-16 rounded-lg border border-border bg-card px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                >
-                  {[20, 50, 100].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <span className="font-medium text-muted-foreground">
-                Page {meta.page} of {meta.totalPages || 1}
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  aria-label="Previous page"
-                  className="h-8 w-8 rounded-lg p-0"
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  disabled={page <= 1 || logsQuery.isFetching}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  aria-label="Next page"
-                  className="h-8 w-8 rounded-lg p-0"
-                  onClick={() => setPage((current) => current + 1)}
-                  disabled={
-                    meta.totalPages === 0 ||
-                    page >= meta.totalPages ||
-                    logsQuery.isFetching
-                  }
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </InventoryQueryStateView>
+        </InventoryTableShell>
       </Card>
     </motion.div>
   );

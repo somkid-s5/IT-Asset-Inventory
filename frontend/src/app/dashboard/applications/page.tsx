@@ -31,7 +31,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/EmptyState";
-import { InventoryQueryStateView } from "@/components/inventory";
+import {
+  EnvironmentBadge,
+  InventoryPagination,
+  InventoryRowActions,
+  InventoryTableShell,
+  InventoryTableToolbar,
+  MissingValue,
+  QualityBadge,
+  RecordStatusBadge,
+} from "@/components/inventory";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
 import { toast } from "sonner";
 import {
@@ -217,7 +226,7 @@ export default function ApplicationsPage() {
               <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
             </Link>
             <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-              {row.original.description || "No application description"}
+              {row.original.description || <MissingValue kind="needs-context" />}
             </p>
           </div>
         ),
@@ -229,11 +238,11 @@ export default function ApplicationsPage() {
           <dl className="min-w-[170px] space-y-1 text-xs">
             <div>
               <dt className="inline text-muted-foreground">Technical: </dt>
-              <dd className="inline font-medium text-foreground">{row.original.technicalOwner || "Needs context"}</dd>
+              <dd className="inline font-medium text-foreground">{row.original.technicalOwner || <MissingValue kind="needs-context" />}</dd>
             </div>
             <div>
               <dt className="inline text-muted-foreground">Business: </dt>
-              <dd className="inline font-medium text-foreground">{row.original.businessUnit || "Needs context"}</dd>
+              <dd className="inline font-medium text-foreground">{row.original.businessUnit || <MissingValue kind="needs-context" />}</dd>
             </div>
           </dl>
         ),
@@ -245,10 +254,8 @@ export default function ApplicationsPage() {
           <div className="min-w-[130px] space-y-1.5">
             <div className="flex flex-wrap gap-1">
               {row.original.environments.length ? row.original.environments.map((environment) => (
-                <Badge key={environment.id} variant="outline" className="px-1.5 py-0 text-[10px]">
-                  {environment.name}
-                </Badge>
-              )) : <span className="text-xs text-muted-foreground">Not recorded</span>}
+                <EnvironmentBadge key={environment.id} value={environment.name} className="px-1.5 py-0 text-[10px]" />
+              )) : <MissingValue compact />}
             </div>
             <p className="text-xs text-muted-foreground">
               {getTopologyCounts(row.original).components} components
@@ -261,7 +268,7 @@ export default function ApplicationsPage() {
         header: "Primary URL / access",
         cell: ({ row }) => {
           const access = getPrimaryAccess(row.original);
-          if (!access) return <span className="text-xs text-muted-foreground">Not recorded</span>;
+          if (!access) return <MissingValue compact />;
           const isHttpUrl = /^https?:\/\//i.test(access.address);
           return (
             <div className="min-w-[190px]">
@@ -292,24 +299,39 @@ export default function ApplicationsPage() {
         id: "completeness",
         header: "Completeness",
         cell: ({ row }) => (
-          <Badge variant={row.original.completeness?.complete ? "default" : "secondary"}>
-            {row.original.completeness?.completeness ?? 0}%
-          </Badge>
+          <div className="flex items-center gap-2">
+            <QualityBadge value={row.original.completeness?.complete ? "COMPLETE" : "NEEDS_CONTEXT"} />
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {row.original.completeness?.completeness ?? 0}%
+            </span>
+          </div>
         ),
       },
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => <Badge variant={row.original.status === "ACTIVE" ? "default" : "secondary"}>{row.original.status}</Badge>,
+        cell: ({ row }) => <RecordStatusBadge value={row.original.status} />,
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => user?.role === "ADMIN" && row.original.status === "ACTIVE" ? (
-          <Button variant="ghost" size="sm" onClick={() => archive.mutate(row.original.id)}>Archive</Button>
-        ) : user?.role === "ADMIN" && row.original.status === "ARCHIVED" ? (
-          <Button variant="ghost" size="sm" onClick={() => restore.mutate(row.original.id)}>Restore</Button>
-        ) : null,
+        cell: ({ row }) => (
+          <InventoryRowActions
+            recordLabel={row.original.name}
+            detailHref={`/dashboard/applications/${row.original.id}`}
+            lifecycle={{
+              status: row.original.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
+              archive: {
+                allowed: user?.role === "ADMIN" && row.original.status === "ACTIVE",
+                onSelect: () => archive.mutate(row.original.id),
+              },
+              restore: {
+                allowed: user?.role === "ADMIN" && row.original.status === "ARCHIVED",
+                onSelect: () => restore.mutate(row.original.id),
+              },
+            }}
+          />
+        ),
       },
     ],
     [archive, restore, user?.role],
@@ -421,17 +443,36 @@ export default function ApplicationsPage() {
         </div>
       </div>
 
-      <div className="relative w-full max-w-xl">
-        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input aria-label="Search applications" className="pl-9" placeholder="Search applications, owners, or business units" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-      </div>
-
-      <InventoryQueryStateView
+      <InventoryTableShell
+        title="Application registry"
+        description="One clear record for the service owner, environments, primary access, and infrastructure relationships."
+        toolbar={
+          <InventoryTableToolbar
+            search={
+              <div className="relative w-full max-w-xl">
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input aria-label="Search applications" className="pl-9" placeholder="Search applications, owners, or business units" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+              </div>
+            }
+          />
+        }
         state={queryState.state}
         hasStaleData={queryState.hasStaleData}
         onRetry={() => void applicationsQuery.refetch()}
         emptyState={<EmptyState icon={AppWindow} title="No applications yet" description="Create the first application to start mapping its environments and components." />}
         filteredEmptyState={<EmptyState icon={AppWindow} title="No applications found" description="No applications match the current search or archived filter." />}
+        pagination={
+          <InventoryPagination
+            page={table.getState().pagination.pageIndex + 1}
+            pageSize={table.getState().pagination.pageSize}
+            total={visible.length}
+            onPageChange={(page) => table.setPageIndex(page - 1)}
+            onPageSizeChange={(pageSize) => {
+              table.setPageSize(pageSize);
+              table.setPageIndex(0);
+            }}
+          />
+        }
       >
         <div className="space-y-3">
           <Card className="overflow-hidden p-0">
@@ -464,15 +505,8 @@ export default function ApplicationsPage() {
               </div>
             </CardContent>
           </Card>
-          {table.getPageCount() > 1 && (
-            <div className="flex items-center justify-end gap-3 pt-3 text-sm">
-              <span className="text-muted-foreground">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</span>
-              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Previous</Button>
-              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</Button>
-            </div>
-          )}
         </div>
-      </InventoryQueryStateView>
+      </InventoryTableShell>
     </div>
   );
 }

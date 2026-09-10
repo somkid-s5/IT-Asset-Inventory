@@ -346,6 +346,10 @@ export function InventoryTableShell({
       {children}
     </InventoryQueryStateView>
   );
+  const showPagination =
+    state === "ready" ||
+    state === "refreshing" ||
+    (state === "error" && hasStaleData === true);
 
   return (
     <section
@@ -368,7 +372,7 @@ export function InventoryTableShell({
       </header>
       {toolbar}
       <div data-slot="inventory-table-content">{content}</div>
-      {pagination}
+      {showPagination ? pagination : null}
     </section>
   );
 }
