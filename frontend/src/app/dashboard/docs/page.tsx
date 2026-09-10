@@ -137,7 +137,12 @@ export default function DocsPage() {
     },
     {
       hasData: categoriesQuery.data !== undefined && articlesQuery.data !== undefined,
-      hasRecords: filteredCategories.length > 0 || filteredRecentArticles.length > 0,
+      // This page has two independent result surfaces. Let the inner cards
+      // render their explicit category/document empty states instead of
+      // collapsing a document no-result into the generic query shell state.
+      hasRecords: normalizedSearch
+        ? true
+        : filteredCategories.length > 0 || filteredRecentArticles.length > 0,
       isFiltered: Boolean(normalizedSearch),
     },
   );

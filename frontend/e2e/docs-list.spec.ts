@@ -33,5 +33,8 @@ test.describe('Knowledge Base List Features', () => {
     await expect(
       page.getByRole('heading', { name: 'No categories found for "nonexistent-kb-article-search-query-value"' })
     ).toBeVisible();
+    await expect(
+      page.getByText('No documents found for "nonexistent-kb-article-search-query-value"')
+    ).toBeVisible();
   });
 });

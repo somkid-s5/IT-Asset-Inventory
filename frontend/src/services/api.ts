@@ -5,10 +5,11 @@ const getBaseUrl = () => {
         return process.env.NEXT_PUBLIC_API_URL;
     }
     if (typeof window !== 'undefined') {
-        if (process.env.NODE_ENV === 'production') {
-            return '/api';
-        }
-        return `${window.location.protocol}//${window.location.hostname}:3001/api`;
+        // Keep browser requests same-origin. The native HTTP dev server
+        // proxies /api to the backend, while the production gateway already
+        // owns that route. This also keeps known-link requests and uploaded
+        // image URLs on the same origin without changing backend auth.
+        return '/api';
     }
     return 'http://backend:3001/api';
 };
