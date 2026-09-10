@@ -548,7 +548,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         (request) =>
           request.method() === "PATCH" && request.url() === componentUpdateUrl,
       );
-      await failedSaveComponentButton.click({ force: true });
+      await failedSaveComponentButton.dispatchEvent("click");
       await failedUpdateRequest;
       await expect(page.getByText("Could not update component")).toBeVisible({
         timeout: 15_000,
