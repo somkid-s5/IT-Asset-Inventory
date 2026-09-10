@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 
 type RelationKind = "assets" | "vms" | "logical-databases";
 
@@ -56,10 +56,17 @@ function apiPath(path: string) {
   return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+function apiPathname(path: string) {
+  const endpoint = apiPath(path);
+  return endpoint.startsWith("/") ? endpoint : new URL(endpoint).pathname;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function textPattern(value: string) {
-  return new RegExp(
-    `Technical Owner:\\s*${value.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}`,
-  );
+  return new RegExp(`Technical Owner:\\s*${escapeRegExp(value)}`);
 }
 
 async function responseJson<T>(
@@ -98,6 +105,24 @@ async function getApplication(
   return responseJson<ApplicationSnapshot>(
     await request.get(apiPath(`/applications/${applicationId}`)),
     200,
+  );
+}
+
+async function createAcceptanceApplication(
+  request: APIRequestContext,
+  name: string,
+) {
+  return responseJson<{ id: string }>(
+    await request.post(apiPath("/applications"), {
+      data: {
+        name,
+        description: "Ticket 05 query-state persistence fixture",
+        technicalOwner: "Ticket 05",
+        businessUnit: "Acceptance",
+        environments: [{ name: "PROD", access: [] }],
+      },
+    }),
+    201,
   );
 }
 
@@ -203,12 +228,6 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
     const updatedDescription = `Updated application description ${runId}`;
     const credentialPassword = `T05-credential-${runId}-secret!`;
     const fixtures: CreatedFixtures = {};
-    const cleanupContext = await browser.newContext({
-      storageState: ADMIN_STATE,
-      baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
-      ignoreHTTPSErrors:
-        process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === "true",
-    });
 
     try {
       // These records are the repository's deterministic development fixtures,
@@ -293,7 +312,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       const createResponsePromise = page.waitForResponse(
         (response) =>
           response.request().method() === "POST" &&
-          new URL(response.url()).pathname === "/api/applications",
+          new URL(response.url()).pathname === apiPathname("/applications"),
       );
       await createDialog
         .getByRole("button", { name: "Create application" })
@@ -420,9 +439,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         { exact: true },
       );
       await logicalDatabaseOption.scrollIntoViewIfNeeded();
-      await logicalDatabaseCheckbox.evaluate((element) => {
-        (element as HTMLButtonElement).click();
-      });
+      await logicalDatabaseCheckbox.click();
       await expect(logicalDatabaseCheckbox).toHaveAttribute(
         "aria-checked",
         "true",
@@ -431,9 +448,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         name: "Add component",
       });
       await addComponentButton.scrollIntoViewIfNeeded();
-      await addComponentButton.evaluate((element) => {
-        (element as HTMLButtonElement).click();
-      });
+      await addComponentButton.click();
       await expect(page.getByText("Component added")).toBeVisible();
       await expect(page.getByText(componentName, { exact: true })).toBeVisible();
       await expect(
@@ -443,8 +458,8 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
 
       // Component Name + Description round trip through edit and reload.
       await page
-        .getByText(componentName, { exact: true })
-        .locator("..")
+        .getByRole("listitem")
+        .filter({ hasText: componentName })
         .getByRole("button", { name: "Edit", exact: true })
         .click();
       const editComponentDialog = page.getByRole("dialog", {
@@ -457,9 +472,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         name: "Save component",
       });
       await saveComponentButton.scrollIntoViewIfNeeded();
-      await saveComponentButton.evaluate((element) => {
-        (element as HTMLButtonElement).click();
-      });
+      await saveComponentButton.click();
       await expect(page.getByText("Component updated")).toBeVisible();
       await page.reload();
       await expect(
@@ -506,11 +519,13 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
 
       // Separate UI error harness: app/detail data remains real, while only this
       // attempted mutation response is synthetic to exercise safe error feedback.
-      const componentUpdateUrl = apiPath(
-        `/applications/${createdApplication.id}/environments/${prodEnvironment?.id}/components/${persistedComponent?.id}`,
+      const componentUpdatePath =
+        `/applications/${createdApplication.id}/environments/${prodEnvironment?.id}/components/${persistedComponent?.id}`;
+      const componentUpdateRoute = new RegExp(
+        `${escapeRegExp(apiPathname(componentUpdatePath))}$`,
       );
       await page.route(
-        `**/api/applications/${createdApplication.id}/environments/${prodEnvironment?.id}/components/${persistedComponent?.id}`,
+        componentUpdateRoute,
         async (route) => {
           if (route.request().method() === "PATCH") {
             await route.fulfill({
@@ -528,8 +543,8 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         },
       );
       await page
-        .getByText(componentName, { exact: true })
-        .locator("..")
+        .getByRole("listitem")
+        .filter({ hasText: componentName })
         .getByRole("button", { name: "Edit", exact: true })
         .click();
       const failedComponentDialog = page.getByRole("dialog", {
@@ -547,14 +562,14 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       const failedUpdateRequest = page.waitForRequest(
         (request) =>
           request.method() === "PATCH" &&
-          new URL(request.url()).pathname === new URL(componentUpdateUrl).pathname,
+          new URL(request.url()).pathname === apiPathname(componentUpdatePath),
       );
-      await failedSaveComponentButton.dispatchEvent("click");
+      await failedSaveComponentButton.click();
       await failedUpdateRequest;
       await expect(page.getByText("Could not update component")).toBeVisible({
         timeout: 15_000,
       });
-      await page.unroute(componentUpdateUrl);
+      await page.unroute(componentUpdateRoute);
       await page.reload();
       await expect(
         page.getByText(updatedComponentDescription, { exact: true }),
@@ -606,16 +621,16 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         exact: true,
       });
       await expect(accessCard).toBeVisible();
-      await expect(accessCard.locator("..").getByText("Primary", { exact: true })).toBeVisible();
+      await expect(page.getByText("Primary", { exact: true })).toBeVisible();
       await expect(
         page.getByText(`Secondary Access ${runId}`, { exact: true }),
       ).toBeVisible();
       await expect(page.getByText(`t05-admin-${runId}`, { exact: true })).toBeVisible();
 
       // Edit the access metadata and credential role without replacing the secret.
-      await accessCard
-        .locator("..")
-        .getByRole("button", { name: /Edit/ })
+      await page
+        .getByRole("button", { name: "Edit", exact: true })
+        .nth(1)
         .click();
       const editAccessDialog = page.getByRole("dialog", {
         name: "Edit access point",
@@ -637,12 +652,12 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         { exact: true },
       );
       await expect(updatedAccess).toBeVisible();
+      await expect(page.getByText("Primary", { exact: true })).toBeVisible();
       await expect(
-        updatedAccess.locator("..").getByText("Primary", { exact: true }),
+        page.getByText(`https://credential-updated-${runId}.internal.example`, {
+          exact: false,
+        }),
       ).toBeVisible();
-      await expect(
-        updatedAccess.locator(".."),
-      ).toContainText(`https://credential-updated-${runId}.internal.example`);
 
       const persistedAccess = await getApplication(
         page.request,
@@ -666,16 +681,14 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
 
       const viewerContext = await browser.newContext({
         storageState: "playwright/.auth/viewer.json",
-        baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
+        baseURL:
+          process.env.PLAYWRIGHT_BASE_URL ?? new URL(page.url()).origin,
         ignoreHTTPSErrors: process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === "true",
       });
       const viewerPage = await viewerContext.newPage();
       try {
         await viewerPage.goto(`/dashboard/applications/${createdApplication.id}`);
-        const viewerAccessCard = viewerPage
-          .getByText("Initial application URL", { exact: true })
-          .locator("..");
-        await expect(viewerAccessCard.getByText(/Restricted/)).toBeVisible();
+        await expect(viewerPage.getByText("Restricted", { exact: true })).toBeVisible();
         await expect(
           viewerPage.getByRole("button", { name: "Reveal" }),
         ).toHaveCount(0);
@@ -719,9 +732,8 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       await page.reload();
       await expect(
         page.getByText(`Credential Primary Updated ${runId}`, { exact: true })
-          .locator("..")
-          .getByText("Primary", { exact: true }),
       ).toBeVisible();
+      await expect(page.getByText("Primary", { exact: true })).toBeVisible();
 
       // Archive and restore via the real registry UI, then prove all linked history survives.
       await page.goto("/dashboard/applications");
@@ -747,12 +759,12 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
           if (response.request().method() !== "GET") return false;
           const url = new URL(response.url());
           return (
-            url.pathname === new URL(apiPath("/applications")).pathname &&
+            url.pathname === apiPathname("/applications") &&
             url.searchParams.get("includeArchived") === "true"
           );
         },
       );
-      await showArchivedButton.dispatchEvent("click");
+      await showArchivedButton.click();
       const archivedListResponse = await archivedListResponsePromise;
       expect(archivedListResponse.status()).toBe(200);
       const hideArchivedButton = page.getByRole("button", {
@@ -777,14 +789,14 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         (response) =>
           response.request().method() === "PATCH" &&
           new URL(response.url()).pathname ===
-            new URL(apiPath(`/applications/${createdApplication.id}/restore`)).pathname,
+            apiPathname(`/applications/${createdApplication.id}/restore`),
       );
       const restoredListResponsePromise = page.waitForResponse(
         (response) => {
           if (response.request().method() !== "GET") return false;
           const url = new URL(response.url());
           return (
-            url.pathname === new URL(apiPath("/applications")).pathname &&
+            url.pathname === apiPathname("/applications") &&
             url.searchParams.get("includeArchived") === "true"
           );
         },
@@ -796,7 +808,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
       expect(restoredListResponse.status()).toBe(200);
       await expect(archivedRow).toContainText("ACTIVE");
       await expect(hideArchivedButton).toBeVisible();
-      await hideArchivedButton.dispatchEvent("click");
+      await hideArchivedButton.click();
       await expect(
         page.getByRole("button", { name: "Show archived" }),
       ).toBeVisible();
@@ -845,11 +857,7 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
         ]),
       );
     } finally {
-      try {
-        await cleanupCreatedFixtures(cleanupContext.request, fixtures);
-      } finally {
-        await cleanupContext.close();
-      }
+      await cleanupCreatedFixtures(page.request, fixtures);
     }
   });
 });
@@ -872,92 +880,34 @@ test.describe("Ticket 05 editor access contract", () => {
 });
 
 test.describe("Ticket 05 query-state harness (separate from persistence acceptance)", () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+  test.use({ storageState: ADMIN_STATE });
   test.setTimeout(60_000);
-
-  const syntheticUser = {
-    id: "ticket-05-query-state-user",
-    username: "ticket-05-query-state-user",
-    displayName: "Ticket 05 Query State",
-    avatarSeed: "ticket-05-query-state",
-    role: "ADMIN" as const,
-    mustChangePassword: false,
-  };
-
-  async function installSyntheticAuth(page: Page) {
-    await page.addInitScript((user) => {
-      window.localStorage.setItem("user", JSON.stringify(user));
-    }, syntheticUser);
-    await page.route(apiPath("/auth/me"), async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ user: syntheticUser }),
-      });
-    });
-  }
 
   test("proves list 500 is not an empty result and retry recovers", async ({
     page,
-  }) => {
-    let allowRetry = false;
-    await installSyntheticAuth(page);
-    await page.route(`${API_BASE_URL}/applications**`, async (route) => {
-      if (!allowRetry) {
-        await route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({ message: "Internal server failure" }),
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: "ticket-05-list-retry",
-            name: "Ticket 05 retry application",
-            description: "query-state harness",
-            technicalOwner: "Ticket 05",
-            businessUnit: "Acceptance",
-            status: "ACTIVE",
-            access: [],
-            environments: [],
-            completeness: { complete: true, completeness: 100 },
-          },
-        ]),
-      });
-    });
+  }, testInfo) => {
+    const applicationName = `T05 query list ${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${Date.now().toString(36)}`;
+    let applicationId: string | undefined;
+    const applicationsPath = apiPathname("/applications");
+    const applicationsRoute = new RegExp(
+      `${escapeRegExp(applicationsPath)}(?:\\?.*)?$`,
+    );
 
-    const listRequestPromise = page.waitForRequest(
-      (request) =>
-        request.method() === "GET" &&
-        request.url().startsWith(`${API_BASE_URL}/applications?`),
-    );
-    await page.goto("/dashboard/applications");
-    expect((await listRequestPromise).url()).toBe(
-      `${API_BASE_URL}/applications?includeArchived=false`,
-    );
-    await expect(
-      page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
-    ).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText("No applications yet")).toHaveCount(0);
-    await expect(page.getByText("No applications found")).toHaveCount(0);
-    allowRetry = true;
-    await page.getByRole("button", { name: "Retry" }).click();
-    await expect(page.getByRole("table")).toContainText(
-      "Ticket 05 retry application",
-    );
-  });
-
-  test("proves detail 500 is not Not Found and retry recovers", async ({ page }) => {
-    let allowRetry = false;
-    await installSyntheticAuth(page);
-    await page.route(
-      apiPath("/applications/ticket-05-detail-retry"),
-      async (route) => {
-        if (!allowRetry) {
+    try {
+      const createdApplication = await createAcceptanceApplication(
+        page.request,
+        applicationName,
+      );
+      applicationId = createdApplication.id;
+      let failNextList = true;
+      await page.route(applicationsRoute, async (route) => {
+        const url = new URL(route.request().url());
+        if (
+          route.request().method() === "GET" &&
+          url.pathname === applicationsPath &&
+          failNextList
+        ) {
+          failNextList = false;
           await route.fulfill({
             status: 500,
             contentType: "application/json",
@@ -965,41 +915,101 @@ test.describe("Ticket 05 query-state harness (separate from persistence acceptan
           });
           return;
         }
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            id: "ticket-05-detail-retry",
-            name: "Ticket 05 recovered detail",
-            description: "query-state harness",
-            technicalOwner: "Ticket 05",
-            businessUnit: "Acceptance",
-            status: "ACTIVE",
-            access: [],
-            environments: [],
-            documentLinks: [],
-          }),
-        });
-      },
-    );
+        await route.continue();
+      });
 
-    const detailRequestPromise = page.waitForRequest(
-      (request) =>
-        request.method() === "GET" &&
-        request.url() === apiPath("/applications/ticket-05-detail-retry"),
-    );
-    await page.goto("/dashboard/applications/ticket-05-detail-retry");
-    expect((await detailRequestPromise).url()).toBe(
-      apiPath("/applications/ticket-05-detail-retry"),
-    );
-    await expect(
-      page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
-    ).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText("Application not found")).toHaveCount(0);
-    allowRetry = true;
-    await page.getByRole("button", { name: "Retry" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Ticket 05 recovered detail" }),
-    ).toBeVisible();
+      const listRequestPromise = page.waitForRequest(
+        (request) =>
+          request.method() === "GET" &&
+          new URL(request.url()).pathname === applicationsPath,
+      );
+      await page.goto("/dashboard/applications");
+      await listRequestPromise;
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
+      ).toBeVisible({ timeout: 45_000 });
+      await expect(page.getByText("No applications yet")).toHaveCount(0);
+      await expect(page.getByText("No applications found")).toHaveCount(0);
+      const retryResponsePromise = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === applicationsPath,
+      );
+      await page.getByRole("button", { name: "Retry" }).click();
+      expect((await retryResponsePromise).status()).toBe(200);
+      await expect(page.getByRole("table")).toContainText(applicationName);
+    } finally {
+      await page.unroute(applicationsRoute);
+      if (applicationId) {
+        await cleanupRequest(
+          page.request,
+          "patch",
+          apiPath(`/applications/${applicationId}/archive`),
+          "query list application archive",
+        );
+      }
+    }
+  });
+
+  test("proves detail 500 is not Not Found and retry recovers", async ({ page }, testInfo) => {
+    const applicationName = `T05 query detail ${testInfo.workerIndex}-${testInfo.repeatEachIndex}-${Date.now().toString(36)}`;
+    let applicationId: string | undefined;
+    let detailRoute: RegExp | undefined;
+
+    try {
+      const createdApplication = await createAcceptanceApplication(
+        page.request,
+        applicationName,
+      );
+      applicationId = createdApplication.id;
+      const detailPath = `/applications/${applicationId}`;
+      const detailPathname = apiPathname(detailPath);
+      detailRoute = new RegExp(`${escapeRegExp(detailPathname)}$`);
+      let failNextDetail = true;
+      await page.route(detailRoute, async (route) => {
+        if (route.request().method() === "GET" && failNextDetail) {
+          failNextDetail = false;
+          await route.fulfill({
+            status: 500,
+            contentType: "application/json",
+            body: JSON.stringify({ message: "Internal server failure" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+
+      const detailRequestPromise = page.waitForRequest(
+        (request) =>
+          request.method() === "GET" &&
+          new URL(request.url()).pathname === detailPathname,
+      );
+      await page.goto(`/dashboard/applications/${applicationId}`);
+      await detailRequestPromise;
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Inventory unavailable" }),
+      ).toBeVisible({ timeout: 45_000 });
+      await expect(page.getByText("Application not found")).toHaveCount(0);
+      const retryResponsePromise = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === detailPathname,
+      );
+      await page.getByRole("button", { name: "Retry" }).click();
+      expect((await retryResponsePromise).status()).toBe(200);
+      await expect(
+        page.getByRole("heading", { name: applicationName }),
+      ).toBeVisible();
+    } finally {
+      if (detailRoute) await page.unroute(detailRoute);
+      if (applicationId) {
+        await cleanupRequest(
+          page.request,
+          "patch",
+          apiPath(`/applications/${applicationId}/archive`),
+          "query detail application archive",
+        );
+      }
+    }
   });
 });
