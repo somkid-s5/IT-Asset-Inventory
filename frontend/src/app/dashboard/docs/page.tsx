@@ -236,6 +236,33 @@ export default function DocsPage() {
         </div>
       </div>
 
+      {(queryState.state === "filtered-empty" || queryState.state === "error") && (
+        <div
+          data-slot="docs-query-recovery"
+          className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 p-3 sm:flex-row sm:items-end"
+        >
+          <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+            Search documentation
+            <Input
+              aria-label="Search documentation"
+              placeholder="Search knowledge base, manuals, or topics..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="h-9 border-border/60 bg-card"
+            />
+          </label>
+          {search ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSearch("")}
+            >
+              Clear search
+            </Button>
+          ) : null}
+        </div>
+      )}
+
       <InventoryQueryStateView
         state={queryState.state}
         hasStaleData={queryState.hasStaleData}

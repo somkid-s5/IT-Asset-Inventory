@@ -33,6 +33,8 @@ import {
   KnowledgeDocumentLinks,
   type KnowledgeDocumentLinkValues,
 } from "@/components/KnowledgeDocumentLinks";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 const NotionEditor = dynamic(() => import("@/components/NotionEditor"), {
   ssr: false,
@@ -70,15 +72,25 @@ export default function ArticleFormPage() {
     databases: [],
   });
 
-  const { data: categories = [] } = useQuery({
+  const categoriesQuery = useQuery({
     queryKey: ["kb-categories"],
     queryFn: kbService.getCategories,
   });
+  const categories = categoriesQuery.data ?? [];
+  const categoriesState = useInventoryQueryState(categoriesQuery, {
+    hasData: categoriesQuery.data !== undefined,
+    hasRecords: categories.length > 0,
+  });
 
-  const { data: existingArticle } = useQuery({
+  const existingArticleQuery = useQuery({
     queryKey: ["kb-document", editId],
     queryFn: () => kbService.getDocument(editId!),
     enabled: !!editId,
+  });
+  const existingArticle = existingArticleQuery.data;
+  const existingArticleState = useInventoryQueryState(existingArticleQuery, {
+    hasData: existingArticle !== undefined,
+    hasRecords: Boolean(existingArticle),
   });
 
   useEffect(() => {
@@ -166,8 +178,81 @@ export default function ArticleFormPage() {
 
   if (authLoading || !canAuthor) return null;
 
+  if (
+    categoriesState.state === "loading" ||
+    (editId && existingArticleState.state === "loading")
+  ) {
+    return (
+      <div className="flex items-center justify-center h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary opacity-20" />
+      </div>
+    );
+  }
+
+  if (categoriesState.state !== "ready" && categoriesState.state !== "refreshing") {
+    return (
+      <div className="space-y-4 pb-12">
+        <InventoryQueryStateView
+          state={categoriesState.state}
+          hasStaleData={categoriesState.hasStaleData}
+          onRetry={() => void categoriesQuery.refetch()}
+          loadingLabel="Loading documentation categories…"
+        />
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/dashboard/docs")}
+          >
+            Return to Knowledge Base
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    editId &&
+    existingArticleState.state !== "ready" &&
+    existingArticleState.state !== "refreshing"
+  ) {
+    return (
+      <div className="space-y-4 pb-12">
+        <InventoryQueryStateView
+          state={existingArticleState.state}
+          hasStaleData={existingArticleState.hasStaleData}
+          onRetry={() => void existingArticleQuery.refetch()}
+          loadingLabel="Loading document…"
+        />
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/dashboard/docs")}
+          >
+            Return to Knowledge Base
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-6xl mx-auto pb-12">
+    <InventoryQueryStateView
+      state={editId ? existingArticleState.state : categoriesState.state}
+      hasStaleData={
+        editId ? existingArticleState.hasStaleData : categoriesState.hasStaleData
+      }
+      onRetry={() => {
+        if (editId) {
+          void existingArticleQuery.refetch();
+        } else {
+          void categoriesQuery.refetch();
+        }
+      }}
+      loadingLabel="Loading documentation categories…"
+    >
+      <div className="max-w-6xl mx-auto pb-12">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex min-w-0 items-center gap-3">
           <Button
@@ -303,6 +388,7 @@ export default function ArticleFormPage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </InventoryQueryStateView>
   );
 }

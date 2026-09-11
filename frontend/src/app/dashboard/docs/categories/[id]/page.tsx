@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 const getInitials = (name: string) => {
   if (!name) return "IT";
@@ -44,16 +46,22 @@ export default function CategoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  const { data: category, isLoading: categoryLoading } = useQuery({
+  const categoryQuery = useQuery({
     queryKey: ["kb-category", categoryId],
     queryFn: () => kbService.getCategory(categoryId),
     enabled: !!categoryId,
   });
+  const category = categoryQuery.data;
+  const categoryState = useInventoryQueryState(categoryQuery, {
+    hasData: category !== undefined,
+    hasRecords: Boolean(category),
+  });
 
-  const { data: categories = [] } = useQuery({
+  const categoriesQuery = useQuery({
     queryKey: ["kb-categories"],
     queryFn: kbService.getCategories,
   });
+  const categories = categoriesQuery.data ?? [];
 
   useEffect(() => {
     if (category) {
@@ -83,7 +91,7 @@ export default function CategoryPage() {
     }
   }, [category, router]);
 
-  if (categoryLoading) {
+  if (categoryState.state === "loading") {
     return (
       <div className="w-full space-y-5 pb-12">
         <Skeleton className="h-32 w-full rounded-2xl" />
@@ -101,7 +109,27 @@ export default function CategoryPage() {
     );
   }
 
-  if (!category) return null;
+  if (!category) {
+    return (
+      <div className="space-y-4 pb-12">
+        <InventoryQueryStateView
+          state={categoryState.state}
+          hasStaleData={categoryState.hasStaleData}
+          onRetry={() => void categoryQuery.refetch()}
+          loadingLabel="Loading documentation category…"
+        />
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/dashboard/docs")}
+          >
+            Return to Knowledge Base
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const documents = category.documents || [];
   const normalizedSearch = search.trim().toLowerCase();
@@ -126,7 +154,13 @@ export default function CategoryPage() {
   );
 
   return (
-    <div className="w-full space-y-5 pb-12">
+    <InventoryQueryStateView
+      state={categoryState.state}
+      hasStaleData={categoryState.hasStaleData}
+      onRetry={() => void categoryQuery.refetch()}
+      loadingLabel="Loading documentation category…"
+    >
+      <div className="w-full space-y-5 pb-12">
       <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-sidebar-background to-sidebar-accent p-5 text-sidebar-foreground shadow-sm sm:p-6">
         <nav
           className="mb-3 flex items-center gap-2 text-[11px] font-semibold text-sidebar-foreground/60"
@@ -180,30 +214,46 @@ export default function CategoryPage() {
             <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
               All Categories
             </h3>
-            <div className="space-y-1">
-              {categories.map((item) => {
-                const isActive = item.id === categoryId;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() =>
-                      router.push(`/dashboard/docs/categories/${item.id}`)
-                    }
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-bold transition-all ${
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    }`}
-                  >
-                    <span className="truncate">{item.name}</span>
-                    <span className="rounded-full border border-border/20 bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                      {item._count?.documents || 0}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {categoriesQuery.isError ? (
+              <div className="space-y-2" role="alert">
+                <p className="text-xs text-destructive">
+                  Categories could not be loaded.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void categoriesQuery.refetch()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {categories.map((item) => {
+                  const isActive = item.id === categoryId;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() =>
+                        router.push(`/dashboard/docs/categories/${item.id}`)
+                      }
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-bold transition-all ${
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="truncate">{item.name}</span>
+                      <span className="rounded-full border border-border/20 bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        {item._count?.documents || 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </aside>
 
@@ -395,6 +445,7 @@ export default function CategoryPage() {
           )}
         </main>
       </div>
-    </div>
+      </div>
+    </InventoryQueryStateView>
   );
 }

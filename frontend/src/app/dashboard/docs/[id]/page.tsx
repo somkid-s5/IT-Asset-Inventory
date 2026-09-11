@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { motion } from "framer-motion";
 import { fadeInUp } from "@/lib/animations";
+import { InventoryQueryStateView } from "@/components/inventory";
+import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 export default function ArticlePage() {
   const { id } = useParams();
@@ -35,10 +37,15 @@ export default function ArticlePage() {
       window.removeEventListener("kb-document-saved", handleDocumentSaved);
   }, []);
 
-  const { data: document, isLoading } = useQuery({
+  const documentQuery = useQuery({
     queryKey: ["kb-document", id],
     queryFn: () => kbService.getDocument(id as string),
     enabled: !!id,
+  });
+  const document = documentQuery.data;
+  const documentState = useInventoryQueryState(documentQuery, {
+    hasData: document !== undefined,
+    hasRecords: Boolean(document),
   });
 
   const handleCopyLink = async () => {
@@ -51,7 +58,7 @@ export default function ArticlePage() {
     }
   };
 
-  if (isLoading) {
+  if (documentState.state === "loading") {
     return (
       <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8">
         <div className="space-y-4">
@@ -68,16 +75,21 @@ export default function ArticlePage() {
 
   if (!document) {
     return (
-      <div className="flex flex-col items-center justify-center h-full space-y-4">
-        <p className="text-muted-foreground font-medium uppercase tracking-widest">
-          Document not found
-        </p>
-        <Button
-          onClick={() => router.push("/dashboard/docs")}
-          variant="outline"
-        >
-          Return to Library
-        </Button>
+      <div className="space-y-4">
+        <InventoryQueryStateView
+          state={documentState.state}
+          hasStaleData={documentState.hasStaleData}
+          onRetry={() => void documentQuery.refetch()}
+          loadingLabel="Loading document…"
+        />
+        <div className="flex justify-center">
+          <Button
+            onClick={() => router.push("/dashboard/docs")}
+            variant="outline"
+          >
+            Return to Library
+          </Button>
+        </div>
       </div>
     );
   }
@@ -112,12 +124,18 @@ export default function ArticlePage() {
   ];
 
   return (
-    <motion.div
-      variants={fadeInUp}
-      initial="hidden"
-      animate="visible"
-      className="flex min-h-full flex-col"
+    <InventoryQueryStateView
+      state={documentState.state}
+      hasStaleData={documentState.hasStaleData}
+      onRetry={() => void documentQuery.refetch()}
+      loadingLabel="Loading document…"
     >
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="flex min-h-full flex-col"
+      >
       {/* Document Navigation Bar */}
       <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border/40 bg-card/80 px-4 py-3 backdrop-blur-md sm:px-6">
         <Button
@@ -320,6 +338,7 @@ export default function ArticlePage() {
           </div>
         </aside>
       </div>
-    </motion.div>
+      </motion.div>
+    </InventoryQueryStateView>
   );
 }

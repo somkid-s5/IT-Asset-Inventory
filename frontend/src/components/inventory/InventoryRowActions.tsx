@@ -36,6 +36,9 @@ export interface InventoryRowLifecycleAction {
 export interface InventoryRowActionsProps {
   recordLabel: string;
   detailHref: string;
+  viewActionLabel?: string;
+  inlineLifecycleActions?: boolean;
+  menuRecordLabel?: string;
   edit?: {
     allowed: boolean;
     onSelect: () => void;
@@ -57,6 +60,9 @@ function isLifecycleActionVisible(lifecycle?: InventoryRowLifecycleAction) {
 export function InventoryRowActions({
   recordLabel,
   detailHref,
+  viewActionLabel,
+  inlineLifecycleActions = false,
+  menuRecordLabel = recordLabel,
   edit,
   secondaryActions = [],
   lifecycle,
@@ -67,8 +73,16 @@ export function InventoryRowActions({
 
   return (
     <div className="flex items-center justify-end gap-1" data-slot="inventory-row-actions">
-      <Button asChild variant="ghost" size="icon-sm" title={`View ${recordLabel}`}>
-        <Link href={detailHref} aria-label={`View ${recordLabel}`}>
+      <Button
+        asChild
+        variant="ghost"
+        size="icon-sm"
+        title={viewActionLabel ?? `View ${recordLabel}`}
+      >
+        <Link
+          href={detailHref}
+          aria-label={viewActionLabel ?? `View ${recordLabel}`}
+        >
           <Eye />
         </Link>
       </Button>
@@ -86,15 +100,41 @@ export function InventoryRowActions({
         </Button>
       )}
 
+      {inlineLifecycleActions && archiveVisible && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          title={`Archive ${recordLabel}`}
+          aria-label="Archive"
+          onClick={lifecycle.archive?.onSelect}
+        >
+          <Archive />
+        </Button>
+      )}
+
+      {inlineLifecycleActions && restoreVisible && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          title={`Restore ${recordLabel}`}
+          aria-label="Restore"
+          onClick={lifecycle.restore?.onSelect}
+        >
+          <ArchiveRestore />
+        </Button>
+      )}
+
       {menuVisible && (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              title={`More actions for ${recordLabel}`}
-              aria-label={`More actions for ${recordLabel}`}
+              title={`More actions for ${menuRecordLabel}`}
+              aria-label={`More actions for ${menuRecordLabel}`}
             >
               <MoreHorizontal />
             </Button>

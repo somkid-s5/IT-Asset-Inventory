@@ -214,7 +214,11 @@ test.describe("Ticket 05 persistence-backed Application acceptance", () => {
     page,
     browser,
   }, testInfo) => {
-    test.setTimeout(120_000);
+    // This persistence journey intentionally covers multiple API-backed
+    // mutations, cross-role checks, and reloads. Keep its timeout separate
+    // from short list/query-state checks so a slow local Postgres does not
+    // turn an in-progress acceptance run into a teardown failure.
+    test.setTimeout(300_000);
 
     const runId =
       process.env.TICKET_05_RUN_ID?.trim() ||

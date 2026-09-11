@@ -7,6 +7,8 @@ import {
 
 interface InventoryBadgeProps {
   value?: unknown;
+  displayValue?: string;
+  role?: "status" | null;
   className?: string;
 }
 
@@ -23,6 +25,8 @@ const BADGE_KIND_LABELS: Record<InventoryBadgeKind, string> = {
 function SemanticInventoryBadge({
   kind,
   value,
+  displayValue,
+  role = "status",
   className,
 }: InventoryBadgeProps & { kind: InventoryBadgeKind }) {
   const meta = getInventoryBadgeMeta(kind, value);
@@ -32,11 +36,11 @@ function SemanticInventoryBadge({
     <Badge
       variant={variant}
       className={className}
-      role="status"
+      role={role ?? undefined}
       aria-label={`${BADGE_KIND_LABELS[kind]}: ${meta.label}`}
       title={`${BADGE_KIND_LABELS[kind]}: ${meta.label}`}
     >
-      {meta.label}
+      {displayValue ?? meta.label}
     </Badge>
   );
 }

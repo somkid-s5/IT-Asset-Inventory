@@ -58,7 +58,7 @@ test.describe("V1.1 shared query state", () => {
       });
     });
 
-    await page.goto("http://localhost:3000/dashboard/applications");
+    await page.goto("/dashboard/applications");
     const errorAlert = page
       .getByRole("alert")
       .filter({ hasText: "Inventory unavailable" });

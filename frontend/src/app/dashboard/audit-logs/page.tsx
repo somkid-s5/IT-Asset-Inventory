@@ -529,7 +529,7 @@ export default function AuditLogsPage() {
           </div>
 
         <InventoryTableShell
-          title="System Audit Logs"
+          title="Audit log results"
           description="Search and review the complete server-side audit history."
           state={queryState.state}
           hasStaleData={queryState.hasStaleData}

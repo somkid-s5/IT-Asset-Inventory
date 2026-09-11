@@ -1118,7 +1118,7 @@ export default function ApplicationDetailPage() {
         open={Boolean(componentDialog)}
         onOpenChange={(open) => !open && setComponentDialog(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add component</DialogTitle>
           </DialogHeader>
@@ -1192,7 +1192,7 @@ export default function ApplicationDetailPage() {
         open={Boolean(editingComponent)}
         onOpenChange={(open) => !open && setEditingComponent(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit component</DialogTitle>
           </DialogHeader>

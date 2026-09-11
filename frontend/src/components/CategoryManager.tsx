@@ -30,7 +30,7 @@ export function CategoryManager() {
   const [isInitializing, setIsInitializing] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: categories = [], isLoading } = useQuery({
+  const { data: categories = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['kb-categories'],
     queryFn: kbService.getCategories,
   });
@@ -139,6 +139,23 @@ export function CategoryManager() {
             {isLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin opacity-20" />
+              </div>
+            ) : isError ? (
+              <div
+                className="space-y-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-center"
+                role="alert"
+              >
+                <p className="text-xs font-medium text-destructive">
+                  Categories could not be loaded.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void refetch()}
+                >
+                  Retry
+                </Button>
               </div>
             ) : categories.length === 0 ? (
               <p className="text-center py-8 text-xs text-muted-foreground italic">No categories yet.</p>

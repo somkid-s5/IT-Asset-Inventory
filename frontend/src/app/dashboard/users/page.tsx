@@ -489,7 +489,7 @@ export default function UsersPage() {
       </div>
 
       <InventoryTableShell
-        title="System Access & User Directory"
+        title="User directory results"
         description="Manage staff accounts and security permissions"
         toolbar={
           <InventoryTableToolbar

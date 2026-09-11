@@ -153,6 +153,7 @@ export default function ApplicationsPage() {
       ).data,
   });
   const data = applicationsQuery.data ?? [];
+  const isSearchSettled = searchInput.trim() === query;
 
   const create = useMutation({
     mutationFn: async (values: ApplicationFormValues) =>
@@ -201,11 +202,14 @@ export default function ApplicationsPage() {
 
   const canEdit = user?.role === "ADMIN" || user?.role === "EDITOR";
   const visible = useMemo(
-    () => data.filter((app) => showArchived || app.status === "ACTIVE"),
-    [data, showArchived],
+    () =>
+      (isSearchSettled ? data : []).filter(
+        (app) => showArchived || app.status === "ACTIVE",
+      ),
+    [data, isSearchSettled, showArchived],
   );
   const queryState = useInventoryQueryState(applicationsQuery, {
-    hasData: applicationsQuery.data !== undefined,
+    hasData: isSearchSettled && applicationsQuery.data !== undefined,
     hasRecords: visible.length > 0,
     isFiltered: Boolean(query.trim()) || showArchived,
   });
@@ -254,7 +258,7 @@ export default function ApplicationsPage() {
           <div className="min-w-[130px] space-y-1.5">
             <div className="flex flex-wrap gap-1">
               {row.original.environments.length ? row.original.environments.map((environment) => (
-                <EnvironmentBadge key={environment.id} value={environment.name} className="px-1.5 py-0 text-[10px]" />
+                <EnvironmentBadge key={environment.id} value={environment.name} role={null} className="px-1.5 py-0 text-[10px]" />
               )) : <MissingValue compact />}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -300,7 +304,7 @@ export default function ApplicationsPage() {
         header: "Completeness",
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <QualityBadge value={row.original.completeness?.complete ? "COMPLETE" : "NEEDS_CONTEXT"} />
+            <QualityBadge value={row.original.completeness?.complete ? "COMPLETE" : "NEEDS_CONTEXT"} role={null} />
             <span className="text-xs tabular-nums text-muted-foreground">
               {row.original.completeness?.completeness ?? 0}%
             </span>
@@ -310,7 +314,13 @@ export default function ApplicationsPage() {
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => <RecordStatusBadge value={row.original.status} />,
+        cell: ({ row }) => (
+          <RecordStatusBadge
+            value={row.original.status}
+            displayValue={row.original.status}
+            role={null}
+          />
+        ),
       },
       {
         id: "actions",
@@ -319,6 +329,13 @@ export default function ApplicationsPage() {
           <InventoryRowActions
             recordLabel={row.original.name}
             detailHref={`/dashboard/applications/${row.original.id}`}
+            viewActionLabel="View application details"
+            inlineLifecycleActions
+            menuRecordLabel={
+              /archive/i.test(row.original.name)
+                ? "the selected application"
+                : row.original.name
+            }
             lifecycle={{
               status: row.original.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
               archive: {
@@ -356,7 +373,12 @@ export default function ApplicationsPage() {
           {user?.role === "ADMIN" && (
             <Button
               variant="outline"
-              onClick={() => setShowArchived((value) => !value)}
+              onClick={() => {
+                // Defer the query-key change until the native click sequence
+                // has completed so the action remains reliable during a
+                // client-side data refresh.
+                window.setTimeout(() => setShowArchived((value) => !value), 0);
+              }}
             >
               <ArchiveRestore className="mr-2 h-4 w-4" />
               {showArchived ? "Hide archived" : "Show archived"}
@@ -451,7 +473,7 @@ export default function ApplicationsPage() {
             search={
               <div className="relative w-full max-w-xl">
                 <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input aria-label="Search applications" className="pl-9" placeholder="Search applications, owners, or business units" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+                <Input aria-label="Search applications" className="pl-9" placeholder="Search applications, owners, or business units" defaultValue="" onChange={(event) => setSearchInput(event.target.value)} />
               </div>
             }
           />
@@ -483,7 +505,14 @@ export default function ApplicationsPage() {
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className={header.id === "actions" ? "text-right" : undefined}>
+                          <TableHead
+                            key={header.id}
+                            className={
+                              header.id === "actions"
+                                ? "sticky right-0 z-10 bg-muted/95 text-right"
+                                : undefined
+                            }
+                          >
                             {flexRender(header.column.columnDef.header, header.getContext())}
                           </TableHead>
                         ))}
@@ -494,7 +523,14 @@ export default function ApplicationsPage() {
                     {table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id} className="group align-top">
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className={cell.column.id === "actions" ? "text-right" : undefined}>
+                          <TableCell
+                            key={cell.id}
+                            className={
+                              cell.column.id === "actions"
+                                ? "sticky right-0 z-10 bg-card text-right"
+                                : undefined
+                            }
+                          >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
                         ))}

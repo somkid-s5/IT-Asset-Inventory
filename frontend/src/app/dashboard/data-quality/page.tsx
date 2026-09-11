@@ -122,6 +122,45 @@ export default function DataQualityPage() {
 
   if (qualityQuery.isLoading) return <DashboardSkeleton />;
 
+  if (qualityQuery.isError) {
+    return (
+      <div className="workspace-page space-y-6">
+        <section className="workspace-hero flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Records that need attention
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Review missing ownership, lifecycle, connection, and recovery
+              details before the inventory is used for operational decisions.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => void qualityQuery.refetch()}
+            disabled={qualityQuery.isFetching}
+          >
+            <RefreshCw
+              className={qualityQuery.isFetching ? "animate-spin" : ""}
+            />
+            {qualityQuery.isFetching ? "Refreshing..." : "Retry quality checks"}
+          </Button>
+        </section>
+
+        <Card
+          role="alert"
+          className="border-destructive/30 bg-destructive/5"
+        >
+          <CardContent className="flex items-start gap-3 p-5 text-sm text-destructive">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+            Quality checks could not be loaded. Confirm the API is available,
+            then retry the checks.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const summaries: QualitySummary[] = qualityQuery.data ?? [];
   const totalRecords = summaries.reduce(
     (sum, summary) => sum + summary.total,
@@ -169,16 +208,6 @@ export default function DataQualityPage() {
           {qualityQuery.isFetching ? "Refreshing..." : "Refresh quality checks"}
         </Button>
       </section>
-
-      {qualityQuery.isError ? (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="flex items-start gap-3 p-5 text-sm text-destructive">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-            Quality checks could not be loaded. Confirm the API is available,
-            then refresh this page.
-          </CardContent>
-        </Card>
-      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard

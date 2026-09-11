@@ -34,6 +34,10 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 # Prisma needs to be available in production to connect to DB
 COPY --from=builder /app/prisma ./prisma
+# The explicit acceptance verifier is a supported operational tool. It is
+# invoked from prisma/verify-golden-dataset.ts and needs only this source file
+# in the production runner; the rest of the application source stays out.
+COPY --from=builder /app/src/verification/golden-dataset-verifier.ts ./src/verification/golden-dataset-verifier.ts
 
 EXPOSE 3001
 

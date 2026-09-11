@@ -15,13 +15,14 @@ export default function PublicArticlePage() {
   const { id } = useParams();
   const router = useRouter();
 
-  const { data: document, isLoading } = useQuery({
+  const documentQuery = useQuery({
     queryKey: ["kb-document-public", id],
     queryFn: () => kbService.getPublicDocument(id as string),
     enabled: !!id,
   });
+  const document = documentQuery.data;
 
-  if (isLoading) {
+  if (documentQuery.isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 md:p-20">
         <div className="max-w-4xl mx-auto space-y-8">
@@ -31,6 +32,34 @@ export default function PublicArticlePage() {
             <Skeleton className="h-4 w-48" />
           </div>
           <Skeleton className="h-[600px] w-full rounded-3xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (documentQuery.isError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <BrandMark className="mb-8 scale-125" />
+        <h1 className="text-2xl font-black mb-2">Document unavailable</h1>
+        <p className="text-muted-foreground mb-8">
+          The shared document could not be loaded. Please retry or return home.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button
+            onClick={() => void documentQuery.refetch()}
+            variant="outline"
+            className="rounded-xl px-8"
+          >
+            Retry
+          </Button>
+          <Button
+            onClick={() => router.push("/")}
+            variant="ghost"
+            className="rounded-xl px-8"
+          >
+            Return Home
+          </Button>
         </div>
       </div>
     );

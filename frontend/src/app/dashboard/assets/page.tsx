@@ -655,6 +655,52 @@ export default function AssetsPage() {
         </div>
       </div>
 
+      {queryState.state === "filtered-empty" && (
+        <div
+          className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-card p-3 shadow-sm sm:flex-row sm:items-end"
+          data-slot="assets-filtered-empty-controls"
+        >
+          <div className="min-w-0 flex-1">
+            <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+              Search assets
+              <Input
+                placeholder="Search assets..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="h-9"
+              />
+            </label>
+          </div>
+          <div className="min-w-0 flex-1">
+            <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+              Owner
+              <Input
+                aria-label="Filter by owner"
+                placeholder="Owner (exact match)"
+                value={ownerFilter}
+                onChange={(event) => setOwnerFilter(event.target.value)}
+                className="h-9"
+              />
+            </label>
+          </div>
+          <div className="min-w-0 flex-1">
+            <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+              Location
+              <Input
+                aria-label="Filter by location"
+                placeholder="Location (exact match)"
+                value={locationFilter}
+                onChange={(event) => setLocationFilter(event.target.value)}
+                className="h-9"
+              />
+            </label>
+          </div>
+          <Button type="button" variant="outline" onClick={clearAssetFilters}>
+            Clear filters
+          </Button>
+        </div>
+      )}
+
       <div>
         <InventoryQueryStateView
           state={queryState.state}
@@ -684,10 +730,6 @@ export default function AssetsPage() {
                   ? "No archived assets match your current search or type filter."
                   : "No assets match your current search or filter criteria."
               }
-              action={{
-                label: "Clear filters",
-                onClick: clearAssetFilters,
-              }}
             />
           }
         >

@@ -242,6 +242,16 @@ export default function DashboardPage() {
     (qualityQuery.data?.assets.issueCount ?? 0) +
     (qualityQuery.data?.databases.issueCount ?? 0) +
     (qualityQuery.data?.vms.issueCount ?? 0);
+  const contextIssueValue = qualityQuery.isPending
+    ? "—"
+    : qualityQuery.isError
+      ? "Unavailable"
+      : contextIssueCount;
+  const contextIssueSubtitle = qualityQuery.isPending
+    ? "Loading Data Quality"
+    : qualityQuery.isError
+      ? "Data Quality unavailable"
+      : "Central Data Quality model";
 
   const refreshAll = async () => {
     await Promise.all([overviewQuery.refetch(), qualityQuery.refetch()]);
@@ -329,8 +339,8 @@ export default function DashboardPage() {
             />
             <SummaryCard
               title="Needs Context"
-              value={contextIssueCount}
-              subtitle="Central Data Quality model"
+              value={contextIssueValue}
+              subtitle={contextIssueSubtitle}
               icon={ShieldAlert}
               href="/dashboard/data-quality"
             />
@@ -491,7 +501,7 @@ function SummaryCard({
   href,
 }: {
   title: string;
-  value: number;
+  value: number | string;
   subtitle: string;
   icon: ComponentType<{ className?: string }>;
   href: string;
@@ -499,7 +509,7 @@ function SummaryCard({
   return (
     <Link
       href={href}
-      aria-label={`${title}: ${value.toLocaleString()}`}
+      aria-label={`${title}: ${typeof value === "number" ? value.toLocaleString() : value}`}
       className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     >
       <Card className="h-full gap-0 rounded-2xl border border-border/60 p-0 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/15">
@@ -511,7 +521,7 @@ function SummaryCard({
             <Icon className="h-4 w-4 text-primary" />
           </div>
           <p className="mt-3 font-mono text-3xl font-bold tracking-tight text-foreground">
-            {value.toLocaleString()}
+            {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           <p className="mt-1 text-[10px] text-muted-foreground">{subtitle}</p>
         </CardContent>

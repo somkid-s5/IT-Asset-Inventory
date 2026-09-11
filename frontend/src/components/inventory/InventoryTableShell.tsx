@@ -108,7 +108,7 @@ export interface InventoryQueryStateViewProps {
   emptyState?: ReactNode;
   filteredEmptyState?: ReactNode;
   loadingLabel?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export function InventoryQueryStateView({
