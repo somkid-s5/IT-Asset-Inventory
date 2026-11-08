@@ -35,7 +35,9 @@ Thumbs.db
 *.csv
 
 # AI Workflow
-.agents/
+.agents/*
+!.agents/skills/
+!.agents/skills/**
 .superpowers/
 todos/
 .antigravitycli/

@@ -41,6 +41,8 @@ For substantial feature, screen, table, schema, API, or workflow work, use the p
 
 Use them together with the installed AI Hero flow: `grill-with-docs` -> `to-spec` -> `to-tickets` -> `implement`/`tdd` -> `code-review`.
 
+The project vendors its workflow and audit skills under `.agents/skills/` for Codex Cloud. Use the relevant project-local skill when its task matches; do not depend on a personal skills directory.
+
 Hard rule: rendering is not completion. A feature is not done until its operational purpose, data model, relationships, states, permissions, API/persistence trace, realistic data behavior, downstream usage, and acceptance evidence are covered. Tickets should be vertical slices across schema/API/UI/tests where applicable.
 
 Model policy: use GPT-5.6 Luna High for implementation workers and routine ticket execution. Auditor/reviewer roles (including Product/Data Audit, UX Audit, architecture/completeness review, and spec-vs-code review) may use GPT-5.6 Sol when deeper reasoning materially improves review quality. Do not silently upgrade ordinary implementation workers to Sol.
