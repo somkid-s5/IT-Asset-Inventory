@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePageHeader } from "@/contexts/PageHeaderContext";
 import api from "@/services/api";
@@ -383,20 +384,21 @@ export default function ApplicationDetailPage() {
       hasStaleData={detailState.hasStaleData}
     >
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 w-full sm:flex-1">
           <h2 className="text-2xl font-semibold">{data.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {data.description || "Application topology and operational access."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <Badge>{data.status}</Badge>
           {canEdit && (
             <>
               <Button
                 size="sm"
                 variant="outline"
+                className="min-h-[44px] sm:min-h-[36px]"
                 onClick={() => {
                   setApplicationForm({
                     name: data.name,
@@ -412,11 +414,16 @@ export default function ApplicationDetailPage() {
               <Button
                 size="sm"
                 variant="outline"
+                className="min-h-[44px] sm:min-h-[36px]"
                 onClick={() => setEnvironmentDialog(true)}
               >
                 Add environment
               </Button>
-              <Button size="sm" onClick={() => setAccessDialog(true)}>
+              <Button
+                size="sm"
+                className="min-h-[44px] sm:min-h-[36px]"
+                onClick={() => setAccessDialog(true)}
+              >
                 Add access
               </Button>
             </>
@@ -552,7 +559,7 @@ export default function ApplicationDetailPage() {
         <CardHeader>
           <CardTitle className="text-base">Environment topology</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
+        <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] gap-4">
           {data.environments.length === 0 ? (
             <EmptyState
               icon={AppWindow}
@@ -718,33 +725,106 @@ export default function ApplicationDetailPage() {
                             ? " · archived history retained"
                             : ""}
                         </p>
+                        {component.assets?.length ? (
+                          <div className="space-y-1 pt-1">
+                            <p className="text-xs text-muted-foreground">Assets</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {component.assets.map((asset) => (
+                                <Button key={asset.id} asChild size="xs" variant="outline" className="h-auto min-h-[44px] sm:min-h-[32px] max-w-full flex-col items-start justify-center gap-1 whitespace-normal break-all py-2 text-left">
+                                  <Link href={`/dashboard/assets/${asset.id}`} className="flex flex-col items-start gap-1">
+                                    <span className="flex flex-wrap items-center gap-1.5">
+                                      <span>{asset.name}{asset.assetId ? ` · ${asset.assetId}` : ""}</span>
+                                      <Badge variant="secondary">
+                                        {asset.relationType === "SHARED" ? "Shared" : "Primary"}
+                                      </Badge>
+                                    {asset.status === "ARCHIVED" && <Badge variant="outline">Archived</Badge>}
+                                    </span>
+                                    {asset.responsibleParty && (
+                                      <span className="text-xs font-normal text-muted-foreground">
+                                        Responsible: {asset.responsibleParty}
+                                      </span>
+                                    )}
+                                  </Link>
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        {component.virtualMachines?.length ? (
+                          <div className="space-y-1 pt-1">
+                            <p className="text-xs text-muted-foreground">Virtual machines</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {component.virtualMachines.map((vm) => (
+                                <Button key={vm.id} asChild size="xs" variant="outline" className="h-auto min-h-[44px] sm:min-h-[32px] max-w-full flex-col items-start justify-center gap-1 whitespace-normal break-all py-2 text-left">
+                                  <Link href={`/dashboard/virtual-machines/${vm.id}`} className="flex flex-col items-start gap-1">
+                                    <span className="flex flex-wrap items-center gap-1.5">
+                                      <span>{vm.name}</span>
+                                      <Badge variant="secondary">
+                                        {vm.relationType === "SHARED" ? "Shared" : "Primary"}
+                                      </Badge>
+                                    {vm.archived && <Badge variant="outline">Archived</Badge>}
+                                    {vm.lifecycleState === "DELETED_IN_VCENTER" && (
+                                      <Badge variant="outline">Deleted in vCenter</Badge>
+                                    )}
+                                    </span>
+                                    {vm.responsibleParty && (
+                                      <span className="text-xs font-normal text-muted-foreground">
+                                        Responsible: {vm.responsibleParty}
+                                      </span>
+                                    )}
+                                  </Link>
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        {!component.assets?.length && !component.virtualMachines?.length && (
+                          <p className="text-xs text-muted-foreground">No compute infrastructure linked</p>
+                        )}
                         {component.logicalDatabases?.length ? (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {component.logicalDatabases.map((logical) => (
-                              <Button
-                                key={logical.id}
-                                type="button"
-                                size="xs"
-                                variant="outline"
-                                onClick={() => {
-                                  if (logical.databaseInventory?.id) {
-                                    router.push(
-                                      `/dashboard/databases/${logical.databaseInventory.id}`,
-                                    );
-                                  }
-                                }}
-                                disabled={!logical.databaseInventory?.id}
-                              >
-                                <span>
-                                  {logical.databaseInventory?.name
-                                    ? `${logical.databaseInventory.name} · ${logical.name}`
-                                    : logical.name}
-                                </span>
-                                {logical.archived && (
-                                  <Badge variant="outline">Archived</Badge>
-                                )}
-                              </Button>
-                            ))}
+                          <div className="space-y-1 pt-1">
+                            <p className="text-xs text-muted-foreground">Logical databases</p>
+                            <div className="flex flex-wrap gap-1.5">
+                            {component.logicalDatabases.map((logical) => {
+                              const databaseId = logical.databaseInventory?.id;
+                              const databaseLabel = logical.databaseInventory?.name
+                                ? `${logical.databaseInventory.name} · ${logical.name}`
+                                : logical.name;
+                              const linkContent = (
+                                <>
+                                  <span>{databaseLabel}</span>
+                                  {logical.archived && (
+                                    <Badge variant="outline">Archived</Badge>
+                                  )}
+                                </>
+                              );
+
+                              return databaseId ? (
+                                <Button
+                                  key={logical.id}
+                                  asChild
+                                  size="xs"
+                                  variant="outline"
+                                  className="h-auto min-h-[44px] sm:min-h-[32px] max-w-full whitespace-normal break-all text-left"
+                                >
+                                  <Link href={`/dashboard/databases/${databaseId}#logical-database-${logical.id}`}>
+                                    {linkContent}
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <Button
+                                  key={logical.id}
+                                  type="button"
+                                  size="xs"
+                                  variant="outline"
+                                  className="h-auto min-h-[44px] sm:min-h-[32px] max-w-full whitespace-normal break-all text-left"
+                                  disabled
+                                >
+                                  {linkContent}
+                                </Button>
+                              );
+                            })}
+                            </div>
                           </div>
                         ) : null}
                       </li>

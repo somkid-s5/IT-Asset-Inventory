@@ -2629,7 +2629,7 @@ export default function AssetDetailsPage() {
           </div>
         </div>
       </motion.div>
-      <AssetFormDialog
+      {editOpen && <AssetFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
         assetToEdit={asset}
@@ -2638,7 +2638,7 @@ export default function AssetDetailsPage() {
           void queryClient.invalidateQueries({ queryKey: ["asset", assetId] });
           void assetQuery.refetch();
         }}
-      />
+      />}
     </InventoryQueryStateView>
   );
 }

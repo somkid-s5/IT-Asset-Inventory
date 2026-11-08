@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 export interface PageHeaderBreadcrumb {
   label: string;
@@ -20,9 +21,25 @@ interface PageHeaderContextValue {
 const PageHeaderContext = createContext<PageHeaderContextValue | undefined>(undefined);
 
 export function PageHeaderProvider({ children }: { children: ReactNode }) {
-  const [header, setHeader] = useState<PageHeaderState | null>(null);
+  const pathname = usePathname();
+  const [storedHeader, setStoredHeader] = useState<{
+    pathname: string;
+    header: PageHeaderState;
+  } | null>(null);
 
-  const value = useMemo(() => ({ header, setHeader }), [header]);
+  const setHeader = useCallback((nextHeader: PageHeaderState | null) => {
+    setStoredHeader((current) => {
+      if (!nextHeader) {
+        return current?.pathname === pathname ? null : current;
+      }
+
+      return { pathname, header: nextHeader };
+    });
+  }, [pathname]);
+
+  const header = storedHeader?.pathname === pathname ? storedHeader.header : null;
+
+  const value = useMemo(() => ({ header, setHeader }), [header, setHeader]);
 
   return <PageHeaderContext.Provider value={value}>{children}</PageHeaderContext.Provider>;
 }

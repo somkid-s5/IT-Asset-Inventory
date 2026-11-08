@@ -1031,12 +1031,12 @@ export default function AssetsPage() {
       </div>
 
       {/* Asset Form Dialog */}
-      <AssetFormDialog
+      {dialogOpen && <AssetFormDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         assetToEdit={editingAsset}
         onSuccess={handleAssetSaved}
-      />
+      />}
 
       {/* Delete Confirmation */}
       <Dialog

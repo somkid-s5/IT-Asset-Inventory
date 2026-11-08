@@ -9,6 +9,7 @@ export interface ApplicationComponent {
     id: string;
     name: string;
     assetId?: string | null;
+    status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED" | "ARCHIVED";
     relationType?: string;
     responsibleParty?: string | null;
   }>;

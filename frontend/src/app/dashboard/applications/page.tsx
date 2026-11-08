@@ -86,23 +86,28 @@ function getPrimaryAccess(application: Application) {
     )[0];
 }
 
+function isHttpAddress(address: string) {
+  return /^https?:\/\//i.test(address);
+}
+
 function getTopologyCounts(application: Application) {
-  return application.environments.reduce(
-    (summary, environment) => {
-      summary.components += environment.components.length;
-      summary.linkedRecords += environment.components.reduce(
-        (count, component) =>
-          count +
-          (component.assets?.length ?? 0) +
-          (component.virtualMachines?.length ?? 0) +
-          (component.logicalDatabases?.length ?? 0),
-        0,
+  const linkedRecordIds = new Set<string>();
+  let components = 0;
+  let access = 0;
+
+  for (const environment of application.environments) {
+    components += environment.components.length;
+    access += environment.access?.length ?? 0;
+    for (const component of environment.components) {
+      component.assets?.forEach((asset) => linkedRecordIds.add(`asset:${asset.id}`));
+      component.virtualMachines?.forEach((vm) => linkedRecordIds.add(`vm:${vm.id}`));
+      component.logicalDatabases?.forEach((logical) =>
+        linkedRecordIds.add(`logical-database:${logical.id}`),
       );
-      summary.access += environment.access?.length ?? 0;
-      return summary;
-    },
-    { components: 0, linkedRecords: 0, access: application.access.length },
-  );
+    }
+  }
+
+  return { components, linkedRecords: linkedRecordIds.size, access };
 }
 
 export default function ApplicationsPage() {
@@ -220,7 +225,7 @@ export default function ApplicationsPage() {
         accessorKey: "name",
         header: "Application",
         cell: ({ row }) => (
-          <div className="min-w-[190px]">
+          <div className="w-[240px] min-w-[240px] max-w-[240px]">
             <Link
               href={`/dashboard/applications/${row.original.id}`}
               className="group flex items-center gap-2 font-semibold hover:text-primary"
@@ -273,10 +278,15 @@ export default function ApplicationsPage() {
         cell: ({ row }) => {
           const access = getPrimaryAccess(row.original);
           if (!access) return <MissingValue compact />;
-          const isHttpUrl = /^https?:\/\//i.test(access.address);
+          const isHttpUrl = isHttpAddress(access.address);
           return (
             <div className="min-w-[190px]">
               <p className="text-xs font-medium">{access.label}</p>
+              {access.environment?.name ? (
+                <p className="text-[10px] text-muted-foreground">
+                  Primary access · {access.environment.name}
+                </p>
+              ) : null}
               {isHttpUrl ? (
                 <a href={access.address} target="_blank" rel="noreferrer" className="block max-w-[230px] truncate text-xs text-primary hover:underline" title={access.address}>
                   {access.address}
@@ -301,7 +311,7 @@ export default function ApplicationsPage() {
       },
       {
         id: "completeness",
-        header: "Completeness",
+        header: "Profile & topology",
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <QualityBadge value={row.original.completeness?.complete ? "COMPLETE" : "NEEDS_CONTEXT"} role={null} />
@@ -364,12 +374,12 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Application registry</h2>
-          <p className="mt-1 text-sm text-muted-foreground">One clear record for the service owner, environments, primary access, and infrastructure relationships.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <InventoryTableShell
+        title="Application registry"
+        description="Applications, owners, environments, access points, and linked infrastructure."
+        toolbar={
+          <div className="space-y-3">
+            <div className="flex flex-wrap justify-end gap-2">
           {user?.role === "ADMIN" && (
             <Button
               variant="outline"
@@ -462,13 +472,7 @@ export default function ApplicationsPage() {
               </DialogContent>
             </Dialog>
           )}
-        </div>
-      </div>
-
-      <InventoryTableShell
-        title="Application registry"
-        description="One clear record for the service owner, environments, primary access, and infrastructure relationships."
-        toolbar={
+            </div>
           <InventoryTableToolbar
             search={
               <div className="relative w-full max-w-xl">
@@ -477,6 +481,7 @@ export default function ApplicationsPage() {
               </div>
             }
           />
+          </div>
         }
         state={queryState.state}
         hasStaleData={queryState.hasStaleData}
@@ -497,22 +502,130 @@ export default function ApplicationsPage() {
         }
       >
         <div className="space-y-3">
+          <div className="space-y-3 md:hidden">
+            {table.getRowModel().rows.map((row) => {
+              const application = row.original;
+              const counts = getTopologyCounts(application);
+              const primaryAccess = getPrimaryAccess(application);
+
+              return (
+                <Card key={row.id} role="article" aria-label={`Application ${application.name}`} className="overflow-hidden">
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/dashboard/applications/${application.id}`}
+                          className="flex min-h-11 items-center gap-2 font-semibold hover:text-primary"
+                        >
+                          <AppWindow className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="break-words">{application.name}</span>
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          {application.description || <MissingValue kind="needs-context" />}
+                        </p>
+                      </div>
+                      <RecordStatusBadge
+                        value={application.status}
+                        displayValue={application.status}
+                        role={null}
+                      />
+                    </div>
+
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-y border-border/60 py-3 text-xs">
+                      <div>
+                        <dt className="text-muted-foreground">Technical owner</dt>
+                        <dd className="mt-1 font-medium">{application.technicalOwner || <MissingValue kind="needs-context" />}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Business unit</dt>
+                        <dd className="mt-1 font-medium">{application.businessUnit || <MissingValue kind="needs-context" />}</dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="text-muted-foreground">Environments</dt>
+                        <dd className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {application.environments.length ? application.environments.map((environment) => (
+                            <EnvironmentBadge key={environment.id} value={environment.name} role={null} className="px-1.5 py-0 text-[10px]" />
+                          )) : <MissingValue compact />}
+                          <span className="text-muted-foreground">· {counts.components} components</span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Linked records</dt>
+                        <dd className="mt-1 font-medium">{counts.linkedRecords}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Access points</dt>
+                        <dd className="mt-1 font-medium">{counts.access}</dd>
+                      </div>
+                      {primaryAccess ? (
+                        <div className="col-span-2 min-w-0">
+                          <dt className="text-muted-foreground">
+                            Primary access{primaryAccess.environment?.name ? ` · ${primaryAccess.environment.name}` : ""}
+                          </dt>
+                          <dd className="mt-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                              <span className="font-medium">{primaryAccess.label}</span>
+                              <span className="text-muted-foreground">({primaryAccess.method})</span>
+                            </div>
+                            {isHttpAddress(primaryAccess.address) ? (
+                              <a
+                                href={primaryAccess.address}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 block min-h-11 break-all rounded-md font-mono text-[11px] text-primary underline-offset-2 hover:underline"
+                              >
+                                {primaryAccess.address}
+                              </a>
+                            ) : (
+                              <p className="mt-1 min-h-11 break-all font-mono text-[11px] text-muted-foreground">
+                                {primaryAccess.address}
+                              </p>
+                            )}
+                          </dd>
+                        </div>
+                      ) : null}
+                    </dl>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Profile &amp; topology</span>
+                        <QualityBadge value={application.completeness?.complete ? "COMPLETE" : "NEEDS_CONTEXT"} role={null} />
+                        <span className="tabular-nums">{application.completeness?.completeness ?? 0}%</span>
+                      </div>
+                      <InventoryRowActions
+                        recordLabel={application.name}
+                        detailHref={`/dashboard/applications/${application.id}`}
+                        viewActionLabel="View application details"
+                        inlineLifecycleActions
+                        menuRecordLabel={/archive/i.test(application.name) ? "the selected application" : application.name}
+                        lifecycle={{
+                          status: application.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
+                          archive: {
+                            allowed: user?.role === "ADMIN" && application.status === "ACTIVE",
+                            onSelect: () => archive.mutate(application.id),
+                          },
+                          restore: {
+                            allowed: user?.role === "ADMIN" && application.status === "ARCHIVED",
+                            onSelect: () => restore.mutate(application.id),
+                          },
+                        }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
           <Card className="overflow-hidden p-0">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table className="min-w-[1180px]">
+              <div className="hidden overflow-x-auto md:block">
+                <Table className="min-w-[1160px]">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
-                          <TableHead
-                            key={header.id}
-                            className={
-                              header.id === "actions"
-                                ? "sticky right-0 z-10 bg-muted/95 text-right"
-                                : undefined
-                            }
-                          >
+                          <TableHead key={header.id}>
                             {flexRender(header.column.columnDef.header, header.getContext())}
                           </TableHead>
                         ))}
@@ -523,14 +636,7 @@ export default function ApplicationsPage() {
                     {table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id} className="group align-top">
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            className={
-                              cell.column.id === "actions"
-                                ? "sticky right-0 z-10 bg-card text-right"
-                                : undefined
-                            }
-                          >
+                          <TableCell key={cell.id}>
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
                         ))}

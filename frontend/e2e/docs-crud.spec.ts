@@ -5,13 +5,16 @@ test.describe('KB Document CRUD Operations', () => {
 
   test('should perform full CRUD operations on knowledge documents', async ({ page }) => {
     // Navigate to docs dashboard
-    await page.goto('/dashboard/docs');
+    await page.goto('/dashboard/docs', { waitUntil: 'domcontentloaded' });
     const newDocButton = page.getByRole('button', { name: /New Document/i });
     await expect(newDocButton).toBeVisible();
     await newDocButton.click();
 
     // Verify redirects to /new
-    await page.waitForURL('**/dashboard/docs/new', { timeout: 30000 });
+    await page.waitForURL('**/dashboard/docs/new', {
+      timeout: 30000,
+      waitUntil: 'domcontentloaded',
+    });
     const titleInput = page.getByPlaceholder('e.g. How to configure the core switch...');
     await expect(titleInput).toBeVisible();
 
@@ -43,7 +46,7 @@ test.describe('KB Document CRUD Operations', () => {
     await expect(page.getByText('Document published')).toBeVisible();
 
     // Verify it exists in list/dashboard
-    await page.goto('/dashboard/docs');
+    await page.goto('/dashboard/docs', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'SysOps Knowledge Base' })).toBeVisible();
 
     // Search for the newly created document
@@ -60,12 +63,17 @@ test.describe('KB Document CRUD Operations', () => {
     const docLink = page.getByRole('link', { name: `Open ${uniqueTitle}` });
     await expect(docLink).toBeVisible();
     await Promise.all([
-      page.waitForURL(/\/dashboard\/docs\/[^/]+$/, { timeout: 30000 }),
+      page.waitForURL(/\/dashboard\/docs\/[^/]+$/, {
+        timeout: 30000,
+        waitUntil: 'domcontentloaded',
+      }),
       docLink.click(),
     ]);
 
     // Verify detail view page
-    await expect(page.getByRole('heading', { name: uniqueTitle, level: 1 })).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.getByRole('main').getByRole('heading', { name: uniqueTitle, level: 1 }),
+    ).toBeVisible({ timeout: 15000 });
 
     // Edit Document
     const editIconBtn = page.getByRole('button', { name: 'Edit Document' });
@@ -82,10 +90,15 @@ test.describe('KB Document CRUD Operations', () => {
     await saveChangesButton.click();
 
     // Wait for redirect back to details page (URL path ending with document ID)
-    await page.waitForURL(/\/dashboard\/docs\/[^/]+$/, { timeout: 15000 });
+    await page.waitForURL(/\/dashboard\/docs\/[^/]+$/, {
+      timeout: 15000,
+      waitUntil: 'domcontentloaded',
+    });
 
     // Verify updated title on details page
-    await expect(page.getByRole('heading', { name: updatedTitle, level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole('main').getByRole('heading', { name: updatedTitle, level: 1 }),
+    ).toBeVisible();
 
     // Clean up / Delete Document
     // Dialog confirm needs to be handled via Page dialog event
@@ -99,7 +112,10 @@ test.describe('KB Document CRUD Operations', () => {
     await deleteButton.click();
 
     // Should redirect back to /docs dashboard
-    await page.waitForURL('**/dashboard/docs', { timeout: 15000 });
+    await page.waitForURL('**/dashboard/docs', {
+      timeout: 15000,
+      waitUntil: 'domcontentloaded',
+    });
     await expect(page.getByRole('heading', { name: 'SysOps Knowledge Base' })).toBeVisible();
   });
 });

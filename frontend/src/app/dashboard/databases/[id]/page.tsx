@@ -78,6 +78,16 @@ export default function DatabaseDetailPage() {
     return () => setHeader(null);
   }, [database, setHeader]);
 
+  useEffect(() => {
+    if (!database || !window.location.hash.startsWith("#logical-database-")) {
+      return;
+    }
+    const target = document.getElementById(window.location.hash.slice(1));
+    if (!target) return;
+    target.scrollIntoView({ block: "center" });
+    target.focus({ preventScroll: true });
+  }, [database]);
+
   const databaseStats = useMemo(() => {
     if (!database) return { accounts: 0, appIps: 0 };
     return {
@@ -142,8 +152,8 @@ export default function DatabaseDetailPage() {
         pwdToCopy = res.data.password;
       }
       if (pwdToCopy) {
-        await navigator.clipboard.writeText(pwdToCopy);
         await api.post(`/databases/${database.id}/accounts/${accountId}/copy`);
+        await navigator.clipboard.writeText(pwdToCopy);
         toast.success("Copied password");
       }
     } catch {
@@ -466,9 +476,12 @@ export default function DatabaseDetailPage() {
         {database.logicalDatabases?.length ? (
           <div className="grid gap-3 lg:grid-cols-2">
             {database.logicalDatabases.map((logical) => (
-              <div
+              <article
                 key={logical.id}
-                className="rounded-xl border border-border/50 bg-background/40 p-3"
+                id={`logical-database-${logical.id}`}
+                tabIndex={-1}
+                aria-label={`Logical database ${logical.name}`}
+                className="rounded-xl border border-border/50 bg-background/40 p-3 focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -551,7 +564,7 @@ export default function DatabaseDetailPage() {
                     No Application Component relationships yet.
                   </p>
                 )}
-              </div>
+              </article>
             ))}
           </div>
         ) : (
@@ -577,12 +590,92 @@ export default function DatabaseDetailPage() {
             {databaseStats.accounts}
           </span>
         </div>
-        <div className="overflow-x-auto p-0">
+        <div className="p-0">
           {database.accounts.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
               No saved accounts found
             </div>
           ) : (
+            <>
+            <div className="space-y-3 p-4 md:hidden">
+              {database.accounts.map((account) => {
+                const isPasswordRevealed = !!revealedPasswords[account.id];
+                return (
+                  <article key={account.id} aria-label={`Database account ${account.username}`} className="rounded-xl border border-border/60 bg-background/40 p-3">
+                    <div className="flex min-h-11 items-center justify-between gap-3">
+                      <h3 className="break-all font-mono text-sm font-semibold">{account.username}</h3>
+                      <button
+                        aria-label="Copy username"
+                        onClick={() => void copyValue(account.username, "Username")}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <dl className="mt-3 space-y-3 border-t border-border/50 pt-3 text-xs">
+                      <div>
+                        <dt className="text-muted-foreground">Password</dt>
+                        <dd className="mt-1 flex min-h-11 items-center gap-2">
+                          <span className="min-w-0 flex-1 break-all rounded-md bg-muted/50 px-2 py-2 text-center font-mono font-semibold tabular-nums">
+                            {isPasswordRevealed ? revealedPasswords[account.id] : "••••••••••••"}
+                          </span>
+                          {canViewSecrets ? (
+                            <>
+                              <button
+                                aria-label={isPasswordRevealed ? `Hide password for ${account.username}` : `Reveal password for ${account.username}`}
+                                onClick={() => handleRevealPassword(account.id)}
+                                className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+                              >
+                                {isPasswordRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                              <button
+                                aria-label={`Copy password for ${account.username}`}
+                                onClick={() => void copyPassword(account.id, isPasswordRevealed ? revealedPasswords[account.id] : undefined)}
+                                className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Restricted</span>
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Role</dt>
+                        <dd className="mt-1">
+                          <span className={cn("rounded-md border px-2.5 py-1 text-[11px] font-semibold", getRoleBadge(account.role))}>
+                            {formatMissingValue(account.role, "needs-context")}
+                          </span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Scope</dt>
+                        <dd className="mt-1 font-medium">
+                          {account.scope === "LOGICAL_DATABASES" ? "Logical databases" : "Whole instance"}
+                          {account.scope === "LOGICAL_DATABASES" && account.logicalDatabaseNames?.length ? (
+                            <p className="mt-1 break-words text-[11px] text-muted-foreground">{account.logicalDatabaseNames.join(", ")}</p>
+                          ) : null}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Privileges</dt>
+                        <dd className="mt-1 flex flex-wrap gap-1.5">
+                          {account.privileges.map((priv) => (
+                            <span key={priv} className={cn("rounded-md border px-2 py-1 text-[11px] font-semibold", getPrivilegeBadge(priv))}>{priv}</span>
+                          ))}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Notes</dt>
+                        <dd className="mt-1 break-words text-foreground">{formatMissingValue(account.note, "needs-context")}</dd>
+                      </div>
+                    </dl>
+                  </article>
+                );
+              })}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[820px] border-collapse text-left text-sm">
               <thead>
                 <tr className="bg-muted/20 border-b border-border/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -596,7 +689,7 @@ export default function DatabaseDetailPage() {
               </thead>
               <tbody className="divide-y divide-border/50">
                 {database.accounts.map((account) => {
-                  const isRev = !!revealedPasswords[account.id];
+                  const isPasswordRevealed = !!revealedPasswords[account.id];
                   return (
                     <tr
                       key={account.id}
@@ -621,7 +714,7 @@ export default function DatabaseDetailPage() {
                       <td className="px-3 py-2.5 sm:px-4">
                         <div className="flex items-center gap-2">
                           <div className="font-mono bg-muted/50 px-2 py-1 rounded-md min-w-[160px] text-center font-semibold tabular-nums transition-all">
-                            {isRev
+                            {isPasswordRevealed
                               ? revealedPasswords[account.id]
                               : "••••••••••••"}
                           </div>
@@ -629,14 +722,14 @@ export default function DatabaseDetailPage() {
                             <>
                               <button
                                 aria-label={
-                                  isRev
+                                  isPasswordRevealed
                                     ? `Hide password for ${account.username}`
                                     : `Reveal password for ${account.username}`
                                 }
                                 onClick={() => handleRevealPassword(account.id)}
                                 className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
                               >
-                                {isRev ? (
+                                {isPasswordRevealed ? (
                                   <EyeOff className="h-4 w-4" />
                                 ) : (
                                   <Eye className="h-4 w-4" />
@@ -647,7 +740,7 @@ export default function DatabaseDetailPage() {
                                 onClick={() => {
                                   void copyPassword(
                                     account.id,
-                                    isRev
+                                    isPasswordRevealed
                                       ? revealedPasswords[account.id]
                                       : undefined,
                                   );
@@ -712,16 +805,18 @@ export default function DatabaseDetailPage() {
                 })}
               </tbody>
             </table>
+            </div>
+            </>
           )}
         </div>
       </section>
     </motion.div>
-    <DatabaseFormDialog
+    {editOpen && <DatabaseFormDialog
       open={editOpen}
       onOpenChange={setEditOpen}
       databaseToEdit={database}
       onSuccess={() => void refetch()}
-    />
+    />}
     </InventoryQueryStateView>
   );
 }

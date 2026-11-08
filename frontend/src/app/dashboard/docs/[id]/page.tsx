@@ -17,11 +17,13 @@ import { motion } from "framer-motion";
 import { fadeInUp } from "@/lib/animations";
 import { InventoryQueryStateView } from "@/components/inventory";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
+import { usePageHeader } from "@/contexts/PageHeaderContext";
 
 export default function ArticlePage() {
   const { id } = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { setHeader } = usePageHeader();
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -43,6 +45,18 @@ export default function ArticlePage() {
     enabled: !!id,
   });
   const document = documentQuery.data;
+  useEffect(() => {
+    if (isEditing) return;
+    setHeader({
+      title: document?.title ?? "Document",
+      breadcrumbs: [
+        { label: "Workspace", href: "/dashboard" },
+        { label: "Knowledge Base", href: "/dashboard/docs" },
+        { label: document?.title ?? "Document" },
+      ],
+    });
+    return () => setHeader(null);
+  }, [document?.title, isEditing, setHeader]);
   const documentState = useInventoryQueryState(documentQuery, {
     hasData: document !== undefined,
     hasRecords: Boolean(document),

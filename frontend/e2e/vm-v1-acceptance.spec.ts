@@ -117,7 +117,9 @@ test.describe("VM V1 acceptance - relationships, credentials, archive/restore", 
         name: /Treasury Registry.*Shared/,
       }),
     ).toHaveCount(1);
-    await expect(page.getByText("svc_vm_e2e", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("table").getByText("svc_vm_e2e", { exact: true }),
+    ).toBeVisible();
 
     const copy = page.getByRole("button", {
       name: "Copy password for svc_vm_e2e",
@@ -164,7 +166,9 @@ test.describe("VM V1 acceptance - relationships, credentials, archive/restore", 
         name: /Treasury Registry.*Shared/,
       }),
     ).toHaveCount(1);
-    await expect(page.getByText("svc_vm_e2e", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("table").getByText("svc_vm_e2e", { exact: true }),
+    ).toBeVisible();
 
     await page.goto("/dashboard/audit-logs");
     const search = page.getByPlaceholder(

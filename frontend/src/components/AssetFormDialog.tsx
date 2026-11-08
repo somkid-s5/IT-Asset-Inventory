@@ -745,17 +745,21 @@ export function AssetFormDialog({
           .forEach((user) => {
             const id = user.id as string;
             if (credentialMap.has(id)) return;
+            const existing = assetToEdit?.credentials?.find(
+              (credential) => credential.id === id,
+            );
             credentialMap.set(id, {
               id,
               username: user.username.trim(),
               password: user.password,
-              type: item.type.trim() || undefined,
-              nodeLabel:
-                assetMode === "multi"
+              type: existing ? existing.type ?? undefined : item.type.trim() || undefined,
+              nodeLabel: existing
+                ? existing.nodeLabel ?? undefined
+                : assetMode === "multi"
                   ? item.nodeLabel.trim() || undefined
                   : undefined,
-              manageType: item.manageType.trim() || undefined,
-              version: item.version.trim() || undefined,
+              manageType: existing ? existing.manageType ?? undefined : item.manageType.trim() || undefined,
+              version: existing ? existing.version ?? undefined : item.version.trim() || undefined,
             });
           });
       });

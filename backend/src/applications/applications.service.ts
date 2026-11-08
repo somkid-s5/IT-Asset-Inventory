@@ -31,7 +31,14 @@ const include = {
         include: {
           assetLinks: {
             include: {
-              asset: { select: { id: true, name: true, assetId: true } },
+              asset: {
+                select: {
+                  id: true,
+                  name: true,
+                  assetId: true,
+                  status: true,
+                },
+              },
             },
           },
           vmLinks: {

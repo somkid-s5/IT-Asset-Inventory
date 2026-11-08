@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import api from "@/services/api";
 import { InventoryDocuments } from "@/components/InventoryDocuments";
 import { EnvironmentBadge, InventoryQueryStateView } from "@/components/inventory";
+import { formatMissingValue } from "@/lib/inventory-presentation";
 import { useInventoryQueryState } from "@/lib/inventory-query-state";
 
 export default function VmDetailPage() {
@@ -112,10 +113,8 @@ export default function VmDetailPage() {
     }
 
     try {
-      if (!passwords[accountId]) {
-        const res = await revealVmGuestAccountPassword(accountId);
-        setPasswords((prev) => ({ ...prev, [accountId]: res.password }));
-      }
+      const res = await revealVmGuestAccountPassword(accountId);
+      setPasswords((prev) => ({ ...prev, [accountId]: res.password }));
       setRevealed((prev) => {
         const next = new Set(prev);
         next.add(accountId);
@@ -131,18 +130,17 @@ export default function VmDetailPage() {
   ) => {
     const accountId = account.id || "";
     let pwd = passwords[accountId];
-    if (!pwd) {
-      try {
+    try {
+      if (!pwd) {
         const res = await revealVmGuestAccountPassword(accountId);
         pwd = res.password;
         setPasswords((prev) => ({ ...prev, [accountId]: pwd }));
-      } catch {
-        toast.error("Failed to copy password");
-        return;
       }
+      await api.post(`/vm/guest-accounts/${accountId}/copy`);
+      await copyValue(pwd, "Password");
+    } catch {
+      toast.error("Failed to copy password");
     }
-    await copyValue(pwd, "Password");
-    await api.post(`/vm/guest-accounts/${accountId}/copy`);
   };
 
   if (detailState.state === "loading" || !vm) {
@@ -652,12 +650,75 @@ export default function VmDetailPage() {
                 Accounts
               </h2>
             </div>
-            <div className="p-0 overflow-x-auto">
+            <div className="p-0">
               {vm.guestAccounts.length === 0 ? (
                 <div className="p-8 text-center text-sm text-muted-foreground">
                   No account information saved
                 </div>
               ) : (
+                <>
+                <div className="space-y-3 p-4 md:hidden">
+                  {vm.guestAccounts.map((account) => {
+                    const accountId = account.id || "";
+                    const isPasswordRevealed = revealed.has(accountId);
+                    const pwdText = passwords[accountId] || "••••••••••••";
+                    return (
+                      <article key={account.id || account.username} aria-label={`Guest OS account ${account.username}`} className="rounded-xl border border-border/60 bg-background/40 p-3">
+                        <div className="flex min-h-11 items-center justify-between gap-3">
+                          <h3 className="break-all font-mono text-sm font-semibold">{account.username}</h3>
+                          <button
+                            aria-label="Copy username"
+                            onClick={() => void copyValue(account.username, "Username")}
+                            className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <dl className="mt-3 space-y-3 border-t border-border/50 pt-3 text-xs">
+                          <div>
+                            <dt className="text-muted-foreground">Password</dt>
+                            <dd className="mt-1 flex min-h-11 items-center gap-2">
+                              <span className="min-w-0 flex-1 break-all rounded-md bg-muted/50 px-2 py-2 font-mono font-semibold tabular-nums">{isPasswordRevealed ? pwdText : "••••••••••••"}</span>
+                              {canEdit ? (
+                                <>
+                                  <button
+                                    aria-label={`${isPasswordRevealed ? "Hide" : "Reveal"} password for ${account.username}`}
+                                    onClick={() => void handleRevealPassword(accountId)}
+                                    className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+                                  >
+                                    {isPasswordRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  </button>
+                                  <button
+                                    aria-label={`Copy password for ${account.username}`}
+                                    onClick={() => void handleCopyPassword(account)}
+                                    className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </button>
+                                </>
+                              ) : null}
+                            </dd>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <dt className="text-muted-foreground">Method</dt>
+                              <dd className="mt-1 font-medium">{account.accessMethod}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">Role</dt>
+                              <dd className="mt-1 font-medium">{formatMissingValue(account.role, "needs-context")}</dd>
+                            </div>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Notes</dt>
+                            <dd className="mt-1 break-words text-foreground">{formatMissingValue(account.note, "needs-context")}</dd>
+                          </div>
+                        </dl>
+                      </article>
+                    );
+                  })}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[820px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="bg-muted/20 border-b border-border/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -671,11 +732,11 @@ export default function VmDetailPage() {
                   <tbody className="divide-y divide-border/50">
                     {vm.guestAccounts.map((account) => {
                       const accountId = account.id || "";
-                      const isRev = revealed.has(accountId);
+                      const isPasswordRevealed = revealed.has(accountId);
                       const pwdText = passwords[accountId] || "••••••••••••";
                       return (
                         <tr
-                          key={account.username}
+                          key={account.id || account.username}
                           className="hover:bg-muted/20 transition-colors"
                         >
                           <td className="px-3 py-2.5 sm:px-4">
@@ -697,18 +758,18 @@ export default function VmDetailPage() {
                           <td className="px-3 py-2.5 sm:px-4">
                             <div className="flex items-center gap-2">
                               <div className="font-mono bg-muted/50 px-2 py-1 rounded-md min-w-[160px] text-center font-semibold tabular-nums transition-all">
-                                {isRev ? pwdText : "••••••••••••"}
+                                {isPasswordRevealed ? pwdText : "••••••••••••"}
                               </div>
                               {canEdit ? (
                                 <>
                                   <button
-                                    aria-label={`${isRev ? "Hide" : "Reveal"} password for ${account.username}`}
+                                    aria-label={`${isPasswordRevealed ? "Hide" : "Reveal"} password for ${account.username}`}
                                     onClick={() => {
                                       void handleRevealPassword(accountId);
                                     }}
                                     className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
                                   >
-                                    {isRev ? (
+                                    {isPasswordRevealed ? (
                                       <EyeOff className="h-4 w-4" />
                                     ) : (
                                       <Eye className="h-4 w-4" />
@@ -745,6 +806,8 @@ export default function VmDetailPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
+                </>
               )}
             </div>
           </section>

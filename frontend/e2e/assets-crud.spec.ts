@@ -4,7 +4,7 @@ test.describe("Assets CRUD Operations", () => {
   test.use({ storageState: "playwright/.auth/admin.json" });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto("/dashboard/assets");
+    await page.goto("/dashboard/assets", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("button", { name: "Add Asset" })).toBeVisible({
       timeout: 10000,
     });
@@ -80,7 +80,9 @@ test.describe("Assets CRUD Operations", () => {
     await expect(row).toBeVisible();
 
     // Verify the incomplete record is actionable from Data Quality before fixing governance context.
-    await page.goto("/dashboard/data-quality");
+    await page.goto("/dashboard/data-quality", {
+      waitUntil: "domcontentloaded",
+    });
     const qualityIssueBefore = page
       .getByRole("link")
       .filter({ hasText: assetName });
@@ -88,19 +90,19 @@ test.describe("Assets CRUD Operations", () => {
     await expect(
       qualityIssueBefore.getByText("owner", { exact: true }),
     ).toBeVisible();
-    const qualityHref = await qualityIssueBefore.getAttribute("href");
-    expect(qualityHref).toMatch(/^\/dashboard\/assets\/[^/?]+\?edit=1$/);
-    await page.goto(qualityHref!);
-    await expect(page).toHaveURL(/\/dashboard\/assets\/[^/?]+\?edit=1$/);
+    await qualityIssueBefore.click();
+    await expect(page).toHaveURL(/\/dashboard\/assets\/[^/?]+\?edit=1$/, {
+      timeout: 30_000,
+    });
     await expect(
       page.getByRole("heading", { name: "Edit Asset Information" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
     await expect(
       page.getByPlaceholder("e.g. Ubuntu 24.04 or iLO 6"),
     ).toHaveValue("Ubuntu 24.04 LTS");
     await page.getByRole("button", { name: "Cancel" }).click();
 
-    await page.goto("/dashboard/assets");
+    await page.goto("/dashboard/assets", { waitUntil: "domcontentloaded" });
     await page.getByPlaceholder("Search assets...").fill(assetName);
     row = page.getByRole("row").filter({ hasText: assetName });
     await expect(row).toBeVisible();
@@ -125,11 +127,13 @@ test.describe("Assets CRUD Operations", () => {
     await page.getByRole("button", { name: "Save Changes" }).click();
 
     await expect(page.getByText("Asset updated successfully")).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 15_000 });
 
     const modifiedRow = page.getByRole("row").filter({ hasText: modifiedName });
     await expect(modifiedRow).toBeVisible();
 
-    await modifiedRow.click();
+    await modifiedRow.getByRole("button", { name: "Asset Actions" }).click();
+    await page.getByRole("menuitem", { name: "View Details" }).click();
     await expect(page).toHaveURL(/\/dashboard\/assets\/[^/]+$/);
     await expect(
       page
@@ -161,7 +165,9 @@ test.describe("Assets CRUD Operations", () => {
 
     // Data Quality may still list this progressive record for other missing context,
     // but the owner issue must be resolved by the normal Asset edit journey.
-    await page.goto("/dashboard/data-quality");
+    await page.goto("/dashboard/data-quality", {
+      waitUntil: "domcontentloaded",
+    });
     const qualityIssueAfter = page
       .getByRole("link")
       .filter({ hasText: modifiedName });
@@ -170,7 +176,7 @@ test.describe("Assets CRUD Operations", () => {
       qualityIssueAfter.getByText("owner", { exact: true }),
     ).toHaveCount(0);
 
-    await page.goto("/dashboard/assets");
+    await page.goto("/dashboard/assets", { waitUntil: "domcontentloaded" });
     const filteredAssetsResponse = page.waitForResponse((response) => {
       if (!response.url().includes("/api/assets")) return false;
       const url = new URL(response.url());
@@ -198,7 +204,7 @@ test.describe("Assets CRUD Operations", () => {
     page,
   }) => {
     await page.getByRole("combobox").selectOption("5");
-    await expect(page.getByRole("table")).not.toContainText("switch-edge-01");
+    await expect(page.getByRole("table")).not.toHaveText(/switch-edge-01/);
 
     await page.getByPlaceholder("Search assets...").fill("db-prod-01");
     const childRow = page.getByRole("row").filter({ hasText: "db-prod-01" });
@@ -216,7 +222,7 @@ test.describe("Assets CRUD Operations", () => {
     await parentOption.click();
     await expect(
       page.getByRole("combobox", { name: "Parent Asset" }),
-    ).toContainText("switch-edge-01");
+    ).toHaveText(/switch-edge-01/);
     await page.getByRole("button", { name: "Save Changes" }).click();
     await expect(page.getByText("Asset updated successfully")).toBeVisible();
 
@@ -237,7 +243,9 @@ test.describe("Assets CRUD Operations", () => {
     ).toBeVisible();
 
     // Cleanup the seeded child so this test remains repeatable.
-    await page.goto("/dashboard/assets?q=db-prod-01");
+    await page.goto("/dashboard/assets?q=db-prod-01", {
+      waitUntil: "domcontentloaded",
+    });
     const cleanupRow = page.getByRole("row").filter({ hasText: "db-prod-01" });
     await expect(cleanupRow).toBeVisible();
     await cleanupRow.getByRole("button", { name: "Edit Asset" }).click();

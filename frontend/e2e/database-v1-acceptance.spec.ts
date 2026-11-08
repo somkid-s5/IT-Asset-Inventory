@@ -42,9 +42,11 @@ test.describe("Database V1 acceptance - topology, account scopes, credentials, l
     await expect(
       page.getByText("Treasury Registry", { exact: true }),
     ).toHaveCount(3);
-    await expect(page.getByText("svc_registry", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("report_reader", { exact: true }),
+      page.getByRole("table").getByText("svc_registry", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("table").getByText("report_reader", { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("Whole Instance", { exact: true }),
@@ -117,9 +119,11 @@ test.describe("Database V1 acceptance - topology, account scopes, credentials, l
       .click();
     await expect(page.getByText("registry", { exact: true })).toBeVisible();
     await expect(page.getByText("audit", { exact: true })).toBeVisible();
-    await expect(page.getByText("svc_registry", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("report_reader", { exact: true }),
+      page.getByRole("table").getByText("svc_registry", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("table").getByText("report_reader", { exact: true }),
     ).toBeVisible();
   });
 });
